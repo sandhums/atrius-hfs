@@ -56,7 +56,7 @@ jobs:
           echo 'linker = "clang"' >> ~/.cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "link-arg=-Wl,-zstack-size=8388608"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -71,21 +71,13 @@ jobs:
 
   cleanup-test-containers:
     name: Cleanup Test Containers
-    runs-on: [self-hosted, Windows]  # TODO: revert to [self-hosted] after verifying Windows cleanup works
+    runs-on: [self-hosted, Linux]
     needs: [test-rust]
     if: always()
     steps:
-      - name: Remove testcontainers from this run (Unix)
-        if: runner.os != 'Windows'
+      - name: Remove testcontainers from this run
         run: |
           docker ps -aq --filter "label=github.run_id=${{ github.run_id }}" | xargs -r docker rm -f || true
-
-      - name: Remove testcontainers from this run (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $ids = docker ps -aq --filter "label=github.run_id=${{ github.run_id }}"
-          if ($ids) { docker rm -f $ids }
 
   test-python:
     name: Test Python
@@ -123,7 +115,7 @@ jobs:
           echo 'linker = "clang"' >> ~/.cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "link-arg=-Wl,-zstack-size=8388608"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -175,7 +167,7 @@ jobs:
           echo 'linker = "clang"' >> ~/.cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "link-arg=-Wl,-zstack-size=8388608"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -242,7 +234,7 @@ jobs:
           echo 'linker = "clang"' >> ~/.cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "link-arg=-Wl,-zstack-size=8388608"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -293,7 +285,7 @@ jobs:
           echo 'linker = "clang"' >> ~/.cargo/config.toml
           echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "link-arg=-Wl,-zstack-size=8388608"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -621,8 +613,9 @@ jobs:
           rm -f ~/.cargo/config.toml
           echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
           echo 'linker = "aarch64-unknown-linux-gnu-gcc"' >> ~/.cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld"]' >> ~/.cargo/config.toml
 
-      - name: Configure Rust to use LLD (MacOS)
+      - name: Configure Rust linker (macOS)
         if: matrix.os == 'macOS'
         run: |
           mkdir -p ~/.cargo
@@ -640,6 +633,7 @@ jobs:
         if: matrix.os == 'Linux-ARM64'
         env:
           CC_aarch64_unknown_linux_gnu: aarch64-unknown-linux-gnu-gcc
+          PYO3_CROSS_PYTHON_VERSION: "3.14"
         run: cargo build --workspace --all-features --release --target ${{ matrix.target }}
 
       - name: Build Release (Unix)
@@ -697,8 +691,14 @@ jobs:
         working-directory: crates/pysof
         run: uv run maturin build --release -o dist -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
 
+      - name: Build pysof wheel (Linux ARM64)
+        if: matrix.os == 'Linux-ARM64'
+        working-directory: crates/pysof
+        env:
+          PYO3_CROSS_PYTHON_VERSION: "3.14"
+        run: uv run maturin build --release -o dist --target aarch64-unknown-linux-gnu -i python3.10 -i python3.11 -i python3.12 -i python3.13 -i python3.14
+
       - name: Upload pysof artifacts
-        if: matrix.os != 'Linux-ARM64'
         uses: actions/upload-artifact@v4
         with:
           name: pysof-${{ matrix.target }}

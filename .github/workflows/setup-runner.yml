@@ -1,0 +1,42 @@
+name: Setup Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to set up'
+        required: true
+        default: 'macOS'
+        type: choice
+        options:
+          - macOS
+
+jobs:
+  setup-macos:
+    name: Install dependencies (macOS)
+    if: inputs.runner == 'macOS'
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Install LLVM (provides ld.lld)
+        run: |
+          echo "=== Current Homebrew LLVM status ==="
+          brew list llvm 2>/dev/null && echo "LLVM already installed" || brew install llvm
+          echo ""
+          echo "=== Verify ld.lld is available ==="
+          /opt/homebrew/bin/ld.lld --version
+          echo ""
+          echo "=== Verify ld.lld is on PATH ==="
+          which ld.lld || echo "ld.lld not on PATH - checking /opt/homebrew/bin"
+          ls -la /opt/homebrew/bin/ld.lld
+
+      - name: Test LLD can link for AArch64 Linux
+        run: |
+          echo "=== Testing LLD AArch64 cross-link capability ==="
+          echo 'void _start(void) { for(;;); }' > /tmp/test_lld.c
+          aarch64-unknown-linux-gnu-gcc -nostdlib -fuse-ld=lld -o /tmp/test_lld /tmp/test_lld.c && echo "SUCCESS: GCC + LLD cross-link works" || echo "FAIL: GCC + LLD cross-link failed"
+          rm -f /tmp/test_lld /tmp/test_lld.c
+          echo ""
+          echo "=== Runner environment ==="
+          echo "PATH: $PATH"
+          echo "Homebrew prefix: $(brew --prefix)"
+          uname -a

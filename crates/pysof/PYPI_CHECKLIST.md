@@ -8,7 +8,7 @@ This checklist ensures high-quality PyPI releases with proper metadata, document
 - ✅ Version synchronized to 0.1.25 across all files
 - ✅ Project URLs fixed (using [project.urls] table, pointing to pysof crate)
 - ✅ README restructured (badges, quick links, user-first approach)
-- ✅ Python version support expanded (3.8 - 3.13)
+- ✅ Python version support expanded (3.10 - 3.14)
 - ✅ All metadata and classifiers updated
 - ✅ Documentation updated (RELEASING.md, this checklist)
 
@@ -53,9 +53,9 @@ This checklist ensures high-quality PyPI releases with proper metadata, document
   - [x] Documentation - Points to pysof crate directory
   - [x] Bug Tracker - Points to hfs issues
   - [x] Source - Points to pysof crate directory
-- [x] Python version requirement correct: `requires-python = ">=3.8"`
+- [x] Python version requirement correct: `requires-python = ">=3.10"`
 - [x] Keywords appropriate for PyPI search
-- [x] Classifiers accurate (Development Status, Intended Audience, etc.) - Added Python 3.8-3.13
+- [x] Classifiers accurate (Development Status, Intended Audience, etc.) - Added Python 3.10-3.14
 - [x] License field matches repository license
 
 ### Build Verification
@@ -237,7 +237,7 @@ If critical issues are found after release:
 
 ### Version Mismatch
 - **Problem**: Python package version doesn't match Rust version
-- **Solution**: Verify `python_requires = ">=3.8, <3.14"` in `pyproject.toml` and sync `pyproject.toml` version before release
+- **Solution**: Verify `requires-python = ">=3.10"` in `pyproject.toml` and sync `pyproject.toml` version before release
 - **Prevention**: Follow version sync checklist above
 
 ### Missing Wheels for Platform
