@@ -313,18 +313,20 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [convertsToInteger()](https://hl7.org/fhirpath/2025Jan/#convertstointeger--boolean): ✅
     *   [toLong()](https://hl7.org/fhirpath/2025Jan/#tolong--long) (STU): ✅
     *   [convertsToLong()](https://hl7.org/fhirpath/2025Jan/#convertstolong--boolean) (STU): ✅
-    *   [toDate()](https://hl7.org/fhirpath/2025Jan/#todate--date): ✅
+    *   [toDate()](https://hl7.org/fhirpath/2025Jan/#todate--date): 🟡 (Basic conversion; optional `format` parameter not yet supported)
     *   [convertsToDate()](https://hl7.org/fhirpath/2025Jan/#convertstodate--boolean): ✅
-    *   [toDateTime()](https://hl7.org/fhirpath/2025Jan/#todatetime--datetime): ✅
+    *   [toDateTime()](https://hl7.org/fhirpath/2025Jan/#todatetime--datetime): 🟡 (Basic conversion; optional `format` parameter not yet supported)
     *   [convertsToDateTime()](https://hl7.org/fhirpath/2025Jan/#convertstodatetime--boolean): ✅
     *   [toDecimal()](https://hl7.org/fhirpath/2025Jan/#todecimal--decimal): ✅
     *   [convertsToDecimal()](https://hl7.org/fhirpath/2025Jan/#convertstodecimal--boolean): ✅
     *   [toQuantity()](https://hl7.org/fhirpath/2025Jan/#toquantityunit--string--quantity): 🟡 (Basic types, no unit conversion)
     *   [convertsToQuantity()](https://hl7.org/fhirpath/2025Jan/#convertstoquantityunit--string--boolean): 🟡 (Basic types, no unit conversion)
-    *   [toString()](https://hl7.org/fhirpath/2025Jan/#tostring--string): ✅
+    *   [toString()](https://hl7.org/fhirpath/2025Jan/#tostring--string): 🟡 (Basic conversion; optional `format` parameter not yet supported)
     *   [convertsToString()](https://hl7.org/fhirpath/2025Jan/#convertstostring--string): ✅
     *   [toTime()](https://hl7.org/fhirpath/2025Jan/#totime--time): ✅
     *   [convertsToTime()](https://hl7.org/fhirpath/2025Jan/#convertstotime--boolean): ✅
+*   [Date Conversion Functions](https://hl7.org/fhirpath/2025Jan/#date-conversion-functions) (STU)
+    *   Date/DateTime/Time string format codes (`yyyy`, `MM`, `dd`, etc.): ❌ Not Implemented
 *   [String Manipulation](https://hl7.org/fhirpath/2025Jan/#string-manipulation)
     *   [indexOf()](https://hl7.org/fhirpath/2025Jan/#indexofsubstring--string--integer): ✅
     *   [lastIndexOf()](https://hl7.org/fhirpath/2025Jan/#lastindexofsubstring--string--integer) (STU): ✅
@@ -373,7 +375,10 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [highBoundary()](https://hl7.org/fhirpath/2025Jan/#highboundaryprecision-integer-decimal--date--datetime--time) (STU): ✅ (Full support for Decimal, Date, DateTime, and Time)
     *   [precision()](https://hl7.org/fhirpath/2025Jan/#precision--integer) (STU): ✅ (See [limitation for decimal trailing zeros](PRECISION_LIMITATION.md))
 *   [Date/DateTime/Time Component Extraction](https://hl7.org/fhirpath/2025Jan/#extract-datedatetimetime-components) (STU): ✅ (All component functions implemented: yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf)
-    
+*   [Date and Time Interval Functions](https://hl7.org/fhirpath/2025Jan/#date-and-time-interval-functions) (STU)
+    *   [duration()](https://hl7.org/fhirpath/2025Jan/#durationvalue-date--datetime--time-precision-identifier-integer): ❌ Not Implemented
+    *   [difference()](https://hl7.org/fhirpath/2025Jan/#differencevalue-date--datetime--time-precision-identifier-integer): ❌ Not Implemented
+
 ### [Operations](https://hl7.org/fhirpath/2025Jan/#operations)
     
 *   [Equality](https://hl7.org/fhirpath/2025Jan/#equality)
@@ -409,8 +414,13 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [`mod` (Modulo)](https://hl7.org/fhirpath/2025Jan/#mod): ✅ (Numeric)
     *   [`&` (String Concatenation)](https://hl7.org/fhirpath/2025Jan/#-string-concatenation): ✅
 *   [Date/Time Arithmetic](https://hl7.org/fhirpath/2025Jan/#datetime-arithmetic): ✅ (Full arithmetic support with timezone and precision handling)
+*   [Unary Operators (`+` and `-`)](https://hl7.org/fhirpath/2025Jan/#unary-operators--and--): ✅
 *   [Operator Precedence](https://hl7.org/fhirpath/2025Jan/#operator-precedence): ✅
     
+### [Instance Selector](https://hl7.org/fhirpath/2025Jan/#instance-selector) (STU)
+
+*   Object creation syntax (`typename { element : value, ... }`): ❌ Not Implemented
+
 ### [Aggregates](https://hl7.org/fhirpath/2025Jan/#aggregates)
 
 *   [aggregate()](https://hl7.org/fhirpath/2025Jan/#aggregateaggregator--expression--init--value--value) (STU): ✅ (Full accumulator support)
