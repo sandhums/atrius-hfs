@@ -43,6 +43,7 @@
 
 use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
 use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult, TypeInfoResult};
+
 #[cfg(feature = "xml")]
 use helios_serde_support::SingleOrVec;
 
@@ -2098,6 +2099,20 @@ impl<V, E> Element<V, E> {
     }
 }
 
+// New Code :
+impl<E> Element<String, E> {
+    #[inline]
+    pub fn as_str(&self) -> Option<&str> {
+        self.value.as_deref()
+    }
+}
+
+impl<V, E> Element<V, E> {
+    #[inline]
+    pub fn value_ref(&self) -> Option<&V> {
+        self.value.as_ref()
+    }
+}
 // Custom Deserialize for Element<V, E>
 // Remove PartialEq/Eq bounds for V and E as they are not needed for deserialization itself
 impl<'de, V, E> Deserialize<'de> for Element<V, E>
@@ -2776,55 +2791,17 @@ where
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
         use std::any::TypeId;
-
-        // Prioritize returning the primitive value if it exists
-        if let Some(v) = &self.value {
-            let result = v.to_evaluation_result();
-            // For primitive values, we need to preserve FHIR type information
-            return match result {
-                EvaluationResult::Boolean(b, _) => {
-                    // Return FHIR boolean
-                    EvaluationResult::fhir_boolean(b)
-                }
-                EvaluationResult::Integer(i, _) => {
-                    // Return FHIR integer
-                    EvaluationResult::fhir_integer(i)
-                }
-                #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                EvaluationResult::Integer64(i, _) => {
-                    // Return FHIR integer64 (R5 and above)
-                    EvaluationResult::fhir_integer64(i)
-                }
-                EvaluationResult::String(s, _) => {
-                    // Determine the FHIR type name based on V's type
-                    let fhir_type_name = if TypeId::of::<V>() == TypeId::of::<String>() {
-                        // For strings, we need more context to determine the exact FHIR type
-                        // Default to "string" but this could be date, dateTime, etc.
-                        "string"
-                    } else {
-                        // Default fallback
-                        "string"
-                    };
-                    EvaluationResult::fhir_string(s, fhir_type_name)
-                }
-                EvaluationResult::DateTime(dt, type_info) => {
-                    // Check if V is PrecisionInstant - if so, this is an instant
-                    if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
-                        // Return as FHIR instant
-                        EvaluationResult::DateTime(dt, Some(TypeInfoResult::new("FHIR", "instant")))
-                    } else {
-                        // Preserve original type info for PrecisionDateTime
-                        EvaluationResult::DateTime(dt, type_info)
-                    }
-                }
-                _ => result, // For other types, return as-is
-            };
-        } else if self.id.is_some() || self.extension.is_some() {
-            // If value is None, but id or extension exist, return an Object with those
+         // New Code:
+        // If this Element carries `id` and/or `extension`, we must return an object-shaped result
+        // so FHIRPath can access `.id` / `.extension` on primitives (FHIR logical model).
+        // This is especially important when `value` is present *and* extensions exist.
+        if self.id.is_some() || self.extension.is_some() {
             let mut map = std::collections::HashMap::new();
+
             if let Some(id) = &self.id {
                 map.insert("id".to_string(), EvaluationResult::string(id.clone()));
             }
+
             if let Some(ext) = &self.extension {
                 let ext_collection: Vec<EvaluationResult> =
                     ext.iter().map(|e| e.to_evaluation_result()).collect();
@@ -2835,10 +2812,84 @@ where
                     );
                 }
             }
-            // Only return Object if map is not empty (i.e., id or extension was actually present)
+
+            // If a primitive value exists, include it as the `value` property.
+            // We keep the existing FHIR-typed scalar mapping so downstream comparisons still work.
+            if let Some(v) = &self.value {
+                let result = v.to_evaluation_result();
+
+                let typed_value = match result {
+                    EvaluationResult::Boolean(b, _) => EvaluationResult::fhir_boolean(b),
+                    EvaluationResult::Integer(i, _) => EvaluationResult::fhir_integer(i),
+                    #[cfg(not(any(feature = "R4", feature = "R4B")))]
+                    EvaluationResult::Integer64(i, _) => EvaluationResult::fhir_integer64(i),
+                    EvaluationResult::String(s, _) => {
+                        // NOTE:
+                        // For Atrius type aliases like `Canonical = Element<String, Extension>`,
+                        // V is `String` for many distinct FHIR primitives. We cannot infer whether
+                        // it is `canonical`, `uri`, `code`, etc. from `TypeId`.
+                        // We default to "string" here; callers (e.g., derive macro) can override
+                        // the typed-object name when they have the field-level primitive type.
+                        let fhir_type_name = if TypeId::of::<V>() == TypeId::of::<String>() {
+                            "string"
+                        } else {
+                            "string"
+                        };
+                        EvaluationResult::fhir_string(s, fhir_type_name)
+                    }
+                    EvaluationResult::DateTime(dt, type_info) => {
+                        if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
+                            EvaluationResult::DateTime(
+                                dt,
+                                Some(TypeInfoResult::new("FHIR", "instant")),
+                            )
+                        } else {
+                            EvaluationResult::DateTime(dt, type_info)
+                        }
+                    }
+                    other => other,
+                };
+
+                if typed_value != EvaluationResult::Empty {
+                    map.insert("value".to_string(), typed_value);
+                }
+            }
+
+            // Only return Object if map is not empty (i.e., id/extension/value produced something)
             if !map.is_empty() {
+                // NOTE: We type this as "FHIR.Element" for now. Field-level typing can be applied
+                // by the derive macro when the specific FHIR primitive type name is known.
                 return EvaluationResult::typed_object(map, "FHIR", "Element");
             }
+
+            return EvaluationResult::Empty;
+        }
+
+        // No id/extension: behave like a simple primitive for most FHIRPath operations.
+        if let Some(v) = &self.value {
+            let result = v.to_evaluation_result();
+            return match result {
+                EvaluationResult::Boolean(b, _) => EvaluationResult::fhir_boolean(b),
+                EvaluationResult::Integer(i, _) => EvaluationResult::fhir_integer(i),
+                #[cfg(not(any(feature = "R4", feature = "R4B")))]
+                EvaluationResult::Integer64(i, _) => EvaluationResult::fhir_integer64(i),
+                EvaluationResult::String(s, _) => {
+                    let fhir_type_name = if TypeId::of::<V>() == TypeId::of::<String>() {
+                        "string"
+                    } else {
+                        "string"
+                    };
+                    EvaluationResult::fhir_string(s, fhir_type_name)
+                }
+                EvaluationResult::DateTime(dt, type_info) => {
+                    if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
+                        EvaluationResult::DateTime(dt, Some(TypeInfoResult::new("FHIR", "instant")))
+                    } else {
+                        EvaluationResult::DateTime(dt, type_info)
+                    }
+                }
+                other => other,
+            };
         }
 
         // If value, id, and extension are all None, return Empty

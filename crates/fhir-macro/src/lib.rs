@@ -2857,21 +2857,34 @@ fn generate_fhirpath_struct_impl(
                     if let Some(inner_value) = &self.#field_name_ident {
                         // Handle FHIR primitive types with proper type preservation
                         let mut field_result = inner_value.to_evaluation_result();
-                        // Override type information for string-based FHIR primitive types
+                        // Override type information for FHIR primitive types, including object-shaped primitives
                         field_result = match field_result {
                             helios_fhirpath_support::EvaluationResult::String(s, _) => {
                                 helios_fhirpath_support::EvaluationResult::fhir_string(s, #type_name)
-                            },
+                            }
                             helios_fhirpath_support::EvaluationResult::Boolean(b, _) => {
                                 helios_fhirpath_support::EvaluationResult::fhir_boolean(b)
-                            },
+                            }
                             helios_fhirpath_support::EvaluationResult::Integer(i, _) => {
                                 helios_fhirpath_support::EvaluationResult::fhir_integer(i)
-                            },
+                            }
                             helios_fhirpath_support::EvaluationResult::Decimal(d, _) => {
                                 helios_fhirpath_support::EvaluationResult::fhir_decimal(d)
-                            },
-                            _ => field_result,
+                            }
+                            helios_fhirpath_support::EvaluationResult::Object { map, type_info: existing } => {
+                                // IMPORTANT:
+                                // Atrius primitives are often `type X = Element<String, Extension>`.
+                                // When `id`/`extension` are present, `Element::to_evaluation_result()` returns an object
+                                // (so `.extension` works in FHIRPath). We still must stamp the *FHIR primitive type*
+                                // on the node so `is(FHIR.xxx)` / `ofType(FHIR.xxx)` can work.
+                                let type_info = existing
+                                    .unwrap_or_else(|| helios_fhirpath_support::TypeInfoResult::new("FHIR", #type_name));
+                                helios_fhirpath_support::EvaluationResult::Object {
+                                    map,
+                                    type_info: Some(type_info),
+                                }
+                            }
+                            other => other,
                         };
                         // Only insert if the inner evaluation is not Empty
                         if field_result != helios_fhirpath_support::EvaluationResult::Empty {
@@ -2899,21 +2912,29 @@ fn generate_fhirpath_struct_impl(
                 quote! {
                     // Handle FHIR primitive types with proper type preservation
                     let mut field_result = self.#field_name_ident.to_evaluation_result();
-                    // Override type information for FHIR primitive types
+                    // Override type information for FHIR primitive types, including object-shaped primitives
                     field_result = match field_result {
                         helios_fhirpath_support::EvaluationResult::String(s, _) => {
                             helios_fhirpath_support::EvaluationResult::fhir_string(s, #type_name)
-                        },
+                        }
                         helios_fhirpath_support::EvaluationResult::Boolean(b, _) => {
                             helios_fhirpath_support::EvaluationResult::fhir_boolean(b)
-                        },
+                        }
                         helios_fhirpath_support::EvaluationResult::Integer(i, _) => {
                             helios_fhirpath_support::EvaluationResult::fhir_integer(i)
-                        },
+                        }
                         helios_fhirpath_support::EvaluationResult::Decimal(d, _) => {
                             helios_fhirpath_support::EvaluationResult::fhir_decimal(d)
-                        },
-                        _ => field_result,
+                        }
+                        helios_fhirpath_support::EvaluationResult::Object { map, type_info: existing } => {
+                            let type_info = existing
+                                .unwrap_or_else(|| helios_fhirpath_support::TypeInfoResult::new("FHIR", #type_name));
+                            helios_fhirpath_support::EvaluationResult::Object {
+                                map,
+                                type_info: Some(type_info),
+                            }
+                        }
+                        other => other,
                     };
                     // Only insert if the evaluation is not Empty
                     if field_result != helios_fhirpath_support::EvaluationResult::Empty {

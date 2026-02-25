@@ -1992,8 +1992,42 @@ fn evaluate_invocation(
             match invocation_base {
                 EvaluationResult::Object {
                     map: obj,
-                    type_info: _,
+                    type_info,
                 } => {
+                    // --- FHIR primitive wrapper handling (Option B) ---
+                    // When a FHIR primitive is represented as an Element-shaped object,
+                    // allow access to `id`, `extension`, and the implicit primitive `value`.
+                    // This keeps `Patient.active.id` / `.extension` working while other
+                    // operations can use `primitive_system_value(..)` when they need the
+                    // System.* view.
+                    let is_fhir_element_object = type_info
+                        .as_ref()
+                        .is_some_and(|ti| ti.namespace.eq_ignore_ascii_case("FHIR") && ti.name == "Element");
+
+                    if is_fhir_element_object {
+                        match name.as_str() {
+                            // Expose id/extension directly from the wrapper
+                            "id" | "extension" => {
+                                if let Some(v) = obj.get(name.as_str()) {
+                                    return Ok(v.clone());
+                                }
+                                return Ok(EvaluationResult::Empty);
+                            }
+                            // Expose the implicit primitive value
+                            "value" => {
+                                if let Some(v) = obj.get("value") {
+                                    return Ok(v.clone());
+                                }
+                                // Fallback: derive the System view if the wrapper doesn't carry `value`
+                                return Ok(crate::primitive_system_value(invocation_base).clone());
+                            }
+                            _ => {
+                                // Other properties are not defined on the Element wrapper here.
+                                // (Functions like getValue() are handled as function invocations.)
+                            }
+                        }
+                    }
+
                     // In strict mode, check if this is a typed polymorphic field access
                     if context.is_strict_mode {
                         // Check if this field exists directly in the object
@@ -2075,7 +2109,7 @@ fn evaluate_invocation(
                         }
                     }
 
-                    if name == "id" || name == "extension" {
+                    if name == "id" || name == "extension" || name == "value" {
                         Ok(normalize_collection_result(results, result_is_unordered))
                     } else {
                         let mut combined_results_for_flattening = Vec::new();
@@ -7618,6 +7652,22 @@ fn apply_type_operation(
         _ => value,
     };
 
+    // --- FHIR primitive handling (Option B: Element-shaped wrapper) ---
+    // For `is`/`as`, FHIRPath spec says FHIR primitives do NOT auto-convert to System.* types.
+    // (Auto-conversion is allowed for general expression evaluation and for `ofType`.)
+    let prim_view = crate::fhir_primitive_view(actual_value);
+
+    if (op == "is" || op == "as")
+        && prim_view.is_fhir_primitive
+        && crate::type_spec_is_system(type_spec)
+    {
+        return match op {
+            "is" => Ok(EvaluationResult::boolean(false)),
+            "as" => Ok(EvaluationResult::Empty),
+            _ => unreachable!(),
+        };
+    }
+
     // Determine if the type_spec refers to a non-System FHIR type
     let (is_fhir_type_for_poly, type_name_for_poly, namespace_for_poly_opt) = match type_spec {
         TypeSpecifier::QualifiedIdentifier(namespace, Some(type_name)) => {
@@ -7691,14 +7741,22 @@ fn apply_type_operation(
             if actual_value == &EvaluationResult::Empty {
                 return Ok(EvaluationResult::Empty);
             }
+
+            // For general type checks, auto-convert FHIR primitives to their System value view.
+            // NOTE: The `is/as` + System.* exception is handled earlier.
+            let v = crate::primitive_system_value(actual_value);
+
             let is_result =
-                crate::resource_type::is_of_type_with_context(actual_value, type_spec, context)?;
+                crate::resource_type::is_of_type_with_context(v, type_spec, context)?;
             Ok(EvaluationResult::boolean(is_result))
         }
         "as" => {
             // This path is for System types.
+            // NOTE: The `is/as` + System.* exception for FHIR primitives is handled earlier.
+            let v = crate::primitive_system_value(actual_value);
+
             let cast_result =
-                crate::resource_type::as_type_with_context(actual_value, type_spec, context)?;
+                crate::resource_type::as_type_with_context(v, type_spec, context)?;
             if context.is_strict_mode
                 && actual_value != &EvaluationResult::Empty
                 && cast_result == EvaluationResult::Empty

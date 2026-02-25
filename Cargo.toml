@@ -17,6 +17,7 @@ default-members = [
 	"crates/persistence",
 	"crates/rest",
 	"crates/sof",
+	"crates/fhir-valueset-gen"
 ]
 resolver = "2"
 
@@ -24,7 +25,10 @@ resolver = "2"
 version = "0.1.41"
 edition = "2024"
 license = "MIT"
-authors = ["Helios Software"]
+authors = [
+	"Atrius Software",
+	"Original Author Helios Software"
+]
 repository = "https://github.com/HeliosSoftware/hfs"
 rust-version = "1.90"
 

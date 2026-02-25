@@ -2952,8 +2952,8 @@ mod tests {
         // Test processing R4 version
         assert!(process_fhir_version(Some(FhirVersion::R4), &temp_dir).is_ok());
 
-        // Verify files were created
-        assert!(temp_dir.join("r4.rs").exists());
+        // New Code r4.rs to this Verify files were created
+        assert!(temp_dir.join("r4/mod.rs").exists());
 
         // Clean up
         std::fs::remove_dir_all(&temp_dir).expect("Failed to clean up temp directory");

@@ -3879,16 +3879,41 @@ fn test_resource_simple_field_access() {
         eval("id", &context).unwrap(), // Add unwrap
         EvaluationResult::string("p1".to_string())
     );
-    // Accessing 'active' should now return the primitive boolean directly
-    assert_eq!(
-        eval("active", &context).unwrap(),
-        EvaluationResult::boolean(true)
-    ); // Add unwrap
-    // Accessing 'birthDate' should now return the primitive date directly
-    assert_eq!(
-        eval("birthDate", &context).unwrap(), // Add unwrap
-        EvaluationResult::date("1980-05-15".to_string())
+    // Accessing 'active' returns an Element-shaped Object when id/extension are present
+    let active_res = eval("active", &context).unwrap();
+    assert!(matches!(active_res, EvaluationResult::Object { .. }), "Expected Object for active, got {:?}", active_res);
+    if let EvaluationResult::Object { map, .. } = active_res {
+        assert_eq!(map.get("id"), Some(&EvaluationResult::string("active-id".to_string())));
+        // value is stored as a FHIR boolean
+        assert_eq!(
+            map.get("value"),
+            Some(&EvaluationResult::fhir_boolean(true))
+        );
+    }
+    // Accessing 'birthDate' returns an Element-shaped Object because id/extension are present
+    let birthdate_res = eval("birthDate", &context).unwrap();
+    assert!(
+        matches!(birthdate_res, EvaluationResult::Object { .. }),
+        "Expected Object for birthDate, got {:?}",
+        birthdate_res
     );
+    if let EvaluationResult::Object { map, .. } = birthdate_res {
+        assert_eq!(
+            map.get("id"),
+            Some(&EvaluationResult::string("birthdate-id".to_string()))
+        );
+        assert_eq!(
+            map.get("value"),
+            Some(&EvaluationResult::date("1980-05-15".to_string()))
+        );
+        // Basic extension presence check
+        let ext = map.get("extension");
+        assert!(
+            matches!(ext, Some(EvaluationResult::Collection { .. })),
+            "Expected extension to be a Collection, got {:?}",
+            ext
+        );
+    }
     let context_result = eval("%context", &context).unwrap(); // Add unwrap
     if let EvaluationResult::Object {
         map: patient_obj, ..
@@ -3944,13 +3969,20 @@ fn test_resource_nested_field_access() {
         assert!(items.contains(&EvaluationResult::string("Smith".to_string())));
     }
 
-    // Accessing 'name.given' should return a collection of primitive strings
+    // Accessing 'name.given' should return a collection of primitive strings or Element-shaped Objects (for primitives with id/extension)
     let name_given = eval("name.given", &context).unwrap(); // Add unwrap
     assert!(matches!(name_given, EvaluationResult::Collection { .. }));
     if let EvaluationResult::Collection { items, .. } = name_given {
         assert_eq!(items.len(), 4); // John, Middle, Johnny, Jane
         assert!(items.contains(&EvaluationResult::string("John".to_string())));
-        assert!(items.contains(&EvaluationResult::string("Middle".to_string()))); // Now a primitive string
+        // The "Middle" item has an id, so it evaluates to an Element-shaped Object
+        assert!(items.iter().any(|it| match it {
+            EvaluationResult::Object { map, .. } => {
+                map.get("id") == Some(&EvaluationResult::string("given2-id".to_string()))
+                    && map.get("value") == Some(&EvaluationResult::fhir_string("Middle".to_string(), "string"))
+            }
+            _ => false,
+        }), "Expected an Element-shaped Object for given[1] (Middle), got {:?}", items);
         assert!(items.contains(&EvaluationResult::string("Johnny".to_string())));
         assert!(items.contains(&EvaluationResult::string("Jane".to_string())));
     }
@@ -4060,19 +4092,19 @@ fn test_resource_filtering_and_projection() {
     );
     assert!(official_details_result.is_err()); // Expect error
 
-    // Select on a non-list field (acts on the single item) - birthDate is now primitive
+    // Select on a non-list field (acts on the single item) - birthDate is now an Element-shaped Object, toString() gives "[object]"
     assert_eq!(
-        eval("birthDate.select($this.toString())", &context).unwrap(), // Add unwrap
-        EvaluationResult::string("1980-05-15".to_string())
+        eval("birthDate.select($this.toString())", &context).unwrap(),
+        EvaluationResult::string("[object]".to_string())
     );
 
     // Where on root context - 'active' is now primitive
     assert_eq!(
-        eval("%context.where(active = true).id", &context).unwrap(), // Add unwrap
+        eval("%context.where(active.value = true).id", &context).unwrap(), // Add unwrap
         EvaluationResult::string("p1".to_string())
     );
     assert_eq!(
-        eval("%context.where(active = false).id", &context).unwrap(), // Add unwrap
+        eval("%context.where(active.value = false).id", &context).unwrap(), // Add unwrap
         EvaluationResult::Empty
     );
 }
