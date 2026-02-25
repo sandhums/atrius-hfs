@@ -179,6 +179,7 @@ pub fn infer_expression_type(expr: &Expression, context: &TypeContext) -> Option
             // Lambda returns the type of its body expression
             infer_expression_type(expr, context)
         }
+        Expression::InstanceSelector(type_name, _fields) => Some(InferredType::fhir(type_name)),
     }
 }
 

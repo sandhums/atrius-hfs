@@ -5542,3 +5542,362 @@ fn test_quantity_implicit_conversion_operations() {
         EvaluationResult::boolean(true)
     );
 }
+
+// =============================================================================
+// Phase 1: Aggregate Functions — sum(), min(), max(), avg()
+// =============================================================================
+
+#[test]
+fn test_sum_integers() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1 | 2 | 3).sum()", &context).unwrap(),
+        EvaluationResult::integer(6)
+    );
+}
+
+#[test]
+fn test_sum_decimals() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1.5 | 2.5).sum()", &context).unwrap(),
+        EvaluationResult::decimal(dec!(4.0))
+    );
+}
+
+#[test]
+fn test_sum_empty() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("{}.sum()", &context).unwrap(),
+        EvaluationResult::integer(0)
+    );
+}
+
+#[test]
+fn test_sum_single() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(42).sum()", &context).unwrap(),
+        EvaluationResult::integer(42)
+    );
+}
+
+#[test]
+fn test_min_integers() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(3 | 1 | 2).min()", &context).unwrap(),
+        EvaluationResult::integer(1)
+    );
+}
+
+#[test]
+fn test_min_empty() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(eval("{}.min()", &context).unwrap(), EvaluationResult::Empty);
+}
+
+#[test]
+fn test_max_integers() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1 | 3 | 2).max()", &context).unwrap(),
+        EvaluationResult::integer(3)
+    );
+}
+
+#[test]
+fn test_max_empty() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(eval("{}.max()", &context).unwrap(), EvaluationResult::Empty);
+}
+
+#[test]
+fn test_avg_integers() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1 | 2 | 3).avg()", &context).unwrap(),
+        EvaluationResult::decimal(dec!(2))
+    );
+}
+
+#[test]
+fn test_avg_decimals() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1.5 | 2.5).avg()", &context).unwrap(),
+        EvaluationResult::decimal(dec!(2.0))
+    );
+}
+
+#[test]
+fn test_avg_empty() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(eval("{}.avg()", &context).unwrap(), EvaluationResult::Empty);
+}
+
+// =============================================================================
+// Phase 2: Regex Flags — matches(), matchesFull(), replaceMatches()
+// =============================================================================
+
+#[test]
+fn test_matches_case_insensitive() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'HELLO'.matches('hello', 'i')", &context).unwrap(),
+        EvaluationResult::boolean(true)
+    );
+}
+
+#[test]
+fn test_matches_multiline() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'line1\\nline2'.matches('^line2$', 'm')", &context).unwrap(),
+        EvaluationResult::boolean(true)
+    );
+}
+
+#[test]
+fn test_matches_no_flags_backward_compat() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    // Without flags, dot_matches_new_line should still be on (backward compat)
+    assert_eq!(
+        eval("'hello\\nworld'.matches('hello.world')", &context).unwrap(),
+        EvaluationResult::boolean(true)
+    );
+}
+
+#[test]
+fn test_matches_full_case_insensitive() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'HELLO'.matchesFull('hello', 'i')", &context).unwrap(),
+        EvaluationResult::boolean(true)
+    );
+}
+
+#[test]
+fn test_replace_matches_case_insensitive() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'ABC'.replaceMatches('[a-z]+', 'x', 'i')", &context).unwrap(),
+        EvaluationResult::string("x".to_string())
+    );
+}
+
+// =============================================================================
+// Phase 3: coalesce() Function
+// =============================================================================
+
+#[test]
+fn test_coalesce_non_empty_base() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("(1).coalesce(2)", &context).unwrap(),
+        EvaluationResult::integer(1)
+    );
+}
+
+#[test]
+fn test_coalesce_empty_base() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("{}.coalesce(2)", &context).unwrap(),
+        EvaluationResult::integer(2)
+    );
+}
+
+#[test]
+fn test_coalesce_all_empty() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("{}.coalesce({})", &context).unwrap(),
+        EvaluationResult::Empty
+    );
+}
+
+#[test]
+fn test_coalesce_multiple_args() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("{}.coalesce({}, 3)", &context).unwrap(),
+        EvaluationResult::integer(3)
+    );
+}
+
+// =============================================================================
+// Phase 4: combine() preserveOrder parameter
+// =============================================================================
+
+#[test]
+fn test_combine_preserve_order() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    let result = eval("(1 | 2).combine(3 | 4, true)", &context).unwrap();
+    // With preserveOrder=true, result should NOT have undefined order
+    match result {
+        EvaluationResult::Collection {
+            has_undefined_order,
+            ..
+        } => {
+            assert!(!has_undefined_order);
+        }
+        _ => panic!("Expected collection result"),
+    }
+}
+
+#[test]
+fn test_combine_default_unordered() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    let result = eval("(1 | 2).combine(3 | 4)", &context).unwrap();
+    match result {
+        EvaluationResult::Collection {
+            has_undefined_order,
+            ..
+        } => {
+            assert!(has_undefined_order);
+        }
+        _ => panic!("Expected collection result"),
+    }
+}
+
+// =============================================================================
+// Phase 6: duration() and difference() Functions
+// =============================================================================
+
+#[test]
+fn test_duration_days() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-02.duration(@2025-01-07, 'day')", &context).unwrap(),
+        EvaluationResult::integer(5)
+    );
+}
+
+#[test]
+fn test_duration_weeks_zero() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    // 5 days is 0 complete weeks
+    assert_eq!(
+        eval("@2025-01-02.duration(@2025-01-07, 'week')", &context).unwrap(),
+        EvaluationResult::integer(0)
+    );
+}
+
+#[test]
+fn test_duration_year_partial() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-01.duration(@2025-09-01, 'year')", &context).unwrap(),
+        EvaluationResult::integer(0)
+    );
+}
+
+#[test]
+fn test_duration_year_dec_to_sep() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2024-12-01.duration(@2025-09-01, 'year')", &context).unwrap(),
+        EvaluationResult::integer(0)
+    );
+}
+
+#[test]
+fn test_difference_week_boundary() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    // Jan 2 (Thu) to Jan 7 (Tue) - crosses 1 Sunday boundary (Jan 5)
+    assert_eq!(
+        eval("@2025-01-02.difference(@2025-01-07, 'week')", &context).unwrap(),
+        EvaluationResult::integer(1)
+    );
+}
+
+#[test]
+fn test_difference_year_same_year() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-01.difference(@2025-09-01, 'year')", &context).unwrap(),
+        EvaluationResult::integer(0)
+    );
+}
+
+#[test]
+fn test_difference_year_cross() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2024-12-01.difference(@2025-09-01, 'year')", &context).unwrap(),
+        EvaluationResult::integer(1)
+    );
+}
+
+#[test]
+fn test_duration_negative() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-10.duration(@2025-01-05, 'day')", &context).unwrap(),
+        EvaluationResult::integer(-5)
+    );
+}
+
+// =============================================================================
+// Phase 7: Format Codes for toDate(), toDateTime(), toString()
+// =============================================================================
+
+#[test]
+fn test_to_string_date_format() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-15.toString('yyyy')", &context).unwrap(),
+        EvaluationResult::string("2025".to_string())
+    );
+}
+
+#[test]
+fn test_to_string_date_full_format() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("@2025-01-15.toString('MM/dd/yyyy')", &context).unwrap(),
+        EvaluationResult::string("01/15/2025".to_string())
+    );
+}
+
+#[test]
+fn test_to_string_no_format_unchanged() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'hello'.toString()", &context).unwrap(),
+        EvaluationResult::string("hello".to_string())
+    );
+}
+
+#[test]
+fn test_to_date_with_format() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    assert_eq!(
+        eval("'01/15/2025'.toDate('MM/dd/yyyy')", &context).unwrap(),
+        EvaluationResult::date("2025-01-15".to_string())
+    );
+}
+
+// =============================================================================
+// Phase 8: Instance Selector
+// =============================================================================
+
+#[test]
+fn test_instance_selector_basic() {
+    let context = EvaluationContext::new_empty_with_default_version();
+    let result = eval("Quantity { value: 5, unit: 'mg' }", &context).unwrap();
+    match result {
+        EvaluationResult::Object { map, type_info } => {
+            assert_eq!(map.get("value"), Some(&EvaluationResult::integer(5)));
+            assert_eq!(
+                map.get("unit"),
+                Some(&EvaluationResult::string("mg".to_string()))
+            );
+            assert!(type_info.is_some());
+            assert_eq!(type_info.unwrap().name, "Quantity");
+        }
+        _ => panic!("Expected Object result"),
+    }
+}

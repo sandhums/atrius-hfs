@@ -171,5 +171,6 @@ fn expression_debug_name(expr: &Expression) -> String {
         Expression::Or(_, op, _) => op.clone(),
         Expression::Implies(_, _) => "implies".to_string(),
         Expression::Lambda(_, _) => "=>".to_string(),
+        Expression::InstanceSelector(type_name, _) => format!("{} {{...}}", type_name),
     }
 }
