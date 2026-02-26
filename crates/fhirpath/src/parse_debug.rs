@@ -153,6 +153,22 @@ fn expression_to_debug_tree_inner(expr: &Expression, context: &TypeContext) -> V
             }
             node
         }
+        Expression::InstanceSelector(type_name, fields) => {
+            let field_nodes: Vec<Value> = fields
+                .iter()
+                .map(|(name, expr)| {
+                    json!({
+                        "FieldName": name,
+                        "Value": expression_to_debug_tree_inner(expr, context)
+                    })
+                })
+                .collect();
+            json!({
+                "ExpressionType": "InstanceSelector",
+                "TypeName": type_name,
+                "Fields": field_nodes
+            })
+        }
     };
 
     // Add return type if available
@@ -489,6 +505,23 @@ fn spanned_expression_to_debug_tree_inner(
             }
             node
         }
+
+        SpannedExprKind::InstanceSelector(type_name, fields) => {
+            let field_nodes: Vec<Value> = fields
+                .iter()
+                .map(|(name, expr_inner)| {
+                    json!({
+                        "FieldName": name,
+                        "Value": spanned_expression_to_debug_tree_inner(expr_inner, context)
+                    })
+                })
+                .collect();
+            json!({
+                "ExpressionType": "InstanceSelector",
+                "TypeName": type_name,
+                "Fields": field_nodes
+            })
+        }
     };
 
     // Add Position and Length from the span
@@ -693,6 +726,14 @@ fn generate_parse_debug_inner(expr: &Expression, output: &mut String, indent: us
                 output.push_str(&format!("{}=>\n", indent_str));
             }
             generate_parse_debug_inner(expr, output, indent + 1);
+        }
+        Expression::InstanceSelector(type_name, fields) => {
+            output.push_str(&format!("{}{} {{\n", indent_str, type_name));
+            for (name, expr) in fields {
+                output.push_str(&format!("{}  {}: ", indent_str, name));
+                generate_parse_debug_inner(expr, output, indent + 2);
+            }
+            output.push_str(&format!("{}}}\n", indent_str));
         }
     }
 }
