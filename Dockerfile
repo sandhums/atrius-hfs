@@ -24,8 +24,13 @@ RUN chmod +x /app/${BINARY_NAME}
 # Persist BINARY_NAME for the entrypoint
 ENV BINARY_NAME=${BINARY_NAME}
 
+# Create writable data directory for SQLite and other persistent data
+RUN mkdir -p /data && chown hfs:hfs /data
+VOLUME /data
+
 # Default host binding for all servers (each binary reads only its own env var)
 ENV HFS_SERVER_HOST=0.0.0.0
+ENV HFS_DATABASE_URL=:memory:
 ENV SOF_SERVER_HOST=0.0.0.0
 ENV FHIRPATH_SERVER_HOST=0.0.0.0
 

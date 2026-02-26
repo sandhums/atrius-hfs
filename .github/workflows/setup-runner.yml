@@ -35,7 +35,9 @@ jobs:
           echo 'void _start(void) { for(;;); }' > /tmp/test_lld.c
           aarch64-unknown-linux-gnu-gcc -nostdlib -fuse-ld=lld -o /tmp/test_lld /tmp/test_lld.c && echo "SUCCESS: GCC + LLD cross-link works" || echo "FAIL: GCC + LLD cross-link failed"
           rm -f /tmp/test_lld /tmp/test_lld.c
-          echo ""
+
+      - name: Print runner environment
+        run: |
           echo "=== Runner environment ==="
           echo "PATH: $PATH"
           echo "Homebrew prefix: $(brew --prefix)"
