@@ -262,12 +262,15 @@
 
 // Internal modules - not part of the public API
 mod aggregate_function;
+mod aggregate_math_functions;
 mod boolean_functions;
 mod boundary_functions;
 mod collection_functions;
 mod collection_navigation;
 mod contains_function;
 mod conversion_functions;
+mod format_functions;
+mod interval_functions;
 mod json_utils;
 mod ucum;
 // Public for internal testing only - not part of the public API
@@ -282,6 +285,7 @@ mod long_conversion;
 mod not_function;
 mod polymorphic_access;
 mod reference_key_functions;
+mod repeat_all_function;
 mod repeat_function;
 mod resource_type;
 mod set_operations;

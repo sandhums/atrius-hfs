@@ -17,8 +17,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = ">=0.27", features = ["extension-module", "generate-import-lib"] }
-helios-sof = { path = "../sof", version = "0.1.41" }
-helios-fhir = { path = "../fhir", version = "0.1.41" }
+helios-sof = { path = "../sof", version = "0.1.45" }
+helios-fhir = { path = "../fhir", version = "0.1.45" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
@@ -31,6 +31,10 @@ R4 = ["helios-sof/R4", "helios-fhir/R4"]
 R4B = ["helios-sof/R4B", "helios-fhir/R4B"]
 R5 = ["helios-sof/R5", "helios-fhir/R5"]
 R6 = ["helios-sof/R6", "helios-fhir/R6"]
+
+# Vendor OpenSSL when cross-compiling for Linux ARM64
+[target.'cfg(all(target_arch = "aarch64", target_os = "linux"))'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
 
 [build-dependencies]
 pyo3-build-config = "0.27"

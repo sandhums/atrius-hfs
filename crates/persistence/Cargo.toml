@@ -34,9 +34,9 @@ R6 = ["helios-fhir/R6"]
 
 [dependencies]
 # Core dependencies (always included)
-helios-fhir = { path = "../fhir", version = "0.1.41" }
-helios-fhirpath = { path = "../fhirpath", version = "0.1.41" }
-helios-fhirpath-support = { path = "../fhirpath-support", version = "0.1.41" }
+helios-fhir = { path = "../fhir", version = "0.1.45" }
+helios-fhirpath = { path = "../fhirpath", version = "0.1.45" }
+helios-fhirpath-support = { path = "../fhirpath-support", version = "0.1.45" }
 rust_decimal = "1"
 serde.workspace = true
 serde_json.workspace = true
@@ -84,6 +84,10 @@ aws-credential-types = { version = "1", optional = true }
 axum = { version = "0.8", optional = true }
 tower-http = { version = "0.6", features = ["cors"], optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+[package.metadata.docs.rs]
+features = ["sqlite", "postgres", "elasticsearch", "mongodb"]
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }

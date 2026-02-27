@@ -62,9 +62,31 @@ echo '{"resourceType": "Patient", "id": "123"}' | ./fhirpath-cli 'Patient.id'
 # Then POST expressions to http://localhost:3000/fhirpath
 ```
 
-## Using Docker Image
+## Using Docker Images
 
-*Coming soon.*
+Pre-built multi-arch Docker images (amd64/arm64) are available on GitHub Container Registry.
+
+```bash
+# FHIR Server (default: R4, in-memory SQLite, port 8080)
+docker run -p 8080:8080 ghcr.io/heliossoftware/hfs:latest
+
+# With persistent SQLite storage
+docker run -p 8080:8080 -v hfs-data:/data -e HFS_DATABASE_URL=/data/fhir.db ghcr.io/heliossoftware/hfs:latest
+
+# With PostgreSQL
+docker run -p 8080:8080 \
+  -e HFS_STORAGE_BACKEND=postgres \
+  -e HFS_DATABASE_URL="postgresql://user:pass@host:5432/fhir" \
+  ghcr.io/heliossoftware/hfs:latest
+
+# FHIRPath Server (port 3000)
+docker run -p 3000:3000 ghcr.io/heliossoftware/fhirpath-server:latest
+
+# SQL-on-FHIR Server (port 8080)
+docker run -p 8080:8080 ghcr.io/heliossoftware/sof-server:latest
+```
+
+See [Environment Variables](#environment-variables) for all available configuration options.
 
 ## Building From Source
 
@@ -377,6 +399,10 @@ Published crate documentation is available on [crates.io](https://crates.io/keyw
 ```bash
 cargo doc --no-deps --open
 ```
+
+# Roadmap
+
+See our [Roadmap](ROADMAP.md) for current development priorities and planned features.
 
 # Contributing
 
