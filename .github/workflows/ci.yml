@@ -309,10 +309,13 @@ jobs:
           path: lcov.info
           retention-days: 7
 
-      # Kill stale GPG agents that can cause lock contention on self-hosted runners
+      # Kill stale GPG agents/keyboxd that can cause lock contention on self-hosted runners
       - name: Clean up GPG state
         if: runner.os == 'macOS'
-        run: gpgconf --kill all || true
+        run: |
+          gpgconf --kill all || true
+          pkill -f keyboxd || true
+          rm -rf ~/.gnupg/public-keys.d/*.lock ~/.gnupg/*.lock ~/.gnupg/S.* || true
 
       # Upload to Codecov
       - name: Upload coverage to Codecov
