@@ -63,6 +63,9 @@ pub enum StorageBackendMode {
     /// PostgreSQL for CRUD + Elasticsearch for search.
     /// Requires running PostgreSQL and Elasticsearch instances.
     PostgresElasticsearch,
+    /// AWS S3 object storage for CRUD, versioning, history, and bulk operations.
+    /// Requires AWS credentials via the standard provider chain. No search support.
+    S3,
 }
 
 impl fmt::Display for StorageBackendMode {
@@ -74,6 +77,7 @@ impl fmt::Display for StorageBackendMode {
             StorageBackendMode::PostgresElasticsearch => {
                 write!(f, "postgres-elasticsearch")
             }
+            StorageBackendMode::S3 => write!(f, "s3"),
         }
     }
 }
@@ -89,8 +93,9 @@ impl FromStr for StorageBackendMode {
             "postgres-elasticsearch" | "postgres-es" | "pg-elasticsearch" | "pg-es" => {
                 Ok(StorageBackendMode::PostgresElasticsearch)
             }
+            "s3" | "objectstore" => Ok(StorageBackendMode::S3),
             _ => Err(format!(
-                "Invalid storage backend '{}'. Valid values: sqlite, sqlite-elasticsearch, postgres, postgres-elasticsearch",
+                "Invalid storage backend '{}'. Valid values: sqlite, sqlite-elasticsearch, postgres, postgres-elasticsearch, s3",
                 s
             )),
         }
@@ -299,7 +304,7 @@ pub struct ServerConfig {
     #[arg(long, env = "HFS_MAX_PAGE_SIZE", default_value = "1000")]
     pub max_page_size: usize,
 
-    /// Storage backend mode: sqlite (default), sqlite-elasticsearch, postgres, or postgres-elasticsearch.
+    /// Storage backend mode: sqlite (default), sqlite-elasticsearch, postgres, postgres-elasticsearch, or s3.
     #[arg(long, env = "HFS_STORAGE_BACKEND", default_value = "sqlite")]
     pub storage_backend: String,
 
@@ -624,6 +629,18 @@ mod tests {
                 .unwrap(),
             StorageBackendMode::PostgresElasticsearch
         );
+        assert_eq!(
+            "s3".parse::<StorageBackendMode>().unwrap(),
+            StorageBackendMode::S3
+        );
+        assert_eq!(
+            "objectstore".parse::<StorageBackendMode>().unwrap(),
+            StorageBackendMode::S3
+        );
+        assert_eq!(
+            "S3".parse::<StorageBackendMode>().unwrap(),
+            StorageBackendMode::S3
+        );
         assert!("invalid".parse::<StorageBackendMode>().is_err());
     }
 
@@ -639,6 +656,7 @@ mod tests {
             StorageBackendMode::PostgresElasticsearch.to_string(),
             "postgres-elasticsearch"
         );
+        assert_eq!(StorageBackendMode::S3.to_string(), "s3");
     }
 
     #[test]

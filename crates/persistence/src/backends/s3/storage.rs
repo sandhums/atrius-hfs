@@ -1002,6 +1002,85 @@ fn decode_pagination_offset(pagination: &Pagination) -> StorageResult<usize> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Stub trait impls: S3 does not support search or conditional operations
+// ---------------------------------------------------------------------------
+
+use crate::core::search::{SearchProvider, SearchResult};
+use crate::core::storage::{
+    ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
+};
+use crate::types::SearchQuery;
+
+#[async_trait]
+impl SearchProvider for S3Backend {
+    async fn search(
+        &self,
+        _tenant: &TenantContext,
+        _query: &SearchQuery,
+    ) -> StorageResult<SearchResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "search".to_string(),
+        }))
+    }
+
+    async fn search_count(
+        &self,
+        _tenant: &TenantContext,
+        _query: &SearchQuery,
+    ) -> StorageResult<u64> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "search_count".to_string(),
+        }))
+    }
+}
+
+#[async_trait]
+impl ConditionalStorage for S3Backend {
+    async fn conditional_create(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _resource: Value,
+        _search_params: &str,
+        _fhir_version: FhirVersion,
+    ) -> StorageResult<ConditionalCreateResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_create".to_string(),
+        }))
+    }
+
+    async fn conditional_update(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _resource: Value,
+        _search_params: &str,
+        _upsert: bool,
+        _fhir_version: FhirVersion,
+    ) -> StorageResult<ConditionalUpdateResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_update".to_string(),
+        }))
+    }
+
+    async fn conditional_delete(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _search_params: &str,
+    ) -> StorageResult<ConditionalDeleteResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_delete".to_string(),
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -336,8 +336,6 @@ fn map_sdk_error<E>(err: aws_sdk_s3::error::SdkError<E>) -> S3ClientError
 where
     E: ProvideErrorMetadata + std::fmt::Debug,
 {
-    let fallback = format!("{err:?}");
-
     match err {
         aws_sdk_s3::error::SdkError::ServiceError(service_err) => {
             let code = service_err.err().code().unwrap_or("Unknown");
@@ -345,7 +343,7 @@ where
                 .err()
                 .message()
                 .map(str::to_string)
-                .unwrap_or_else(|| fallback.clone());
+                .unwrap_or_default();
             match code {
                 "NoSuchKey" | "NotFound" | "NoSuchBucket" => S3ClientError::NotFound,
                 "PreconditionFailed" => S3ClientError::PreconditionFailed,
@@ -353,11 +351,34 @@ where
                     S3ClientError::Throttled(message)
                 }
                 "InvalidBucketName" | "InvalidArgument" => S3ClientError::InvalidInput(message),
-                _ => S3ClientError::Internal(message),
+                "AccessDenied"
+                | "InvalidAccessKeyId"
+                | "SignatureDoesNotMatch"
+                | "ExpiredToken" => S3ClientError::Unavailable(format!("access denied: {code}")),
+                _ => {
+                    // When S3 returns no error code (e.g. HeadBucket 403),
+                    // fall back to the HTTP status for a cleaner message.
+                    let status = service_err.raw().status().as_u16();
+                    match status {
+                        403 => S3ClientError::Unavailable(
+                            "access denied (HTTP 403) — check AWS credentials and bucket policy"
+                                .to_string(),
+                        ),
+                        404 => S3ClientError::NotFound,
+                        _ if message.is_empty() => S3ClientError::Internal(format!(
+                            "S3 error (HTTP {status}, code={code})"
+                        )),
+                        _ => S3ClientError::Internal(message),
+                    }
+                }
             }
         }
-        aws_sdk_s3::error::SdkError::TimeoutError(_) => S3ClientError::Unavailable(fallback),
-        aws_sdk_s3::error::SdkError::DispatchFailure(_) => S3ClientError::Unavailable(fallback),
-        _ => S3ClientError::Internal(fallback),
+        aws_sdk_s3::error::SdkError::TimeoutError(_) => {
+            S3ClientError::Unavailable("request timed out".to_string())
+        }
+        aws_sdk_s3::error::SdkError::DispatchFailure(err) => {
+            S3ClientError::Unavailable(format!("connection failed: {err:?}"))
+        }
+        _ => S3ClientError::Internal(format!("{err}")),
     }
 }
