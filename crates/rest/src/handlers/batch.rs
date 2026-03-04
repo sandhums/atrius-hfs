@@ -19,6 +19,7 @@ use tracing::{debug, error, warn};
 
 use crate::error::{RestError, RestResult};
 use crate::extractors::TenantExtractor;
+use crate::middleware::prefer::PreferHeader;
 use crate::state::AppState;
 
 /// Handler for batch/transaction processing.
@@ -46,6 +47,7 @@ use crate::state::AppState;
 pub async fn batch_handler<S>(
     State(state): State<AppState<S>>,
     tenant: TenantExtractor,
+    prefer: PreferHeader,
     Json(bundle): Json<Value>,
 ) -> RestResult<Response>
 where
@@ -75,8 +77,8 @@ where
             })?;
 
     match bundle_type {
-        "batch" => process_batch(&state, tenant, &bundle).await,
-        "transaction" => process_transaction(&state, tenant, &bundle).await,
+        "batch" => process_batch(&state, tenant, &prefer, &bundle).await,
+        "transaction" => process_transaction(&state, tenant, &prefer, &bundle).await,
         _ => Err(RestError::BadRequest {
             message: format!(
                 "Bundle type must be 'batch' or 'transaction', got '{}'",
@@ -90,6 +92,7 @@ where
 async fn process_batch<S>(
     state: &AppState<S>,
     tenant: TenantExtractor,
+    prefer: &PreferHeader,
     bundle: &Value,
 ) -> RestResult<Response>
 where
@@ -106,11 +109,12 @@ where
         .cloned()
         .unwrap_or_default();
 
+    let base_url = state.base_url();
     let mut response_entries = Vec::with_capacity(entries.len());
 
     for (index, entry) in entries.iter().enumerate() {
         let result = process_batch_entry(state, &tenant, entry, index).await;
-        response_entries.push(result);
+        response_entries.push(bundle_entry_result_to_json(&result, base_url, prefer));
     }
 
     let response_bundle = serde_json::json!({
@@ -138,6 +142,7 @@ where
 async fn process_transaction<S>(
     state: &AppState<S>,
     tenant: TenantExtractor,
+    prefer: &PreferHeader,
     bundle: &Value,
 ) -> RestResult<Response>
 where
@@ -201,9 +206,10 @@ where
                 .collect();
             ordered_results.sort_by_key(|(idx, _)| *idx);
 
+            let base_url = state.base_url();
             let response_entries: Vec<Value> = ordered_results
                 .into_iter()
-                .map(|(_, result)| bundle_entry_result_to_json(result))
+                .map(|(_, result)| bundle_entry_result_to_json(result, base_url, prefer))
                 .collect();
 
             let response_bundle = serde_json::json!({
@@ -226,20 +232,20 @@ where
     }
 }
 
-/// Processes a single batch entry.
+/// Processes a single batch entry, returning a structured BundleEntryResult.
 async fn process_batch_entry<S>(
     state: &AppState<S>,
     tenant: &TenantExtractor,
     entry: &Value,
     index: usize,
-) -> Value
+) -> BundleEntryResult
 where
     S: ResourceStorage + Send + Sync,
 {
     let request = match entry.get("request") {
         Some(r) => r,
         None => {
-            return create_error_entry("400", &format!("Entry {} missing request", index));
+            return create_error_result(400, &format!("Entry {} missing request", index));
         }
     };
 
@@ -250,7 +256,7 @@ where
     let (resource_type, id) = match parse_request_url(url) {
         Ok(parsed) => parsed,
         Err(e) => {
-            return create_error_entry("400", &e);
+            return create_error_result(400, &e);
         }
     };
 
@@ -262,17 +268,9 @@ where
                 .read(tenant.context(), &resource_type, &id)
                 .await
             {
-                Ok(Some(stored)) => {
-                    serde_json::json!({
-                        "resource": stored.content(),
-                        "response": {
-                            "status": "200 OK",
-                            "etag": format!("W/\"{}\"", stored.version_id())
-                        }
-                    })
-                }
-                Ok(None) => create_error_entry("404", "Resource not found"),
-                Err(e) => create_error_entry("500", &e.to_string()),
+                Ok(Some(stored)) => BundleEntryResult::ok(stored),
+                Ok(None) => create_error_result(404, "Resource not found"),
+                Err(e) => create_error_result(500, &e.to_string()),
             }
         }
         "POST" => {
@@ -280,7 +278,7 @@ where
             let resource = match entry.get("resource") {
                 Some(r) => r.clone(),
                 None => {
-                    return create_error_entry("400", "POST entry missing resource");
+                    return create_error_result(400, "POST entry missing resource");
                 }
             };
 
@@ -295,17 +293,8 @@ where
                 )
                 .await
             {
-                Ok(stored) => {
-                    serde_json::json!({
-                        "resource": stored.content(),
-                        "response": {
-                            "status": "201 Created",
-                            "location": format!("{}/{}", resource_type, stored.id()),
-                            "etag": format!("W/\"{}\"", stored.version_id())
-                        }
-                    })
-                }
-                Err(e) => create_error_entry("400", &e.to_string()),
+                Ok(stored) => BundleEntryResult::created(stored),
+                Err(e) => create_error_result(400, &e.to_string()),
             }
         }
         "PUT" => {
@@ -313,7 +302,7 @@ where
             let resource = match entry.get("resource") {
                 Some(r) => r.clone(),
                 None => {
-                    return create_error_entry("400", "PUT entry missing resource");
+                    return create_error_result(400, "PUT entry missing resource");
                 }
             };
 
@@ -330,16 +319,16 @@ where
                 .await
             {
                 Ok((stored, created)) => {
-                    let status = if created { "201 Created" } else { "200 OK" };
-                    serde_json::json!({
-                        "resource": stored.content(),
-                        "response": {
-                            "status": status,
-                            "etag": format!("W/\"{}\"", stored.version_id())
-                        }
-                    })
+                    if created {
+                        BundleEntryResult::created(stored)
+                    } else {
+                        // For updates, include location with versioned URL
+                        let mut result = BundleEntryResult::ok(stored);
+                        result.location = Some(format!("{}/{}", resource_type, id));
+                        result
+                    }
                 }
-                Err(e) => create_error_entry("400", &e.to_string()),
+                Err(e) => create_error_result(400, &e.to_string()),
             }
         }
         "DELETE" => {
@@ -349,19 +338,13 @@ where
                 .delete(tenant.context(), &resource_type, &id)
                 .await
             {
-                Ok(()) => {
-                    serde_json::json!({
-                        "response": {
-                            "status": "204 No Content"
-                        }
-                    })
-                }
-                Err(e) => create_error_entry("404", &e.to_string()),
+                Ok(()) => BundleEntryResult::deleted(),
+                Err(e) => create_error_result(404, &e.to_string()),
             }
         }
         _ => {
             warn!(method = method, "Unsupported batch method");
-            create_error_entry("405", &format!("Unsupported method: {}", method))
+            create_error_result(405, &format!("Unsupported method: {}", method))
         }
     }
 }
@@ -381,23 +364,19 @@ fn parse_request_url(url: &str) -> Result<(String, String), String> {
     }
 }
 
-/// Creates an error response entry.
-fn create_error_entry(status: &str, message: &str) -> Value {
-    serde_json::json!({
-        "response": {
-            "status": format!("{} {}", status, status_text(status)),
-            "outcome": {
-                "resourceType": "OperationOutcome",
-                "issue": [{
-                    "severity": "error",
-                    "code": "processing",
-                    "details": {
-                        "text": message
-                    }
-                }]
+/// Creates an error BundleEntryResult.
+fn create_error_result(status: u16, message: &str) -> BundleEntryResult {
+    let outcome = serde_json::json!({
+        "resourceType": "OperationOutcome",
+        "issue": [{
+            "severity": "error",
+            "code": "processing",
+            "details": {
+                "text": message
             }
-        }
-    })
+        }]
+    });
+    BundleEntryResult::error(status, outcome)
 }
 
 /// Returns HTTP status text for a status code.
@@ -491,7 +470,11 @@ fn method_processing_order(method: &BundleMethod) -> u8 {
 }
 
 /// Converts a BundleEntryResult to JSON for the response bundle.
-fn bundle_entry_result_to_json(result: &BundleEntryResult) -> Value {
+fn bundle_entry_result_to_json(
+    result: &BundleEntryResult,
+    base_url: &str,
+    prefer: &PreferHeader,
+) -> Value {
     let mut response = serde_json::Map::new();
 
     let status_code = result.status.to_string();
@@ -513,19 +496,79 @@ fn bundle_entry_result_to_json(result: &BundleEntryResult) -> Value {
         );
     }
 
-    let mut entry = serde_json::Map::new();
-
-    if let Some(ref resource) = result.resource {
-        entry.insert("resource".to_string(), resource.clone());
+    // Place outcome in response.outcome (not entry.resource)
+    if let Some(ref outcome) = result.outcome {
+        response.insert("outcome".to_string(), outcome.clone());
     }
 
-    if let Some(ref outcome) = result.outcome {
-        entry.insert("resource".to_string(), outcome.clone());
+    let mut entry = serde_json::Map::new();
+
+    // Include resource based on Prefer header
+    if let Some(ref resource) = result.resource {
+        match prefer.return_preference() {
+            Some("minimal") => {
+                // Omit resource body
+            }
+            Some("OperationOutcome") => {
+                // Return an OperationOutcome instead of the resource
+                let outcome = serde_json::json!({
+                    "resourceType": "OperationOutcome",
+                    "issue": [{
+                        "severity": "information",
+                        "code": "informational",
+                        "details": {
+                            "text": format!("Operation completed with status {}", result.status)
+                        }
+                    }]
+                });
+                entry.insert("resource".to_string(), outcome);
+            }
+            _ => {
+                // Default: return=representation — include the resource
+                entry.insert("resource".to_string(), resource.clone());
+            }
+        }
+    }
+
+    // Build fullUrl from location or resource content
+    if let Some(full_url) = build_full_url(result, base_url) {
+        entry.insert("fullUrl".to_string(), Value::String(full_url));
     }
 
     entry.insert("response".to_string(), Value::Object(response));
 
     Value::Object(entry)
+}
+
+/// Builds the fullUrl for a response entry.
+///
+/// Uses the location (stripping the _history suffix) or falls back to
+/// extracting resourceType/id from the resource content.
+fn build_full_url(result: &BundleEntryResult, base_url: &str) -> Option<String> {
+    // Try to derive from location (e.g., "Patient/123/_history/1" -> base_url/Patient/123)
+    if let Some(ref location) = result.location {
+        let resource_url = if let Some(idx) = location.find("/_history/") {
+            &location[..idx]
+        } else {
+            location.as_str()
+        };
+        return Some(format!(
+            "{}/{}",
+            base_url.trim_end_matches('/'),
+            resource_url
+        ));
+    }
+
+    // Fall back to resource content
+    if let Some(ref resource) = result.resource {
+        let resource_type = resource.get("resourceType").and_then(|v| v.as_str());
+        let id = resource.get("id").and_then(|v| v.as_str());
+        if let (Some(rt), Some(id)) = (resource_type, id) {
+            return Some(format!("{}/{}/{}", base_url.trim_end_matches('/'), rt, id));
+        }
+    }
+
+    None
 }
 
 /// Converts a TransactionError to an HTTP response with OperationOutcome.
