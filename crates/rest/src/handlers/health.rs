@@ -37,7 +37,9 @@ where
     let backend_name = state.storage().backend_name();
 
     let health_response = serde_json::json!({
-        "status": "healthy",
+        "status": "ok",
+        "service": "hfs",
+        "version": env!("CARGO_PKG_VERSION"),
         "backend": backend_name,
         "timestamp": chrono::Utc::now().to_rfc3339()
     });

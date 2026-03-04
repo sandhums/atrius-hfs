@@ -36,7 +36,7 @@ Work that is currently underway or planned for the near term.
 |------|------|--------|
 | **Compliance** | Audit logging (AuditEvent resource support) | 🔵 Design |
 | **Standards** | FHIR Validation engine | 🔵 Design |
-| **Standards** | Authentication & Authorization | 🔵 Design |
+| **Standards** | [Authentication & Authorization](https://github.com/HeliosSoftware/hfs/discussions/45) | 🔵 Design |
 | **Documentation** | Project documentation website | 🔵 Design |
 | **Persistence** | MongoDB as a primary store | 🟡 In progress |
 | **Persistence** | S3 as a primary store | 🟡 In progress |
@@ -45,7 +45,7 @@ Work that is currently underway or planned for the near term.
 
 We are actively developing community discussion documents on the following topics to gather feedback before implementation begins. These will be published as GitHub Discussions:
 
-- **Authentication & Authorization** — Scoping the approach to identity, access control, and SMART on FHIR integration
+- **[Authentication & Authorization](https://github.com/HeliosSoftware/hfs/discussions/45)** — Scoping the approach to identity, access control, and SMART on FHIR integration
 - **Terminology** — Defining how code systems, value sets, and concept maps will be managed
 - **Validation** — Establishing the strategy for StructureDefinition-based validation and profiles
 - **Audit** — Designing the audit trail architecture and AuditEvent generation

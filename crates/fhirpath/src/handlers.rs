@@ -8,6 +8,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use chrono::Utc;
 use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
@@ -456,7 +457,8 @@ pub async fn health_check() -> impl IntoResponse {
     Json(json!({
         "status": "ok",
         "service": "fhirpath-server",
-        "version": env!("CARGO_PKG_VERSION")
+        "version": env!("CARGO_PKG_VERSION"),
+        "timestamp": Utc::now().to_rfc3339()
     }))
 }
 
