@@ -309,10 +309,13 @@ jobs:
           path: lcov.info
           retention-days: 7
 
-      # Kill stale GPG agents that can cause lock contention on self-hosted runners
+      # Kill stale GPG agents/keyboxd that can cause lock contention on self-hosted runners
       - name: Clean up GPG state
         if: runner.os == 'macOS'
-        run: gpgconf --kill all || true
+        run: |
+          gpgconf --kill all || true
+          pkill -f keyboxd || true
+          rm -rf ~/.gnupg/public-keys.d/*.lock ~/.gnupg/*.lock ~/.gnupg/S.* || true
 
       # Upload to Codecov
       - name: Upload coverage to Codecov
@@ -1054,31 +1057,29 @@ jobs:
             fs.writeFileSync('release-binary.tar.gz', Buffer.from(data));
             console.log(`Downloaded: ${asset.name}`);
 
-      - name: Extract binary
+      - name: Extract release archive
         run: |
           mkdir -p extracted
           tar -xzf release-binary.tar.gz -C extracted
           mv extracted/${{ matrix.server }} .
           chmod +x ${{ matrix.server }}
+          # Preserve data directory (search parameters, etc.) if present
+          if [ -d extracted/data ]; then
+            cp -r extracted/data .
+          fi
           rm -rf extracted
 
       - name: Deploy binary and create service
         env:
           DEPLOY_HOST: ${{ matrix.server == 'fhirpath-server' && secrets.FHIRPATH_DEPLOY_HOST || matrix.server == 'sof-server' && secrets.SOF_DEPLOY_HOST || secrets.HFS_DEPLOY_HOST }}
           DEPLOY_USER: ${{ matrix.server == 'fhirpath-server' && secrets.FHIRPATH_DEPLOY_USER || matrix.server == 'sof-server' && secrets.SOF_DEPLOY_USER || secrets.HFS_DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ matrix.server == 'fhirpath-server' && secrets.FHIRPATH_DEPLOY_SSH_KEY || matrix.server == 'sof-server' && secrets.SOF_DEPLOY_SSH_KEY || secrets.HFS_DEPLOY_SSH_KEY }}
           DEPLOY_PORT: ${{ matrix.server == 'fhirpath-server' && secrets.FHIRPATH_DEPLOY_PORT || matrix.server == 'sof-server' && secrets.SOF_DEPLOY_PORT || secrets.HFS_DEPLOY_PORT || 22 }}
           SERVER_NAME: ${{ matrix.server }}
+          HFS_PUBLIC_URL: ${{ secrets.HFS_BASE_URL }}
         run: |
-          # Create temporary SSH key file
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/deploy_key
-
-          # Define SSH command with proper options
-          SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
-          SCP_CMD="scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P $DEPLOY_PORT"
+          # Define SSH command with proper options (runner's own key is trusted by targets)
+          SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST"
+          SCP_CMD="scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P $DEPLOY_PORT"
 
           # Create deployment directory on remote
           $SSH_CMD "sudo mkdir -p /opt/$SERVER_NAME"
@@ -1093,21 +1094,39 @@ jobs:
           # Copy new binary to remote
           $SCP_CMD $SERVER_NAME $DEPLOY_USER@$DEPLOY_HOST:/tmp/
 
+          # Copy data directory (search parameters, etc.) if present
+          if [ -d data ]; then
+            $SCP_CMD -r data $DEPLOY_USER@$DEPLOY_HOST:/tmp/hfs-data
+          fi
+
           # Move binary to final location and set permissions
           $SSH_CMD "sudo mv /tmp/$SERVER_NAME /opt/$SERVER_NAME/ && \
-                    sudo chown root:root /opt/$SERVER_NAME/$SERVER_NAME && \
+                    sudo chown $DEPLOY_USER:$DEPLOY_USER /opt/$SERVER_NAME/$SERVER_NAME && \
                     sudo chmod +x /opt/$SERVER_NAME/$SERVER_NAME"
+
+          # Deploy data directory if present
+          $SSH_CMD "if [ -d /tmp/hfs-data ]; then
+            sudo rm -rf /opt/$SERVER_NAME/data
+            sudo mv /tmp/hfs-data /opt/$SERVER_NAME/data
+            sudo chown -R $DEPLOY_USER:$DEPLOY_USER /opt/$SERVER_NAME/data
+          fi"
+
+          # Ensure the directory is owned by deploy user so the service can write data files (e.g. fhir.db)
+          $SSH_CMD "sudo chown $DEPLOY_USER:$DEPLOY_USER /opt/$SERVER_NAME"
 
           # Create systemd service file if it doesn't exist
           if [ "$SERVER_NAME" = "fhirpath-server" ]; then
             SERVICE_DESCRIPTION="FHIRPath Server"
             SERVICE_EXEC_START="/opt/$SERVER_NAME/$SERVER_NAME --host 0.0.0.0"
+            SERVICE_ENV="Environment=\"FHIRPATH_SERVER_HOST=0.0.0.0\""
           elif [ "$SERVER_NAME" = "sof-server" ]; then
             SERVICE_DESCRIPTION="SQL-on-FHIR Server"
             SERVICE_EXEC_START="/opt/$SERVER_NAME/$SERVER_NAME --host 0.0.0.0"
+            SERVICE_ENV="Environment=\"SOF_SERVER_HOST=0.0.0.0\""
           elif [ "$SERVER_NAME" = "hfs" ]; then
             SERVICE_DESCRIPTION="Helios FHIR Server"
             SERVICE_EXEC_START="/opt/$SERVER_NAME/$SERVER_NAME --host 0.0.0.0"
+            SERVICE_ENV="Environment=\"HFS_SERVER_HOST=0.0.0.0\"\nEnvironment=\"HFS_BASE_URL=${HFS_PUBLIC_URL}\""
           fi
 
           $SSH_CMD "if [ ! -f /etc/systemd/system/$SERVER_NAME.service ]; then
@@ -1118,12 +1137,13 @@ jobs:
 
           [Service]
           Type=simple
-          User=nobody
-          Group=nogroup
+          User=$DEPLOY_USER
+          Group=$DEPLOY_USER
+          WorkingDirectory=/opt/$SERVER_NAME
           ExecStart=$SERVICE_EXEC_START
           Restart=always
           RestartSec=5
-          Environment=\"SOF_SERVER_HOST=0.0.0.0\"
+          $(echo -e "$SERVICE_ENV")
 
           [Install]
           WantedBy=multi-user.target
@@ -1146,5 +1166,3 @@ jobs:
             exit 1
           fi
 
-          # Clean up SSH key
-          rm -f ~/.ssh/deploy_key

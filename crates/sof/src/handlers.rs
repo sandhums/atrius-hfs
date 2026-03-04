@@ -882,7 +882,8 @@ pub async fn health_check() -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "service": "sof-server",
-        "version": env!("CARGO_PKG_VERSION")
+        "version": env!("CARGO_PKG_VERSION"),
+        "timestamp": chrono::Utc::now().to_rfc3339()
     }))
 }
 
