@@ -28,14 +28,15 @@ sqlite = ["helios-rest/sqlite"]
 postgres = ["helios-rest/postgres"]
 mongodb = ["helios-rest/mongodb"]
 elasticsearch = ["helios-rest/elasticsearch"]
+s3 = ["helios-rest/s3"]
 
 [build-dependencies]
 reqwest = { version = "0.12", features = ["blocking"] }
 
 [dependencies]
-helios-fhir = { path = "../fhir", version = "0.1.45" }
-helios-rest = { path = "../rest", version = "0.1.45", default-features = false }
-helios-persistence = { path = "../persistence", version = "0.1.45", default-features = false }
+helios-fhir = { path = "../fhir", version = "0.1.47" }
+helios-rest = { path = "../rest", version = "0.1.47", default-features = false }
+helios-persistence = { path = "../persistence", version = "0.1.47", default-features = false }
 
 # Web framework
 axum = "0.8"

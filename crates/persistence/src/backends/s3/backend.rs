@@ -1,3 +1,5 @@
+//! AWS S3 backend — struct definition, capability matrix, and Backend trait
+//! implementation.
 use std::any::Any;
 use std::future::Future;
 use std::sync::Arc;
@@ -27,12 +29,24 @@ impl std::fmt::Debug for S3Backend {
     }
 }
 
+/// Opaque connection handle for the S3 backend.
+///
+/// S3 is stateless from the client's perspective — there is no persistent TCP
+/// connection to acquire per-request. This marker type satisfies the `Backend`
+/// trait's associated `Connection` type without holding any resources.
 #[derive(Debug)]
 pub struct S3Connection;
 
+/// Resolved bucket name and key hierarchy for a single tenant.
+///
+/// Computed once per storage operation from the `TenantContext` and the
+/// backend configuration, then passed through the call stack within that
+/// operation.
 #[derive(Debug, Clone)]
 pub(crate) struct TenantLocation {
+    /// S3 bucket that holds this tenant's data.
     pub bucket: String,
+    /// Keyspace builder scoped to this tenant's prefix hierarchy.
     pub keyspace: S3Keyspace,
 }
 
@@ -43,8 +57,15 @@ impl S3Backend {
     }
 
     /// Creates a new S3 backend using environment/provider chain credentials.
+    ///
+    /// The region is resolved in priority order: `config.region`, then the
+    /// `AWS_REGION` environment variable, then the standard AWS SDK provider
+    /// chain (shared config file, EC2 instance metadata, etc.).
+    ///
+    /// If `validate_buckets_on_startup` is set, every configured bucket is
+    /// verified with a `HeadBucket` call before this function returns.
     pub fn from_env(config: S3BackendConfig) -> StorageResult<Self> {
-        block_on_detached(Self::from_env_async(config))?
+        block_on(Self::from_env_async(config))?
     }
 
     /// Async constructor for S3 backend using environment/provider chain credentials.
@@ -64,6 +85,7 @@ impl S3Backend {
             .map(str::trim)
             .filter(|url| !url.is_empty())
             .map(str::to_string);
+
         let client = Arc::new(AwsS3Client::from_sdk_config_with_options(
             &sdk_config,
             AwsS3ClientOptions {
@@ -80,7 +102,10 @@ impl S3Backend {
 
         Ok(backend)
     }
-
+    /// Creates a backend with an injected `S3Api` implementation.
+    ///
+    /// Intended exclusively for unit tests that supply a mock client.
+    /// Not compiled into non-test builds.
     #[cfg(test)]
     pub(crate) fn with_client(
         config: S3BackendConfig,
@@ -90,6 +115,11 @@ impl S3Backend {
         Ok(Self { config, client })
     }
 
+    /// Verifies that every bucket referenced in the configuration exists and
+    /// is accessible to the current credentials.
+    ///
+    /// Issues a `HeadBucket` request for each distinct bucket. Returns the
+    /// first error encountered; does not attempt to create missing buckets.
     pub(crate) async fn validate_buckets(&self) -> StorageResult<()> {
         for bucket in self.config.configured_buckets() {
             self.client
@@ -100,6 +130,14 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Resolves the bucket and keyspace for the given tenant.
+    ///
+    /// In `PrefixPerTenant` mode all tenants share one bucket and are separated
+    /// by a key prefix derived from the tenant ID. In `BucketPerTenant` mode
+    /// each tenant maps to a dedicated bucket looked up from the config map.
+    ///
+    /// Returns a `TenantError` if the tenant has no bucket assignment in the
+    /// `BucketPerTenant` mapping.
     pub(crate) fn tenant_location(&self, tenant: &TenantContext) -> StorageResult<TenantLocation> {
         let global_prefix = self
             .config
@@ -143,6 +181,11 @@ impl S3Backend {
         }
     }
 
+    /// Maps a low-level `S3ClientError` to the shared `StorageError` taxonomy.
+    ///
+    /// This is the error boundary between the S3 SDK layer and the storage
+    /// trait layer. Keeping the translation here ensures all storage operations
+    /// return consistent error variants regardless of the underlying transport.
     pub(crate) fn map_client_error(&self, error: S3ClientError) -> StorageError {
         match error {
             S3ClientError::NotFound => StorageError::Backend(BackendError::Unavailable {
@@ -271,8 +314,12 @@ fn apply_s3_compatible_endpoint_defaults(config: &mut S3BackendConfig) {
     }
 }
 
-/// Blocks on an async future from sync code, safely even if currently inside a Tokio runtime.
-fn block_on_detached<F>(future: F) -> StorageResult<F::Output>
+/// Drives an async future to completion from synchronous code.
+///
+/// If a Tokio runtime is already active, the future is driven on a detached
+/// thread to avoid nesting runtimes. Otherwise a temporary single-threaded
+/// runtime is created for the duration of the call.
+fn block_on<F>(future: F) -> StorageResult<F::Output>
 where
     F: Future + Send + 'static,
     F::Output: Send + 'static,

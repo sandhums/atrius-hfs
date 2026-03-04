@@ -288,9 +288,9 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [select()](https://hl7.org/fhirpath/2025Jan/#selectprojection-expression--collection): ✅
     *   [sort()](https://hl7.org/fhirpath/2025Jan/#sortkeyselector-expression-asc--desc----collection) (STU): ✅ (Sort with optional key selector)
     *   [repeat()](https://hl7.org/fhirpath/2025Jan/#repeatprojection-expression--collection): ✅ (With cycle detection)
-    *   [repeatAll()](https://hl7.org/fhirpath/2025Jan/#repeatallprojection-expression--collection) (STU): ❌ Not Implemented
+    *   [repeatAll()](https://hl7.org/fhirpath/2025Jan/#repeatallprojection-expression--collection) (STU): ✅
     *   [ofType()](https://hl7.org/fhirpath/2025Jan/#oftypetype--type-specifier--collection): ✅ (Full namespace qualification support)
-    *   [coalesce()](https://hl7.org/fhirpath/2025Jan/#coalescevalue--collection----collection) (STU): ❌ Not Implemented
+    *   [coalesce()](https://hl7.org/fhirpath/2025Jan/#coalescevalue--collection----collection) (STU): ✅
 *   [Subsetting](https://hl7.org/fhirpath/2025Jan/#subsetting)
     *   [Indexer `[]`](https://hl7.org/fhirpath/2025Jan/#-index--integer---collection): ✅
     *   [single()](https://hl7.org/fhirpath/2025Jan/#single--collection): ✅
@@ -303,7 +303,7 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [exclude()](https://hl7.org/fhirpath/2025Jan/#excludeother-collection--collection): ✅
 *   [Combining](https://hl7.org/fhirpath/2025Jan/#combining)
     *   [union()](https://hl7.org/fhirpath/2025Jan/#unionother--collection): ✅
-    *   [combine()](https://hl7.org/fhirpath/2025Jan/#combineother--collection--collection): 🟡 (Basic implementation; `preserveOrder` parameter not yet supported)
+    *   [combine()](https://hl7.org/fhirpath/2025Jan/#combineother--collection--collection): ✅ (Including optional `preserveOrder` parameter)
 *   [Conversion](https://hl7.org/fhirpath/2025Jan/#conversion)
     *   [Implicit Conversions](https://hl7.org/fhirpath/2025Jan/#conversion): ✅ (Integer/Decimal)
     *   [iif()](https://hl7.org/fhirpath/2025Jan/#iifcriterion-expression-true-result-collection--otherwise-result-collection--collection): ✅
@@ -313,18 +313,20 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [convertsToInteger()](https://hl7.org/fhirpath/2025Jan/#convertstointeger--boolean): ✅
     *   [toLong()](https://hl7.org/fhirpath/2025Jan/#tolong--long) (STU): ✅
     *   [convertsToLong()](https://hl7.org/fhirpath/2025Jan/#convertstolong--boolean) (STU): ✅
-    *   [toDate()](https://hl7.org/fhirpath/2025Jan/#todate--date): ✅
+    *   [toDate()](https://hl7.org/fhirpath/2025Jan/#todate--date): ✅ (Including optional `format` parameter)
     *   [convertsToDate()](https://hl7.org/fhirpath/2025Jan/#convertstodate--boolean): ✅
-    *   [toDateTime()](https://hl7.org/fhirpath/2025Jan/#todatetime--datetime): ✅
+    *   [toDateTime()](https://hl7.org/fhirpath/2025Jan/#todatetime--datetime): ✅ (Including optional `format` parameter)
     *   [convertsToDateTime()](https://hl7.org/fhirpath/2025Jan/#convertstodatetime--boolean): ✅
     *   [toDecimal()](https://hl7.org/fhirpath/2025Jan/#todecimal--decimal): ✅
     *   [convertsToDecimal()](https://hl7.org/fhirpath/2025Jan/#convertstodecimal--boolean): ✅
     *   [toQuantity()](https://hl7.org/fhirpath/2025Jan/#toquantityunit--string--quantity): 🟡 (Basic types, no unit conversion)
     *   [convertsToQuantity()](https://hl7.org/fhirpath/2025Jan/#convertstoquantityunit--string--boolean): 🟡 (Basic types, no unit conversion)
-    *   [toString()](https://hl7.org/fhirpath/2025Jan/#tostring--string): ✅
+    *   [toString()](https://hl7.org/fhirpath/2025Jan/#tostring--string): ✅ (Including optional `format` parameter)
     *   [convertsToString()](https://hl7.org/fhirpath/2025Jan/#convertstostring--string): ✅
     *   [toTime()](https://hl7.org/fhirpath/2025Jan/#totime--time): ✅
     *   [convertsToTime()](https://hl7.org/fhirpath/2025Jan/#convertstotime--boolean): ✅
+*   [Date Conversion Functions](https://hl7.org/fhirpath/2025Jan/#date-conversion-functions) (STU)
+    *   Date/DateTime/Time string format codes (`yyyy`, `MM`, `dd`, etc.): ✅
 *   [String Manipulation](https://hl7.org/fhirpath/2025Jan/#string-manipulation)
     *   [indexOf()](https://hl7.org/fhirpath/2025Jan/#indexofsubstring--string--integer): ✅
     *   [lastIndexOf()](https://hl7.org/fhirpath/2025Jan/#lastindexofsubstring--string--integer) (STU): ✅
@@ -335,9 +337,9 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [upper()](https://hl7.org/fhirpath/2025Jan/#upper--string): ✅
     *   [lower()](https://hl7.org/fhirpath/2025Jan/#lower--string): ✅
     *   [replace()](https://hl7.org/fhirpath/2025Jan/#replacepattern--string-substitution--string--string): ✅
-    *   [matches()](https://hl7.org/fhirpath/2025Jan/#matchesregex--string--boolean): 🟡 (Basic implementation; optional `flags` parameter not yet supported)
-    *   [matchesFull()](https://hl7.org/fhirpath/2025Jan/#matchesfullregex--string--boolean) (STU): 🟡 (Basic implementation; optional `flags` parameter not yet supported)
-    *   [replaceMatches()](https://hl7.org/fhirpath/2025Jan/#replacematchesregex--string-substitution-string--string): 🟡 (Basic implementation; optional `flags` parameter not yet supported)
+    *   [matches()](https://hl7.org/fhirpath/2025Jan/#matchesregex--string--boolean): ✅ (Including optional `flags` parameter: `s`, `m`, `i`, `x`)
+    *   [matchesFull()](https://hl7.org/fhirpath/2025Jan/#matchesfullregex--string--boolean) (STU): ✅ (Including optional `flags` parameter)
+    *   [replaceMatches()](https://hl7.org/fhirpath/2025Jan/#replacematchesregex--string-substitution-string--string): ✅ (Including optional `flags` parameter)
     *   [length()](https://hl7.org/fhirpath/2025Jan/#length--integer): ✅
     *   [toChars()](https://hl7.org/fhirpath/2025Jan/#tochars--collection): ✅
     *   [encode()](https://hl7.org/fhirpath/2025Jan/#encodeformat--string--string): ✅
@@ -373,7 +375,10 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [highBoundary()](https://hl7.org/fhirpath/2025Jan/#highboundaryprecision-integer-decimal--date--datetime--time) (STU): ✅ (Full support for Decimal, Date, DateTime, and Time)
     *   [precision()](https://hl7.org/fhirpath/2025Jan/#precision--integer) (STU): ✅ (See [limitation for decimal trailing zeros](PRECISION_LIMITATION.md))
 *   [Date/DateTime/Time Component Extraction](https://hl7.org/fhirpath/2025Jan/#extract-datedatetimetime-components) (STU): ✅ (All component functions implemented: yearOf, monthOf, dayOf, hourOf, minuteOf, secondOf, millisecondOf)
-    
+*   [Date and Time Interval Functions](https://hl7.org/fhirpath/2025Jan/#date-and-time-interval-functions) (STU)
+    *   [duration()](https://hl7.org/fhirpath/2025Jan/#durationvalue-date--datetime--time-precision-identifier-integer): ✅
+    *   [difference()](https://hl7.org/fhirpath/2025Jan/#differencevalue-date--datetime--time-precision-identifier-integer): ✅
+
 ### [Operations](https://hl7.org/fhirpath/2025Jan/#operations)
     
 *   [Equality](https://hl7.org/fhirpath/2025Jan/#equality)
@@ -409,15 +414,20 @@ The SQL on FHIR specification leverages FHIRPath to define flattened tabular vie
     *   [`mod` (Modulo)](https://hl7.org/fhirpath/2025Jan/#mod): ✅ (Numeric)
     *   [`&` (String Concatenation)](https://hl7.org/fhirpath/2025Jan/#-string-concatenation): ✅
 *   [Date/Time Arithmetic](https://hl7.org/fhirpath/2025Jan/#datetime-arithmetic): ✅ (Full arithmetic support with timezone and precision handling)
+*   [Unary Operators (`+` and `-`)](https://hl7.org/fhirpath/2025Jan/#unary-operators--and--): ✅
 *   [Operator Precedence](https://hl7.org/fhirpath/2025Jan/#operator-precedence): ✅
     
+### [Instance Selector](https://hl7.org/fhirpath/2025Jan/#instance-selector) (STU)
+
+*   Object creation syntax (`typename { element : value, ... }`): ✅
+
 ### [Aggregates](https://hl7.org/fhirpath/2025Jan/#aggregates)
 
 *   [aggregate()](https://hl7.org/fhirpath/2025Jan/#aggregateaggregator--expression--init--value--value) (STU): ✅ (Full accumulator support)
-*   [sum()](https://hl7.org/fhirpath/2025Jan/#sum--integer--long--decimal--quantity) (STU): ❌ Not Implemented (can be done via `aggregate($this + $total, 0)`)
-*   [min()](https://hl7.org/fhirpath/2025Jan/#min--integer--long--decimal--quantity--date--datetime--time--string) (STU): ❌ Not Implemented
-*   [max()](https://hl7.org/fhirpath/2025Jan/#max--integer--long--decimal--quantity--date--datetime--time--string) (STU): ❌ Not Implemented
-*   [avg()](https://hl7.org/fhirpath/2025Jan/#avg--decimal--quantity) (STU): ❌ Not Implemented
+*   [sum()](https://hl7.org/fhirpath/2025Jan/#sum--integer--long--decimal--quantity) (STU): ✅
+*   [min()](https://hl7.org/fhirpath/2025Jan/#min--integer--long--decimal--quantity--date--datetime--time--string) (STU): ✅
+*   [max()](https://hl7.org/fhirpath/2025Jan/#max--integer--long--decimal--quantity--date--datetime--time--string) (STU): ✅
+*   [avg()](https://hl7.org/fhirpath/2025Jan/#avg--decimal--quantity) (STU): ✅
 
 ### [Lexical Elements](https://hl7.org/fhirpath/2025Jan/#lexical-elements)
 

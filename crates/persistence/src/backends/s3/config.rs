@@ -1,3 +1,5 @@
+//! Configuration types for the S3 backend.
+
 use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};

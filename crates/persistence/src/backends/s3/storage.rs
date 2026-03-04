@@ -1,3 +1,7 @@
+//! ResourceStorage, VersionedStorage, and history provider implementations
+//! for the S3 backend, plus shared helper methods for JSON serialization,
+//! object I/O, and history index maintenance.
+
 use async_trait::async_trait;
 use helios_fhir::FhirVersion;
 use serde::Serialize;
@@ -23,13 +27,20 @@ use super::backend::{S3Backend, TenantLocation};
 use super::client::{ListObjectItem, ObjectMetadata};
 use super::models::HistoryIndexEvent;
 
+/// A loaded current resource together with its S3 ETag.
+///
+/// The ETag is used as the optimistic concurrency token for subsequent
+/// conditional writes (`If-Match` on update, `If-None-Match: *` on create).
 #[derive(Debug, Clone)]
 pub(crate) struct CurrentResourceWithMeta {
+    /// The stored resource content and metadata.
     pub resource: StoredResource,
+    /// S3 ETag of the object at the time it was fetched.
     pub etag: Option<String>,
 }
 
 impl S3Backend {
+    /// Serialises `value` to a JSON byte vector.
     pub(crate) fn serialize_json<T: Serialize>(&self, value: &T) -> StorageResult<Vec<u8>> {
         serde_json::to_vec(value).map_err(|e| {
             StorageError::Backend(BackendError::SerializationError {
@@ -38,6 +49,7 @@ impl S3Backend {
         })
     }
 
+    /// Deserialises a JSON byte slice into `T`.
     pub(crate) fn deserialize_json<T: DeserializeOwned>(&self, bytes: &[u8]) -> StorageResult<T> {
         serde_json::from_slice(bytes).map_err(|e| {
             StorageError::Backend(BackendError::SerializationError {
@@ -46,6 +58,11 @@ impl S3Backend {
         })
     }
 
+    /// Writes a JSON byte payload to `key` with optional ETag preconditions.
+    ///
+    /// - `if_match`: the object must exist with exactly this ETag.
+    /// - `if_none_match`: typically `"*"` to prevent overwriting an existing
+    ///   object.
     pub(crate) async fn put_json_object(
         &self,
         bucket: &str,
@@ -67,6 +84,10 @@ impl S3Backend {
             .map_err(|e| self.map_client_error(e))
     }
 
+    /// Writes raw bytes to `key` with the given content type.
+    ///
+    /// No conditional preconditions are applied; used for bulk export NDJSON
+    /// output parts and raw NDJSON archival.
     pub(crate) async fn put_bytes_object(
         &self,
         bucket: &str,
@@ -80,6 +101,7 @@ impl S3Backend {
             .map_err(|e| self.map_client_error(e))
     }
 
+    /// Deletes the object at `key`. Succeeds silently if the key does not exist.
     pub(crate) async fn delete_object(&self, bucket: &str, key: &str) -> StorageResult<()> {
         self.client
             .delete_object(bucket, key)
@@ -87,6 +109,7 @@ impl S3Backend {
             .map_err(|e| self.map_client_error(e))
     }
 
+    /// Downloads and deserialises a JSON object, returning `None` if not found.
     pub(crate) async fn get_json_object<T: DeserializeOwned>(
         &self,
         bucket: &str,
@@ -102,6 +125,8 @@ impl S3Backend {
         }
     }
 
+    /// Exhaustively lists all objects under `prefix`, auto-paginating through
+    /// S3 continuation tokens until the full result set is collected.
     pub(crate) async fn list_objects_all(
         &self,
         bucket: &str,
@@ -126,6 +151,11 @@ impl S3Backend {
         Ok(out)
     }
 
+    /// Loads the current resource pointer together with its S3 ETag.
+    ///
+    /// Returns `None` if the resource has never been created. Does not check
+    /// whether the resource is logically deleted — callers must check
+    /// `StoredResource::is_deleted()` themselves.
     pub(crate) async fn load_current_with_meta(
         &self,
         tenant: &TenantContext,
@@ -145,6 +175,13 @@ impl S3Backend {
         }))
     }
 
+    /// Writes the versioned history snapshot and both history index event keys
+    /// for a resource mutation.
+    ///
+    /// Three objects are written per mutation:
+    /// - The immutable history snapshot under `_history/<version>.json`.
+    /// - A type-level history index event under `history/type/<type>/…`.
+    /// - A system-level history index event under `history/system/…`.
     pub(crate) async fn put_history_and_indexes(
         &self,
         location: &TenantLocation,
@@ -194,6 +231,8 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Derives the `HistoryMethod` for a stored resource from its own method
+    /// field, falling back to `Delete` or `Put` based on the deletion flag.
     pub(crate) fn history_method_for(resource: &StoredResource) -> HistoryMethod {
         match resource.method() {
             Some(ResourceMethod::Post) => HistoryMethod::Post,
@@ -210,12 +249,17 @@ impl S3Backend {
         }
     }
 
+    /// Sorts entries by timestamp descending and returns a cursor-paginated page.
+    ///
+    /// The cursor encodes a simple offset into the sorted list; both forward
+    /// and backward cursors are generated so callers can navigate in either
+    /// direction.
     pub(crate) fn page_history(
         &self,
         mut entries: Vec<HistoryEntry>,
         pagination: &Pagination,
     ) -> StorageResult<HistoryPage> {
-        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        entries.sort_by_key(|e| std::cmp::Reverse(e.timestamp));
 
         let total = entries.len();
         let offset = decode_pagination_offset(pagination)?;
@@ -256,6 +300,8 @@ impl S3Backend {
         ))
     }
 
+    /// Returns all keys ending with `/current.json` under the given resource
+    /// type prefix (or the entire resource tree if `resource_type` is `None`).
     pub(crate) async fn list_current_keys(
         &self,
         location: &TenantLocation,
@@ -278,6 +324,11 @@ impl S3Backend {
         Ok(keys)
     }
 
+    /// Loads history entries by scanning all index event objects under `prefix`.
+    ///
+    /// For each event key found, the corresponding versioned history snapshot is
+    /// fetched and assembled into a `HistoryEntry`. Objects that fail to parse
+    /// are silently skipped.
     pub(crate) async fn load_history_event_entries(
         &self,
         location: &TenantLocation,
@@ -315,6 +366,8 @@ impl S3Backend {
         Ok(entries)
     }
 
+    /// Ensures the resource JSON contains the correct `resourceType` and `id`
+    /// fields, inserting them if they are absent or incorrect.
     pub(crate) fn ensure_resource_shape(
         &self,
         resource_type: &str,
@@ -908,6 +961,10 @@ impl SystemHistoryProvider for S3Backend {
     }
 }
 
+/// Extracts the numeric version string from a history key filename.
+///
+/// History keys have the form `…/_history/<version>.json`; the version is the
+/// filename stem. Returns `None` for empty stems or non-`.json` extensions.
 fn parse_version_from_history_key(key: &str) -> Option<String> {
     if !key.ends_with(".json") {
         return None;
@@ -921,6 +978,10 @@ fn parse_version_from_history_key(key: &str) -> Option<String> {
     }
 }
 
+/// Decodes the numeric offset from a history pagination struct.
+///
+/// Handles both explicit `Offset` mode and `Cursor` mode, where the cursor
+/// encodes the offset as a `CursorValue::Number`.
 fn decode_pagination_offset(pagination: &Pagination) -> StorageResult<usize> {
     match &pagination.mode {
         PaginationMode::Offset(offset) => Ok(*offset as usize),
@@ -938,6 +999,85 @@ fn decode_pagination_offset(pagination: &Pagination) -> StorageResult<usize> {
                 cursor: cursor.encode(),
             }))
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Stub trait impls: S3 does not support search or conditional operations
+// ---------------------------------------------------------------------------
+
+use crate::core::search::{SearchProvider, SearchResult};
+use crate::core::storage::{
+    ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
+};
+use crate::types::SearchQuery;
+
+#[async_trait]
+impl SearchProvider for S3Backend {
+    async fn search(
+        &self,
+        _tenant: &TenantContext,
+        _query: &SearchQuery,
+    ) -> StorageResult<SearchResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "search".to_string(),
+        }))
+    }
+
+    async fn search_count(
+        &self,
+        _tenant: &TenantContext,
+        _query: &SearchQuery,
+    ) -> StorageResult<u64> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "search_count".to_string(),
+        }))
+    }
+}
+
+#[async_trait]
+impl ConditionalStorage for S3Backend {
+    async fn conditional_create(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _resource: Value,
+        _search_params: &str,
+        _fhir_version: FhirVersion,
+    ) -> StorageResult<ConditionalCreateResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_create".to_string(),
+        }))
+    }
+
+    async fn conditional_update(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _resource: Value,
+        _search_params: &str,
+        _upsert: bool,
+        _fhir_version: FhirVersion,
+    ) -> StorageResult<ConditionalUpdateResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_update".to_string(),
+        }))
+    }
+
+    async fn conditional_delete(
+        &self,
+        _tenant: &TenantContext,
+        _resource_type: &str,
+        _search_params: &str,
+    ) -> StorageResult<ConditionalDeleteResult> {
+        Err(StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "S3".to_string(),
+            capability: "conditional_delete".to_string(),
+        }))
     }
 }
 

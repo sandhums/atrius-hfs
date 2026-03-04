@@ -10,8 +10,9 @@
 //! | SQLite + Elasticsearch | `sqlite,elasticsearch` | SQLite for CRUD, Elasticsearch for search |
 //! | PostgreSQL | `postgres` | Full-featured RDBMS with JSONB storage and tsvector search |
 //! | PostgreSQL + Elasticsearch | `postgres,elasticsearch` | PostgreSQL for CRUD, Elasticsearch for search |
+//! | S3 | `s3` | AWS S3 object storage for CRUD, versioning, history, and bulk ops (no search) |
 //!
-//! Set `HFS_STORAGE_BACKEND` to `sqlite`, `sqlite-elasticsearch`, `postgres`, or `postgres-elasticsearch`.
+//! Set `HFS_STORAGE_BACKEND` to `sqlite`, `sqlite-elasticsearch`, `postgres`, `postgres-elasticsearch`, or `s3`.
 
 use clap::Parser;
 use helios_rest::{ServerConfig, StorageBackendMode, create_app_with_config, init_logging};
@@ -87,6 +88,9 @@ async fn main() -> anyhow::Result<()> {
         }
         StorageBackendMode::PostgresElasticsearch => {
             start_postgres_elasticsearch(config).await?;
+        }
+        StorageBackendMode::S3 => {
+            start_s3(config).await?;
         }
     }
 
@@ -370,5 +374,59 @@ async fn start_postgres_elasticsearch(_config: ServerConfig) -> anyhow::Result<(
     )
 }
 
-#[cfg(not(any(feature = "sqlite", feature = "postgres", feature = "mongodb")))]
+/// Starts the server with AWS S3 backend.
+#[cfg(feature = "s3")]
+async fn start_s3(config: ServerConfig) -> anyhow::Result<()> {
+    use helios_persistence::backends::s3::{S3Backend, S3BackendConfig, S3TenancyMode};
+
+    let bucket = std::env::var("HFS_S3_BUCKET").unwrap_or_else(|_| "hfs".to_string());
+    let region = std::env::var("HFS_S3_REGION").ok();
+    let validate_buckets = std::env::var("HFS_S3_VALIDATE_BUCKETS")
+        .map(|s| s.to_lowercase() != "false" && s != "0")
+        .unwrap_or(true);
+
+    info!(
+        bucket = %bucket,
+        region = ?region,
+        validate_buckets = validate_buckets,
+        "Initializing S3 backend"
+    );
+
+    let s3_config = S3BackendConfig {
+        tenancy_mode: S3TenancyMode::PrefixPerTenant {
+            bucket: bucket.clone(),
+        },
+        region,
+        validate_buckets_on_startup: validate_buckets,
+        ..Default::default()
+    };
+
+    let backend = S3Backend::new(s3_config).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to initialize S3 backend (bucket={}, region={:?}): {}",
+            bucket,
+            std::env::var("AWS_REGION").ok(),
+            e
+        )
+    })?;
+
+    let app = create_app_with_config(backend, config.clone());
+    serve(app, &config).await
+}
+
+/// Fallback when s3 feature is not enabled.
+#[cfg(not(feature = "s3"))]
+async fn start_s3(_config: ServerConfig) -> anyhow::Result<()> {
+    anyhow::bail!(
+        "The s3 backend requires the 's3' feature. \
+         Build with: cargo build -p helios-hfs --features s3"
+    )
+}
+
+#[cfg(not(any(
+    feature = "sqlite",
+    feature = "postgres",
+    feature = "mongodb",
+    feature = "s3"
+)))]
 compile_error!("At least one database backend feature must be enabled");

@@ -207,6 +207,11 @@ pub enum Expression {
     /// A lambda expression with optional identifier
     /// (e.g., `item => item.value > 10`)
     Lambda(Option<String>, Box<Expression>),
+
+    /// An instance selector expression
+    /// (e.g., `Quantity { value: 5, unit: 'mg' }`)
+    /// Contains the type name and a list of field name/expression pairs.
+    InstanceSelector(String, Vec<(String, Box<Expression>)>),
 }
 
 /// Represents a type specifier in FHIRPath
@@ -334,6 +339,7 @@ pub enum SpannedExprKind {
     Or(Box<SpannedExpression>, String, Box<SpannedExpression>),
     Implies(Box<SpannedExpression>, Box<SpannedExpression>),
     Lambda(Option<String>, Box<SpannedExpression>),
+    InstanceSelector(String, Vec<(String, Box<SpannedExpression>)>),
 }
 
 #[derive(Debug, Clone)]
@@ -412,6 +418,13 @@ impl SpannedExpression {
             SpannedExprKind::Lambda(param, expr) => {
                 Expression::Lambda(param.clone(), Box::new(expr.to_expression()))
             }
+            SpannedExprKind::InstanceSelector(type_name, fields) => Expression::InstanceSelector(
+                type_name.clone(),
+                fields
+                    .iter()
+                    .map(|(name, expr)| (name.clone(), Box::new(expr.to_expression())))
+                    .collect(),
+            ),
         }
     }
 }
@@ -1107,6 +1120,26 @@ pub fn parser<'src>()
                 // Directly create the Expression::Term(Term::Invocation(...)) structure
                 .map(|(name, params)| {
                     Expression::Term(Term::Invocation(Invocation::Function(name, params)))
+                })
+                .boxed(),
+            // Instance selector: TypeName { field: expr, ... }
+            identifier
+                .clone()
+                .then(
+                    identifier
+                        .clone()
+                        .then_ignore(just(':').padded())
+                        .then(expr.clone().boxed())
+                        .separated_by(just(',').padded())
+                        .allow_trailing()
+                        .collect::<Vec<_>>()
+                        .delimited_by(just('{').padded(), just('}').padded()),
+                )
+                .map(|(type_name, fields)| {
+                    Expression::InstanceSelector(
+                        type_name,
+                        fields.into_iter().map(|(k, v)| (k, Box::new(v))).collect(),
+                    )
                 })
                 .boxed(),
             // Simple identifier, $this, $index, $total (parsed if not a function call)
@@ -1841,6 +1874,31 @@ pub fn spanned_parser<'src>()
                             SpannedExprKind::Term(SpannedTerm::Invocation(
                                 SpannedInvocation::Function(name, params),
                             )),
+                            s.start,
+                            s.end,
+                        )
+                    })
+                    .boxed(),
+                // Instance selector: TypeName { field: expr, ... }
+                identifier
+                    .clone()
+                    .then(
+                        identifier
+                            .clone()
+                            .then_ignore(just(':').padded())
+                            .then(spanned_expr.clone().boxed())
+                            .separated_by(just(',').padded())
+                            .allow_trailing()
+                            .collect::<Vec<_>>()
+                            .delimited_by(just('{').padded(), just('}').padded()),
+                    )
+                    .map_with(|(type_name, fields), extra| {
+                        let s = extra.span();
+                        make_spanned(
+                            SpannedExprKind::InstanceSelector(
+                                type_name,
+                                fields.into_iter().map(|(k, v)| (k, Box::new(v))).collect(),
+                            ),
                             s.start,
                             s.end,
                         )

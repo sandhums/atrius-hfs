@@ -1,3 +1,9 @@
+//! Unit tests for the S3 backend using an in-process mock S3 client.
+//!
+//! All tests run without AWS credentials. [`MockS3Client`] provides a
+//! thread-safe in-memory S3 implementation with optional fault injection
+//! for concurrency and rollback scenarios.
+
 use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 use std::sync::{Arc, Mutex};
@@ -30,29 +36,47 @@ use crate::error::{
 use crate::tenant::{TenantContext, TenantId, TenantPermissions};
 use crate::types::{CursorValue, PageCursor, Pagination, PaginationMode};
 
+/// An in-memory representation of a single S3 object.
 #[derive(Debug, Clone)]
 struct MockObject {
+    /// Raw object body.
     body: Vec<u8>,
+    /// Monotonically assigned ETag string for conditional write testing.
     etag: String,
+    /// Simulated last-modified timestamp.
     last_modified: DateTime<Utc>,
 }
 
+/// Shared mutable state backing `MockS3Client`.
 #[derive(Debug, Default)]
 struct MockState {
+    /// Set of buckets that exist in the mock store.
     buckets: HashSet<String>,
+    /// Stored objects keyed by `(bucket, key)`.
     objects: HashMap<(String, String), MockObject>,
+    /// Monotonic counter used to generate unique ETags.
     etag_counter: u64,
+    /// Total number of `put_object` calls received.
     put_count: u64,
+    /// When set, puts fail once this call count is exceeded (fault injection).
     fail_put_after: Option<u64>,
+    /// When true, all `delete_object` calls return an internal error.
     fail_deletes: bool,
 }
 
+/// An in-process S3 mock implementing `S3Api`.
+///
+/// Designed for deterministic unit tests that exercise the backend logic
+/// without an AWS account. Supports optional fault injection to simulate
+/// concurrent write conflicts and network errors.
 #[derive(Debug, Clone, Default)]
 struct MockS3Client {
+    /// Shared state, cloneable across multiple backend instances in a test.
     state: Arc<Mutex<MockState>>,
 }
 
 impl MockS3Client {
+    /// Creates a mock client with the specified buckets pre-seeded.
     fn with_buckets(buckets: &[&str]) -> Self {
         let mut state = MockState::default();
         state.buckets = buckets.iter().map(|b| (*b).to_string()).collect();
@@ -61,11 +85,15 @@ impl MockS3Client {
         }
     }
 
+    /// Configures the mock to fail all `put_object` calls once `put_count`
+    /// successful puts have been observed. Used to simulate partial-write
+    /// failures during rollback testing.
     fn set_fail_put_after(&self, put_count: u64) {
         let mut state = self.state.lock().unwrap();
         state.fail_put_after = Some(put_count);
     }
 
+    /// Returns the number of objects currently stored in `bucket`.
     fn bucket_object_count(&self, bucket: &str) -> usize {
         let state = self.state.lock().unwrap();
         state.objects.keys().filter(|(b, _)| b == bucket).count()
@@ -224,6 +252,7 @@ impl S3Api for MockS3Client {
     }
 }
 
+/// Constructs a `PrefixPerTenant` backend backed by the given mock client.
 fn make_prefix_backend(mock: Arc<MockS3Client>) -> S3Backend {
     let config = S3BackendConfig {
         tenancy_mode: S3TenancyMode::PrefixPerTenant {
@@ -236,6 +265,8 @@ fn make_prefix_backend(mock: Arc<MockS3Client>) -> S3Backend {
     S3Backend::with_client(config, mock).expect("backend")
 }
 
+/// Constructs a `BucketPerTenant` backend backed by the given mock client
+/// with `tenant-a → bucket-a`, `tenant-b → bucket-b`, and a system bucket.
 fn make_bucket_backend(mock: Arc<MockS3Client>) -> S3Backend {
     let mut tenant_bucket_map = HashMap::new();
     tenant_bucket_map.insert("tenant-a".to_string(), "bucket-a".to_string());
@@ -253,6 +284,7 @@ fn make_bucket_backend(mock: Arc<MockS3Client>) -> S3Backend {
     S3Backend::with_client(config, mock).expect("backend")
 }
 
+/// Creates a full-access `TenantContext` for the given tenant ID string.
 fn tenant(id: &str) -> TenantContext {
     TenantContext::new(TenantId::new(id), TenantPermissions::full_access())
 }

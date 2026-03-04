@@ -256,7 +256,8 @@ pub fn union_function(
 pub fn combine_function(
     invocation_base: &EvaluationResult,
     other_collection: &EvaluationResult,
-    _context: &EvaluationContext, // Prefixed with underscore as it's intentionally unused
+    preserve_order: bool,
+    _context: &EvaluationContext,
 ) -> Result<EvaluationResult, EvaluationError> {
     // Convert inputs to Vec for processing
     let left_items = match invocation_base {
@@ -275,8 +276,8 @@ pub fn combine_function(
     let mut combined_items = left_items;
     combined_items.extend(right_items);
 
-    // combine() output order is not guaranteed by spec, so mark as undefined.
-    Ok(normalize_collection_result(combined_items, true))
+    // When preserveOrder is true, the output order is defined (not undefined).
+    Ok(normalize_collection_result(combined_items, !preserve_order))
 }
 
 /// Helper function to check equality between two EvaluationResult values
@@ -852,7 +853,7 @@ mod tests {
         let context = EvaluationContext::new_empty_with_default_version();
 
         // Test combine
-        let result = combine_function(&collection1, &collection2, &context).unwrap();
+        let result = combine_function(&collection1, &collection2, false, &context).unwrap();
 
         // Should return [1, 2, 3, 4, 5, 6] with undefined order
         match result {
@@ -899,7 +900,7 @@ mod tests {
         let context = EvaluationContext::new_empty_with_default_version();
 
         // Test combine
-        let result = combine_function(&collection1, &collection2, &context).unwrap();
+        let result = combine_function(&collection1, &collection2, false, &context).unwrap();
 
         // Should return [1, 2, 2, 2, 3] with undefined order
         match result {
@@ -952,7 +953,7 @@ mod tests {
         let context = EvaluationContext::new_empty_with_default_version();
 
         // Test combine with empty
-        let result = combine_function(&collection, &empty, &context).unwrap();
+        let result = combine_function(&collection, &empty, false, &context).unwrap();
 
         // Result should have the same elements as collection, but with undefined order
         match result {
@@ -971,7 +972,7 @@ mod tests {
         }
 
         // Test empty combine
-        let result = combine_function(&empty, &collection, &context).unwrap();
+        let result = combine_function(&empty, &collection, false, &context).unwrap();
 
         // Result should have the same elements as collection, but with undefined order
         match result {

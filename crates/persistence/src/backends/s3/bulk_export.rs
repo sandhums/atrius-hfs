@@ -1,3 +1,9 @@
+//! Bulk export implementation for the S3 backend.
+//!
+//! Implements `BulkExportStorage` and `ExportDataProvider`. Export jobs are
+//! persisted as a small JSON state object in S3 and run synchronously within
+//! the `start_export` call, writing NDJSON output parts directly to S3.
+
 use std::collections::BTreeSet;
 
 use async_trait::async_trait;
@@ -166,7 +172,7 @@ impl BulkExportStorage for S3Backend {
             }
         }
 
-        exports.sort_by(|a, b| b.transaction_time.cmp(&a.transaction_time));
+        exports.sort_by_key(|e| std::cmp::Reverse(e.transaction_time));
         Ok(exports)
     }
 }
@@ -296,6 +302,11 @@ impl ExportDataProvider for S3Backend {
 }
 
 impl S3Backend {
+    /// Drives a bulk export job to completion.
+    ///
+    /// Iterates over all matching resource types, fetches them in batches, and
+    /// writes NDJSON output parts to S3. Updates the job state object after
+    /// each type completes and writes the final manifest on success.
     async fn run_export_job(
         &self,
         tenant: &TenantContext,
@@ -414,6 +425,8 @@ impl S3Backend {
         self.save_export_state(tenant, job_id, &state).await
     }
 
+    /// Writes a single NDJSON output part to S3 and returns an
+    /// `ExportOutputFile` describing the S3 location and line count.
     async fn write_export_part(
         &self,
         location: &TenantLocation,
@@ -443,6 +456,7 @@ impl S3Backend {
         )
     }
 
+    /// Returns `true` if the job state object exists in S3.
     async fn export_job_exists(
         &self,
         location: &TenantLocation,
@@ -457,6 +471,9 @@ impl S3Backend {
             .is_some())
     }
 
+    /// Loads and deserialises the export job state from S3.
+    ///
+    /// Returns `JobNotFound` if the state object does not exist.
     async fn load_export_state(
         &self,
         tenant: &TenantContext,
@@ -474,6 +491,7 @@ impl S3Backend {
             })
     }
 
+    /// Serialises and writes the export job state to S3.
     async fn save_export_state(
         &self,
         tenant: &TenantContext,
@@ -488,6 +506,8 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Transitions the export job to the `Error` state, recording the failure
+    /// message in the state object.
     async fn mark_export_failed(
         &self,
         tenant: &TenantContext,
@@ -502,6 +522,8 @@ impl S3Backend {
         self.save_export_state(tenant, job_id, &state).await
     }
 
+    /// Writes per-type export progress to S3 so that partial completion can be
+    /// inspected before the job finishes.
     async fn save_export_type_progress(
         &self,
         location: &TenantLocation,
@@ -518,6 +540,9 @@ impl S3Backend {
     }
 }
 
+/// Parses the numeric offset encoded in an export batch cursor.
+///
+/// A `None` cursor is treated as offset `0` (start of the result set).
 fn parse_export_cursor(cursor: Option<&str>) -> StorageResult<usize> {
     match cursor {
         None => Ok(0),
@@ -529,6 +554,10 @@ fn parse_export_cursor(cursor: Option<&str>) -> StorageResult<usize> {
     }
 }
 
+/// Extracts the resource type from a `current.json` object key.
+///
+/// Keys follow the pattern `…/resources/<type>/<id>/current.json`; the
+/// segment immediately after `resources` is the resource type.
 fn parse_resource_type_from_current_key(key: &str) -> Option<String> {
     let parts: Vec<&str> = key.split('/').collect();
     let resources_idx = parts.iter().position(|segment| *segment == "resources")?;

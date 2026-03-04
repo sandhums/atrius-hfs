@@ -1,3 +1,10 @@
+//! Bulk submission implementation for the S3 backend.
+//!
+//! Implements `BulkSubmitProvider`, `StreamingBulkSubmitProvider`, and
+//! `BulkSubmitRollbackProvider`. All submission state — including manifests,
+//! raw NDJSON lines, entry results, and change records — is persisted as
+//! individual S3 objects keyed under the submission's prefix.
+
 use async_trait::async_trait;
 use chrono::Utc;
 use helios_fhir::FhirVersion;
@@ -111,7 +118,7 @@ impl BulkSubmitProvider for S3Backend {
             submissions.push(state.summary);
         }
 
-        submissions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        submissions.sort_by_key(|s| std::cmp::Reverse(s.created_at));
 
         let start = (offset as usize).min(submissions.len());
         let end = start.saturating_add(limit as usize).min(submissions.len());
@@ -261,7 +268,7 @@ impl BulkSubmitProvider for S3Backend {
             .map(|state| state.manifest)
             .collect::<Vec<_>>();
 
-        manifests.sort_by(|a, b| a.added_at.cmp(&b.added_at));
+        manifests.sort_by_key(|m| m.added_at);
         Ok(manifests)
     }
 
@@ -560,7 +567,7 @@ impl BulkSubmitRollbackProvider for S3Backend {
     ) -> StorageResult<Vec<SubmissionChange>> {
         let location = self.tenant_location(tenant)?;
         let mut changes = self.load_changes(&location, submission_id).await?;
-        changes.sort_by(|a, b| b.changed_at.cmp(&a.changed_at));
+        changes.sort_by_key(|c| std::cmp::Reverse(c.changed_at));
 
         let start = (offset as usize).min(changes.len());
         let end = start.saturating_add(limit as usize).min(changes.len());
@@ -618,6 +625,12 @@ impl BulkSubmitRollbackProvider for S3Backend {
 }
 
 impl S3Backend {
+    /// Processes a single NDJSON entry: validates it, upserts the resource,
+    /// and records a change log entry for rollback.
+    ///
+    /// Returns a `BulkEntryResult` describing the outcome. Storage errors are
+    /// promoted to entry-level processing errors rather than aborting the whole
+    /// batch.
     async fn process_single_entry(
         &self,
         tenant: &TenantContext,
@@ -732,6 +745,10 @@ impl S3Backend {
         }
     }
 
+    /// Archives the raw NDJSON payload for a single entry to S3.
+    ///
+    /// Stored under `raw/<manifest>/<line>.ndjson` so that the original data
+    /// is preserved for auditing after ingestion.
     async fn persist_raw_entry(
         &self,
         location: &TenantLocation,
@@ -765,6 +782,7 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Persists the processing result for a single entry to S3.
     async fn persist_entry_result(
         &self,
         location: &TenantLocation,
@@ -784,6 +802,7 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Loads all entry results for a manifest from S3.
     async fn load_entry_results(
         &self,
         location: &TenantLocation,
@@ -815,6 +834,7 @@ impl S3Backend {
         Ok(results)
     }
 
+    /// Loads all change log records for a submission from S3.
     async fn load_changes(
         &self,
         location: &TenantLocation,
@@ -844,6 +864,7 @@ impl S3Backend {
         Ok(changes)
     }
 
+    /// Loads the submission state, returning `SubmissionNotFound` if absent.
     async fn load_submission_state(
         &self,
         location: &TenantLocation,
@@ -859,6 +880,7 @@ impl S3Backend {
             })
     }
 
+    /// Loads the submission state, returning `None` if it does not exist.
     async fn load_submission_state_optional(
         &self,
         location: &TenantLocation,
@@ -873,6 +895,7 @@ impl S3Backend {
             .map(|(state, _)| state))
     }
 
+    /// Serialises and writes the submission state to S3.
     async fn save_submission_state(
         &self,
         location: &TenantLocation,
@@ -888,6 +911,7 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Loads a manifest state from S3, returning `None` if it does not exist.
     async fn load_manifest_state_optional(
         &self,
         location: &TenantLocation,
@@ -906,6 +930,7 @@ impl S3Backend {
             .map(|(state, _)| state))
     }
 
+    /// Serialises and writes a manifest state to S3.
     async fn save_manifest_state(
         &self,
         location: &TenantLocation,
@@ -924,6 +949,7 @@ impl S3Backend {
         Ok(())
     }
 
+    /// Lists all manifest state objects for a submission.
     async fn list_manifest_states(
         &self,
         location: &TenantLocation,
@@ -953,6 +979,8 @@ impl S3Backend {
         Ok(manifests)
     }
 
+    /// Builds a minimal OperationOutcome from a storage error for use in
+    /// per-entry failure records.
     fn bulk_submit_operation_outcome(err: &StorageError) -> serde_json::Value {
         let code = match err {
             StorageError::Validation(_) => "invalid",

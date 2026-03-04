@@ -80,7 +80,7 @@ use helios_fhirpath_support::{
     EvaluationError, EvaluationResult, IntoEvaluationResult, TypeInfoResult,
 };
 use parking_lot::Mutex;
-use regex::{Regex, RegexBuilder};
+use regex::RegexBuilder;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use std::collections::{HashMap, HashSet};
@@ -1286,6 +1286,19 @@ pub fn evaluate(
             // Return Ok(Empty) as it's not an error, just not evaluated yet.
             Ok(EvaluationResult::Empty)
         }
+        Expression::InstanceSelector(type_name, fields) => {
+            let mut map = std::collections::HashMap::new();
+            for (field_name, field_expr) in fields {
+                let value = evaluate(field_expr, context, current_item)?;
+                map.insert(field_name.clone(), value);
+            }
+            Ok(EvaluationResult::Object {
+                map,
+                type_info: Some(helios_fhirpath_support::TypeInfoResult::new(
+                    "FHIR", type_name,
+                )),
+            })
+        }
     };
 
     // Record debug trace step if tracer is active
@@ -2379,11 +2392,44 @@ fn evaluate_invocation(
                         }
                     }
                 }
+                "coalesce" if !args_exprs.is_empty() => {
+                    // coalesce() uses short-circuit evaluation:
+                    // return the invocation base if non-empty, otherwise
+                    // evaluate each arg in order and return the first non-empty
+                    if !matches!(invocation_base, EvaluationResult::Empty) {
+                        if let EvaluationResult::Collection { items, .. } = invocation_base {
+                            if !items.is_empty() {
+                                return Ok(invocation_base.clone());
+                            }
+                        } else {
+                            return Ok(invocation_base.clone());
+                        }
+                    }
+                    for arg_expr in args_exprs {
+                        let result = evaluate(arg_expr, context, None)?;
+                        match &result {
+                            EvaluationResult::Empty => continue,
+                            EvaluationResult::Collection { items, .. } if items.is_empty() => {
+                                continue;
+                            }
+                            _ => return Ok(result),
+                        }
+                    }
+                    Ok(EvaluationResult::Empty)
+                }
                 "repeat" if !args_exprs.is_empty() => {
                     // Get the projection expression from args_exprs
                     let projection_expr = &args_exprs[0];
                     // Call the repeat_function implementation
                     crate::repeat_function::repeat_function(
+                        invocation_base,
+                        projection_expr,
+                        context,
+                    )
+                }
+                "repeatAll" if !args_exprs.is_empty() => {
+                    let projection_expr = &args_exprs[0];
+                    crate::repeat_all_function::repeat_all_function(
                         invocation_base,
                         projection_expr,
                         context,
@@ -2416,6 +2462,24 @@ fn evaluate_invocation(
                             context,
                         ),
                     }
+                }
+                "duration" if args_exprs.len() == 2 => {
+                    let target = evaluate(&args_exprs[0], context, None)?;
+                    let precision = extract_precision_keyword(&args_exprs[1])?;
+                    crate::interval_functions::duration_function(
+                        invocation_base,
+                        &target,
+                        &precision,
+                    )
+                }
+                "difference" if args_exprs.len() == 2 => {
+                    let target = evaluate(&args_exprs[0], context, None)?;
+                    let precision = extract_precision_keyword(&args_exprs[1])?;
+                    crate::interval_functions::difference_function(
+                        invocation_base,
+                        &target,
+                        &precision,
+                    )
                 }
                 "trace" => {
                     // Check if there are arguments - trace() requires at least a name
@@ -3071,6 +3135,9 @@ fn expression_contains_define_variable(expr: &Expression) -> bool {
         }
         Expression::Type(left, _, _) => expression_contains_define_variable(left),
         Expression::Lambda(_, body) => expression_contains_define_variable(body),
+        Expression::InstanceSelector(_, fields) => fields
+            .iter()
+            .any(|(_, expr)| expression_contains_define_variable(expr)),
     }
 }
 
@@ -3121,6 +3188,9 @@ fn expression_contains_variables(expr: &Expression) -> bool {
         }
         Expression::Type(left, _, _) => expression_contains_variables(left),
         Expression::Lambda(_, body) => expression_contains_variables(body),
+        Expression::InstanceSelector(_, fields) => fields
+            .iter()
+            .any(|(_, expr)| expression_contains_variables(expr)),
     }
 }
 
@@ -3180,6 +3250,40 @@ fn evaluate_all_with_criteria(
 
     // If all items satisfied the criteria (were true)
     Ok(EvaluationResult::boolean(true))
+}
+
+/// Extracts a precision keyword from an AST expression.
+/// Supports both string literals ('year') and bare identifiers (year).
+fn extract_precision_keyword(expr: &Expression) -> Result<String, EvaluationError> {
+    match expr {
+        Expression::Term(Term::Literal(Literal::String(s))) => Ok(s.clone()),
+        Expression::Term(Term::Invocation(Invocation::Member(name))) => Ok(name.clone()),
+        _ => Err(EvaluationError::InvalidArgument(
+            "Precision argument must be a string literal or keyword identifier".to_string(),
+        )),
+    }
+}
+
+/// Applies FHIRPath regex flags to a RegexBuilder.
+/// Supported flags: s (dotAll), m (multiLine), i (caseInsensitive), x (comments/whitespace).
+fn apply_regex_flags(builder: &mut RegexBuilder, flags: &str) {
+    for ch in flags.chars() {
+        match ch {
+            's' => {
+                builder.dot_matches_new_line(true);
+            }
+            'm' => {
+                builder.multi_line(true);
+            }
+            'i' => {
+                builder.case_insensitive(true);
+            }
+            'x' => {
+                builder.ignore_whitespace(true);
+            }
+            _ => {} // Ignore unknown flags per spec
+        }
+    }
 }
 
 /// Calls a standard FHIRPath function (that doesn't take a lambda).
@@ -3276,6 +3380,10 @@ fn call_function(
             // Delegate to the dedicated function in boolean_functions.rs
             crate::boolean_functions::any_false_function(invocation_base)
         }
+        "sum" => crate::aggregate_math_functions::sum_function(invocation_base),
+        "min" => crate::aggregate_math_functions::min_function(invocation_base),
+        "max" => crate::aggregate_math_functions::max_function(invocation_base),
+        "avg" => crate::aggregate_math_functions::avg_function(invocation_base),
         "first" => {
             // Delegate to the dedicated function in collection_functions.rs
             crate::collection_functions::first_function(invocation_base, context)
@@ -3403,16 +3511,26 @@ fn call_function(
             crate::set_operations::union_function(invocation_base, other_collection, context)
         }
         "combine" => {
-            // Validate argument count
-            if args.len() != 1 {
+            if args.is_empty() || args.len() > 2 {
                 return Err(EvaluationError::InvalidArity(
-                    "Function 'combine' expects 1 argument".to_string(),
+                    "Function 'combine' expects 1 or 2 arguments".to_string(),
                 ));
             }
             let other_collection = &args[0];
-
-            // Delegate to the dedicated function in set_operations.rs
-            crate::set_operations::combine_function(invocation_base, other_collection, context)
+            let preserve_order = if args.len() == 2 {
+                match &args[1] {
+                    EvaluationResult::Boolean(b, _) => *b,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+            crate::set_operations::combine_function(
+                invocation_base,
+                other_collection,
+                preserve_order,
+                context,
+            )
         }
         "single" => {
             // Returns the single item in a collection, or empty if 0 or >1 items
@@ -3602,50 +3720,75 @@ fn call_function(
             })
         }
         "toString" => {
-            // Converts the input to its string representation using the helper
-            // Check for singleton first
             if invocation_base.count() > 1 {
                 return Err(EvaluationError::SingletonEvaluationError(
                     "toString requires a singleton input".to_string(),
                 ));
             }
+            if args.len() == 1 {
+                // toString with format code
+                match &args[0] {
+                    EvaluationResult::String(fmt, _) => {
+                        if matches!(invocation_base, EvaluationResult::Empty) {
+                            return Ok(EvaluationResult::Empty);
+                        }
+                        return crate::format_functions::to_string_with_format(
+                            invocation_base,
+                            fmt,
+                        );
+                    }
+                    EvaluationResult::Empty => return Ok(EvaluationResult::Empty),
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "toString format argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            }
             Ok(match invocation_base {
-                // Wrap in Ok
-                EvaluationResult::Empty => EvaluationResult::Empty, // toString on empty is empty
-                // Collections handled by initial check
+                EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::Collection { .. } => unreachable!(),
-                // Convert single item to string
-                single_item => EvaluationResult::string(single_item.to_string_value()), // Uses updated to_string_value
+                single_item => EvaluationResult::string(single_item.to_string_value()),
             })
         }
         "toDate" => {
-            // Converts the input to Date according to FHIRPath rules
-            // Check for singleton first
             if invocation_base.count() > 1 {
                 return Err(EvaluationError::SingletonEvaluationError(
                     "toDate requires a singleton input".to_string(),
                 ));
             }
+            // Handle format argument for string parsing
+            if args.len() == 1 {
+                match (&args[0], invocation_base) {
+                    (EvaluationResult::String(fmt, _), EvaluationResult::String(s, _)) => {
+                        return crate::format_functions::parse_date_with_format(s, fmt);
+                    }
+                    (_, EvaluationResult::Empty) | (EvaluationResult::Empty, _) => {
+                        return Ok(EvaluationResult::Empty);
+                    }
+                    (EvaluationResult::String(_fmt, _), _) => {
+                        // Non-string input with format -> just try normal conversion
+                    }
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "toDate format argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            }
             Ok(match invocation_base {
-                // Wrap in Ok
                 EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::Date(d, _) => EvaluationResult::date(d.clone()),
                 EvaluationResult::DateTime(dt, _) => {
-                    // Extract the date part
                     if let Some(date_part) = dt.split('T').next() {
                         EvaluationResult::date(date_part.to_string())
                     } else {
-                        EvaluationResult::Empty // Should not happen if DateTime format is valid
+                        EvaluationResult::Empty
                     }
                 }
                 EvaluationResult::String(s, _) => {
-                    // Attempt to parse as Date or DateTime and extract date part
-                    // This requires a robust date/datetime parsing logic
-                    // For now, assume valid FHIR date/datetime strings
                     if s.contains('T') {
-                        // Looks like DateTime
                         if let Some(date_part) = s.split('T').next() {
-                            // Basic validation: check if date_part looks like YYYY, YYYY-MM, or YYYY-MM-DD
                             if date_part.len() == 4 || date_part.len() == 7 || date_part.len() == 10
                             {
                                 EvaluationResult::date(date_part.to_string())
@@ -3655,23 +3798,17 @@ fn call_function(
                         } else {
                             EvaluationResult::Empty
                         }
+                    } else if s.len() == 4 || s.len() == 7 || s.len() == 10 {
+                        EvaluationResult::date(s.clone())
                     } else {
-                        // Looks like Date
-                        // Basic validation
-                        if s.len() == 4 || s.len() == 7 || s.len() == 10 {
-                            EvaluationResult::date(s.clone())
-                        } else {
-                            EvaluationResult::Empty
-                        }
+                        EvaluationResult::Empty
                     }
                 }
-                // Collections handled by initial check
                 EvaluationResult::Collection { .. } => {
-                    // This arm should be unreachable due to the count check above
                     eprintln!("Warning: toDate called on a collection");
                     EvaluationResult::Empty
                 }
-                _ => EvaluationResult::Empty, // Other types cannot convert
+                _ => EvaluationResult::Empty,
             })
         }
         "convertsToDate" => {
@@ -3704,20 +3841,34 @@ fn call_function(
             })
         }
         "toDateTime" => {
-            // Converts the input to DateTime according to FHIRPath rules
-            // Check for singleton first
             if invocation_base.count() > 1 {
                 return Err(EvaluationError::SingletonEvaluationError(
                     "toDateTime requires a singleton input".to_string(),
                 ));
             }
+            if args.len() == 1 {
+                match (&args[0], invocation_base) {
+                    (EvaluationResult::String(fmt, _), EvaluationResult::String(s, _)) => {
+                        return crate::format_functions::parse_datetime_with_format(s, fmt);
+                    }
+                    (_, EvaluationResult::Empty) | (EvaluationResult::Empty, _) => {
+                        return Ok(EvaluationResult::Empty);
+                    }
+                    (EvaluationResult::String(_fmt, _), _) => {
+                        // Non-string input with format -> fall through to normal conversion
+                    }
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "toDateTime format argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            }
             Ok(match invocation_base {
-                // Wrap in Ok
                 EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::DateTime(dt, _) => EvaluationResult::datetime(dt.clone()),
-                EvaluationResult::Date(d, _) => EvaluationResult::datetime(d.clone()), // Date becomes DateTime (no time part)
+                EvaluationResult::Date(d, _) => EvaluationResult::datetime(d.clone()),
                 EvaluationResult::String(s, _) => {
-                    // Basic check: Does it look like YYYY, YYYY-MM, YYYY-MM-DD, or YYYY-MM-DDTHH...?
                     let is_date_like = s.len() == 4 || s.len() == 7 || s.len() == 10;
                     let is_datetime_like =
                         s.contains('T') && s.starts_with(|c: char| c.is_ascii_digit());
@@ -3727,13 +3878,11 @@ fn call_function(
                         EvaluationResult::Empty
                     }
                 }
-                // Collections handled by initial check
                 EvaluationResult::Collection { .. } => {
-                    // This arm should be unreachable due to the count check above
                     eprintln!("Warning: toDateTime called on a collection");
                     EvaluationResult::Empty
                 }
-                _ => EvaluationResult::Empty, // Other types cannot convert
+                _ => EvaluationResult::Empty,
             })
         }
         "convertsToDateTime" => {
@@ -4389,9 +4538,9 @@ fn call_function(
             })
         }
         "matches" => {
-            if args.len() != 1 {
+            if args.is_empty() || args.len() > 2 {
                 return Err(EvaluationError::InvalidArity(
-                    "Function 'matches' expects 1 argument".to_string(),
+                    "Function 'matches' expects 1 or 2 arguments".to_string(),
                 ));
             }
             // Check for singleton base and arg
@@ -4400,22 +4549,39 @@ fn call_function(
                     "matches requires singleton input and argument".to_string(),
                 ));
             }
+            // Extract optional flags argument
+            let flags = if args.len() == 2 {
+                match &args[1] {
+                    EvaluationResult::String(f, _) => Some(f.as_str()),
+                    EvaluationResult::Empty => None,
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "matches flags argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            } else {
+                None
+            };
             Ok(match (invocation_base, &args[0]) {
-                // Wrap in Ok
                 (EvaluationResult::String(s, _), EvaluationResult::String(regex_pattern, _)) => {
-                    match RegexBuilder::new(regex_pattern)
-                        .dot_matches_new_line(true)
-                        .build()
-                    {
+                    let mut builder = RegexBuilder::new(regex_pattern);
+                    if let Some(flags) = flags {
+                        apply_regex_flags(&mut builder, flags);
+                    } else {
+                        // Backward compat: no flags arg means dot_matches_new_line is on
+                        builder.dot_matches_new_line(true);
+                    }
+                    match builder.build() {
                         Ok(re) => EvaluationResult::boolean(re.is_match(s)),
-                        Err(e) => return Err(EvaluationError::InvalidRegex(e.to_string())), // Return Err
+                        Err(e) => return Err(EvaluationError::InvalidRegex(e.to_string())),
                     }
                 }
                 // Handle empty cases
                 (EvaluationResult::String(_, _), EvaluationResult::Empty) => {
                     EvaluationResult::Empty
-                } // S.matches({}) -> {}
-                (EvaluationResult::Empty, _) => EvaluationResult::Empty, // {}.matches(R) -> {}
+                }
+                (EvaluationResult::Empty, _) => EvaluationResult::Empty,
                 _ => {
                     return Err(EvaluationError::TypeError(
                         "matches requires String input and argument".to_string(),
@@ -4424,9 +4590,9 @@ fn call_function(
             })
         }
         "matchesFull" => {
-            if args.len() != 1 {
+            if args.is_empty() || args.len() > 2 {
                 return Err(EvaluationError::InvalidArity(
-                    "Function 'matchesFull' expects 1 argument".to_string(),
+                    "Function 'matchesFull' expects 1 or 2 arguments".to_string(),
                 ));
             }
             // Check for singleton base and arg
@@ -4435,11 +4601,27 @@ fn call_function(
                     "matchesFull requires singleton input and argument".to_string(),
                 ));
             }
+            let flags = if args.len() == 2 {
+                match &args[1] {
+                    EvaluationResult::String(f, _) => Some(f.as_str()),
+                    EvaluationResult::Empty => None,
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "matchesFull flags argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            } else {
+                None
+            };
             Ok(match (invocation_base, &args[0]) {
                 (EvaluationResult::String(s, _), EvaluationResult::String(regex_pattern, _)) => {
-                    // matchesFull implicitly adds ^ and $ to the pattern
                     let full_pattern = format!("^{}$", regex_pattern);
-                    match Regex::new(&full_pattern) {
+                    let mut builder = RegexBuilder::new(&full_pattern);
+                    if let Some(flags) = flags {
+                        apply_regex_flags(&mut builder, flags);
+                    }
+                    match builder.build() {
                         Ok(re) => EvaluationResult::boolean(re.is_match(s)),
                         Err(e) => return Err(EvaluationError::InvalidRegex(e.to_string())),
                     }
@@ -4447,8 +4629,8 @@ fn call_function(
                 // Handle empty cases
                 (EvaluationResult::String(_, _), EvaluationResult::Empty) => {
                     EvaluationResult::Empty
-                } // S.matchesFull({}) -> {}
-                (EvaluationResult::Empty, _) => EvaluationResult::Empty, // {}.matchesFull(R) -> {}
+                }
+                (EvaluationResult::Empty, _) => EvaluationResult::Empty,
                 _ => {
                     return Err(EvaluationError::TypeError(
                         "matchesFull requires String input and argument".to_string(),
@@ -4457,9 +4639,9 @@ fn call_function(
             })
         }
         "replaceMatches" => {
-            if args.len() != 2 {
+            if args.len() < 2 || args.len() > 3 {
                 return Err(EvaluationError::InvalidArity(
-                    "Function 'replaceMatches' expects 2 arguments".to_string(),
+                    "Function 'replaceMatches' expects 2 or 3 arguments".to_string(),
                 ));
             }
             // Check for singleton base and args
@@ -4468,29 +4650,44 @@ fn call_function(
                     "replaceMatches requires singleton input and arguments".to_string(),
                 ));
             }
+            let flags = if args.len() == 3 {
+                match &args[2] {
+                    EvaluationResult::String(f, _) => Some(f.as_str()),
+                    EvaluationResult::Empty => None,
+                    _ => {
+                        return Err(EvaluationError::TypeError(
+                            "replaceMatches flags argument must be a string".to_string(),
+                        ));
+                    }
+                }
+            } else {
+                None
+            };
             Ok(match (invocation_base, &args[0], &args[1]) {
-                // Wrap in Ok
                 (
                     EvaluationResult::String(s, _),
                     EvaluationResult::String(regex_pattern, _),
                     EvaluationResult::String(substitution, _),
                 ) => {
-                    // If pattern is empty, return original string unchanged
                     if regex_pattern.is_empty() {
                         EvaluationResult::string(s.clone())
                     } else {
-                        match Regex::new(regex_pattern) {
+                        let mut builder = RegexBuilder::new(regex_pattern);
+                        if let Some(flags) = flags {
+                            apply_regex_flags(&mut builder, flags);
+                        }
+                        match builder.build() {
                             Ok(re) => EvaluationResult::string(
-                                re.replace_all(s, substitution).to_string(),
+                                re.replace_all(s, substitution.as_str()).to_string(),
                             ),
-                            Err(e) => return Err(EvaluationError::InvalidRegex(e.to_string())), // Return Err
+                            Err(e) => return Err(EvaluationError::InvalidRegex(e.to_string())),
                         }
                     }
                 }
                 // Handle empty cases
-                (EvaluationResult::Empty, _, _) => EvaluationResult::Empty, // {}.replaceMatches(R, S) -> {}
-                (_, EvaluationResult::Empty, _) => EvaluationResult::Empty, // S.replaceMatches({}, S) -> {}
-                (_, _, EvaluationResult::Empty) => EvaluationResult::Empty, // S.replaceMatches(R, {}) -> {}
+                (EvaluationResult::Empty, _, _) => EvaluationResult::Empty,
+                (_, EvaluationResult::Empty, _) => EvaluationResult::Empty,
+                (_, _, EvaluationResult::Empty) => EvaluationResult::Empty,
                 _ => {
                     return Err(EvaluationError::TypeError(
                         "replaceMatches requires String input and arguments".to_string(),
@@ -6338,6 +6535,14 @@ fn call_function(
                 "highBoundary",
                 "getResourceKey",
                 "getReferenceKey",
+                "sum",
+                "min",
+                "max",
+                "avg",
+                "coalesce",
+                "repeatAll",
+                "duration",
+                "difference",
             ];
             if !handled_functions.contains(&name) {
                 eprintln!("Warning: Unsupported function called: {}", name); // Keep this warning for truly unhandled functions

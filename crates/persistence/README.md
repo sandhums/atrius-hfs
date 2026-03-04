@@ -794,15 +794,25 @@ Optional overrides:
 
 Example:
 
+MinIO Testing
+
 ```bash
 RUN_MINIO_S3_TESTS=1 \
 cargo test -p helios-persistence --features s3 --test minio_s3_tests
 ```
 
+S3 Testing
+
+Note: Make sure aws sso login is set up and running before executing S3 Testing
+
 ```bash
-RUN_AWS_S3_TESTS=1 \
-cargo test -p helios-persistence --features s3 --test s3_tests
+export RUN_AWS_S3_TESTS=1
+export HFS_S3_TEST_BUCKET="your-existing-bucket-name"
+export AWS_REGION="us-east-1"   # or your bucket’s region
+cargo test -p helios-persistence --test s3_tests --features s3
 ```
+
+
 
 ## Implementation Status
 
