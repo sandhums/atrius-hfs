@@ -118,7 +118,7 @@ impl BulkSubmitProvider for S3Backend {
             submissions.push(state.summary);
         }
 
-        submissions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        submissions.sort_by_key(|s| std::cmp::Reverse(s.created_at));
 
         let start = (offset as usize).min(submissions.len());
         let end = start.saturating_add(limit as usize).min(submissions.len());
@@ -268,7 +268,7 @@ impl BulkSubmitProvider for S3Backend {
             .map(|state| state.manifest)
             .collect::<Vec<_>>();
 
-        manifests.sort_by(|a, b| a.added_at.cmp(&b.added_at));
+        manifests.sort_by_key(|m| m.added_at);
         Ok(manifests)
     }
 
@@ -567,7 +567,7 @@ impl BulkSubmitRollbackProvider for S3Backend {
     ) -> StorageResult<Vec<SubmissionChange>> {
         let location = self.tenant_location(tenant)?;
         let mut changes = self.load_changes(&location, submission_id).await?;
-        changes.sort_by(|a, b| b.changed_at.cmp(&a.changed_at));
+        changes.sort_by_key(|c| std::cmp::Reverse(c.changed_at));
 
         let start = (offset as usize).min(changes.len());
         let end = start.saturating_add(limit as usize).min(changes.len());

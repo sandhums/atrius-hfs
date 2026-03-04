@@ -172,7 +172,7 @@ impl BulkExportStorage for S3Backend {
             }
         }
 
-        exports.sort_by(|a, b| b.transaction_time.cmp(&a.transaction_time));
+        exports.sort_by_key(|e| std::cmp::Reverse(e.transaction_time));
         Ok(exports)
     }
 }

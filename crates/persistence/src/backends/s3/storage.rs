@@ -259,7 +259,7 @@ impl S3Backend {
         mut entries: Vec<HistoryEntry>,
         pagination: &Pagination,
     ) -> StorageResult<HistoryPage> {
-        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        entries.sort_by_key(|e| std::cmp::Reverse(e.timestamp));
 
         let total = entries.len();
         let offset = decode_pagination_offset(pagination)?;
