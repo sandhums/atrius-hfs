@@ -414,14 +414,14 @@ mod tests {
     }
 
     #[test]
-    fn block_on_detached_works_inside_current_thread_runtime() {
+    fn block_on_works_inside_current_thread_runtime() {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("build test runtime");
 
         rt.block_on(async {
-            let value = block_on_detached(async { 7usize }).expect("block_on_detached should work");
+            let value = block_on(async { 7usize }).expect("block_on should work");
             assert_eq!(value, 7);
         });
     }
