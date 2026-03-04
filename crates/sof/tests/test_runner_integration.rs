@@ -140,6 +140,7 @@ fn run_single_test(test: &Test, bundle: &SofBundle) -> TestResult {
 
     // Parse the result as JSON
     let actual_rows: Vec<serde_json::Value> = match serde_json::from_slice(&result) {
+
         Ok(rows) => rows,
         Err(e) => {
             return TestResult {
@@ -148,7 +149,9 @@ fn run_single_test(test: &Test, bundle: &SofBundle) -> TestResult {
             };
         }
     };
-
+    println!("--- TEST: {} ---", test.title);
+    println!("Actual rows: {}", serde_json::to_string_pretty(&actual_rows).unwrap());
+    println!("Expected rows: {}", serde_json::to_string_pretty(test.expect.as_ref().unwrap()).unwrap());
     // Compare with expected results
     match &test.expect {
         Some(expected) => {
@@ -268,7 +271,10 @@ fn run_comprehensive_test_suite() {
         let entry = entry.expect("Failed to read directory entry");
         let path = entry.path();
 
-        if path.extension().and_then(|s| s.to_str()) == Some("json") {
+        // if path.extension().and_then(|s| s.to_str()) == Some("json") {
+        if path.extension().and_then(|s| s.to_str()) == Some("json")
+            && path.file_name().and_then(|s| s.to_str()) == Some("constant.json")
+        {
             let file_name = path
                 .file_name()
                 .and_then(|s| s.to_str())

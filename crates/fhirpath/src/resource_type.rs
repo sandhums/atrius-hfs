@@ -82,231 +82,255 @@ pub fn is_of_type_with_context(
     let (target_namespace, target_type) =
         extract_namespace_and_type_with_context(type_spec, context)?;
     match value {
-        EvaluationResult::Boolean(_, type_info) => {
+        EvaluationResult::Boolean(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Boolean for boolean values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Boolean",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Integer(_, type_info) => {
+        EvaluationResult::Integer(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Integer for integer values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Integer",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Decimal(_, type_info) => {
+        EvaluationResult::Decimal(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Decimal for decimal values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Decimal",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::String(_, type_info) => {
+        EvaluationResult::String(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.String for string values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "String",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Date(_, type_info) => {
+        EvaluationResult::Date(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Date for date values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Date",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::DateTime(_, type_info) => {
+        EvaluationResult::DateTime(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.DateTime for datetime values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "DateTime",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Time(_, type_info) => {
+        EvaluationResult::Time(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Time for time values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Time",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Quantity(_, _, type_info) => {
+        EvaluationResult::Quantity(_, _, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Quantity for quantity values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Quantity",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
         EvaluationResult::Object { map, type_info, .. } => {
             // First check if there's type_info available
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else if let Some(resource_type_value) = map.get("resourceType") {
                 // For FHIR resources, check the resourceType property
-                if let EvaluationResult::String(resource_type, _) = resource_type_value {
+                if let EvaluationResult::String(resource_type, _, _) = resource_type_value {
                     // Check if the resource type matches the target type
-                    check_type_match(
+                    check_type_match_with_cross_namespace(
                         &Some("FHIR".to_string()),
                         resource_type,
                         &target_namespace,
                         &target_type,
+                        false,
                     )
                 } else {
                     Ok(false)
                 }
             } else {
                 // Default to System.Object for object values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Object",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
         EvaluationResult::Collection { type_info, .. } => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Collection for collection values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Collection",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
-        EvaluationResult::Empty => {
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
             // Empty values don't match any specific type
             Ok(false)
         }
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
         EvaluationResult::Integer64(_, type_info) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             } else {
                 // Default to System.Integer64 for integer64 values
-                check_type_match(
+                check_type_match_with_cross_namespace(
                     &Some("System".to_string()),
                     "Integer64",
                     &target_namespace,
                     &target_type,
+                    false,
                 )
             }
         }
         #[cfg(any(feature = "R4", feature = "R4B"))]
-        EvaluationResult::Integer64(_, _) => {
+        EvaluationResult::Integer64(_, _, _) => {
             // In R4 and R4B, Integer64 should be treated as Integer
-            check_type_match(
+            check_type_match_with_cross_namespace(
                 &Some("System".to_string()),
                 "Integer",
                 &target_namespace,
                 &target_type,
+                false,
             )
         }
     }
@@ -330,7 +354,7 @@ pub fn is_of_type_for_of_type(
     let (target_namespace, target_type) = extract_namespace_and_type_without_context(type_spec)?;
 
     match value {
-        EvaluationResult::Boolean(_, type_info) => {
+        EvaluationResult::Boolean(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -350,7 +374,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::Integer(_, type_info) => {
+        EvaluationResult::Integer(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -370,7 +394,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::Decimal(_, type_info) => {
+        EvaluationResult::Decimal(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -390,7 +414,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::String(_, type_info) => {
+        EvaluationResult::String(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -410,7 +434,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::Date(_, type_info) => {
+        EvaluationResult::Date(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -430,7 +454,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::DateTime(_, type_info) => {
+        EvaluationResult::DateTime(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -450,7 +474,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::Time(_, type_info) => {
+        EvaluationResult::Time(_, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -470,7 +494,7 @@ pub fn is_of_type_for_of_type(
                 )
             }
         }
-        EvaluationResult::Quantity(_, _, type_info) => {
+        EvaluationResult::Quantity(_, _, type_info, _) => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
                     &Some(type_info.namespace.clone()),
@@ -494,7 +518,7 @@ pub fn is_of_type_for_of_type(
             // Collections are not simple types and don't match single type checks
             Ok(false)
         }
-        EvaluationResult::Empty => {
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
             // Empty values don't match any specific type
             Ok(false)
         }
@@ -520,7 +544,7 @@ pub fn is_of_type_for_of_type(
             }
         }
         #[cfg(any(feature = "R4", feature = "R4B"))]
-        EvaluationResult::Integer64(_, _) => {
+        EvaluationResult::Integer64(_, _, _) => {
             // In R4 and R4B, Integer64 should be treated as Integer
             check_type_match_with_cross_namespace(
                 &Some("System".to_string()),
@@ -542,7 +566,7 @@ pub fn is_of_type_for_of_type(
                 )
             } else if let Some(resource_type_value) = map.get("resourceType") {
                 // For FHIR resources, check the resourceType property
-                if let EvaluationResult::String(resource_type, _) = resource_type_value {
+                if let EvaluationResult::String(resource_type, _, _) = resource_type_value {
                     // Check if the resource type matches the target type
                     check_type_match_with_cross_namespace(
                         &Some("FHIR".to_string()),
@@ -580,9 +604,9 @@ pub fn is_of_type(
     let (target_namespace, target_type) = extract_namespace_and_type_without_context(type_spec)?;
 
     match value {
-        EvaluationResult::Boolean(_, type_info) => {
+        EvaluationResult::Boolean(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -590,7 +614,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Boolean for boolean values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Boolean",
                     &target_namespace,
@@ -598,9 +622,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::Integer(_, type_info) => {
+        EvaluationResult::Integer(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -608,7 +632,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Integer for integer values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Integer",
                     &target_namespace,
@@ -616,9 +640,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::Decimal(_, type_info) => {
+        EvaluationResult::Decimal(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -626,7 +650,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Decimal for decimal values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Decimal",
                     &target_namespace,
@@ -634,9 +658,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::String(_, type_info) => {
+        EvaluationResult::String(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -644,7 +668,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.String for string values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "String",
                     &target_namespace,
@@ -652,9 +676,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::Date(_, type_info) => {
+        EvaluationResult::Date(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -662,7 +686,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Date for date values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Date",
                     &target_namespace,
@@ -670,9 +694,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::DateTime(_, type_info) => {
+        EvaluationResult::DateTime(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -680,7 +704,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.DateTime for datetime values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "DateTime",
                     &target_namespace,
@@ -688,9 +712,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::Time(_, type_info) => {
+        EvaluationResult::Time(_, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -698,7 +722,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Time for time values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Time",
                     &target_namespace,
@@ -706,9 +730,9 @@ pub fn is_of_type(
                 )
             }
         }
-        EvaluationResult::Quantity(_, _, type_info) => {
+        EvaluationResult::Quantity(_, _, type_info, _) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -716,7 +740,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Quantity for quantity values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Quantity",
                     &target_namespace,
@@ -728,14 +752,14 @@ pub fn is_of_type(
             // Collections are not simple types and don't match single type checks
             Ok(false)
         }
-        EvaluationResult::Empty => {
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
             // Empty values don't match any specific type
             Ok(false)
         }
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
         EvaluationResult::Integer64(_, type_info) => {
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -743,7 +767,7 @@ pub fn is_of_type(
                 )
             } else {
                 // Default to System.Integer64 for integer64 values
-                check_type_match(
+                check_type_match_strict(
                     &Some("System".to_string()),
                     "Integer64",
                     &target_namespace,
@@ -752,9 +776,9 @@ pub fn is_of_type(
             }
         }
         #[cfg(any(feature = "R4", feature = "R4B"))]
-        EvaluationResult::Integer64(_, _) => {
+        EvaluationResult::Integer64(_, _, _) => {
             // In R4 and R4B, Integer64 should be treated as Integer
-            check_type_match(
+            check_type_match_strict(
                 &Some("System".to_string()),
                 "Integer",
                 &target_namespace,
@@ -764,7 +788,7 @@ pub fn is_of_type(
         EvaluationResult::Object { map, type_info, .. } => {
             // First check if there's type_info available
             if let Some(type_info) = type_info {
-                check_type_match(
+                check_type_match_strict(
                     &Some(type_info.namespace.clone()),
                     &type_info.name,
                     &target_namespace,
@@ -772,9 +796,9 @@ pub fn is_of_type(
                 )
             } else if let Some(resource_type_value) = map.get("resourceType") {
                 // For FHIR resources, check the resourceType property
-                if let EvaluationResult::String(resource_type, _) = resource_type_value {
+                if let EvaluationResult::String(resource_type, _, _) = resource_type_value {
                     // Check if the resource type matches the target type
-                    check_type_match(
+                    check_type_match_strict(
                         &Some("FHIR".to_string()),
                         resource_type,
                         &target_namespace,
@@ -1566,7 +1590,7 @@ fn try_convert_for_of_type(
     let (_target_namespace, target_type) = extract_namespace_and_type_without_context(type_spec)?;
 
     match value {
-        EvaluationResult::String(s, type_info) => {
+        EvaluationResult::String(s, type_info, _) => {
             // Check if this is a FHIR string that might represent a different type
             if let Some(type_info) = type_info {
                 if type_info.namespace == "FHIR" && type_info.name == "string" {
@@ -1722,12 +1746,34 @@ pub fn of_type_with_context(
             let mut result = Vec::new();
 
             for item in items {
-                // Use context-aware type checking
-                if is_of_type_with_context(item, type_spec, context)? {
-                    result.push(item.clone());
+                // `ofType()` has special semantics for primitives: FHIR primitives are
+                // automatically treated as System primitives in most expressions.
+                // Therefore, for primitives we must use the `ofType`-specific matcher
+                // (which allows FHIR<->System primitive matching) and optional conversion.
+                let matches = matches!(
+                    item,
+                    EvaluationResult::Boolean(_, _, _)
+                        | EvaluationResult::String(_, _, _)
+                        | EvaluationResult::Integer(_, _, _)
+                        | EvaluationResult::Decimal(_, _, _)
+                        | EvaluationResult::Date(_, _, _)
+                        | EvaluationResult::DateTime(_, _, _)
+                        | EvaluationResult::Time(_, _, _)
+                        | EvaluationResult::Quantity(_, _, _, _)
+                );
+
+                if matches {
+                    if is_of_type_for_of_type(item, type_spec)? {
+                        result.push(item.clone());
+                    } else if let Some(converted) = try_convert_for_of_type(item, type_spec)? {
+                        result.push(converted);
+                    }
+                } else {
+                    // For resources/complex types, use the context-aware type system.
+                    if is_of_type_with_context(item, type_spec, context)? {
+                        result.push(item.clone());
+                    }
                 }
-                // Note: try_convert_for_of_type uses the without-context version
-                // which can't validate complex types, so we skip it for now
             }
 
             if result.is_empty() {
@@ -1757,11 +1803,32 @@ pub fn of_type_with_context(
 
         // For a singleton value, treat it like a collection of one
         _ => {
-            if is_of_type_with_context(collection, type_spec, context)? {
-                // Return the value directly for a singleton that matches
-                Ok(collection.clone())
+            let is_primitive = matches!(
+                collection,
+                EvaluationResult::Boolean(_, _, _)
+                    | EvaluationResult::String(_, _, _)
+                    | EvaluationResult::Integer(_, _, _)
+                    | EvaluationResult::Decimal(_, _, _)
+                    | EvaluationResult::Date(_, _, _)
+                    | EvaluationResult::DateTime(_, _, _)
+                    | EvaluationResult::Time(_, _, _)
+                    | EvaluationResult::Quantity(_, _, _, _)
+            );
+
+            if is_primitive {
+                if is_of_type_for_of_type(collection, type_spec)? {
+                    Ok(collection.clone())
+                } else if let Some(converted) = try_convert_for_of_type(collection, type_spec)? {
+                    Ok(converted)
+                } else {
+                    Ok(EvaluationResult::Empty)
+                }
             } else {
-                Ok(EvaluationResult::Empty)
+                if is_of_type_with_context(collection, type_spec, context)? {
+                    Ok(collection.clone())
+                } else {
+                    Ok(EvaluationResult::Empty)
+                }
             }
         }
     }
@@ -2104,4 +2171,50 @@ mod tests {
         let decimal_result = of_type(&collection, &decimal_type).unwrap();
         assert_eq!(decimal_result, EvaluationResult::Empty);
     }
+}
+
+/// Strict type match used for `is()` where FHIR and System are distinct.
+///
+/// - Namespace must match when a namespace is present on the type specifier.
+/// - If the type specifier has no namespace, it matches any namespace only by type name.
+/// - FHIR type hierarchy is only applied when BOTH sides are in the FHIR namespace.
+fn check_type_match_strict(
+    value_namespace: &Option<String>,
+    value_type: &str,
+    target_namespace: &Option<String>,
+    target_type: &str,
+) -> Result<bool, EvaluationError> {
+    // If a target namespace is specified, it must match the value namespace.
+    if let Some(target_ns) = target_namespace.as_deref() {
+        let value_ns = value_namespace.as_deref().unwrap_or("");
+        if !value_ns.eq_ignore_ascii_case(target_ns) {
+            return Ok(false);
+        }
+
+        // When both are FHIR, honor the generated subtype hierarchy.
+        if value_ns.eq_ignore_ascii_case("FHIR") {
+            #[cfg(feature = "R4")]
+            if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
+                return Ok(true);
+            }
+            #[cfg(feature = "R4B")]
+            if helios_fhir::r4b::type_hierarchy::is_subtype_of(value_type, target_type) {
+                return Ok(true);
+            }
+            #[cfg(feature = "R5")]
+            if helios_fhir::r5::type_hierarchy::is_subtype_of(value_type, target_type) {
+                return Ok(true);
+            }
+            #[cfg(feature = "R6")]
+            if helios_fhir::r6::type_hierarchy::is_subtype_of(value_type, target_type) {
+                return Ok(true);
+            }
+        }
+
+        // Otherwise strict name match.
+        return Ok(value_type.eq_ignore_ascii_case(target_type));
+    }
+
+    // No target namespace: match by type name only.
+    Ok(value_type.eq_ignore_ascii_case(target_type))
 }

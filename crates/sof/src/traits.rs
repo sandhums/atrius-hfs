@@ -245,13 +245,13 @@ pub trait ViewDefinitionWhereTrait {
 ///         let eval_result = constant.to_evaluation_result()?;
 ///         
 ///         match eval_result {
-///             EvaluationResult::String(s, _) => {
+///             EvaluationResult::String(s, _, _) => {
 ///                 println!("String constant '{}' = '{}'", name, s);
 ///             },
-///             EvaluationResult::Integer(i, _) => {
+///             EvaluationResult::Integer(i, _, _) => {
 ///                 println!("Integer constant '{}' = {}", name, i);
 ///             },
-///             EvaluationResult::Boolean(b, _) => {
+///             EvaluationResult::Boolean(b, _, _) => {
 ///                 println!("Boolean constant '{}' = {}", name, b);
 ///             },
 ///             _ => {
@@ -450,18 +450,18 @@ mod r4_impl {
             if let Some(value) = &self.value {
                 let eval_result = match value {
                     ViewDefinitionConstantValue::String(s) => {
-                        EvaluationResult::String(s.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(s.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Boolean(b) => {
-                        EvaluationResult::Boolean(b.value.unwrap_or(false), None)
+                        EvaluationResult::Boolean(b.value.unwrap_or(false), None, None)
                     }
                     ViewDefinitionConstantValue::Integer(i) => {
-                        EvaluationResult::Integer(i.value.unwrap_or(0) as i64, None)
+                        EvaluationResult::Integer(i.value.unwrap_or(0) as i64, None, None)
                     }
                     ViewDefinitionConstantValue::Decimal(d) => {
                         if let Some(precise_decimal) = &d.value {
                             match precise_decimal.original_string().parse() {
-                                Ok(decimal_value) => EvaluationResult::Decimal(decimal_value, None),
+                                Ok(decimal_value) => EvaluationResult::Decimal(decimal_value, None, None),
                                 Err(_) => {
                                     return Err(SofError::InvalidViewDefinition(format!(
                                         "Invalid decimal value for constant '{}'",
@@ -470,11 +470,12 @@ mod r4_impl {
                                 }
                             }
                         } else {
-                            EvaluationResult::Decimal("0".parse().unwrap(), None)
+                            EvaluationResult::Decimal("0".parse().unwrap(), None, None)
                         }
                     }
                     ViewDefinitionConstantValue::Date(d) => EvaluationResult::Date(
                         d.value.clone().unwrap_or_default().to_string(),
+                        None,
                         None,
                     ),
                     ViewDefinitionConstantValue::DateTime(dt) => {
@@ -488,6 +489,7 @@ mod r4_impl {
                         EvaluationResult::DateTime(
                             prefixed,
                             Some(TypeInfoResult::new("FHIR", "dateTime")),
+                            None,
                         )
                     }
                     ViewDefinitionConstantValue::Time(t) => {
@@ -498,16 +500,16 @@ mod r4_impl {
                         } else {
                             format!("@T{}", value_str)
                         };
-                        EvaluationResult::Time(prefixed, None)
+                        EvaluationResult::Time(prefixed, None, None)
                     }
                     ViewDefinitionConstantValue::Code(c) => {
-                        EvaluationResult::String(c.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(c.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Base64Binary(b) => {
-                        EvaluationResult::String(b.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(b.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Id(i) => {
-                        EvaluationResult::String(i.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(i.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Instant(i) => {
                         let value_str = i.value.clone().unwrap_or_default().to_string();
@@ -520,28 +522,29 @@ mod r4_impl {
                         EvaluationResult::DateTime(
                             prefixed,
                             Some(TypeInfoResult::new("FHIR", "instant")),
+                            None,
                         )
                     }
                     ViewDefinitionConstantValue::Oid(o) => {
-                        EvaluationResult::String(o.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(o.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::PositiveInt(p) => {
-                        EvaluationResult::Integer(p.value.unwrap_or(1) as i64, None)
+                        EvaluationResult::Integer(p.value.unwrap_or(1) as i64, None, None)
                     }
                     ViewDefinitionConstantValue::UnsignedInt(u) => {
-                        EvaluationResult::Integer(u.value.unwrap_or(0) as i64, None)
+                        EvaluationResult::Integer(u.value.unwrap_or(0) as i64, None, None)
                     }
                     ViewDefinitionConstantValue::Uri(u) => {
-                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Url(u) => {
-                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Uuid(u) => {
-                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(u.value.clone().unwrap_or_default(), None, None)
                     }
                     ViewDefinitionConstantValue::Canonical(c) => {
-                        EvaluationResult::String(c.value.clone().unwrap_or_default(), None)
+                        EvaluationResult::String(c.value.clone().unwrap_or_default(), None, None)
                     }
                 };
 

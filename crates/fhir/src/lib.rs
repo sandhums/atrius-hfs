@@ -42,8 +42,7 @@
 //! ```
 
 use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
-use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult, TypeInfoResult};
-
+use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult, PrimitiveMeta, TypeInfoResult};
 #[cfg(feature = "xml")]
 use helios_serde_support::SingleOrVec;
 
@@ -1416,6 +1415,7 @@ impl IntoEvaluationResult for PrecisionInstant {
         EvaluationResult::DateTime(
             self.inner.original_string.to_string(),
             Some(TypeInfoResult::new("FHIR", "instant")),
+            None
         )
     }
 }
@@ -2099,20 +2099,6 @@ impl<V, E> Element<V, E> {
     }
 }
 
-// New Code :
-impl<E> Element<String, E> {
-    #[inline]
-    pub fn as_str(&self) -> Option<&str> {
-        self.value.as_deref()
-    }
-}
-
-impl<V, E> Element<V, E> {
-    #[inline]
-    pub fn value_ref(&self) -> Option<&V> {
-        self.value.as_ref()
-    }
-}
 // Custom Deserialize for Element<V, E>
 // Remove PartialEq/Eq bounds for V and E as they are not needed for deserialization itself
 impl<'de, V, E> Deserialize<'de> for Element<V, E>
@@ -2783,158 +2769,105 @@ where
     }
 }
 
-// For Element<V, E> - Returns Object with id, extension, value if present
+// For Element<V, E> - Returns System primitive with attached PrimitiveMeta if present
 impl<V, E> IntoEvaluationResult for Element<V, E>
 where
     V: IntoEvaluationResult + Clone + 'static,
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        use std::any::TypeId;
-         // New Code:
-        // If this Element carries `id` and/or `extension`, we must return an object-shaped result
-        // so FHIRPath can access `.id` / `.extension` on primitives (FHIR logical model).
-        // This is especially important when `value` is present *and* extensions exist.
-        if self.id.is_some() || self.extension.is_some() {
-            let mut map = std::collections::HashMap::new();
-
-            if let Some(id) = &self.id {
-                map.insert("id".to_string(), EvaluationResult::string(id.clone()));
-            }
-
-            if let Some(ext) = &self.extension {
-                let ext_collection: Vec<EvaluationResult> =
-                    ext.iter().map(|e| e.to_evaluation_result()).collect();
-                if !ext_collection.is_empty() {
-                    map.insert(
-                        "extension".to_string(),
-                        EvaluationResult::collection(ext_collection),
-                    );
-                }
-            }
-
-            // If a primitive value exists, include it as the `value` property.
-            // We keep the existing FHIR-typed scalar mapping so downstream comparisons still work.
-            if let Some(v) = &self.value {
-                let result = v.to_evaluation_result();
-
-                let typed_value = match result {
-                    EvaluationResult::Boolean(b, _) => EvaluationResult::fhir_boolean(b),
-                    EvaluationResult::Integer(i, _) => EvaluationResult::fhir_integer(i),
-                    #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                    EvaluationResult::Integer64(i, _) => EvaluationResult::fhir_integer64(i),
-                    EvaluationResult::String(s, _) => {
-                        // NOTE:
-                        // For Atrius type aliases like `Canonical = Element<String, Extension>`,
-                        // V is `String` for many distinct FHIR primitives. We cannot infer whether
-                        // it is `canonical`, `uri`, `code`, etc. from `TypeId`.
-                        // We default to "string" here; callers (e.g., derive macro) can override
-                        // the typed-object name when they have the field-level primitive type.
-                        let fhir_type_name = if TypeId::of::<V>() == TypeId::of::<String>() {
-                            "string"
-                        } else {
-                            "string"
-                        };
-                        EvaluationResult::fhir_string(s, fhir_type_name)
-                    }
-                    EvaluationResult::DateTime(dt, type_info) => {
-                        if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
-                            EvaluationResult::DateTime(
-                                dt,
-                                Some(TypeInfoResult::new("FHIR", "instant")),
-                            )
-                        } else {
-                            EvaluationResult::DateTime(dt, type_info)
-                        }
-                    }
-                    other => other,
-                };
-
-                if typed_value != EvaluationResult::Empty {
-                    map.insert("value".to_string(), typed_value);
-                }
-            }
-
-            // Only return Object if map is not empty (i.e., id/extension/value produced something)
-            if !map.is_empty() {
-                // NOTE: We type this as "FHIR.Element" for now. Field-level typing can be applied
-                // by the derive macro when the specific FHIR primitive type name is known.
-                return EvaluationResult::typed_object(map, "FHIR", "Element");
-            }
-
+        // Completely empty element
+        if self.value.is_none()
+            && self.id.is_none()
+            && self.extension.as_ref().is_none_or(|e| e.is_empty())
+        {
             return EvaluationResult::Empty;
         }
 
-        // No id/extension: behave like a simple primitive for most FHIRPath operations.
-        if let Some(v) = &self.value {
-            let result = v.to_evaluation_result();
-            return match result {
-                EvaluationResult::Boolean(b, _) => EvaluationResult::fhir_boolean(b),
-                EvaluationResult::Integer(i, _) => EvaluationResult::fhir_integer(i),
-                #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                EvaluationResult::Integer64(i, _) => EvaluationResult::fhir_integer64(i),
-                EvaluationResult::String(s, _) => {
-                    let fhir_type_name = if TypeId::of::<V>() == TypeId::of::<String>() {
-                        "string"
-                    } else {
-                        "string"
-                    };
-                    EvaluationResult::fhir_string(s, fhir_type_name)
-                }
-                EvaluationResult::DateTime(dt, type_info) => {
-                    if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
-                        EvaluationResult::DateTime(dt, Some(TypeInfoResult::new("FHIR", "instant")))
-                    } else {
-                        EvaluationResult::DateTime(dt, type_info)
-                    }
-                }
-                other => other,
+        // Build PrimitiveMeta from id/extension (drop empty meta)
+        let meta: Option<PrimitiveMeta> = {
+            let extension = self.extension.as_ref().map(|ext| {
+                ext.iter()
+                    .map(|e| e.to_evaluation_result())
+                    .collect::<Vec<_>>()
+            });
+
+            let mut m = PrimitiveMeta {
+                id: self.id.clone(),
+                extension,
             };
+
+            // Normalize empty extension vec to None
+            if let Some(ext) = m.extension.as_ref() {
+                if ext.is_empty() {
+                    m.extension = None;
+                }
+            }
+
+            if m.is_empty() { None } else { Some(m) }
+        };
+
+        // If we have a value, return the underlying *System* value and attach meta
+        if let Some(v) = &self.value {
+            let value_result = v.to_evaluation_result();
+            if value_result == EvaluationResult::Empty {
+                return EvaluationResult::Empty;
+            }
+            return value_result.with_primitive_meta(meta);
         }
 
-        // If value, id, and extension are all None, return Empty
+        // Underscore-only primitive (id/extension with no value):
+        // In this representation, there is no System value to return.
+        // (If you later want `_x.id`/`_x.extension` without a value, you can consider
+        // attaching meta to Empty via a dedicated variant.)
         EvaluationResult::Empty
     }
 }
 
-// For DecimalElement<E> - Returns Decimal value if present, otherwise handles id/extension
+// For DecimalElement<E> - Returns Decimal value if present, attaches PrimitiveMeta if present
 impl<E> IntoEvaluationResult for DecimalElement<E>
 where
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        // Prioritize returning the primitive decimal value if it exists
-        if let Some(precise_decimal) = &self.value {
-            if let Some(decimal_val) = precise_decimal.value() {
-                // Return FHIR decimal
-                return EvaluationResult::fhir_decimal(decimal_val);
-            }
-            // If PreciseDecimal holds None for value, fall through to check id/extension
+        // Completely empty
+        if self.value.is_none()
+            && self.id.is_none()
+            && self.extension.as_ref().is_none_or(|e| e.is_empty())
+        {
+            return EvaluationResult::Empty;
         }
 
-        // If value is None, but id or extension exist, return an Object with those
-        if self.id.is_some() || self.extension.is_some() {
-            let mut map = std::collections::HashMap::new();
-            if let Some(id) = &self.id {
-                map.insert("id".to_string(), EvaluationResult::string(id.clone()));
-            }
-            if let Some(ext) = &self.extension {
-                let ext_collection: Vec<EvaluationResult> =
-                    ext.iter().map(|e| e.to_evaluation_result()).collect();
-                if !ext_collection.is_empty() {
-                    map.insert(
-                        "extension".to_string(),
-                        EvaluationResult::collection(ext_collection),
-                    );
+        // Build PrimitiveMeta
+        let meta: Option<PrimitiveMeta> = {
+            let extension = self.extension.as_ref().map(|ext| {
+                ext.iter()
+                    .map(|e| e.to_evaluation_result())
+                    .collect::<Vec<_>>()
+            });
+
+            let mut m = PrimitiveMeta {
+                id: self.id.clone(),
+                extension,
+            };
+
+            if let Some(ext) = m.extension.as_ref() {
+                if ext.is_empty() {
+                    m.extension = None;
                 }
             }
-            // Only return Object if map is not empty
-            if !map.is_empty() {
-                return EvaluationResult::typed_object(map, "FHIR", "decimal");
+
+            if m.is_empty() { None } else { Some(m) }
+        };
+
+        // Value present: return fhir_decimal and attach meta
+        if let Some(precise_decimal) = &self.value {
+            if let Some(decimal_val) = precise_decimal.value() {
+                return EvaluationResult::fhir_decimal(decimal_val).with_primitive_meta(meta);
             }
         }
 
-        // If value, id, and extension are all None, return Empty
+        // Underscore-only: no numeric System value to return
         EvaluationResult::Empty
     }
 }
