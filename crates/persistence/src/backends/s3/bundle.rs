@@ -1,3 +1,10 @@
+//! Bundle processing (batch and transaction) for the S3 backend.
+//!
+//! Transactions are implemented with a best-effort compensation log: each
+//! successful operation records a [`CompensationAction`] that is applied in
+//! reverse if a later operation fails. S3 does not provide atomic multi-object
+//! operations, so the rollback is advisory rather than strictly atomic.
+
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -14,9 +21,16 @@ use crate::types::StoredResource;
 
 use super::backend::S3Backend;
 
+/// An undo operation recorded for each successful step in a transaction.
+///
+/// Applied in reverse order if a later step fails, approximating an atomic
+/// transaction rollback against an eventually-consistent object store.
 #[derive(Debug, Clone)]
 enum CompensationAction {
+    /// Delete a newly-created resource to undo a POST entry.
     Delete { resource_type: String, id: String },
+    /// Overwrite the current version with a captured snapshot to undo a PUT
+    /// or DELETE entry.
     Restore { snapshot: StoredResource },
 }
 
@@ -113,6 +127,9 @@ impl BundleProvider for S3Backend {
 }
 
 impl S3Backend {
+    /// Executes a single batch entry and converts any error into a 5xx
+    /// `BundleEntryResult` rather than propagating it, preserving best-effort
+    /// batch semantics.
     async fn process_batch_entry(
         &self,
         tenant: &TenantContext,
@@ -124,6 +141,8 @@ impl S3Backend {
         }
     }
 
+    /// Executes a single bundle entry and returns the result together with an
+    /// optional compensation action for rollback.
     async fn execute_bundle_entry(
         &self,
         tenant: &TenantContext,
@@ -283,6 +302,10 @@ impl S3Backend {
         }
     }
 
+    /// Applies compensation actions in reverse order to undo completed steps.
+    ///
+    /// Individual rollback failures are collected and returned as a joined
+    /// error string rather than stopping the rollback mid-way.
     async fn rollback_compensations(
         &self,
         tenant: &TenantContext,
@@ -303,6 +326,10 @@ impl S3Backend {
         }
     }
 
+    /// Applies a single compensation action.
+    ///
+    /// `NotFound` and `Gone` errors on delete compensations are treated as
+    /// success since the intended post-rollback state is already achieved.
     async fn apply_compensation(
         &self,
         tenant: &TenantContext,
@@ -325,6 +352,8 @@ impl S3Backend {
         }
     }
 
+    /// Converts a storage error into a bundle entry result with an appropriate
+    /// HTTP status and a minimal OperationOutcome body.
     fn bundle_error_result(err: &StorageError) -> BundleEntryResult {
         BundleEntryResult::error(
             Self::storage_error_status(err),
@@ -332,6 +361,7 @@ impl S3Backend {
         )
     }
 
+    /// Maps a `StorageError` to an HTTP status code suitable for a bundle entry.
     fn storage_error_status(err: &StorageError) -> u16 {
         match err {
             StorageError::Validation(_) | StorageError::Search(_) => 400,
@@ -348,6 +378,7 @@ impl S3Backend {
         }
     }
 
+    /// Builds a minimal OperationOutcome `Value` from a `StorageError`.
     fn operation_outcome(err: &StorageError) -> Value {
         let code = match err {
             StorageError::Validation(_) => "invalid",
@@ -371,6 +402,11 @@ impl S3Backend {
         })
     }
 
+    /// Parses a bundle entry URL into `(resource_type, id)`.
+    ///
+    /// Both absolute URLs (`https://base/Patient/123`) and relative paths
+    /// (`Patient/123`) are accepted. Returns a validation error if the URL
+    /// does not contain at least two path segments.
     fn parse_url(&self, url: &str) -> crate::error::StorageResult<(String, String)> {
         let path = url
             .strip_prefix("http://")
@@ -395,6 +431,8 @@ impl S3Backend {
     }
 }
 
+/// Recursively rewrites `urn:uuid:…` references in a resource JSON value
+/// using the full URL map built from earlier POST entries in the bundle.
 fn resolve_bundle_references(value: &mut Value, reference_map: &HashMap<String, String>) {
     match value {
         Value::Object(map) => {
