@@ -20,6 +20,7 @@ These capabilities are available today in the current release.
 - [SQLite as a primary store with Elasticsearch as a query secondary](crates/persistence/README.md#sqlite--elasticsearch)
 - [PostgreSQL as a primary store](crates/persistence/README.md#postgresql)
 - [PostgreSQL as a primary store with Elasticsearch as a query secondary](crates/persistence/README.md#postgresql--elasticsearch)
+- [S3 as a primary store](crates/persistence/README.md#s3)
 
 **Analytics & Tooling**
 - [SQL on FHIR](crates/sof/README.md) — CLI and HTTP server
@@ -39,7 +40,7 @@ Work that is currently underway or planned for the near term.
 | **Standards** | [Authentication & Authorization](https://github.com/HeliosSoftware/hfs/discussions/45) | 🔵 Design |
 | **Documentation** | Project documentation website | 🔵 Design |
 | **Persistence** | MongoDB as a primary store | 🟡 In progress |
-| **Persistence** | S3 as a primary store | 🟡 In progress |
+| **Persistence** | S3 as a primary store with Elasticsearch as a query secondary | 🟡 In progress |
 
 ### Discussion Documents
 
@@ -66,7 +67,6 @@ These items are well-understood and will be picked up once current work complete
 ### Persistence Backends
 - Cassandra as a primary store
 - ClickHouse as a primary store
-- S3 with Elasticsearch as a query secondary
 - Cassandra with Elasticsearch as a query secondary
 
 ### Developer Experience
