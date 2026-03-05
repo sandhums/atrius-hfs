@@ -721,6 +721,99 @@ Uses the AWS SDK for Rust ([`aws_sdk_s3`](https://docs.rs/aws-sdk-s3/latest/aws_
 - Region may be provided in config or via `AWS_REGION`
 - Environment credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN`) are supported by provider chain behavior
 
+## Endpoint Modes
+
+### AWS S3 mode
+
+Use this mode when connecting to AWS-managed S3 endpoints.
+
+- `endpoint_url = None`
+- `allow_http = false` (default)
+- `force_path_style = false` (default)
+
+```rust
+use helios_persistence::backends::s3::{S3BackendConfig, S3TenancyMode};
+
+let config = S3BackendConfig {
+    tenancy_mode: S3TenancyMode::PrefixPerTenant {
+        bucket: "my-aws-bucket".to_string(),
+    },
+    endpoint_url: None,
+    force_path_style: false,
+    allow_http: false,
+    ..Default::default()
+};
+```
+
+### S3-compatible endpoint mode (MinIO, etc.)
+
+Use this mode for custom endpoints.
+
+- set `endpoint_url`
+- set `allow_http=true` for local `http://...` endpoints
+- path-style is defaulted on when endpoint mode is active
+- region falls back to `us-east-1` when not provided
+
+```rust
+use helios_persistence::backends::s3::{S3BackendConfig, S3TenancyMode};
+
+let config = S3BackendConfig {
+    tenancy_mode: S3TenancyMode::PrefixPerTenant {
+        bucket: "minio-bucket".to_string(),
+    },
+    endpoint_url: Some("http://127.0.0.1:9000".to_string()),
+    allow_http: true,
+    force_path_style: true,
+    ..Default::default()
+};
+```
+
+Notes:
+
+- `http://` endpoints are rejected unless `allow_http=true`.
+- AWS behavior is unchanged when `endpoint_url` is not set.
+- Buckets are never created by production backend code; startup validation uses `HeadBucket`.
+
+## MinIO Integration Tests
+
+MinIO parity tests live in:
+
+- `crates/persistence/tests/minio_s3_tests.rs`
+
+The suite is opt-in and env-gated:
+
+- `RUN_MINIO_S3_TESTS=1`
+
+Optional overrides:
+
+- `MINIO_IMAGE` (default: `minio/minio`)
+- `MINIO_TAG` (default: `RELEASE.2025-02-28T09-55-16Z`)
+- `MINIO_ROOT_USER` (default: `minioadmin`)
+- `MINIO_ROOT_PASSWORD` (default: `minioadmin`)
+- `HFS_MINIO_TEST_BUCKET` (if unset, tests auto-generate a unique bucket)
+
+Example:
+
+MinIO Testing
+
+```bash
+RUN_MINIO_S3_TESTS=1 \
+cargo test -p helios-persistence --features s3 --test minio_s3_tests
+```
+
+S3 Testing
+
+Note: Make sure aws sso login is set up and running before executing S3 Testing
+
+```bash
+export RUN_AWS_S3_TESTS=1
+export HFS_S3_TEST_BUCKET="your-existing-bucket-name"
+export AWS_REGION="us-east-1"   # or your bucket’s region
+cargo test -p helios-persistence --test s3_tests --features s3
+```
+
+
+
 ## Implementation Status
 
 ### Phase 1: Core Types ✓

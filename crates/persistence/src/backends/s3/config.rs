@@ -39,6 +39,24 @@ pub struct S3BackendConfig {
     /// AWS region override (falls back to provider chain if unset).
     pub region: Option<String>,
 
+    /// Optional S3-compatible endpoint URL (for example, MinIO).
+    ///
+    /// When unset, the backend uses normal AWS S3 endpoint resolution.
+    pub endpoint_url: Option<String>,
+
+    /// Force path-style bucket addressing.
+    ///
+    /// In S3-compatible endpoint mode this may be defaulted at runtime.
+    /// In AWS mode (`endpoint_url == None`), defaults preserve current behavior.
+    #[serde(default)]
+    pub force_path_style: bool,
+
+    /// Allow insecure HTTP endpoint URLs.
+    ///
+    /// This only matters when `endpoint_url` is set. AWS mode is unaffected.
+    #[serde(default)]
+    pub allow_http: bool,
+
     /// Validate all configured buckets on startup with `HeadBucket`.
     pub validate_buckets_on_startup: bool,
 
@@ -57,10 +75,62 @@ impl Default for S3BackendConfig {
             },
             prefix: None,
             region: None,
+            endpoint_url: None,
+            force_path_style: false,
+            allow_http: false,
             validate_buckets_on_startup: true,
             bulk_export_part_size: 10_000,
             bulk_submit_batch_size: 100,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_config() -> S3BackendConfig {
+        S3BackendConfig {
+            tenancy_mode: S3TenancyMode::PrefixPerTenant {
+                bucket: "test-bucket".to_string(),
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn validate_accepts_https_endpoint_without_allow_http() {
+        let mut config = base_config();
+        config.endpoint_url = Some("https://minio.example.local:9000".to_string());
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_http_endpoint_when_allow_http_false() {
+        let mut config = base_config();
+        config.endpoint_url = Some("http://127.0.0.1:9000".to_string());
+        config.allow_http = false;
+
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn validate_accepts_http_endpoint_when_allow_http_true() {
+        let mut config = base_config();
+        config.endpoint_url = Some("http://127.0.0.1:9000".to_string());
+        config.allow_http = true;
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_malformed_endpoint_scheme() {
+        let mut config = base_config();
+        config.endpoint_url = Some("ftp://minio.local:9000".to_string());
+        config.allow_http = true;
+
+        assert!(config.validate().is_err());
     }
 }
 
@@ -81,6 +151,36 @@ impl S3BackendConfig {
                 message: "bulk_submit_batch_size must be > 0".to_string(),
                 source: None,
             }));
+        }
+
+        if let Some(endpoint_url) = self.endpoint_url.as_deref() {
+            let endpoint_url = endpoint_url.trim();
+            if endpoint_url.is_empty() {
+                return Err(StorageError::Backend(BackendError::Internal {
+                    backend_name: "s3".to_string(),
+                    message: "endpoint_url must not be empty when provided".to_string(),
+                    source: None,
+                }));
+            }
+
+            let lower = endpoint_url.to_ascii_lowercase();
+            let is_http = lower.starts_with("http://");
+            let is_https = lower.starts_with("https://");
+            if !is_http && !is_https {
+                return Err(StorageError::Backend(BackendError::Internal {
+                    backend_name: "s3".to_string(),
+                    message: "endpoint_url must start with http:// or https://".to_string(),
+                    source: None,
+                }));
+            }
+
+            if is_http && !self.allow_http {
+                return Err(StorageError::Backend(BackendError::Internal {
+                    backend_name: "s3".to_string(),
+                    message: "http endpoint_url requires allow_http=true".to_string(),
+                    source: None,
+                }));
+            }
         }
 
         match &self.tenancy_mode {

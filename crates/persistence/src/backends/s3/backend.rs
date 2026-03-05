@@ -1,6 +1,6 @@
 //! AWS S3 backend — struct definition, capability matrix, and Backend trait
 //! implementation.
-
+use std::any::Any;
 use std::future::Future;
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ use crate::core::{Backend, BackendCapability, BackendKind};
 use crate::error::{BackendError, StorageError, StorageResult};
 use crate::tenant::{TenantContext, TenantId};
 
-use super::client::{AwsS3Client, S3Api, S3ClientError};
+use super::client::{AwsS3Client, AwsS3ClientOptions, S3Api, S3ClientError};
 use super::config::{S3BackendConfig, S3TenancyMode};
 use super::keyspace::S3Keyspace;
 
@@ -64,25 +64,44 @@ impl S3Backend {
     ///
     /// If `validate_buckets_on_startup` is set, every configured bucket is
     /// verified with a `HeadBucket` call before this function returns.
-    pub fn from_env(mut config: S3BackendConfig) -> StorageResult<Self> {
+    pub fn from_env(config: S3BackendConfig) -> StorageResult<Self> {
+        block_on(Self::from_env_async(config))?
+    }
+
+    /// Async constructor for S3 backend using environment/provider chain credentials.
+    pub async fn from_env_async(mut config: S3BackendConfig) -> StorageResult<Self> {
         config.validate()?;
 
         if config.region.is_none() {
             config.region = std::env::var("AWS_REGION").ok();
         }
 
-        let sdk_config = block_on(AwsS3Client::load_sdk_config(config.region.as_deref()))?;
-        let client = Arc::new(AwsS3Client::from_sdk_config(&sdk_config));
+        apply_s3_compatible_endpoint_defaults(&mut config);
+
+        let sdk_config = AwsS3Client::load_sdk_config(config.region.as_deref()).await;
+        let endpoint_url = config
+            .endpoint_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .map(str::to_string);
+
+        let client = Arc::new(AwsS3Client::from_sdk_config_with_options(
+            &sdk_config,
+            AwsS3ClientOptions {
+                endpoint_url,
+                force_path_style: config.force_path_style,
+            },
+        ));
 
         let backend = Self { config, client };
 
         if backend.config.validate_buckets_on_startup {
-            block_on(backend.validate_buckets())??;
+            backend.validate_buckets().await?;
         }
 
         Ok(backend)
     }
-
     /// Creates a backend with an injected `S3Api` implementation.
     ///
     /// Intended exclusively for unit tests that supply a mock client.
@@ -273,20 +292,63 @@ impl Backend for S3Backend {
     }
 }
 
-/// Drives an async future to completion on the current thread.
+/// Applies endpoint-mode defaults without changing standard AWS mode behavior.
+fn apply_s3_compatible_endpoint_defaults(config: &mut S3BackendConfig) {
+    let has_endpoint_url = config
+        .endpoint_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|url| !url.is_empty())
+        .is_some();
+
+    if !has_endpoint_url {
+        return;
+    }
+
+    if !config.force_path_style {
+        config.force_path_style = true;
+    }
+
+    if config.region.is_none() {
+        config.region = Some("us-east-1".to_string());
+    }
+}
+
+/// Drives an async future to completion from synchronous code.
 ///
-/// If a Tokio runtime is already active the future is driven via
-/// `block_in_place` to avoid nesting runtimes. Otherwise a temporary
-/// single-threaded runtime is created for the duration of the call.
-///
-/// Used during synchronous backend construction (`from_env`) where async SDK
-/// config loading must complete before the constructor can return.
+/// If a Tokio runtime is already active, the future is driven on a detached
+/// thread to avoid nesting runtimes. Otherwise a temporary single-threaded
+/// runtime is created for the duration of the call.
 fn block_on<F>(future: F) -> StorageResult<F::Output>
 where
-    F: Future,
+    F: Future + Send + 'static,
+    F::Output: Send + 'static,
 {
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        Ok(tokio::task::block_in_place(|| handle.block_on(future)))
+    if tokio::runtime::Handle::try_current().is_ok() {
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| {
+                    StorageError::Backend(BackendError::Internal {
+                        backend_name: "s3".to_string(),
+                        message: format!("failed to create runtime: {e}"),
+                        source: None,
+                    })
+                })?;
+            Ok(rt.block_on(future))
+        })
+        .join()
+        .map_err(|panic_payload| {
+            StorageError::Backend(BackendError::Internal {
+                backend_name: "s3".to_string(),
+                message: format!(
+                    "failed to join detached runtime thread: {}",
+                    panic_payload_to_message(panic_payload)
+                ),
+                source: None,
+            })
+        })?
     } else {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -299,5 +361,68 @@ where
                 })
             })?;
         Ok(rt.block_on(future))
+    }
+}
+
+fn panic_payload_to_message(payload: Box<dyn Any + Send + 'static>) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        "unknown panic payload".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn base_config() -> S3BackendConfig {
+        S3BackendConfig {
+            tenancy_mode: S3TenancyMode::PrefixPerTenant {
+                bucket: "test-bucket".to_string(),
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn endpoint_defaults_not_applied_in_aws_mode() {
+        let mut config = base_config();
+        config.endpoint_url = None;
+        config.region = None;
+        config.force_path_style = false;
+
+        apply_s3_compatible_endpoint_defaults(&mut config);
+
+        assert!(config.region.is_none());
+        assert!(!config.force_path_style);
+    }
+
+    #[test]
+    fn endpoint_defaults_applied_when_endpoint_is_set() {
+        let mut config = base_config();
+        config.endpoint_url = Some("http://127.0.0.1:9000".to_string());
+        config.region = None;
+        config.force_path_style = false;
+
+        apply_s3_compatible_endpoint_defaults(&mut config);
+
+        assert_eq!(config.region.as_deref(), Some("us-east-1"));
+        assert!(config.force_path_style);
+    }
+
+    #[test]
+    fn block_on_works_inside_current_thread_runtime() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build test runtime");
+
+        rt.block_on(async {
+            let value = block_on(async { 7usize }).expect("block_on should work");
+            assert_eq!(value, 7);
+        });
     }
 }

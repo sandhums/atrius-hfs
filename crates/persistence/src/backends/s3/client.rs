@@ -138,11 +138,42 @@ pub struct AwsS3Client {
     client: Client,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct AwsS3ClientOptions {
+    pub endpoint_url: Option<String>,
+    pub force_path_style: bool,
+}
+
 impl AwsS3Client {
     /// Constructs a client from a pre-loaded AWS SDK configuration.
+    #[allow(dead_code)]
     pub fn from_sdk_config(config: &SdkConfig) -> Self {
+        Self::from_sdk_config_with_options(config, AwsS3ClientOptions::default())
+    }
+
+    /// Constructs a client from a pre-loaded AWS SDK configuration with S3-compatible overrides.
+    ///
+    /// This is used for non-AWS S3 endpoints (e.g., MinIO, local S3-compatible gateways) where
+    /// callers may need to:
+    /// - override the endpoint URL (`options.endpoint_url`)
+    /// - force path-style addressing (`options.force_path_style`)
+    ///
+    /// When `endpoint_url` is `None`, the SDK will use the default AWS endpoint resolution
+    /// derived from `config` (region, partitions, etc.).
+    pub fn from_sdk_config_with_options(config: &SdkConfig, options: AwsS3ClientOptions) -> Self {
+        let mut builder = aws_sdk_s3::config::Builder::from(config);
+
+        // Override endpoint for S3-compatible providers (e.g., MinIO).
+        if let Some(endpoint_url) = options.endpoint_url {
+            builder = builder.endpoint_url(endpoint_url);
+        }
+
+        // Some S3-compatible providers require path-style requests (bucket in path vs subdomain).
+        builder = builder.force_path_style(options.force_path_style);
+
+        let s3_config = builder.build();
         Self {
-            client: Client::new(config),
+            client: Client::from_conf(s3_config),
         }
     }
 
