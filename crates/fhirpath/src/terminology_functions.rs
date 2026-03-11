@@ -330,6 +330,37 @@ fn extract_coding(coded: &EvaluationResult) -> Result<(String, String), Evaluati
 
         // Coding object
         EvaluationResult::Object { map, .. } => {
+            // If this is a CodeableConcept, pull the first usable Coding from `coding[]`
+            if let Some(EvaluationResult::Collection { items, .. }) = map.get("coding") {
+                for item in items {
+                    if let EvaluationResult::Object { map: coding_map, .. } = item {
+                        let system = coding_map
+                            .get("system")
+                            .and_then(|v| match v {
+                                EvaluationResult::String(s, _, _) => Some(s.clone()),
+                                _ => None,
+                            })
+                            .unwrap_or_default();
+
+                        let code = coding_map
+                            .get("code")
+                            .and_then(|v| match v {
+                                EvaluationResult::String(c, _, _) => Some(c.clone()),
+                                _ => None,
+                            });
+
+                        if let Some(code) = code {
+                            return Ok((system, code));
+                        }
+                    }
+                }
+
+                return Err(EvaluationError::TypeError(
+                    "CodeableConcept.coding must contain at least one Coding with a 'code'".to_string(),
+                ));
+            }
+
+            // Otherwise treat as a Coding-like object
             let system = map
                 .get("system")
                 .and_then(|v| match v {
@@ -345,19 +376,21 @@ fn extract_coding(coded: &EvaluationResult) -> Result<(String, String), Evaluati
                     _ => None,
                 })
                 .ok_or_else(|| {
-                    EvaluationError::TypeError("Coding must have a 'code' element".to_string())
+                    EvaluationError::TypeError(
+                        "Coding must have a 'code' element (or CodeableConcept.coding[] must contain one)".to_string(),
+                    )
                 })?;
 
             Ok((system, code))
         }
 
         _ => Err(EvaluationError::TypeError(
-            "Expected string code or Coding object".to_string(),
+            "Expected string code or Coding/CodeableConcept object".to_string(),
         )),
     }
 }
 
-/// Extracts system, code, and display from a Coding
+/// Extracts system, code, and display from a Coding or CodeableConcept
 fn extract_coding_with_display(
     coded: &EvaluationResult,
 ) -> Result<(String, String, Option<String>), EvaluationError> {
@@ -365,8 +398,44 @@ fn extract_coding_with_display(
         // Direct code string
         EvaluationResult::String(code, _, _) => Ok((String::new(), code.clone(), None)),
 
-        // Coding object
+        // Coding object OR CodeableConcept object
         EvaluationResult::Object { map, .. } => {
+            // If this is a CodeableConcept, pull the first usable Coding from `coding[]`
+            if let Some(EvaluationResult::Collection { items, .. }) = map.get("coding") {
+                for item in items {
+                    if let EvaluationResult::Object { map: coding_map, .. } = item {
+                        let system = coding_map
+                            .get("system")
+                            .and_then(|v| match v {
+                                EvaluationResult::String(s, _, _) => Some(s.clone()),
+                                _ => None,
+                            })
+                            .unwrap_or_default();
+
+                        let code = coding_map
+                            .get("code")
+                            .and_then(|v| match v {
+                                EvaluationResult::String(c, _, _) => Some(c.clone()),
+                                _ => None,
+                            });
+
+                        let display = coding_map.get("display").and_then(|v| match v {
+                            EvaluationResult::String(d, _, _) => Some(d.clone()),
+                            _ => None,
+                        });
+
+                        if let Some(code) = code {
+                            return Ok((system, code, display));
+                        }
+                    }
+                }
+
+                return Err(EvaluationError::TypeError(
+                    "CodeableConcept.coding must contain at least one Coding with a 'code'".to_string(),
+                ));
+            }
+
+            // Otherwise treat as a Coding-like object
             let system = map
                 .get("system")
                 .and_then(|v| match v {
@@ -382,7 +451,9 @@ fn extract_coding_with_display(
                     _ => None,
                 })
                 .ok_or_else(|| {
-                    EvaluationError::TypeError("Coding must have a 'code' element".to_string())
+                    EvaluationError::TypeError(
+                        "Coding must have a 'code' element (or CodeableConcept.coding[] must contain one)".to_string(),
+                    )
                 })?;
 
             let display = map.get("display").and_then(|v| match v {
@@ -394,7 +465,7 @@ fn extract_coding_with_display(
         }
 
         _ => Err(EvaluationError::TypeError(
-            "Expected string code or Coding object".to_string(),
+            "Expected string code or Coding/CodeableConcept object".to_string(),
         )),
     }
 }
@@ -574,6 +645,50 @@ mod tests {
         };
 
         let (system, code, display) = extract_coding_with_display(&coding).unwrap();
+        assert_eq!(system, "http://loinc.org");
+        assert_eq!(code, "1234-5");
+        assert_eq!(display, Some("Test Code".to_string()));
+    }
+
+    #[test]
+    fn test_extract_coding_with_display_from_codeable_concept() {
+        // Build a CodeableConcept-like object with coding[]
+        let mut coding_map = HashMap::new();
+        coding_map.insert(
+            "system".to_string(),
+            EvaluationResult::string("http://loinc.org".to_string()),
+        );
+        coding_map.insert(
+            "code".to_string(),
+            EvaluationResult::string("1234-5".to_string()),
+        );
+        coding_map.insert(
+            "display".to_string(),
+            EvaluationResult::string("Test Code".to_string()),
+        );
+
+        let coding = EvaluationResult::Object {
+            map: coding_map,
+            type_info: None,
+        };
+
+        let cc = EvaluationResult::Object {
+            map: {
+                let mut m = HashMap::new();
+                m.insert(
+                    "coding".to_string(),
+                    EvaluationResult::Collection {
+                        items: vec![coding],
+                        has_undefined_order: false,
+                        type_info: None,
+                    },
+                );
+                m
+            },
+            type_info: None,
+        };
+
+        let (system, code, display) = extract_coding_with_display(&cc).unwrap();
         assert_eq!(system, "http://loinc.org");
         assert_eq!(code, "1234-5");
         assert_eq!(display, Some("Test Code".to_string()));

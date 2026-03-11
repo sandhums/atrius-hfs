@@ -35,6 +35,7 @@ pub mod initial_fhir_model;
 // New
 pub mod directory_output_helpers;
 
+
 use std::collections::HashSet;
 use crate::initial_fhir_model::{Bundle, CompartmentDefinition, Resource};
 use helios_fhir::FhirVersion;
@@ -47,6 +48,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use crate::directory_output_helpers::{module_file_stem, write_mod_index};
+
 
 /// Generates a comprehensive module documentation header for a FHIR version.
 ///
@@ -2156,7 +2158,7 @@ fn generate_element_documentation(element: &ElementDefinition) -> String {
 /// - **Resources**: Generates structs that can be included in the Resource enum
 fn structure_definition_to_rust(
     sd: &StructureDefinition,
-    cycles: &std::collections::HashSet<(String, String)>,
+    cycles: &HashSet<(String, String)>,
 ) -> String {
     let mut output = String::new();
 
@@ -2554,6 +2556,7 @@ fn process_elements(
                 }
             }
             output.push_str("}\n\n");
+
         }
 
         // Collect all choice element fields for this struct

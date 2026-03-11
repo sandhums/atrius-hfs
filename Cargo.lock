@@ -473,7 +473,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "atrius-fhir-valueset-gen"
-version = "0.1.45"
+version = "0.1.47"
 dependencies = [
  "anyhow",
  "helios-fhir-gen",
@@ -2139,6 +2139,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "fhir-validation"
+version = "0.1.47"
+dependencies = [
+ "fhir-validation-gen",
+ "fhir-validation-types",
+ "helios-fhir",
+ "helios-fhirpath",
+ "helios-fhirpath-support",
+ "serde_json",
+]
+
+[[package]]
+name = "fhir-validation-gen"
+version = "0.1.47"
+dependencies = [
+ "helios-fhir",
+ "helios-fhir-gen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "fhir-validation-types"
+version = "0.1.47"
+
+[[package]]
 name = "filetime"
 version = "0.2.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2473,6 +2499,7 @@ version = "0.1.47"
 dependencies = [
  "chrono",
  "clap",
+ "fhir-validation-types",
  "helios-fhir-macro",
  "helios-fhirpath-support",
  "helios-serde-support",
