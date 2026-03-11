@@ -234,7 +234,7 @@ fn make_unique_module(base: &str, url: &str, used: &mut HashMap<String, String>)
             return base.to_string();
         }
         let suffix = hash8(url);
-        let candidate = format!("{base}__{suffix}");
+        let candidate = format!("{base}_{suffix}");
         used.insert(candidate.clone(), url.to_string());
         return candidate;
     }
@@ -248,7 +248,7 @@ fn make_unique_type(base: &str, url: &str, used: &mut HashMap<String, String>) -
             return base.to_string();
         }
         let suffix = hash8(url);
-        let candidate = format!("{base}__{suffix}");
+        let candidate = format!("{base}_{suffix}");
         used.insert(candidate.clone(), url.to_string());
         return candidate;
     }
