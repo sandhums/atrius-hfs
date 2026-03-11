@@ -1,0 +1,23 @@
+[package]
+name = "fhir-validation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["R4"]
+R4 = []
+R4B = []
+R5 = []
+R6 = []
+
+[dependencies]
+helios-fhir = { path = "../fhir", version = "0.1.47" }
+helios-fhirpath = { path = "../fhirpath"}
+helios-fhirpath-support = { path = "../fhirpath-support", version = "0.1.47" }
+fhir-validation-types = { path = "../fhir-validation-types"}
+fhir-validation-gen = { path = "../fhir-validation-gen"}
+serde_json = "1.0.143"
