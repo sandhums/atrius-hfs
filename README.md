@@ -33,7 +33,7 @@ The Helios FHIR Server includes several components:
 
 See [Core Components](#core-components) for details on each.
 
-The server supports SQLite, PostgreSQL, and Elasticsearch in various configurations — see [Storage Backends](#storage-backends) for setup options.
+The server supports SQLite, PostgreSQL, Elasticsearch, and S3 in various configurations — see [Storage Backends](#storage-backends) for setup options.
 
 ## Using Release Binaries
 
@@ -171,6 +171,7 @@ The Helios FHIR Server supports multiple storage backend configurations. Choose 
 | **SQLite + Elasticsearch** | Elasticsearch-powered search with relevance scoring | Production deployments needing robust search |
 | **PostgreSQL** | Built-in full-text search (tsvector/tsquery) | Production OLTP deployments |
 | **PostgreSQL + Elasticsearch** | Elasticsearch-powered search with PostgreSQL CRUD | Production deployments needing RDBMS + robust search |
+| **S3** | Object storage for CRUD, versioning, history, and bulk operations (no search) | Archival, bulk analytics, cost-effective storage |
 
 ### Running the Server
 
@@ -193,13 +194,21 @@ HFS_STORAGE_BACKEND=postgres-elasticsearch \
 HFS_DATABASE_URL="postgresql://user:pass@localhost:5432/fhir" \
 HFS_ELASTICSEARCH_NODES=http://localhost:9200 \
   ./hfs
+
+# S3 (requires AWS credentials via standard provider chain:
+# https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html)
+HFS_STORAGE_BACKEND=s3 \
+HFS_S3_BUCKET=my-fhir-bucket \
+AWS_PROFILE=your-aws-profile \
+AWS_REGION=us-east-1 \
+  ./hfs
 ```
 
 ### Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `HFS_STORAGE_BACKEND` | `sqlite` | Backend mode: `sqlite`, `sqlite-elasticsearch`, `postgres`, or `postgres-elasticsearch` |
+| `HFS_STORAGE_BACKEND` | `sqlite` | Backend mode: `sqlite`, `sqlite-elasticsearch`, `postgres`, `postgres-elasticsearch`, or `s3` |
 | `HFS_SERVER_PORT` | `8080` | Server port |
 | `HFS_SERVER_HOST` | `127.0.0.1` | Host to bind |
 | `HFS_DATABASE_URL` | `fhir.db` | Database URL (SQLite path or PostgreSQL connection string) |
@@ -209,6 +218,9 @@ HFS_ELASTICSEARCH_NODES=http://localhost:9200 \
 | `HFS_ELASTICSEARCH_INDEX_PREFIX` | `hfs` | ES index name prefix |
 | `HFS_ELASTICSEARCH_USERNAME` | *(none)* | ES basic auth username |
 | `HFS_ELASTICSEARCH_PASSWORD` | *(none)* | ES basic auth password |
+| `HFS_S3_BUCKET` | `hfs` | S3 bucket name (prefix-per-tenant mode) |
+| `HFS_S3_REGION` | *(AWS provider chain)* | AWS region override |
+| `HFS_S3_VALIDATE_BUCKETS` | `true` | Validate bucket access on startup |
 
 For detailed backend setup instructions (building from source, Docker commands, and search offloading architecture), see the [persistence crate documentation](crates/persistence/README.md#building--running-storage-backends).
 

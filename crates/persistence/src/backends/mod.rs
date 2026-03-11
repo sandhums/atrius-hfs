@@ -50,5 +50,5 @@ pub mod postgres;
 #[cfg(feature = "elasticsearch")]
 pub mod elasticsearch;
 //
-// #[cfg(feature = "s3")]
-// pub mod s3;
+#[cfg(feature = "s3")]
+pub mod s3;
