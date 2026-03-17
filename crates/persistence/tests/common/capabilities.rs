@@ -278,11 +278,11 @@ impl CapabilityMatrix {
         matrix.set_backend_capabilities(
             BackendKind::S3,
             vec![
-                (BackendCapability::Crud, SupportLevel::Planned),
+                (BackendCapability::Crud, SupportLevel::Implemented),
                 (BackendCapability::Versioning, SupportLevel::Implemented),
                 (BackendCapability::InstanceHistory, SupportLevel::Implemented),
-                (BackendCapability::TypeHistory, SupportLevel::NotPlanned),
-                (BackendCapability::SystemHistory, SupportLevel::NotPlanned),
+                (BackendCapability::TypeHistory, SupportLevel::Implemented),
+                (BackendCapability::SystemHistory, SupportLevel::Implemented),
                 (BackendCapability::BasicSearch, SupportLevel::NotPlanned),
                 (BackendCapability::DateSearch, SupportLevel::NotPlanned),
                 (BackendCapability::ReferenceSearch, SupportLevel::NotPlanned),
@@ -294,13 +294,14 @@ impl CapabilityMatrix {
                 (BackendCapability::TerminologySearch, SupportLevel::NotPlanned),
                 (BackendCapability::Transactions, SupportLevel::NotPlanned),
                 (BackendCapability::OptimisticLocking, SupportLevel::Implemented),
-                (BackendCapability::CursorPagination, SupportLevel::Partial),
+                (BackendCapability::CursorPagination, SupportLevel::Implemented),
                 (BackendCapability::OffsetPagination, SupportLevel::NotPlanned),
                 (BackendCapability::Sorting, SupportLevel::NotPlanned),
                 (BackendCapability::BulkExport, SupportLevel::Implemented),
-                (BackendCapability::SharedSchema, SupportLevel::Planned),
+                (BackendCapability::BulkImport, SupportLevel::Implemented),
+                (BackendCapability::SharedSchema, SupportLevel::Implemented),
                 (BackendCapability::SchemaPerTenant, SupportLevel::NotPlanned),
-                (BackendCapability::DatabasePerTenant, SupportLevel::Planned),
+                (BackendCapability::DatabasePerTenant, SupportLevel::Implemented),
             ],
         );
 

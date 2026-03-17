@@ -21,7 +21,7 @@ cassandra = ["dep:cdrs-tokio", "dep:cdrs-tokio-helpers-derive"]
 mongodb = ["dep:mongodb"]
 neo4j = ["dep:neo4rs"]
 elasticsearch = ["dep:elasticsearch"]
-s3 = ["dep:object_store", "dep:aws-config", "dep:aws-credential-types"]
+s3 = ["dep:aws-sdk-s3", "dep:aws-config", "dep:aws-credential-types"]
 
 # Configuration advisor binary
 advisor = ["dep:axum", "dep:tower-http", "dep:tracing-subscriber"]
@@ -75,8 +75,8 @@ neo4rs = { version = "0.8", optional = true }
 # Elasticsearch backend
 elasticsearch = { version = "8.15.0-alpha.1", optional = true }
 
-# S3/Object storage backend
-object_store = { version = "0.11", features = ["aws"], optional = true }
+# S3 backend
+aws-sdk-s3 = { version = "1", optional = true }
 aws-config = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
 

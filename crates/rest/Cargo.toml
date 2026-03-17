@@ -28,6 +28,7 @@ sqlite = ["helios-persistence/sqlite"]
 postgres = ["helios-persistence/postgres"]
 mongodb = ["helios-persistence/mongodb"]
 elasticsearch = ["helios-persistence/elasticsearch"]
+s3 = ["helios-persistence/s3"]
 
 [dependencies]
 # Core dependencies
