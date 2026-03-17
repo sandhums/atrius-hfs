@@ -215,7 +215,11 @@ pub fn parse_output_value(
             .parse::<i64>()
             .map(EvaluationResult::integer)
             .map_err(|_| format!("Invalid integer value: {}", output_value)),
-        "string" => Ok(EvaluationResult::String(output_value.to_string(), None, None)),
+        "string" => Ok(EvaluationResult::String(
+            output_value.to_string(),
+            None,
+            None,
+        )),
         "date" => {
             // Handle R5's @ prefix for dates
             let date_str = if fhir_version == "R5" && output_value.starts_with('@') {
@@ -225,9 +229,17 @@ pub fn parse_output_value(
             };
             Ok(EvaluationResult::Date(date_str.to_string(), None, None))
         }
-        "dateTime" => Ok(EvaluationResult::DateTime(output_value.to_string(), None, None)),
+        "dateTime" => Ok(EvaluationResult::DateTime(
+            output_value.to_string(),
+            None,
+            None,
+        )),
         "time" => Ok(EvaluationResult::Time(output_value.to_string(), None, None)),
-        "code" => Ok(EvaluationResult::String(output_value.to_string(), None, None)),
+        "code" => Ok(EvaluationResult::String(
+            output_value.to_string(),
+            None,
+            None,
+        )),
         "decimal" => output_value
             .parse::<Decimal>()
             .map(EvaluationResult::decimal)

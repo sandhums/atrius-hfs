@@ -46,7 +46,10 @@ fn create_type_object(value: &EvaluationResult) -> EvaluationResult {
         "namespace".to_string(),
         EvaluationResult::String(namespace, None, None),
     );
-    map.insert("name".to_string(), EvaluationResult::String(name, None,None));
+    map.insert(
+        "name".to_string(),
+        EvaluationResult::String(name, None, None),
+    );
 
     EvaluationResult::Object {
         map,
@@ -130,7 +133,9 @@ fn get_type_info(value: &EvaluationResult) -> (String, String) {
                 ("System".to_string(), "Collection".to_string())
             }
         }
-        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => ("System".to_string(), "Empty".to_string()),
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+            ("System".to_string(), "Empty".to_string())
+        }
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
         EvaluationResult::Integer64(_, type_info) => {
             if let Some(type_info) = type_info {

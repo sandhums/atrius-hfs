@@ -1,14 +1,36 @@
-use std::collections::HashMap;
-use crate::model::{BindingModel, FieldModel, InvariantModel, TypeKind, TypeValidationModel};
+//! Emit generated validation code from normalized `TypeValidationModel`s.
+//!
+//! This module is the second half of the validation generator pipeline:
+//! - `extract.rs` parses raw FHIR definitions into normalized intermediate models
+//! - `emit.rs` turns those models into generated Rust code
+//!
+//! Responsibilities:
+//! - emit generated invariant metadata (`InvariantDef` constants)
+//! - emit generated binding metadata (`BindingDef` constants)
+//! - emit version-aware `Validatable` impls for each generated Rust type
+//! - emit recursive validation traversal for nested datatypes, backbone elements,
+//!   choice fields, and contained resources
+//! - emit version-aware resource dispatcher methods used by the runtime validator
+//!
+//! Key design points:
+//! - `StructureKind` is used to identify concrete dispatchable resources
+//! - `ParentKind` is used to decide recursive structural traversal behavior
+//! - binding application is version-aware (`apply_r4_bindings`, `apply_r5_bindings`, ...)
+//! - invariant evaluation stays on the shared runtime validator path
+use crate::model::{
+    BindingModel, FieldModel, InvariantModel, ParentKind, StructureKind, TypeValidationModel,
+};
 use crate::versions::FhirVersion;
+use std::collections::HashMap;
 
-/// Emit the validation metadata impl block for a single generated type.
+/// Emit generated metadata constants for a single normalized type.
 ///
-/// This is the first-pass emitter that generates only:
-/// - `INVARIANTS`
-/// - `BINDINGS`
+/// This emits only declarative metadata:
+/// - invariant definitions
+/// - binding definitions
 ///
-/// Recursive `Validatable` traversal can be added afterwards.
+/// Executable recursive traversal is emitted separately by
+/// `emit_validatable_impl_for_type`.
 pub fn emit_validation_metadata_for_type(ty: &TypeValidationModel, output: &mut String) {
     if ty.invariants.is_empty() && ty.bindings.is_empty() {
         return;
@@ -25,15 +47,18 @@ pub fn emit_validation_metadata_for_type(ty: &TypeValidationModel, output: &mut 
     }
 }
 
-/// Emit a first-pass `Validatable` impl for a single generated type.
+/// Emit the version-specific `Validatable` impl for one generated Rust type.
 ///
-/// This version validates metadata declared directly on `Self` and emits
-/// executable recursive traversal for the easy cases first:
-/// - non-choice single complex fields
-/// - non-choice repeating complex fields
+/// The generated impl has two responsibilities:
+/// - apply metadata declared directly on `Self`
+/// - recurse into child fields that require nested validation
 ///
-/// Choice fields and contained resources are left as TODO scaffolding for a
-/// later pass.
+/// The emitted binding path is version-aware because typed binding validation is
+/// implemented in version-specific runtime modules (`apply_r4_bindings`,
+/// `apply_r5_bindings`, etc.).
+///
+/// Invariant application remains shared at runtime and uses the supplied
+/// `FhirPathEvaluator`.
 pub fn emit_validatable_impl_for_type(
     version: FhirVersion,
     ty: &TypeValidationModel,
@@ -43,9 +68,13 @@ pub fn emit_validatable_impl_for_type(
 ) {
     let trait_name = version.validatable_trait_name();
     let feature_name = version.validation_feature();
+    let validation_module_path = validation_trait_module_path(version);
 
     output.push_str(&format!("#[cfg(feature = {:?})]\n", feature_name));
-    output.push_str(&format!("impl fhir_validation::r4::{} for {} {{\n", trait_name, ty.rust_type));
+    output.push_str(&format!(
+        "impl {validation_module_path}::{} for {} {{\n",
+        trait_name, ty.rust_type
+    ));
 
     output.push_str("    fn validate_bindings(\n");
     output.push_str("        &self,\n");
@@ -57,9 +86,11 @@ pub fn emit_validatable_impl_for_type(
     if ty.bindings.is_empty() {
         output.push_str("        let _ = (validator, terminology);\n");
     } else {
+        let apply_bindings_method = apply_bindings_method_name(version);
         output.push_str(&format!(
-            "        issues.extend(validator.validate_bindings(self, {}, terminology));\n",
-            bindings_const_name(ty)
+            "        issues.extend(validator.{apply_bindings_method}(self, {}, terminology));\n",
+            bindings_const_name(ty),
+            apply_bindings_method = apply_bindings_method,
         ));
     }
 
@@ -78,7 +109,7 @@ pub fn emit_validatable_impl_for_type(
     output.push_str("    fn validate_invariants(\n");
     output.push_str("        &self,\n");
     output.push_str("        validator: &fhir_validation::Validator,\n");
-    output.push_str("        evaluator: &dyn fhir_validation::InvariantEvaluator,\n");
+    output.push_str("        evaluator: &dyn fhir_validation::FhirPathEvaluator,\n");
     output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
     output.push_str("        let mut issues = Vec::new();\n");
 
@@ -86,8 +117,9 @@ pub fn emit_validatable_impl_for_type(
         output.push_str("        let _ = (validator, evaluator);\n");
     } else {
         output.push_str(&format!(
-            "        issues.extend(validator.validate_invariants(self, {}, evaluator));\n",
-            invariants_const_name(ty)
+            "        issues.extend(validator.apply_invariants(self, {}, evaluator, {:?}));\n",
+            invariants_const_name(ty),
+            ty.fhir_path
         ));
     }
 
@@ -105,23 +137,35 @@ pub fn emit_validatable_impl_for_type(
     output.push_str("}\n\n");
 }
 
-/// Emit metadata + first-pass validatable impl for one type.
+/// Emit all generated validation code for a set of normalized type models.
+///
+/// This function builds lookup indices used during recursive emission, emits
+/// each individual type, and then emits the top-level version-specific resource
+/// dispatchers for bindings and invariants.
 pub fn emit_types(version: FhirVersion, types: &[TypeValidationModel], output: &mut String) {
-    let type_index_by_path: HashMap<&str, &TypeValidationModel> = types
-        .iter()
-        .map(|ty| (ty.fhir_path.as_str(), ty))
-        .collect();
+    let type_index_by_path: HashMap<&str, &TypeValidationModel> =
+        types.iter().map(|ty| (ty.fhir_path.as_str(), ty)).collect();
 
-    let type_index_by_rust_type: HashMap<&str, &TypeValidationModel> = types
-        .iter()
-        .map(|ty| (ty.rust_type.as_str(), ty))
-        .collect();
+    let type_index_by_rust_type: HashMap<&str, &TypeValidationModel> =
+        types.iter().map(|ty| (ty.rust_type.as_str(), ty)).collect();
 
     for ty in types {
-        emit_type(version, ty, &type_index_by_path, &type_index_by_rust_type, output);
+        emit_type(
+            version,
+            ty,
+            &type_index_by_path,
+            &type_index_by_rust_type,
+            output,
+        );
     }
+    // for ty in types {
+    //     eprintln!("{} -> {:?} - {:?}", ty.rust_type, ty.structure_kind, ty.parent_kind);
+    // }
+    emit_resource_bindings_dispatcher(version, types, output);
+    emit_resource_invariants_dispatcher(version, types, output);
 }
 
+/// Emit metadata and executable validation code for one normalized type.
 pub fn emit_type(
     version: FhirVersion,
     ty: &TypeValidationModel,
@@ -139,12 +183,164 @@ pub fn emit_type(
     );
 }
 
+/// Return true when a type should participate in top-level resource dispatch.
+///
+/// This is based on `StructureKind`, not `ParentKind`, because resource
+/// dispatcher generation follows FHIR specification category rather than
+/// inheritance/runtime structure.
+fn is_dispatchable_resource(ty: &TypeValidationModel) -> bool {
+    matches!(ty.structure_kind, StructureKind::Resource)
+}
+
+/// Emit the version-specific resource dispatcher for binding validation.
+///
+/// The generated method matches over the versioned `Resource` enum and forwards
+/// to each concrete resource type's generated `validate_bindings` impl.
+fn emit_resource_bindings_dispatcher(
+    version: FhirVersion,
+    types: &[TypeValidationModel],
+    output: &mut String,
+) {
+    let resources: Vec<&TypeValidationModel> = types
+        .iter()
+        .filter(|ty| is_dispatchable_resource(ty))
+        .collect();
+
+    if resources.is_empty() {
+        return;
+    }
+
+    let feature_name = version.validation_feature();
+    let trait_name = version.validatable_trait_name();
+    let validation_module_path = validation_trait_module_path(version);
+    let resource_enum_path = resource_enum_path(version);
+    let method_name = contained_dispatch_method_name(version, ValidationPass::Bindings);
+
+    output.push_str(&format!("#[cfg(feature = {:?})]\n", feature_name));
+    output.push_str("impl fhir_validation::Validator {\n");
+    output.push_str(&format!(
+        "    pub fn {method_name}(\n",
+        method_name = method_name,
+    ));
+    output.push_str(&format!(
+        "        &self,\n        resource: &{resource_enum_path},\n",
+        resource_enum_path = resource_enum_path,
+    ));
+    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyService>,\n");
+    output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
+    output.push_str("        match resource {\n");
+
+    for resource in resources {
+        let rust_type = &resource.rust_type;
+        output.push_str(&format!(
+            "            {resource_enum_path}::{rust_type}(value) => <{rust_type} as {validation_module_path}::{trait_name}>::validate_bindings(value.as_ref(), self, terminology),\n",
+            resource_enum_path = resource_enum_path,
+            rust_type = rust_type,
+            validation_module_path = validation_module_path,
+            trait_name = trait_name,
+        ));
+    }
+
+    output.push_str("        }\n");
+    output.push_str("    }\n");
+    output.push_str("}\n\n");
+}
+
+/// Emit the version-specific resource dispatcher for invariant validation.
+///
+/// The generated method matches over the versioned `Resource` enum and forwards
+/// to each concrete resource type's generated `validate_invariants` impl.
+fn emit_resource_invariants_dispatcher(
+    version: FhirVersion,
+    types: &[TypeValidationModel],
+    output: &mut String,
+) {
+    let resources: Vec<&TypeValidationModel> = types
+        .iter()
+        .filter(|ty| is_dispatchable_resource(ty))
+        .collect();
+
+    if resources.is_empty() {
+        return;
+    }
+
+    let feature_name = version.validation_feature();
+    let trait_name = version.validatable_trait_name();
+    let validation_module_path = validation_trait_module_path(version);
+    let resource_enum_path = resource_enum_path(version);
+    let method_name = contained_dispatch_method_name(version, ValidationPass::Invariants);
+
+    output.push_str(&format!("#[cfg(feature = {:?})]\n", feature_name));
+    output.push_str("impl fhir_validation::Validator {\n");
+    output.push_str(&format!(
+        "    pub fn {method_name}(\n",
+        method_name = method_name,
+    ));
+    output.push_str(&format!(
+        "        &self,\n        resource: &{resource_enum_path},\n",
+        resource_enum_path = resource_enum_path,
+    ));
+    output.push_str("        evaluator: &dyn fhir_validation::FhirPathEvaluator,\n");
+    output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
+    output.push_str("        match resource {\n");
+
+    for resource in resources {
+        let rust_type = &resource.rust_type;
+        output.push_str(&format!(
+            "            {resource_enum_path}::{rust_type}(value) => <{rust_type} as {validation_module_path}::{trait_name}>::validate_invariants(value.as_ref(), self, evaluator),\n",
+            resource_enum_path = resource_enum_path,
+            rust_type = rust_type,
+            validation_module_path = validation_module_path,
+            trait_name = trait_name,
+        ));
+    }
+
+    output.push_str("        }\n");
+    output.push_str("    }\n");
+    output.push_str("}\n\n");
+}
+
+/// Return the version-specific runtime binding application method name.
+///
+/// Bindings are applied in version-aware runtime modules because typed binding
+/// validation depends on versioned `Coding` / `CodeableConcept` model types.
+fn apply_bindings_method_name(version: FhirVersion) -> &'static str {
+    match version {
+        FhirVersion::R4 => "apply_r4_bindings",
+        FhirVersion::R4B => "apply_r4b_bindings",
+        FhirVersion::R5 => "apply_r5_bindings",
+        FhirVersion::R6 => "apply_r6_bindings",
+    }
+}
+
+/// Return the version-specific validation trait module path used in generated impls.
+fn validation_trait_module_path(version: FhirVersion) -> &'static str {
+    match version {
+        FhirVersion::R4 => "fhir_validation::r4",
+        FhirVersion::R4B => "fhir_validation::r4b",
+        FhirVersion::R5 => "fhir_validation::r5",
+        FhirVersion::R6 => "fhir_validation::r6",
+    }
+}
+
+/// Return the version-specific `Resource` enum path used in generated dispatchers.
+fn resource_enum_path(version: FhirVersion) -> &'static str {
+    match version {
+        FhirVersion::R4 => "helios_fhir::r4::Resource",
+        FhirVersion::R4B => "helios_fhir::r4b::Resource",
+        FhirVersion::R5 => "helios_fhir::r5::Resource",
+        FhirVersion::R6 => "helios_fhir::r6::Resource",
+    }
+}
+
+/// Which validation phase the emitter is currently generating code for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ValidationPass {
     Bindings,
     Invariants,
 }
 
+/// Emit the generated invariant metadata constant for one type.
 fn emit_invariants_const(
     ty: &TypeValidationModel,
     invariants: &[InvariantModel],
@@ -164,7 +360,10 @@ fn emit_invariants_const(
             invariant.severity.as_rust_tokens()
         ));
         output.push_str(&format!("        path: {:?},\n", invariant.path));
-        output.push_str(&format!("        expression: {:?},\n", invariant.expression));
+        output.push_str(&format!(
+            "        expression: {:?},\n",
+            invariant.expression
+        ));
         output.push_str(&format!("        human: {:?},\n", invariant.human));
         output.push_str("    },\n");
     }
@@ -172,11 +371,8 @@ fn emit_invariants_const(
     output.push_str("];\n");
 }
 
-fn emit_bindings_const(
-    ty: &TypeValidationModel,
-    bindings: &[BindingModel],
-    output: &mut String,
-) {
+/// Emit the generated binding metadata constant for one type.
+fn emit_bindings_const(ty: &TypeValidationModel, bindings: &[BindingModel], output: &mut String) {
     let const_name = bindings_const_name(ty);
     output.push_str(&format!(
         "const {const_name}: &'static [fhir_validation_types::BindingDef] = &[\n",
@@ -209,7 +405,14 @@ fn emit_bindings_const(
     output.push_str("];\n");
 }
 
-
+/// Emit recursive validation code for child fields under one generated type.
+///
+/// This function separates:
+/// - executable recursive candidates that can be emitted directly
+/// - deferred candidates that need specialized handling, such as choice fields
+///   or contained resources
+///
+/// The same traversal strategy is reused for both bindings and invariants.
 fn emit_recursive_validation(
     version: FhirVersion,
     ty: &TypeValidationModel,
@@ -224,7 +427,7 @@ fn emit_recursive_validation(
         .filter(|field| {
             should_emit_executable_recursion(
                 pass,
-                ty.kind,
+                ty.parent_kind,
                 field,
                 type_index_by_path,
                 type_index_by_rust_type,
@@ -238,7 +441,7 @@ fn emit_recursive_validation(
         .filter(|field| {
             should_emit_deferred_todo(
                 pass,
-                ty.kind,
+                ty.parent_kind,
                 field,
                 type_index_by_path,
                 type_index_by_rust_type,
@@ -261,38 +464,42 @@ fn emit_recursive_validation(
         output.push_str("        // Deferred recursive validation candidates.\n");
         output.push_str("        // These need specialized handling (for example choice enums or contained resources).\n");
 
-    for field in deferred_candidates {
-        if field.rust_field_name == "contained" {
-            emit_contained_field_recursive_validation(version, field, pass, output);
-            continue;
-        }
-        if field.is_choice {
-            emit_choice_field_recursive_validation(
-                field,
-                pass,
-                &ty.bindings,
-                type_index_by_path,
-                type_index_by_rust_type,
-                output,
-            );
-            continue;
-        }
+        for field in deferred_candidates {
+            if field.rust_field_name == "contained" {
+                emit_contained_field_recursive_validation(version, field, pass, output);
+                continue;
+            }
+            if field.is_choice {
+                emit_choice_field_recursive_validation(
+                    field,
+                    pass,
+                    &ty.bindings,
+                    type_index_by_path,
+                    type_index_by_rust_type,
+                    output,
+                );
+                continue;
+            }
 
-        let field_name = emitted_field_name(field);
-        let pass_name = match pass {
-            ValidationPass::Bindings => "bindings",
-            ValidationPass::Invariants => "invariants",
-        };
+            let field_name = emitted_field_name(field);
+            let pass_name = match pass {
+                ValidationPass::Bindings => "bindings",
+                ValidationPass::Invariants => "invariants",
+            };
 
-        let cardinality = if field.is_array { "repeating" } else { "single" };
-        let choice = if field.is_choice { ", choice[x]" } else { "" };
-        let enum_name = field
-            .choice_enum_name
-            .as_deref()
-            .map(|name| format!(", enum={name}"))
-            .unwrap_or_default();
+            let cardinality = if field.is_array {
+                "repeating"
+            } else {
+                "single"
+            };
+            let choice = if field.is_choice { ", choice[x]" } else { "" };
+            let enum_name = field
+                .choice_enum_name
+                .as_deref()
+                .map(|name| format!(", enum={name}"))
+                .unwrap_or_default();
 
-        output.push_str(&format!(
+            output.push_str(&format!(
             "        // TODO({pass_name}): recurse into self.{field_name} // path={path}, type_codes={type_codes:?}, {cardinality}{choice}{enum_name}\n",
             field_name = field_name,
             path = field.fhir_path,
@@ -301,9 +508,16 @@ fn emit_recursive_validation(
             choice = choice,
             enum_name = enum_name,
         ));
-    }
+        }
     }
 }
+
+/// Emit recursive validation for a FHIR choice field.
+///
+/// Choice fields require special handling because the generated Rust model uses
+/// an enum rather than a single concrete child type path. This function emits a
+/// match over the generated choice enum and forwards validation to the selected
+/// variant when validator metadata exists for that child type.
 fn emit_choice_field_recursive_validation(
     field: &FieldModel,
     pass: ValidationPass,
@@ -327,9 +541,9 @@ fn emit_choice_field_recursive_validation(
 
     let mut emitted_any_arm = false;
 
-    let direct_choice_binding = current_bindings.iter().find(|binding| {
-        binding.path == field.fhir_path && binding.is_choice_binding
-    });
+    let direct_choice_binding = current_bindings
+        .iter()
+        .find(|binding| binding.path == field.fhir_path && binding.is_choice_binding);
 
     for type_code in &field.type_codes {
         let variant_name = choice_variant_name_from_type_code(type_code);
@@ -380,8 +594,12 @@ fn emit_choice_field_recursive_validation(
                     "                {enum_name}::{variant_name}(value) => {{\n"
                 ));
                 output.push_str(
-                    "                    issues.extend(value.validate_invariants(validator, evaluator));\n",
+                    "                    let child_issues = value.validate_invariants(validator, evaluator);\n",
                 );
+                output.push_str(&format!(
+                    "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    field.fhir_path,
+                ));
                 output.push_str("                }\n");
                 emitted_any_arm = true;
             }
@@ -416,12 +634,9 @@ fn emit_choice_field_recursive_validation(
     output.push_str("        }\n");
 }
 
-fn emit_choice_todo(
-    field: &FieldModel,
-    pass: ValidationPass,
-    reason: &str,
-    output: &mut String,
-) {
+/// Emit a TODO comment for a choice field that could not yet be emitted
+/// executable recursion for.
+fn emit_choice_todo(field: &FieldModel, pass: ValidationPass, reason: &str, output: &mut String) {
     let field_name = emitted_field_name(field);
 
     output.push_str(&format!(
@@ -434,6 +649,7 @@ fn emit_choice_todo(
     ));
 }
 
+/// Return a human-readable name for the current validation pass.
 fn validation_pass_name(pass: ValidationPass) -> &'static str {
     match pass {
         ValidationPass::Bindings => "bindings",
@@ -441,10 +657,12 @@ fn validation_pass_name(pass: ValidationPass) -> &'static str {
     }
 }
 
+/// Convert a FHIR type code into the corresponding generated choice enum variant name.
 fn choice_variant_name_from_type_code(type_code: &str) -> String {
     capitalize_first_letter(&normalize_choice_variant_base(type_code))
 }
 
+/// Normalize a FHIR type code into the base Rust naming form used for choice variants.
 fn normalize_choice_variant_base(type_code: &str) -> String {
     match type_code {
         "base64Binary" => "base64Binary".to_string(),
@@ -471,10 +689,12 @@ fn normalize_choice_variant_base(type_code: &str) -> String {
     }
 }
 
+/// Return the generated child type path corresponding to a choice variant type code.
 fn child_type_path_for_choice_variant(type_code: &str) -> Option<String> {
     Some(choice_variant_name_from_type_code(type_code))
 }
 
+/// Capitalize the first character of a string for generated Rust type/variant names.
 fn capitalize_first_letter(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {
@@ -482,22 +702,27 @@ fn capitalize_first_letter(s: &str) -> String {
         None => String::new(),
     }
 }
-fn emit_field_recursive_validation(
-    field: &FieldModel,
-    pass: ValidationPass,
-    output: &mut String,
-) {
+
+/// Emit direct recursive validation for a normal child field.
+///
+/// This handles:
+/// - optional vs required fields
+/// - repeating vs scalar fields
+/// - pass-specific rebasing for invariant issues
+fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, output: &mut String) {
     let field_name = emitted_field_name(field);
     match pass {
         ValidationPass::Bindings => {
             if field.is_array {
                 output.push_str(&format!(
-                    "        for value in &self.{field_name} {{\n",
+                    "        if let Some(values) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
+                output.push_str("            for value in values {\n");
                 output.push_str(
-                    "            issues.extend(value.validate_bindings(validator, terminology));\n",
+                    "                issues.extend(value.validate_bindings(validator, terminology));\n",
                 );
+                output.push_str("            }\n");
                 output.push_str("        }\n");
             } else if field.is_required {
                 output.push_str(&format!(
@@ -518,35 +743,47 @@ fn emit_field_recursive_validation(
         ValidationPass::Invariants => {
             if field.is_array {
                 output.push_str(&format!(
-                    "        for value in &self.{field_name} {{\n",
+                    "        if let Some(values) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
-                output.push_str(
-                    "            issues.extend(value.validate_invariants(validator, evaluator));\n",
-                );
+                output.push_str("            for value in values {\n");
+                output.push_str("                let child_issues = value.validate_invariants(validator, evaluator);\n");
+                output.push_str(&format!(
+                    "                issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    field.fhir_path,
+                ));
+                output.push_str("            }\n");
                 output.push_str("        }\n");
             } else if field.is_required {
                 output.push_str(&format!(
-                    "        issues.extend(self.{field_name}.validate_invariants(validator, evaluator));\n",
+                    "        let child_issues = self.{field_name}.validate_invariants(validator, evaluator);\n",
                     field_name = field_name,
+                ));
+                output.push_str(&format!(
+                    "        issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    field.fhir_path,
                 ));
             } else {
                 output.push_str(&format!(
                     "        if let Some(value) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
-                output.push_str(
-                    "            issues.extend(value.validate_invariants(validator, evaluator));\n",
-                );
+                output.push_str("            let child_issues = value.validate_invariants(validator, evaluator);\n");
+                output.push_str(&format!(
+                    "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    field.fhir_path,
+                ));
                 output.push_str("        }\n");
             }
         }
     }
 }
 
+/// Decide whether executable recursive validation should be emitted directly
+/// for this field in the current validation pass.
 fn should_emit_executable_recursion(
     pass: ValidationPass,
-    parent_kind: TypeKind,
+    parent_kind: ParentKind,
     field: &FieldModel,
     type_index_by_path: &HashMap<&str, &TypeValidationModel>,
     type_index_by_rust_type: &HashMap<&str, &TypeValidationModel>,
@@ -574,9 +811,11 @@ fn should_emit_executable_recursion(
     }
 }
 
+/// Decide whether this field should be emitted as a deferred TODO rather than
+/// executable recursive validation.
 fn should_emit_deferred_todo(
     pass: ValidationPass,
-    parent_kind: TypeKind,
+    parent_kind: ParentKind,
     field: &FieldModel,
     type_index_by_path: &HashMap<&str, &TypeValidationModel>,
     type_index_by_rust_type: &HashMap<&str, &TypeValidationModel>,
@@ -611,6 +850,10 @@ fn should_emit_deferred_todo(
     false
 }
 
+/// Resolve the normalized child validation model for a field, if one exists.
+///
+/// Resolution first tries the full FHIR path and then falls back to a single
+/// declared type code's generated Rust type name.
 fn resolve_child_model<'a>(
     field: &FieldModel,
     type_index_by_path: &'a HashMap<&str, &'a TypeValidationModel>,
@@ -622,7 +865,10 @@ fn resolve_child_model<'a>(
 
     if field.type_codes.len() == 1 {
         let rust_type_name = rust_type_name_from_type_code(&field.type_codes[0]);
-        if let Some(model) = type_index_by_rust_type.get(rust_type_name.as_str()).copied() {
+        if let Some(model) = type_index_by_rust_type
+            .get(rust_type_name.as_str())
+            .copied()
+        {
             return Some(model);
         }
     }
@@ -630,15 +876,22 @@ fn resolve_child_model<'a>(
     None
 }
 
+/// Convert a FHIR type code into the generated Rust type name.
 fn rust_type_name_from_type_code(type_code: &str) -> String {
     capitalize_first_letter(type_code)
 }
 
+/// Return the generated Rust type name corresponding to a choice variant type code.
 fn child_rust_type_for_choice_variant(type_code: &str) -> Option<String> {
     Some(rust_type_name_from_type_code(type_code))
 }
 
-fn should_recurse_into_field(parent_kind: TypeKind, field: &FieldModel) -> bool {
+/// Decide whether a field is structurally eligible for recursive validation.
+///
+/// This uses `ParentKind` because recursion is about inheritance/runtime
+/// behavior (`DomainResource`, `BackboneElement`, `Element`), not specification
+/// category.
+fn should_recurse_into_field(parent_kind: ParentKind, field: &FieldModel) -> bool {
     if field.type_codes.is_empty() {
         return false;
     }
@@ -653,10 +906,17 @@ fn should_recurse_into_field(parent_kind: TypeKind, field: &FieldModel) -> bool 
         }
     }
 
-    matches!(parent_kind, TypeKind::Resource | TypeKind::DomainResource | TypeKind::BackboneElement)
-        && !field.type_codes.iter().all(|code| is_primitive_type_code(code))
+    matches!(
+        parent_kind,
+        ParentKind::Resource | ParentKind::DomainResource | ParentKind::BackboneElement
+    ) && !field
+        .type_codes
+        .iter()
+        .all(|code| is_primitive_type_code(code))
 }
 
+/// Return true when the supplied FHIR type code represents a recursively
+/// validated complex/runtime type.
 fn is_recursive_type_code(code: &str) -> bool {
     matches!(
         code,
@@ -688,6 +948,7 @@ fn is_recursive_type_code(code: &str) -> bool {
     )
 }
 
+/// Return true when the supplied FHIR type code is a primitive FHIR type.
 fn is_primitive_type_code(code: &str) -> bool {
     matches!(
         code,
@@ -714,6 +975,12 @@ fn is_primitive_type_code(code: &str) -> bool {
             | "xhtml"
     )
 }
+
+/// Emit recursive validation for contained resources.
+///
+/// Contained resources are validated through the version-specific resource
+/// dispatchers because they are held as versioned `Resource` enum values rather
+/// than normal nested datatype structs.
 fn emit_contained_field_recursive_validation(
     version: FhirVersion,
     field: &FieldModel,
@@ -721,25 +988,33 @@ fn emit_contained_field_recursive_validation(
     output: &mut String,
 ) {
     let dispatch_method = contained_dispatch_method_name(version, pass);
-
     let field_name = emitted_field_name(field);
 
     output.push_str(&format!(
-        "        for value in &self.{field_name} {{\n",
+        "        if let Some(values) = &self.{field_name} {{\n",
         field_name = field_name,
     ));
+    output.push_str("            for value in values {\n");
     output.push_str(&format!(
-        "            issues.extend(validator.{dispatch_method}(value, {arg_name}));\n",
+        "                let child_issues = validator.{dispatch_method}(value, {arg_name});\n",
         dispatch_method = dispatch_method,
         arg_name = contained_dispatch_arg_name(pass),
     ));
+    output.push_str(&format!(
+        "                issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+        field.fhir_path,
+    ));
+    output.push_str("            }\n");
     output.push_str("        }\n");
 }
 
+/// Return the emitted Rust field identifier for a field, applying raw-identifier
+/// escaping when required.
 fn emitted_field_name(field: &FieldModel) -> String {
     raw_ident(&field.rust_field_name)
 }
 
+/// Escape Rust keywords so generated field access remains valid Rust syntax.
 fn raw_ident(name: &str) -> String {
     match name {
         "type" | "match" | "ref" | "loop" | "self" | "super" | "crate" | "mod" | "move"
@@ -748,6 +1023,7 @@ fn raw_ident(name: &str) -> String {
     }
 }
 
+/// Return the version- and pass-specific contained-resource dispatcher method name.
 fn contained_dispatch_method_name(version: FhirVersion, pass: ValidationPass) -> &'static str {
     match (version, pass) {
         (FhirVersion::R4, ValidationPass::Bindings) => "validate_r4_resource_bindings",
@@ -761,20 +1037,26 @@ fn contained_dispatch_method_name(version: FhirVersion, pass: ValidationPass) ->
     }
 }
 
+/// Return the runtime argument name passed to contained-resource dispatch for
+/// the current validation pass.
 fn contained_dispatch_arg_name(pass: ValidationPass) -> &'static str {
     match pass {
         ValidationPass::Bindings => "terminology",
         ValidationPass::Invariants => "evaluator",
     }
 }
+
+/// Return the generated binding constant name for a type.
 fn bindings_const_name(ty: &TypeValidationModel) -> String {
     format!("{}_BINDINGS", upper_snake_case(&ty.rust_type))
 }
 
+/// Return the generated invariant constant name for a type.
 fn invariants_const_name(ty: &TypeValidationModel) -> String {
     format!("{}_INVARIANTS", upper_snake_case(&ty.rust_type))
 }
 
+/// Convert a Rust type name into the generated constant-name form.
 fn upper_snake_case(name: &str) -> String {
     let mut out = String::with_capacity(name.len() + 8);
     let mut prev_is_lower_or_digit = false;

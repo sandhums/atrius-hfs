@@ -276,7 +276,12 @@ pub enum EvaluationResult {
     /// Represents measurements with units (e.g., "5.4 mg", "10 years").
     /// First element is the numeric value, second is the unit string.
     /// Used for FHIR Quantity, Age, Duration, Distance, Count, and Money types.
-    Quantity(Decimal, String, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Quantity(
+        Decimal,
+        String,
+        Option<TypeInfoResult>,
+        Option<PrimitiveMeta>,
+    ),
     /// Ordered collection of evaluation results.
     ///
     /// Represents arrays, lists, and multi-valued FHIR elements. Collections
@@ -309,7 +314,7 @@ pub enum EvaluationResult {
         /// Optional type information
         type_info: Option<TypeInfoResult>,
     },
-    EmptyWithMeta(PrimitiveMeta)
+    EmptyWithMeta(PrimitiveMeta),
 }
 
 /// Comprehensive error type for FHIRPath evaluation failures.
@@ -589,20 +594,24 @@ impl Ord for EvaluationResult {
             (EvaluationResult::Empty, _) => Ordering::Less,
             (_, EvaluationResult::Empty) => Ordering::Greater,
 
-            (EvaluationResult::EmptyWithMeta(_), EvaluationResult::EmptyWithMeta(_)) => Ordering::Equal,
+            (EvaluationResult::EmptyWithMeta(_), EvaluationResult::EmptyWithMeta(_)) => {
+                Ordering::Equal
+            }
 
             (EvaluationResult::EmptyWithMeta(_), _) => Ordering::Less,
             (_, EvaluationResult::EmptyWithMeta(_)) => Ordering::Greater,
 
             (EvaluationResult::Boolean(a, _, _), EvaluationResult::Boolean(b, _, _)) => a.cmp(b),
             (EvaluationResult::Boolean(_, _, _), _) => Ordering::Less,
-            (_, EvaluationResult::Boolean(_, _, _), ) => Ordering::Greater,
+            (_, EvaluationResult::Boolean(_, _, _)) => Ordering::Greater,
 
             (EvaluationResult::Integer(a, _, _), EvaluationResult::Integer(b, _, _)) => a.cmp(b),
             (EvaluationResult::Integer(_, _, _), _) => Ordering::Less,
             (_, EvaluationResult::Integer(_, _, _)) => Ordering::Greater,
 
-            (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer64(b, _, _)) => a.cmp(b),
+            (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer64(b, _, _)) => {
+                a.cmp(b)
+            }
             (EvaluationResult::Integer64(_, _, _), _) => Ordering::Less,
             (_, EvaluationResult::Integer64(_, _, _)) => Ordering::Greater,
 
@@ -795,7 +804,11 @@ impl EvaluationResult {
 
     /// Creates an Integer64 result with System type.
     pub fn integer64(value: i64) -> Self {
-        EvaluationResult::Integer64(value, Some(TypeInfoResult::new("System", "Integer64")), None)
+        EvaluationResult::Integer64(
+            value,
+            Some(TypeInfoResult::new("System", "Integer64")),
+            None,
+        )
     }
 
     /// Creates an Integer64 result with FHIR type.
@@ -830,7 +843,12 @@ impl EvaluationResult {
 
     /// Creates a Quantity result with System type.
     pub fn quantity(value: Decimal, unit: String) -> Self {
-        EvaluationResult::Quantity(value, unit, Some(TypeInfoResult::new("System", "Quantity")), None)
+        EvaluationResult::Quantity(
+            value,
+            unit,
+            Some(TypeInfoResult::new("System", "Quantity")),
+            None,
+        )
     }
 
     /// Creates a Collection result.
@@ -1197,7 +1215,9 @@ impl EvaluationResult {
             | EvaluationResult::Time(_, _, _)
             | EvaluationResult::Quantity(_, _, _, _)
             | EvaluationResult::Object { .. } => Ok(EvaluationResult::Empty),
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => Ok(EvaluationResult::Empty),
+            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                Ok(EvaluationResult::Empty)
+            }
         }
     }
 
@@ -1281,12 +1301,12 @@ impl EvaluationResult {
     pub fn with_primitive_meta(self, meta: Option<PrimitiveMeta>) -> Self {
         let meta = meta.filter(|m| !m.is_empty());
         match self {
-            EvaluationResult::Empty => {
-                meta.map(EvaluationResult::EmptyWithMeta).unwrap_or(EvaluationResult::Empty)
-            }
-            EvaluationResult::EmptyWithMeta(_) => {
-                meta.map(EvaluationResult::EmptyWithMeta).unwrap_or(EvaluationResult::Empty)
-            }
+            EvaluationResult::Empty => meta
+                .map(EvaluationResult::EmptyWithMeta)
+                .unwrap_or(EvaluationResult::Empty),
+            EvaluationResult::EmptyWithMeta(_) => meta
+                .map(EvaluationResult::EmptyWithMeta)
+                .unwrap_or(EvaluationResult::Empty),
             EvaluationResult::Boolean(v, t, _) => EvaluationResult::Boolean(v, t, meta),
             EvaluationResult::String(v, t, _) => EvaluationResult::String(v, t, meta),
             EvaluationResult::Integer(v, t, _) => EvaluationResult::Integer(v, t, meta),
@@ -1300,7 +1320,10 @@ impl EvaluationResult {
         }
     }
     pub fn is_effectively_empty(&self) -> bool {
-        matches!(self, EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_))
+        matches!(
+            self,
+            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_)
+        )
     }
     // End New
 }

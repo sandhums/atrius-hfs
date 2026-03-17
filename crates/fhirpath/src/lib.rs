@@ -309,9 +309,9 @@ pub mod evaluator;
 pub mod parser;
 
 // Public API exports - this is what users of the fhirpath crate should use
+use crate::parser::TypeSpecifier;
 pub use evaluator::EvaluationContext;
 pub use helios_fhirpath_support::EvaluationResult;
-use crate::parser::TypeSpecifier;
 
 /// Evaluates a FHIRPath expression against a given context.
 ///

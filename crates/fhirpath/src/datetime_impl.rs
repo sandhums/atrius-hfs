@@ -148,8 +148,12 @@ pub fn compare_date_time_values(
 ) -> Option<Ordering> {
     match (left, right) {
         // Direct comparisons of same types
-        (EvaluationResult::Date(d1, _, _), EvaluationResult::Date(d2, _, _)) => compare_dates(d1, d2),
-        (EvaluationResult::Time(t1, _, _), EvaluationResult::Time(t2, _, _)) => compare_times(t1, t2),
+        (EvaluationResult::Date(d1, _, _), EvaluationResult::Date(d2, _, _)) => {
+            compare_dates(d1, d2)
+        }
+        (EvaluationResult::Time(t1, _, _), EvaluationResult::Time(t2, _, _)) => {
+            compare_times(t1, t2)
+        }
         (EvaluationResult::DateTime(dt1, _, _), EvaluationResult::DateTime(dt2, _, _)) => {
             compare_datetimes(dt1, dt2)
         }

@@ -164,7 +164,9 @@ fn simple_equality_check(a: &EvaluationResult, b: &EvaluationResult) -> bool {
         (EvaluationResult::Decimal(a_val, _, _), EvaluationResult::Decimal(b_val, _, _)) => {
             a_val == b_val
         }
-        (EvaluationResult::String(a_val, _, _), EvaluationResult::String(b_val, _, _)) => a_val == b_val,
+        (EvaluationResult::String(a_val, _, _), EvaluationResult::String(b_val, _, _)) => {
+            a_val == b_val
+        }
 
         // Quantity comparison with same units
         (

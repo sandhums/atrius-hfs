@@ -140,7 +140,6 @@ fn run_single_test(test: &Test, bundle: &SofBundle) -> TestResult {
 
     // Parse the result as JSON
     let actual_rows: Vec<serde_json::Value> = match serde_json::from_slice(&result) {
-
         Ok(rows) => rows,
         Err(e) => {
             return TestResult {
@@ -150,8 +149,14 @@ fn run_single_test(test: &Test, bundle: &SofBundle) -> TestResult {
         }
     };
     println!("--- TEST: {} ---", test.title);
-    println!("Actual rows: {}", serde_json::to_string_pretty(&actual_rows).unwrap());
-    println!("Expected rows: {}", serde_json::to_string_pretty(test.expect.as_ref().unwrap()).unwrap());
+    println!(
+        "Actual rows: {}",
+        serde_json::to_string_pretty(&actual_rows).unwrap()
+    );
+    println!(
+        "Expected rows: {}",
+        serde_json::to_string_pretty(test.expect.as_ref().unwrap()).unwrap()
+    );
     // Compare with expected results
     match &test.expect {
         Some(expected) => {

@@ -85,13 +85,17 @@ mod tests {
 
                             assert_eq!(
                                 namespace,
-                                &EvaluationResult::String(expected_namespace.to_string(), None,None),
+                                &EvaluationResult::String(
+                                    expected_namespace.to_string(),
+                                    None,
+                                    None
+                                ),
                                 "Wrong namespace for {}",
                                 expr
                             );
                             assert_eq!(
                                 name,
-                                &EvaluationResult::String(expected_name.to_string(), None,None),
+                                &EvaluationResult::String(expected_name.to_string(), None, None),
                                 "Wrong name for {}",
                                 expr
                             );
@@ -130,7 +134,7 @@ mod tests {
                     EvaluationResult::Object { map, .. } => {
                         assert_eq!(
                             map.get("namespace").unwrap(),
-                            &EvaluationResult::String("System".to_string(), None,None),
+                            &EvaluationResult::String("System".to_string(), None, None),
                         );
                         assert_eq!(
                             map.get("name").unwrap(),

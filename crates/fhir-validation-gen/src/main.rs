@@ -1,5 +1,5 @@
-mod extract;
 mod emit;
+mod extract;
 mod model;
 mod versions;
 
@@ -7,8 +7,8 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use extract::extract_type_validation_models;
 use emit::emit_types;
+use extract::extract_type_validation_models;
 use helios_fhir_gen::initial_fhir_model::StructureDefinition;
 use serde_json::Value;
 use versions::FhirVersion;
@@ -32,10 +32,7 @@ fn run() -> Result<(), String> {
         .map_err(|e: String| format!("invalid FHIR version '{}': {e}", args[1]))?;
 
     let output_path = PathBuf::from(args.last().expect("output path missing"));
-    let input_paths: Vec<PathBuf> = args[2..args.len() - 1]
-        .iter()
-        .map(PathBuf::from)
-        .collect();
+    let input_paths: Vec<PathBuf> = args[2..args.len() - 1].iter().map(PathBuf::from).collect();
 
     let mut all_defs = Vec::new();
     for input_path in &input_paths {
@@ -151,8 +148,7 @@ fn write_output(path: &Path, contents: &str) -> Result<(), String> {
         }
     }
 
-    fs::write(path, contents)
-        .map_err(|e| format!("failed to write '{}': {e}", path.display()))
+    fs::write(path, contents).map_err(|e| format!("failed to write '{}': {e}", path.display()))
 }
 
 fn emit_file_prelude(

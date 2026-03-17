@@ -20,7 +20,9 @@ fn extract_items(input: &EvaluationResult) -> Vec<&EvaluationResult> {
 fn compare_values(a: &EvaluationResult, b: &EvaluationResult) -> Option<Ordering> {
     match (a, b) {
         (EvaluationResult::Integer(a, _, _), EvaluationResult::Integer(b, _, _)) => Some(a.cmp(b)),
-        (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer64(b, _, _)) => Some(a.cmp(b)),
+        (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer64(b, _, _)) => {
+            Some(a.cmp(b))
+        }
         (EvaluationResult::Decimal(a, _, _), EvaluationResult::Decimal(b, _, _)) => Some(a.cmp(b)),
         // Mixed numeric: promote to Decimal
         (EvaluationResult::Integer(a, _, _), EvaluationResult::Decimal(b, _, _)) => {
@@ -29,8 +31,12 @@ fn compare_values(a: &EvaluationResult, b: &EvaluationResult) -> Option<Ordering
         (EvaluationResult::Decimal(a, _, _), EvaluationResult::Integer(b, _, _)) => {
             Some(a.cmp(&Decimal::from(*b)))
         }
-        (EvaluationResult::Integer(a, _, _), EvaluationResult::Integer64(b, _, _)) => Some(a.cmp(b)),
-        (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer(b, _, _)) => Some(a.cmp(b)),
+        (EvaluationResult::Integer(a, _, _), EvaluationResult::Integer64(b, _, _)) => {
+            Some(a.cmp(b))
+        }
+        (EvaluationResult::Integer64(a, _, _), EvaluationResult::Integer(b, _, _)) => {
+            Some(a.cmp(b))
+        }
         // Quantity comparison (same unit only)
         (
             EvaluationResult::Quantity(val_a, unit_a, _, _),
@@ -46,7 +52,9 @@ fn compare_values(a: &EvaluationResult, b: &EvaluationResult) -> Option<Ordering
         (EvaluationResult::String(a, _, _), EvaluationResult::String(b, _, _)) => Some(a.cmp(b)),
         // Date/Time comparisons
         (EvaluationResult::Date(a, _, _), EvaluationResult::Date(b, _, _)) => Some(a.cmp(b)),
-        (EvaluationResult::DateTime(a, _, _), EvaluationResult::DateTime(b, _, _)) => Some(a.cmp(b)),
+        (EvaluationResult::DateTime(a, _, _), EvaluationResult::DateTime(b, _, _)) => {
+            Some(a.cmp(b))
+        }
         (EvaluationResult::Time(a, _, _), EvaluationResult::Time(b, _, _)) => Some(a.cmp(b)),
         _ => None,
     }
@@ -157,12 +165,16 @@ pub fn avg_function(
     let sum = sum_function(invocation_base)?;
 
     match sum {
-        EvaluationResult::Integer(v, _, _) => Ok(EvaluationResult::decimal(Decimal::from(v) / count)),
+        EvaluationResult::Integer(v, _, _) => {
+            Ok(EvaluationResult::decimal(Decimal::from(v) / count))
+        }
         EvaluationResult::Integer64(v, _, _) => {
             Ok(EvaluationResult::decimal(Decimal::from(v) / count))
         }
         EvaluationResult::Decimal(v, _, _) => Ok(EvaluationResult::decimal(v / count)),
-        EvaluationResult::Quantity(v, unit, _, _) => Ok(EvaluationResult::quantity(v / count, unit)),
+        EvaluationResult::Quantity(v, unit, _, _) => {
+            Ok(EvaluationResult::quantity(v / count, unit))
+        }
         _ => Err(EvaluationError::TypeError(
             "avg() requires numeric or quantity items".to_string(),
         )),

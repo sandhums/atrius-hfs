@@ -242,7 +242,8 @@ fn convert_fhir_field_to_fhirpath_type(value: &EvaluationResult, suffix: &str) -
                         s.clone(),
                         Some(helios_fhirpath_support::TypeInfoResult::new(
                             "FHIR", "instant",
-                        )), None
+                        )),
+                        None,
                     )
                 }
                 "Code" => {
@@ -476,7 +477,8 @@ pub fn apply_polymorphic_type_operation(
                 }
 
                 // Check if this resource is an Observation with a valueQuantity field
-                if let Some(EvaluationResult::String(resource_type, _, _)) = obj.get("resourceType") {
+                if let Some(EvaluationResult::String(resource_type, _, _)) = obj.get("resourceType")
+                {
                     if resource_type == "Observation" && obj.contains_key("valueQuantity") {
                         return if op == "is" {
                             Ok(EvaluationResult::boolean(true))
@@ -772,7 +774,9 @@ pub fn apply_polymorphic_type_operation(
                         Ok(EvaluationResult::boolean(is_quantity_type))
                     }
                     // These cases should never happen due to earlier checks
-                    EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => Ok(EvaluationResult::boolean(false)),
+                    EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                        Ok(EvaluationResult::boolean(false))
+                    }
                     EvaluationResult::Collection { .. } => Ok(EvaluationResult::boolean(false)),
                     #[cfg(not(any(feature = "R4", feature = "R4B")))]
                     EvaluationResult::Integer64(_, _) => {

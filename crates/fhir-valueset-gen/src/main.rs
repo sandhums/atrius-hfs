@@ -1,7 +1,7 @@
+mod generator;
+mod indexer;
 mod models;
 mod parser;
-mod indexer;
-mod generator;
 
 use std::env;
 use std::fs;
@@ -9,9 +9,9 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-use parser::parse_valuesets_bundle;
-use indexer::build_index;
 use crate::generator::emit_all;
+use indexer::build_index;
+use parser::parse_valuesets_bundle;
 
 fn main() -> Result<()> {
     let version = env::args().nth(1).unwrap_or_else(|| "R5".to_string());
@@ -46,7 +46,11 @@ fn main() -> Result<()> {
         .with_context(|| format!("failed reading {}", input_path.display()))?;
 
     let (code_systems, value_sets) = parse_valuesets_bundle(&json)?;
-    println!("✔ Parsed {} CodeSystems and {} ValueSets", code_systems.len(), value_sets.len());
+    println!(
+        "✔ Parsed {} CodeSystems and {} ValueSets",
+        code_systems.len(),
+        value_sets.len()
+    );
 
     let index = build_index(code_systems, value_sets)?;
     println!(

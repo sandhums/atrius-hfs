@@ -333,7 +333,10 @@ fn extract_coding(coded: &EvaluationResult) -> Result<(String, String), Evaluati
             // If this is a CodeableConcept, pull the first usable Coding from `coding[]`
             if let Some(EvaluationResult::Collection { items, .. }) = map.get("coding") {
                 for item in items {
-                    if let EvaluationResult::Object { map: coding_map, .. } = item {
+                    if let EvaluationResult::Object {
+                        map: coding_map, ..
+                    } = item
+                    {
                         let system = coding_map
                             .get("system")
                             .and_then(|v| match v {
@@ -342,12 +345,10 @@ fn extract_coding(coded: &EvaluationResult) -> Result<(String, String), Evaluati
                             })
                             .unwrap_or_default();
 
-                        let code = coding_map
-                            .get("code")
-                            .and_then(|v| match v {
-                                EvaluationResult::String(c, _, _) => Some(c.clone()),
-                                _ => None,
-                            });
+                        let code = coding_map.get("code").and_then(|v| match v {
+                            EvaluationResult::String(c, _, _) => Some(c.clone()),
+                            _ => None,
+                        });
 
                         if let Some(code) = code {
                             return Ok((system, code));
@@ -356,7 +357,8 @@ fn extract_coding(coded: &EvaluationResult) -> Result<(String, String), Evaluati
                 }
 
                 return Err(EvaluationError::TypeError(
-                    "CodeableConcept.coding must contain at least one Coding with a 'code'".to_string(),
+                    "CodeableConcept.coding must contain at least one Coding with a 'code'"
+                        .to_string(),
                 ));
             }
 
@@ -403,7 +405,10 @@ fn extract_coding_with_display(
             // If this is a CodeableConcept, pull the first usable Coding from `coding[]`
             if let Some(EvaluationResult::Collection { items, .. }) = map.get("coding") {
                 for item in items {
-                    if let EvaluationResult::Object { map: coding_map, .. } = item {
+                    if let EvaluationResult::Object {
+                        map: coding_map, ..
+                    } = item
+                    {
                         let system = coding_map
                             .get("system")
                             .and_then(|v| match v {
@@ -412,12 +417,10 @@ fn extract_coding_with_display(
                             })
                             .unwrap_or_default();
 
-                        let code = coding_map
-                            .get("code")
-                            .and_then(|v| match v {
-                                EvaluationResult::String(c, _, _) => Some(c.clone()),
-                                _ => None,
-                            });
+                        let code = coding_map.get("code").and_then(|v| match v {
+                            EvaluationResult::String(c, _, _) => Some(c.clone()),
+                            _ => None,
+                        });
 
                         let display = coding_map.get("display").and_then(|v| match v {
                             EvaluationResult::String(d, _, _) => Some(d.clone()),
@@ -431,7 +434,8 @@ fn extract_coding_with_display(
                 }
 
                 return Err(EvaluationError::TypeError(
-                    "CodeableConcept.coding must contain at least one Coding with a 'code'".to_string(),
+                    "CodeableConcept.coding must contain at least one Coding with a 'code'"
+                        .to_string(),
                 ));
             }
 

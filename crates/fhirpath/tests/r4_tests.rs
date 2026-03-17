@@ -124,19 +124,37 @@ fn test_basic_fhirpath_expressions() {
         ("10 div 3", EvaluationResult::integer(3)),
         ("10 mod 3", EvaluationResult::integer(1)),
         ("true and true", EvaluationResult::Boolean(true, None, None)),
-        ("true and false", EvaluationResult::Boolean(false, None, None)),
+        (
+            "true and false",
+            EvaluationResult::Boolean(false, None, None),
+        ),
         ("true or false", EvaluationResult::Boolean(true, None, None)),
-        ("false or false", EvaluationResult::Boolean(false, None, None)),
-        ("true xor false", EvaluationResult::Boolean(true, None, None)),
-        ("true xor true", EvaluationResult::Boolean(false, None, None)),
+        (
+            "false or false",
+            EvaluationResult::Boolean(false, None, None),
+        ),
+        (
+            "true xor false",
+            EvaluationResult::Boolean(true, None, None),
+        ),
+        (
+            "true xor true",
+            EvaluationResult::Boolean(false, None, None),
+        ),
         ("1 < 2", EvaluationResult::Boolean(true, None, None)),
         ("1 <= 1", EvaluationResult::Boolean(true, None, None)),
         ("1 > 2", EvaluationResult::Boolean(false, None, None)),
         ("2 >= 2", EvaluationResult::Boolean(true, None, None)),
         ("1 = 1", EvaluationResult::Boolean(true, None, None)),
         ("1 != 2", EvaluationResult::Boolean(true, None, None)),
-        ("'hello' = 'hello'", EvaluationResult::Boolean(true, None, None)),
-        ("'hello' != 'world'", EvaluationResult::Boolean(true, None, None)),
+        (
+            "'hello' = 'hello'",
+            EvaluationResult::Boolean(true, None, None),
+        ),
+        (
+            "'hello' != 'world'",
+            EvaluationResult::Boolean(true, None, None),
+        ),
     ];
 
     let mut passed = 0;
@@ -199,7 +217,10 @@ fn test_real_fhir_patient_type() {
     // Test active.type().namespace - should be FHIR
     let result = evaluate_expression("active.type().namespace", &context).unwrap();
     println!("Real active.type().namespace: {:?}", result);
-    assert_eq!(result, EvaluationResult::String("FHIR".to_string(), None, None));
+    assert_eq!(
+        result,
+        EvaluationResult::String("FHIR".to_string(), None, None)
+    );
 
     // Test active.type().name - should be boolean
     let result = evaluate_expression("active.type().name", &context).unwrap();

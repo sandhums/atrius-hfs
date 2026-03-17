@@ -79,7 +79,8 @@ fn test_uri_type_preservation() {
             &context,
         )
         .unwrap();
-        if let helios_fhirpath_support::EvaluationResult::String(namespace, _, _) = namespace_result {
+        if let helios_fhirpath_support::EvaluationResult::String(namespace, _, _) = namespace_result
+        {
             println!("Namespace: {}", namespace);
             assert_eq!(
                 namespace, "FHIR",

@@ -1,6 +1,6 @@
 use std::io;
-use std::path::Path;
 use std::io::Write;
+use std::path::Path;
 
 pub(crate) fn module_file_stem(name: &str) -> String {
     // Convert FHIR type names like `Observation`, `MedicationRequest`, `xhtml`, `unsignedInt`

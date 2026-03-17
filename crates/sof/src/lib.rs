@@ -2253,12 +2253,21 @@ where
                             // Log raw result
                             sof_debug_where_println(format!("result = {:?}", result));
                             // Log type name
-                            sof_debug_where_println(format!("result.type_name() = {}", result.type_name()));
+                            sof_debug_where_println(format!(
+                                "result.type_name() = {}",
+                                result.type_name()
+                            ));
                             // Log primitive meta presence (if any)
-                            let pm = result.primitive_meta().map(|m| format!("{:?}", m)).unwrap_or_else(|| "<none>".to_string());
+                            let pm = result
+                                .primitive_meta()
+                                .map(|m| format!("{:?}", m))
+                                .unwrap_or_else(|| "<none>".to_string());
                             sof_debug_where_println(format!("result.primitive_meta = {}", pm));
                             // Log truthiness decision
-                            sof_debug_where_println(format!("can_be_coerced_to_boolean = {}", can_be_coerced_to_boolean(&result)));
+                            sof_debug_where_println(format!(
+                                "can_be_coerced_to_boolean = {}",
+                                can_be_coerced_to_boolean(&result)
+                            ));
                             sof_debug_where_println(format!("is_truthy = {}", is_truthy(&result)));
                         }
                         // Check if the result can be meaningfully used as a boolean

@@ -42,7 +42,9 @@
 //! ```
 
 use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
-use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult, PrimitiveMeta, TypeInfoResult};
+use helios_fhirpath_support::{
+    EvaluationResult, IntoEvaluationResult, PrimitiveMeta, TypeInfoResult,
+};
 #[cfg(feature = "xml")]
 use helios_serde_support::SingleOrVec;
 
@@ -1415,7 +1417,7 @@ impl IntoEvaluationResult for PrecisionInstant {
         EvaluationResult::DateTime(
             self.inner.original_string.to_string(),
             Some(TypeInfoResult::new("FHIR", "instant")),
-            None
+            None,
         )
     }
 }

@@ -1,5 +1,3 @@
-
-
 /// Supported FHIR releases for validation generation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum FhirVersion {
@@ -12,6 +10,7 @@ pub enum FhirVersion {
 
 impl FhirVersion {
     /// Short module / directory name used by generated code layouts.
+    #[allow(dead_code)]
     pub fn module_name(self) -> &'static str {
         match self {
             Self::R4 => "r4",
@@ -52,11 +51,13 @@ impl FhirVersion {
     }
 
     /// Module path segment for `helios-fhir`, e.g. `helios_fhir::r4`.
+    #[allow(dead_code)]
     pub fn helios_module_name(self) -> &'static str {
         self.module_name()
     }
 
     /// Returns all supported versions in a stable order.
+    #[allow(dead_code)]
     pub const fn all() -> [FhirVersion; 4] {
         [
             FhirVersion::R4,
@@ -85,17 +86,6 @@ impl std::str::FromStr for FhirVersion {
             other => Err(format!("Unsupported FHIR version: {other}")),
         }
     }
-}
-
-/// High-level classification of the kind of StructureDefinition we are processing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum StructureKind {
-    #[default]
-    Unknown,
-    PrimitiveType,
-    ComplexType,
-    Resource,
-    Logical,
 }
 
 // impl StructureKind {

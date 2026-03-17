@@ -1,41 +1,35 @@
-
+//! Normalized intermediate models used by the validation generator.
+//!
+//! This module defines the generator-facing data structures produced by
+//! `extract.rs` and consumed by `emit.rs`.
+//!
+//! The goal of these models is to separate raw FHIR specification parsing from
+//! Rust code emission. Instead of emitting directly from raw
+//! `StructureDefinition` / `ElementDefinition` JSON, the generator first
+//! normalizes the data into a stable intermediate representation.
+//!
+//! Key design points:
+//! - `TypeValidationModel` represents one generated Rust type that may receive
+//!   validation metadata
+//! - `StructureKind` captures the FHIR specification category of a type
+//!   (`resource`, `complex-type`, `primitive-type`, `logical`)
+//! - `ParentKind` captures inheritance/runtime behavior used by emitted
+//!   validation code (`DomainResource`, `BackboneElement`, `Element`, etc.)
+//! - `FieldModel`, `InvariantModel`, and `BindingModel` capture the direct
+//!   child metadata needed for recursive validation emission
+//!
+//! This split keeps extraction FHIR-aware and emission Rust-oriented.
 
 use std::collections::BTreeMap;
 
-use crate::versions::FhirVersion;
-
-// /// Internal, version-aware model used by the validation generator.
-// ///
-// /// This is the normalized representation produced by `extract.rs` and
-// /// consumed by `emit.rs`.
-// #[derive(Debug, Clone, Default)]
-// pub struct ValidationModel {
-//     pub version: FhirVersion,
-//     pub types: Vec<TypeValidationModel>,
-// }
-//
-// impl ValidationModel {
-//     pub fn new(version: FhirVersion) -> Self {
-//         Self {
-//             version,
-//             types: Vec::new(),
-//         }
-//     }
-//
-//     pub fn push_type(&mut self, ty: TypeValidationModel) {
-//         self.types.push(ty);
-//     }
-//
-//     pub fn find_type(&self, rust_type: &str) -> Option<&TypeValidationModel> {
-//         self.types.iter().find(|t| t.rust_type == rust_type)
-//     }
-//
-//     pub fn find_type_mut(&mut self, rust_type: &str) -> Option<&mut TypeValidationModel> {
-//         self.types.iter_mut().find(|t| t.rust_type == rust_type)
-//     }
-// }
-
 /// Normalized validation metadata for one generated Rust type.
+///
+/// A single FHIR `StructureDefinition` may produce:
+/// - one root `TypeValidationModel` for the main generated type
+/// - additional nested models for generated backbone / element-derived helper
+///   types such as `Patient.contact`
+///
+/// This model is the main contract between extraction and emission.
 #[derive(Debug, Clone, Default)]
 pub struct TypeValidationModel {
     /// Rust type name in the generated FHIR crate, e.g. `Patient`.
@@ -50,8 +44,18 @@ pub struct TypeValidationModel {
     /// The base definition canonical URL, when available.
     pub base_definition: Option<String>,
 
-    /// Coarse type classification used by the generator.
-    pub kind: TypeKind,
+    /// FHIR specification category for this generated type.
+    ///
+    /// This follows `StructureDefinition.kind` semantics:
+    /// `resource`, `complex-type`, `primitive-type`, or `logical`.
+    pub structure_kind: StructureKind,
+
+    /// Inheritance/runtime family inferred from base definition or typed
+    /// element declarations.
+    ///
+    /// This is used by emitted validation code to decide recursive behavior for
+    /// things like `DomainResource`, `BackboneElement`, or `Element`.
+    pub parent_kind: ParentKind,
 
     /// Invariants declared directly on this type path.
     pub invariants: Vec<InvariantModel>,
@@ -69,36 +73,60 @@ pub struct TypeValidationModel {
 }
 
 impl TypeValidationModel {
-    pub fn new(rust_type: impl Into<String>, fhir_path: impl Into<String>, kind: TypeKind) -> Self {
+    /// Construct a new normalized validation model with the supplied Rust type,
+    /// FHIR path, and inheritance/runtime family.
+    ///
+    /// `structure_kind` is initialized as `Unknown` and is filled in during
+    /// extraction.
+    pub fn new(
+        rust_type: impl Into<String>,
+        fhir_path: impl Into<String>,
+        parent_kind: ParentKind,
+    ) -> Self {
         Self {
             rust_type: rust_type.into(),
             fhir_path: fhir_path.into(),
             structure_definition_url: None,
             base_definition: None,
-            kind,
+            structure_kind: StructureKind::Unknown,
+            parent_kind,
             invariants: Vec::new(),
             bindings: Vec::new(),
             fields: Vec::new(),
             direct_supertypes: BTreeMap::new(),
         }
     }
-
-    // pub fn has_validation_metadata(&self) -> bool {
-    //     !(self.invariants.is_empty() && self.bindings.is_empty())
-    // }
-    //
-    // pub fn direct_binding_for_path(&self, path: &str) -> Option<&BindingModel> {
-    //     self.bindings.iter().find(|b| b.path == path)
-    // }
-    //
-    // pub fn direct_field_for_path(&self, path: &str) -> Option<&FieldModel> {
-    //     self.fields.iter().find(|f| f.fhir_path == path)
-    // }
 }
 
-/// High-level classification of a generated FHIR Rust type.
+/// FHIR specification category for a generated type.
+///
+/// This mirrors `StructureDefinition.kind`, not inheritance.
+///
+/// Important:
+/// - `Resource` means the type is a FHIR resource in specification terms
+/// - nested backbone/helper types inside resources are still usually
+///   `ComplexType`
+/// - inheritance-specific concepts such as `BackboneElement` and
+///   `DomainResource` are represented separately by `ParentKind`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TypeKind {
+pub enum StructureKind {
+    #[default]
+    Unknown,
+    Resource,
+    ComplexType,
+    PrimitiveType,
+    Logical,
+}
+
+/// High-level inheritance/runtime classification of a generated FHIR Rust type.
+///
+/// Unlike `StructureKind`, this enum reflects how emitted validation code should
+/// treat a type structurally:
+/// - `DomainResource` and `Resource` affect resource-level recursion
+/// - `BackboneElement` and `Element` affect nested datatype/backbone traversal
+/// - `Primitive` / `ComplexType` capture non-resource helper behavior
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ParentKind {
     #[default]
     Unknown,
     Primitive,
@@ -109,7 +137,13 @@ pub enum TypeKind {
     DomainResource,
 }
 
-/// One direct field/child element under a type.
+/// Normalized metadata for one direct child field under a generated type.
+///
+/// This information is used during emission to:
+/// - recurse into nested datatypes / backbone elements
+/// - emit correct instance-path rebasing
+/// - recognize repeated fields
+/// - recognize and handle FHIR choice elements
 #[derive(Debug, Clone, Default)]
 pub struct FieldModel {
     /// Snapshot element id, e.g. `Patient.gender`.
@@ -118,20 +152,22 @@ pub struct FieldModel {
     /// Snapshot element path, e.g. `Patient.gender`.
     pub fhir_path: String,
 
-    /// Rust field name expected in the generated model, e.g. `gender, multiple_birth`.
+    /// Rust field name expected in the generated model, e.g. `gender`,
+    /// `multiple_birth`.
     pub rust_field_name: String,
 
-    /// FHIR field name, e.g. `gender, multipleBirth`.
+    /// Original FHIR field name, e.g. `gender`, `multipleBirth`.
     pub fhir_field_name: String,
 
     /// True when the element path is a choice like `value[x]`.
     pub is_choice: bool,
 
-    /// When the element is a choice, the base name of the choice, e.g. `value, multipleBirth`
+    /// Base name of a FHIR choice element, e.g. `value`, `multipleBirth`.
     pub choice_base_name: Option<String>,
 
-    /// When the element is a choice, the enum name of the choice, e.g. `PatientMultipleBirth`
-    pub choice_enum_name: Option<String>, 
+    /// Generated Rust enum name for a FHIR choice element, e.g.
+    /// `PatientMultipleBirth`.
+    pub choice_enum_name: Option<String>,
 
     /// Declared FHIR type codes for the element.
     pub type_codes: Vec<String>,
@@ -158,13 +194,10 @@ pub struct FieldModel {
     pub is_direct_child: bool,
 }
 
-// impl FieldModel {
-//     pub fn is_singular(&self) -> bool {
-//         !self.is_array
-//     }
-// }
-
-/// Normalized invariant definition extracted from StructureDefinition.
+/// Normalized invariant definition extracted from `StructureDefinition`.
+///
+/// Each invariant is attached to the generated type path on which it is
+/// declared and is later emitted as a generated `InvariantDef`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InvariantModel {
     pub key: String,
@@ -176,7 +209,11 @@ pub struct InvariantModel {
     pub element_id: String,
 }
 
-/// Normalized binding definition extracted from StructureDefinition.
+/// Normalized binding definition extracted from `ElementDefinition.binding`.
+///
+/// Each binding is attached to the generated type path that owns the bound
+/// direct child field. During emission, these models become generated
+/// `BindingDef`s used by version-specific binding application code.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BindingModel {
     pub path: String,
@@ -184,15 +221,24 @@ pub struct BindingModel {
     pub value_set: String,
     pub binding_name: Option<String>,
     pub description: Option<String>,
+
+    /// The bindable runtime shape of the target field:
+    /// primitive `code`, `Coding`, `CodeableConcept`, or unsupported.
     pub target_kind: BindingTargetKindModel,
     pub element_id: String,
     pub element_path: String,
     pub type_codes: Vec<String>,
+
+    /// The subset of declared type codes that are actually bindable by the
+    /// current validator.
     pub bindable_type_codes: Vec<String>,
+
+    /// True when this binding comes from a choice element such as `value[x]`.
     pub is_choice_binding: bool,
 }
 
-/// Internal severity enum used during extraction before emission.
+/// Internal invariant severity representation used during extraction before
+/// emission into runtime validation types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SeverityModel {
     Fatal,
@@ -203,6 +249,7 @@ pub enum SeverityModel {
 }
 
 impl SeverityModel {
+    /// Render this internal severity as emitted Rust tokens for generated code.
     pub fn as_rust_tokens(self) -> &'static str {
         match self {
             Self::Fatal => "fhir_validation_types::Severity::Fatal",
@@ -213,7 +260,8 @@ impl SeverityModel {
     }
 }
 
-/// Internal binding strength enum used during extraction before emission.
+/// Internal binding strength representation used during extraction before
+/// emission into runtime validation types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BindingStrengthModel {
     Required,
@@ -224,6 +272,8 @@ pub enum BindingStrengthModel {
 }
 
 impl BindingStrengthModel {
+    /// Render this internal binding strength as emitted Rust tokens for
+    /// generated code.
     pub fn as_rust_tokens(self) -> &'static str {
         match self {
             Self::Required => "fhir_validation_types::BindingStrength::Required",
@@ -234,7 +284,10 @@ impl BindingStrengthModel {
     }
 }
 
-/// What kind of binding target an element represents.
+/// Internal classification of the bindable runtime shape of an element.
+///
+/// This is extracted from the element's declared type codes and later emitted
+/// as `fhir_validation_types::BindingTargetKind`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BindingTargetKindModel {
     Code,
@@ -245,13 +298,13 @@ pub enum BindingTargetKindModel {
 }
 
 impl BindingTargetKindModel {
+    /// Render this internal binding target kind as emitted Rust tokens for
+    /// generated code.
     pub fn as_rust_tokens(self) -> &'static str {
         match self {
             Self::Code => "fhir_validation_types::BindingTargetKind::Code",
             Self::Coding => "fhir_validation_types::BindingTargetKind::Coding",
-            Self::CodeableConcept => {
-                "fhir_validation_types::BindingTargetKind::CodeableConcept"
-            }
+            Self::CodeableConcept => "fhir_validation_types::BindingTargetKind::CodeableConcept",
             Self::Unsupported => "fhir_validation_types::BindingTargetKind::Unsupported",
         }
     }

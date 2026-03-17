@@ -102,7 +102,9 @@ pub fn converts_to_long(
         EvaluationResult::Boolean(_, _, _) => Ok(EvaluationResult::boolean(true)),
 
         // String is convertible if it can be parsed as an i64
-        EvaluationResult::String(s, _, _) => Ok(EvaluationResult::boolean(s.parse::<i64>().is_ok())),
+        EvaluationResult::String(s, _, _) => {
+            Ok(EvaluationResult::boolean(s.parse::<i64>().is_ok()))
+        }
 
         // All other types are not convertible
         _ => Ok(EvaluationResult::boolean(false)),

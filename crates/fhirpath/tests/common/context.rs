@@ -76,7 +76,9 @@ pub fn setup_patient_extension_context(context: &mut EvaluationContext, test_nam
 
             // Make sure birthDate is an Object if needed
             let mut birthdate_obj = HashMap::new();
-            if let Some(EvaluationResult::String(date_str, None, None)) = patient_obj.get("birthDate") {
+            if let Some(EvaluationResult::String(date_str, None, None)) =
+                patient_obj.get("birthDate")
+            {
                 birthdate_obj.insert(
                     "value".to_string(),
                     EvaluationResult::String(date_str.clone(), None, None),
@@ -158,7 +160,11 @@ fn setup_observation_context(context: &mut EvaluationContext) {
     let observation_data = if let Some(this) = &context.this {
         if let EvaluationResult::Object { map: obj, .. } = this {
             if obj.get("resourceType")
-                == Some(&EvaluationResult::String("Observation".to_string(), None, None))
+                == Some(&EvaluationResult::String(
+                    "Observation".to_string(),
+                    None,
+                    None,
+                ))
             {
                 Some((this.clone(), obj.clone()))
             } else {
@@ -195,7 +201,11 @@ fn setup_valueset_context(context: &mut EvaluationContext) {
     let valueset_data = if let Some(this) = &context.this {
         if let EvaluationResult::Object { map: obj, .. } = this {
             if obj.get("resourceType")
-                == Some(&EvaluationResult::String("ValueSet".to_string(), None, None))
+                == Some(&EvaluationResult::String(
+                    "ValueSet".to_string(),
+                    None,
+                    None,
+                ))
             {
                 Some(this.clone())
             } else {
@@ -217,7 +227,11 @@ fn setup_questionnaire_context(context: &mut EvaluationContext) {
     let questionnaire_data = if let Some(this) = &context.this {
         if let EvaluationResult::Object { map: obj, .. } = this {
             if obj.get("resourceType")
-                == Some(&EvaluationResult::String("Questionnaire".to_string(), None, None))
+                == Some(&EvaluationResult::String(
+                    "Questionnaire".to_string(),
+                    None,
+                    None,
+                ))
             {
                 Some(this.clone())
             } else {

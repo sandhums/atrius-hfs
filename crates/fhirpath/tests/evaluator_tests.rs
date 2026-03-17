@@ -4014,8 +4014,14 @@ fn test_resource_nested_field_access() {
     if let EvaluationResult::Collection { items: exts, .. } = bday_ext {
         assert_eq!(exts.len(), 1);
         // Further checks require Extension object structure
-        assert_eq!(eval("birthDate.extension.url", &context).unwrap(), EvaluationResult::string("http://example.com/precision".to_string()));
-        assert_eq!(eval("birthDate.extension.valueString", &context).unwrap(), EvaluationResult::string("day".to_string()));
+        assert_eq!(
+            eval("birthDate.extension.url", &context).unwrap(),
+            EvaluationResult::string("http://example.com/precision".to_string())
+        );
+        assert_eq!(
+            eval("birthDate.extension.valueString", &context).unwrap(),
+            EvaluationResult::string("day".to_string())
+        );
     }
 }
 
@@ -4818,7 +4824,10 @@ fn test_math_functions() {
 
         // Special handling for Decimal and Quantity types
         match (&result, &expected) {
-            (EvaluationResult::Decimal(actual, _, _), EvaluationResult::Decimal(expected, _, _)) => {
+            (
+                EvaluationResult::Decimal(actual, _, _),
+                EvaluationResult::Decimal(expected, _, _),
+            ) => {
                 // Check that the difference is very small (within 1e-10)
                 let diff = (*actual - *expected).abs();
                 let epsilon = Decimal::from_str_exact("0.0000000001").unwrap();
@@ -4896,7 +4905,10 @@ fn test_math_functions() {
 
         // Special handling for Decimal and Quantity types
         match (&result, &expected) {
-            (EvaluationResult::Decimal(actual, _, _), EvaluationResult::Decimal(expected, _, _)) => {
+            (
+                EvaluationResult::Decimal(actual, _, _),
+                EvaluationResult::Decimal(expected, _, _),
+            ) => {
                 // Check that the difference is very small (within reasonable error margin)
                 let diff = (*actual - *expected).abs();
                 let epsilon = Decimal::from_str_exact("0.000001").unwrap();
@@ -4947,7 +4959,10 @@ fn test_math_functions() {
 
         // Special handling for Decimal and Quantity types
         match (&result, &expected) {
-            (EvaluationResult::Decimal(actual, _, _), EvaluationResult::Decimal(expected, _, _)) => {
+            (
+                EvaluationResult::Decimal(actual, _, _),
+                EvaluationResult::Decimal(expected, _, _),
+            ) => {
                 // Check that the difference is very small (within reasonable error margin)
                 let diff = (*actual - *expected).abs();
                 let epsilon = Decimal::from_str_exact("0.000001").unwrap();
@@ -4998,7 +5013,10 @@ fn test_math_functions() {
 
         // Special handling for Decimal and Quantity types
         match (&result, &expected) {
-            (EvaluationResult::Decimal(actual, _, _), EvaluationResult::Decimal(expected, _, _)) => {
+            (
+                EvaluationResult::Decimal(actual, _, _),
+                EvaluationResult::Decimal(expected, _, _),
+            ) => {
                 // Check that the difference is very small (within reasonable error margin)
                 let diff = (*actual - *expected).abs();
                 let epsilon = Decimal::from_str_exact("0.000001").unwrap();
@@ -5049,7 +5067,10 @@ fn test_math_functions() {
 
         // Special handling for Decimal and Quantity types
         match (&result, &expected) {
-            (EvaluationResult::Decimal(actual, _, _), EvaluationResult::Decimal(expected, _, _)) => {
+            (
+                EvaluationResult::Decimal(actual, _, _),
+                EvaluationResult::Decimal(expected, _, _),
+            ) => {
                 // Check that the difference is very small (within reasonable error margin)
                 let diff = (*actual - *expected).abs();
                 let epsilon = Decimal::from_str_exact("0.000001").unwrap();

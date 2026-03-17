@@ -53,4 +53,3 @@ pub struct InvariantDef {
     /// Human-readable message.
     pub human: &'static str,
 }
-

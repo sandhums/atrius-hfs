@@ -770,7 +770,8 @@ pub fn evaluate(
                 type_info: _,
             } = &global_context_item
             {
-                if let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType") {
+                if let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType")
+                {
                     // The parser ensures initial_name is cleaned of backticks.
                     if initial_name.eq_ignore_ascii_case(ctx_type) {
                         // The initial identifier matches the context type.
@@ -977,7 +978,9 @@ pub fn evaluate(
                 // Direct boolean values
                 EvaluationResult::Boolean(_, _, _) => left_eval.to_boolean_for_logic()?,
                 // Empty evaluates to empty in logical context
-                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => EvaluationResult::Empty,
+                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                    EvaluationResult::Empty
+                }
                 // For non-boolean singletons, apply singleton evaluation:
                 // A single value is considered true
                 EvaluationResult::String(_, _, _)
@@ -999,7 +1002,9 @@ pub fn evaluate(
                                 EvaluationResult::Boolean(_, _, _) => {
                                     items[0].to_boolean_for_logic()?
                                 }
-                                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => EvaluationResult::Empty,
+                                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                                    EvaluationResult::Empty
+                                }
                                 _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                             }
                         }
@@ -1024,7 +1029,9 @@ pub fn evaluate(
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
                         // Empty evaluates to empty in logical context
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_)=> EvaluationResult::Empty,
+                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                            EvaluationResult::Empty
+                        }
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1073,7 +1080,9 @@ pub fn evaluate(
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
                         // Empty evaluates to empty in logical context
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => EvaluationResult::Empty,
+                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                            EvaluationResult::Empty
+                        }
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1113,7 +1122,9 @@ pub fn evaluate(
 
                     // Apply 3-valued logic for Empty and X
                     match right_bool {
-                        EvaluationResult::Boolean(false, _, _) => Ok(EvaluationResult::boolean(false)), // {} and false -> false
+                        EvaluationResult::Boolean(false, _, _) => {
+                            Ok(EvaluationResult::boolean(false))
+                        } // {} and false -> false
                         _ => Ok(EvaluationResult::Empty), // {} and (true | {}) -> {}
                     }
                 }
@@ -1200,9 +1211,10 @@ pub fn evaluate(
                     (EvaluationResult::Boolean(false, _, _), EvaluationResult::Empty) => {
                         Ok(EvaluationResult::Empty)
                     }
-                    (EvaluationResult::Boolean(false, _, _), EvaluationResult::Boolean(false, _, _)) => {
-                        Ok(EvaluationResult::boolean(false))
-                    }
+                    (
+                        EvaluationResult::Boolean(false, _, _),
+                        EvaluationResult::Boolean(false, _, _),
+                    ) => Ok(EvaluationResult::boolean(false)),
                     // Cases involving Empty handled above, this should not be reached with invalid types
                     _ => unreachable!("Invalid types should have been caught earlier for 'or'"),
                 }
@@ -1254,7 +1266,9 @@ pub fn evaluate(
                     }
                     let right_bool = right_eval.to_boolean_for_logic()?; // Propagate error
                     match right_bool {
-                        EvaluationResult::Boolean(true, _, _) => Ok(EvaluationResult::boolean(true)), // {} implies true -> true
+                        EvaluationResult::Boolean(true, _, _) => {
+                            Ok(EvaluationResult::boolean(true))
+                        } // {} implies true -> true
                         _ => Ok(EvaluationResult::Empty), // {} implies (false | {}) -> {}
                     }
                 }
@@ -2017,7 +2031,7 @@ fn evaluate_invocation(
                                 obj,
                                 name.as_str(),
                             )
-                                .is_some()
+                            .is_some()
                         } else {
                             false
                         };
@@ -2251,7 +2265,6 @@ fn evaluate_invocation(
                 }
                 // Accessing member on Empty returns Empty
                 EvaluationResult::Empty => Ok(EvaluationResult::Empty), // Wrap in Ok
-
             }
         }
         Invocation::Function(name, args_exprs) => {
@@ -4126,7 +4139,9 @@ fn call_function(
                 EvaluationResult::Integer(i, _, _) => {
                     EvaluationResult::quantity(Decimal::from(*i), "1".to_string())
                 } // Convert Integer to Quantity with '1' unit
-                EvaluationResult::Decimal(d, _, _) => EvaluationResult::quantity(*d, "1".to_string()), // Convert Decimal to Quantity with '1' unit
+                EvaluationResult::Decimal(d, _, _) => {
+                    EvaluationResult::quantity(*d, "1".to_string())
+                } // Convert Decimal to Quantity with '1' unit
                 EvaluationResult::Quantity(val, unit, _, _) => {
                     EvaluationResult::quantity(*val, unit.clone())
                 } // Quantity to Quantity
@@ -4639,7 +4654,10 @@ fn call_function(
                 None
             };
             Ok(match (invocation_base, &args[0]) {
-                (EvaluationResult::String(s, _, _), EvaluationResult::String(regex_pattern, _, _)) => {
+                (
+                    EvaluationResult::String(s, _, _),
+                    EvaluationResult::String(regex_pattern, _, _),
+                ) => {
                     let mut builder = RegexBuilder::new(regex_pattern);
                     if let Some(flags) = flags {
                         apply_regex_flags(&mut builder, flags);
@@ -4690,7 +4708,10 @@ fn call_function(
                 None
             };
             Ok(match (invocation_base, &args[0]) {
-                (EvaluationResult::String(s, _, _), EvaluationResult::String(regex_pattern, _, _)) => {
+                (
+                    EvaluationResult::String(s, _, _),
+                    EvaluationResult::String(regex_pattern, _, _),
+                ) => {
                     let full_pattern = format!("^{}$", regex_pattern);
                     let mut builder = RegexBuilder::new(&full_pattern);
                     if let Some(flags) = flags {
@@ -7144,18 +7165,22 @@ fn apply_multiplicative(
                     }
                 },
                 // Quantity * Number = Quantity with same unit
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Integer(n, _, _)) => {
-                    EvaluationResult::quantity(*val * Decimal::from(*n), unit.clone())
-                }
-                (EvaluationResult::Integer(n, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
-                    EvaluationResult::quantity(Decimal::from(*n) * *val, unit.clone())
-                }
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Decimal(d, _, _)) => {
-                    EvaluationResult::quantity(*val * *d, unit.clone())
-                }
-                (EvaluationResult::Decimal(d, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
-                    EvaluationResult::quantity(*d * *val, unit.clone())
-                }
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Integer(n, _, _),
+                ) => EvaluationResult::quantity(*val * Decimal::from(*n), unit.clone()),
+                (
+                    EvaluationResult::Integer(n, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => EvaluationResult::quantity(Decimal::from(*n) * *val, unit.clone()),
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Decimal(d, _, _),
+                ) => EvaluationResult::quantity(*val * *d, unit.clone()),
+                (
+                    EvaluationResult::Decimal(d, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => EvaluationResult::quantity(*d * *val, unit.clone()),
                 // Regular numeric multiplication
                 (EvaluationResult::Integer(l, _, _), EvaluationResult::Integer(r, _, _)) => {
                     // Check for potential overflow before multiplying
@@ -7219,7 +7244,10 @@ fn apply_multiplicative(
                     }
                 }
                 // Quantity / Number = Quantity with same unit
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Integer(n, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Integer(n, _, _),
+                ) => {
                     if *n == 0 {
                         Ok(EvaluationResult::Empty)
                     } else {
@@ -7230,7 +7258,10 @@ fn apply_multiplicative(
                             .ok_or(EvaluationError::ArithmeticOverflow)
                     }
                 }
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Decimal(d, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Decimal(d, _, _),
+                ) => {
                     if d.is_zero() {
                         Ok(EvaluationResult::Empty)
                     } else {
@@ -7242,7 +7273,10 @@ fn apply_multiplicative(
                     }
                 }
                 // Number / Quantity = Quantity with inverted unit
-                (EvaluationResult::Integer(n, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Integer(n, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if val.is_zero() {
                         Ok(EvaluationResult::Empty)
                     } else {
@@ -7263,7 +7297,10 @@ fn apply_multiplicative(
                         }
                     }
                 }
-                (EvaluationResult::Decimal(d, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Decimal(d, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if val.is_zero() {
                         Ok(EvaluationResult::Empty)
                     } else {
@@ -7346,9 +7383,10 @@ fn apply_multiplicative(
                     } else {
                         // Both are integers, use integer arithmetic
                         match (left, right) {
-                            (EvaluationResult::Integer(l, _, _), EvaluationResult::Integer(r, _, _)) => {
-                                apply_integer_multiplicative(*l, op, *r)
-                            }
+                            (
+                                EvaluationResult::Integer(l, _, _),
+                                EvaluationResult::Integer(r, _, _),
+                            ) => apply_integer_multiplicative(*l, op, *r),
                             _ => unreachable!(), // We know they're both integers
                         }
                     }
@@ -7389,7 +7427,7 @@ fn apply_integer_multiplicative(
 }
 
 /// Applies an additive operator to two values
-fn apply_additive(
+pub fn apply_additive(
     left: &EvaluationResult,
     op: &str,
     right: &EvaluationResult,
@@ -7439,7 +7477,10 @@ fn apply_additive(
                     }
                 }
                 // Quantity + Integer (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Integer(n, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Integer(n, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::quantity(*val + Decimal::from(*n), unit.clone())
                     } else {
@@ -7447,7 +7488,10 @@ fn apply_additive(
                     }
                 }
                 // Integer + Quantity (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Integer(n, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Integer(n, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::quantity(Decimal::from(*n) + *val, unit.clone())
                     } else {
@@ -7455,7 +7499,10 @@ fn apply_additive(
                     }
                 }
                 // Quantity + Decimal (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Decimal(d, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Decimal(d, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::quantity(*val + *d, unit.clone())
                     } else {
@@ -7463,7 +7510,10 @@ fn apply_additive(
                     }
                 }
                 // Decimal + Quantity (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Decimal(d, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Decimal(d, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::quantity(*d + *val, unit.clone())
                     } else {
@@ -7471,7 +7521,10 @@ fn apply_additive(
                     }
                 }
                 // Date/DateTime + Quantity (time duration)
-                (EvaluationResult::Date(date_str, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Date(date_str, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         add_duration_to_date(date_str, *val, unit)?
                     } else {
@@ -7481,7 +7534,10 @@ fn apply_additive(
                         )));
                     }
                 }
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Date(date_str, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Date(date_str, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         add_duration_to_date(date_str, *val, unit)?
                     } else {
@@ -7518,7 +7574,10 @@ fn apply_additive(
                     }
                 }
                 // Time + Quantity (time duration)
-                (EvaluationResult::Time(time_str, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Time(time_str, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         add_duration_to_time(time_str, *val, unit)?
                     } else {
@@ -7528,7 +7587,10 @@ fn apply_additive(
                         )));
                     }
                 }
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Time(time_str, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Time(time_str, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         add_duration_to_time(time_str, *val, unit)?
                     } else {
@@ -7620,8 +7682,10 @@ fn apply_additive(
                 ) => {
                     // Special case: if both collections contain single strings, concatenate the strings
                     if left_items.len() == 1 && right_items.len() == 1 {
-                        if let (EvaluationResult::String(l, _, _), EvaluationResult::String(r, _, _)) =
-                            (&left_items[0], &right_items[0])
+                        if let (
+                            EvaluationResult::String(l, _, _),
+                            EvaluationResult::String(r, _, _),
+                        ) = (&left_items[0], &right_items[0])
                         {
                             return Ok(EvaluationResult::string(format!("{}{}", l, r)));
                         }
@@ -7684,7 +7748,10 @@ fn apply_additive(
                     }
                 }
                 // Quantity - Integer (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Integer(n, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Integer(n, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::quantity(*val - Decimal::from(*n), unit.clone())
                     } else {
@@ -7692,7 +7759,10 @@ fn apply_additive(
                     }
                 }
                 // Integer - Quantity (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Integer(n, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Integer(n, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::quantity(Decimal::from(*n) - *val, unit.clone())
                     } else {
@@ -7700,7 +7770,10 @@ fn apply_additive(
                     }
                 }
                 // Quantity - Decimal (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Decimal(d, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Decimal(d, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::quantity(*val - *d, unit.clone())
                     } else {
@@ -7708,7 +7781,10 @@ fn apply_additive(
                     }
                 }
                 // Decimal - Quantity (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Decimal(d, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Decimal(d, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::quantity(*d - *val, unit.clone())
                     } else {
@@ -7783,7 +7859,10 @@ fn apply_additive(
                         })?
                 }
                 // Date - Quantity (time duration)
-                (EvaluationResult::Date(date_str, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Date(date_str, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         // Negate the value for subtraction
                         add_duration_to_date(date_str, -*val, unit)?
@@ -7810,7 +7889,10 @@ fn apply_additive(
                     }
                 }
                 // Time - Quantity (time duration)
-                (EvaluationResult::Time(time_str, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Time(time_str, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::is_time_unit(unit) {
                         // Negate the value for subtraction
                         add_duration_to_time(time_str, -*val, unit)?
@@ -8439,7 +8521,10 @@ fn compare_equality(
                     }
                 }
                 // Quantity vs Integer (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Integer(n, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Integer(n, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::boolean(*val == Decimal::from(*n))
                     } else {
@@ -8448,7 +8533,10 @@ fn compare_equality(
                     }
                 }
                 // Integer vs Quantity (implicit conversion: Integer becomes Quantity with unit '1')
-                (EvaluationResult::Integer(n, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Integer(n, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::boolean(Decimal::from(*n) == *val)
                     } else {
@@ -8457,7 +8545,10 @@ fn compare_equality(
                     }
                 }
                 // Quantity vs Decimal (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Quantity(val, unit, _, _), EvaluationResult::Decimal(d, _, _)) => {
+                (
+                    EvaluationResult::Quantity(val, unit, _, _),
+                    EvaluationResult::Decimal(d, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable(unit, "1") {
                         EvaluationResult::boolean(*val == *d)
                     } else {
@@ -8466,7 +8557,10 @@ fn compare_equality(
                     }
                 }
                 // Decimal vs Quantity (implicit conversion: Decimal becomes Quantity with unit '1')
-                (EvaluationResult::Decimal(d, _, _), EvaluationResult::Quantity(val, unit, _, _)) => {
+                (
+                    EvaluationResult::Decimal(d, _, _),
+                    EvaluationResult::Quantity(val, unit, _, _),
+                ) => {
                     if crate::ucum::units_are_comparable("1", unit) {
                         EvaluationResult::boolean(*d == *val)
                     } else {

@@ -1203,7 +1203,8 @@ mod tests {
     fn test_instant_uses_value_instant() {
         let result = EvaluationResult::DateTime(
             "2023-01-01T12:00:00Z".to_string(),
-            Some(TypeInfoResult::new("FHIR", "instant")), None
+            Some(TypeInfoResult::new("FHIR", "instant")),
+            None,
         );
         let json_result = evaluation_result_to_result_value(result).unwrap();
 

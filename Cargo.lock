@@ -2142,11 +2142,11 @@ dependencies = [
 name = "fhir-validation"
 version = "0.1.47"
 dependencies = [
- "fhir-validation-gen",
  "fhir-validation-types",
  "helios-fhir",
  "helios-fhirpath",
  "helios-fhirpath-support",
+ "serde",
  "serde_json",
 ]
 

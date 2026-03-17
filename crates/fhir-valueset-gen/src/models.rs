@@ -1,6 +1,9 @@
+use helios_fhir_gen::initial_fhir_model::{
+    CodeableConcept, Coding, ContactDetail, Extension, Identifier, Meta, Narrative, Range,
+    Reference,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use helios_fhir_gen::initial_fhir_model::{CodeableConcept, Coding, ContactDetail, Extension, Identifier, Meta, Narrative, Range, Reference};
 use serde_json::Value as JsonValue;
 
 #[derive(Debug, Serialize, Deserialize)]

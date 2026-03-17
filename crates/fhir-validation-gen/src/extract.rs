@@ -1,22 +1,41 @@
-
+//! Extract normalized validation models from FHIR `StructureDefinition` snapshots.
+//!
+//! This module converts raw FHIR definitions into generator-friendly
+//! `TypeValidationModel`s used by `emit.rs`.
+//!
+//! Responsibilities:
+//! - identify all generated Rust types implied by a single StructureDefinition
+//!   snapshot, including nested backbone / element-derived types
+//! - extract invariants declared on each generated type root
+//! - extract direct child bindings from `ElementDefinition.binding`
+//! - extract direct child field metadata used for recursive validation emission
+//! - distinguish between:
+//!   - `StructureKind`: the FHIR specification category (`resource`,
+//!     `complex-type`, `primitive-type`, `logical`)
+//!   - `ParentKind`: the inheritance/runtime family used by generated Rust code
+//!     (`DomainResource`, `BackboneElement`, `Element`, etc.)
+//!
+//! This normalization step is intentionally separate from emission so code
+//! generation can operate on a stable, FHIR-aware intermediate model.
 
 use serde_json::Value;
 
 use crate::model::{
     BindingModel, BindingStrengthModel, BindingTargetKindModel, FieldModel, InvariantModel,
-    SeverityModel, TypeKind, TypeValidationModel,
+    ParentKind, SeverityModel, StructureKind, TypeValidationModel,
 };
-use crate::versions::{FhirVersion, StructureKind};
+use crate::versions::FhirVersion;
 use helios_fhir_gen::initial_fhir_model::{ElementDefinition, StructureDefinition};
 
-
-/// Extract normalized validation models for all Rust types generated from a
-/// single StructureDefinition snapshot.
+/// Extract all validation models implied by a single StructureDefinition.
 ///
-/// This mirrors the FHIR library generator more closely:
-/// - one root model for the StructureDefinition itself
-/// - additional models for nested backbone/element paths that become generated
-///   Rust types from the same snapshot
+/// A single StructureDefinition can produce:
+/// - one root validation model for the structure itself
+/// - additional models for nested backbone/element-derived paths that become
+///   generated Rust helper types
+///
+/// Returns `None` when the definition cannot be normalized into typed snapshot
+/// elements.
 pub fn extract_type_validation_models(
     version: FhirVersion,
     def: &StructureDefinition,
@@ -30,12 +49,7 @@ pub fn extract_type_validation_models(
 
     for path in type_paths {
         if let Some(model) = extract_type_validation_model_for_path(
-            version,
-            def,
-            &def_json,
-            elements,
-            root_path,
-            &path,
+            version, def, &def_json, elements, root_path, &path,
         ) {
             models.push(model);
         }
@@ -44,6 +58,20 @@ pub fn extract_type_validation_models(
     Some(models)
 }
 
+/// Build a normalized `TypeValidationModel` for one generated type path inside
+/// a StructureDefinition snapshot.
+///
+/// This function determines:
+/// - the Rust type name for the generated path
+/// - whether the type should be emitted at all
+/// - the path's `ParentKind` (inheritance/runtime behavior)
+/// - the path's `StructureKind` (FHIR specification category)
+/// - invariants declared exactly at this path
+/// - direct child bindings and field metadata used for recursive emission
+///
+/// Root paths and nested paths are treated differently:
+/// - the root path uses StructureDefinition metadata directly
+/// - nested paths infer their classification from the typed element tree
 fn extract_type_validation_model_for_path(
     version: FhirVersion,
     def: &StructureDefinition,
@@ -58,14 +86,17 @@ fn extract_type_validation_model_for_path(
         rust_type_name(path)
     };
 
-    if !should_emit_type_model(path, root_path, &rust_type) {
+    if !should_emit_type_model(path, root_path, def_json, &rust_type) {
         return None;
     }
 
-    let structure_kind = parse_structure_kind(def_json);
-    let type_kind = classify_type_kind_for_path(path, structure_kind, def_json, elements);
+    let root_structure_kind = parse_structure_kind(def_json);
+    let parent_kind = classify_parent_kind_for_path(path, root_structure_kind, def_json, elements);
+    let structure_kind =
+        classify_structure_kind_for_path(path, root_path, root_structure_kind, elements);
 
-    let mut model = TypeValidationModel::new(rust_type, path.to_string(), type_kind);
+    let mut model = TypeValidationModel::new(rust_type, path.to_string(), parent_kind);
+    model.structure_kind = structure_kind;
     model.structure_definition_url = json_str_field(def_json, "url").map(str::to_string);
     model.base_definition = json_str_field(def_json, "baseDefinition").map(str::to_string);
 
@@ -84,7 +115,17 @@ fn extract_type_validation_model_for_path(
     Some(model)
 }
 
-/// Extract invariants declared exactly on `root_path`.
+/// Extract invariants declared exactly on the supplied generated type root path.
+///
+/// NOTE:
+/// Some R4 invariants (notably dom-3) use older FHIRPath expressions with `as(...)`
+/// over collections, which is not compatible with strict singleton semantics in
+/// the FHIRPath spec. Newer specs (R5+) use `ofType(...)` instead.
+///
+/// We keep the original expression here, but this is the correct place to apply
+/// normalization if needed (for example rewriting `.as(canonical)` to
+/// `.ofType(canonical)`) so that validation stays compatible with official
+/// HL7 invariants without changing FHIRPath engine semantics globally.
 pub fn extract_invariants_from_elements(
     elements: &[ElementDefinition],
     root_path: &str,
@@ -97,7 +138,10 @@ pub fn extract_invariants_from_elements(
             continue;
         }
 
-        let element_id = element.id.clone().unwrap_or_else(|| element_path.to_string());
+        let element_id = element
+            .id
+            .clone()
+            .unwrap_or_else(|| element_path.to_string());
 
         let Some(constraints) = element.constraint.as_ref() else {
             continue;
@@ -111,11 +155,13 @@ pub fn extract_invariants_from_elements(
                 continue;
             }
 
+            let normalized_expression = normalize_invariant_expression(&constraint.key, expression);
+
             out.push(InvariantModel {
                 key: constraint.key.clone(),
                 severity: parse_severity(Some(constraint.severity.as_str())),
                 path: element_path.to_string(),
-                expression: expression.to_string(),
+                expression: normalized_expression,
                 human: constraint.human.clone(),
                 source: constraint.source.clone(),
                 element_id: element_id.clone(),
@@ -126,7 +172,25 @@ pub fn extract_invariants_from_elements(
     out
 }
 
-/// Extract direct child bindings under `root_path` from typed snapshot elements.
+fn normalize_invariant_expression(key: &str, expression: &str) -> String {
+    if key != "dom-3" {
+        return expression.to_string();
+    }
+
+    expression
+        .replace(".as(canonical)", ".ofType(canonical)")
+        .replace(".as(uri)", ".ofType(uri)")
+        .replace(".as(url)", ".ofType(url)")
+}
+
+/// Extract direct child bindings declared under the supplied generated type root.
+///
+/// Only direct child elements are considered here so generated validation code
+/// can apply bindings relative to the current focus type rather than scanning
+/// the whole snapshot repeatedly.
+///
+/// Bindings are taken from `ElementDefinition.binding`, and only bindable target
+/// types currently supported by the validator are retained.
 pub fn extract_bindings_from_elements(
     elements: &[ElementDefinition],
     root_path: &str,
@@ -178,14 +242,20 @@ pub fn extract_bindings_from_elements(
             element_path: element_path.to_string(),
             type_codes,
             bindable_type_codes,
-            is_choice_binding
+            is_choice_binding,
         });
     }
 
     out
 }
 
-/// Extract direct child field metadata under `root_path` from typed snapshot elements.
+/// Extract direct child field metadata under the supplied generated type root.
+///
+/// This metadata is used by emitted validation code to:
+/// - recurse into nested datatypes/backbone elements
+/// - rebase instance paths correctly
+/// - understand repeating vs scalar fields
+/// - recognize choice elements and their generated Rust representation
 pub fn extract_direct_fields_from_elements(
     elements: &[ElementDefinition],
     root_path: &str,
@@ -203,13 +273,8 @@ pub fn extract_direct_fields_from_elements(
             continue;
         };
 
-        let min = element_json
-            .get("min")
-            .and_then(Value::as_u64)
-            .and_then(|v| u32::try_from(v).ok())
-            .unwrap_or(0);
-
-        let max = json_str_field(&element_json, "max").unwrap_or("0").to_string();
+        let min = element.min.unwrap_or(0);
+        let max = element.max.clone().unwrap_or_else(|| "0".to_string());
         let rust_field_name = direct_child_field_name(root_path, element_path);
         let type_codes = element_type_codes(&element_json);
         let element_id = element
@@ -224,9 +289,13 @@ pub fn extract_direct_fields_from_elements(
         } else {
             None
         };
-        let choice_enum_name = choice_base_name
-            .as_ref()
-            .map(|base| format!("{}{}", rust_type_name(root_path), capitalize_first_letter(base)));
+        let choice_enum_name = choice_base_name.as_ref().map(|base| {
+            format!(
+                "{}{}",
+                rust_type_name(root_path),
+                capitalize_first_letter(base)
+            )
+        });
 
         out.push(FieldModel {
             element_id,
@@ -250,6 +319,7 @@ pub fn extract_direct_fields_from_elements(
     out
 }
 
+/// Convert FHIR constraint severity text into the generator's normalized severity model.
 pub fn parse_severity(severity: Option<&str>) -> SeverityModel {
     match severity.unwrap_or("error") {
         "fatal" => SeverityModel::Fatal,
@@ -260,6 +330,7 @@ pub fn parse_severity(severity: Option<&str>) -> SeverityModel {
     }
 }
 
+/// Convert FHIR binding strength text into the generator's normalized binding strength model.
 pub fn parse_binding_strength(strength: Option<&str>) -> BindingStrengthModel {
     match strength.unwrap_or("example") {
         "required" => BindingStrengthModel::Required,
@@ -270,6 +341,11 @@ pub fn parse_binding_strength(strength: Option<&str>) -> BindingStrengthModel {
     }
 }
 
+/// Determine which bindable runtime shape a binding applies to.
+///
+/// Only single-type bindings to `code`, `Coding`, or `CodeableConcept` are
+/// currently mapped to supported target kinds. Other shapes are marked
+/// unsupported for version-specific binding handling.
 pub fn binding_target_kind(type_codes: &[String]) -> BindingTargetKindModel {
     if type_codes.len() != 1 {
         return BindingTargetKindModel::Unsupported;
@@ -283,60 +359,120 @@ pub fn binding_target_kind(type_codes: &[String]) -> BindingTargetKindModel {
     }
 }
 
-pub fn classify_type_kind(type_name: &str, structure_kind: StructureKind, def_json: &Value) -> TypeKind {
+/// Classify the inheritance/runtime family for a generated type.
+///
+/// `ParentKind` is derived from base-definition semantics and is used by
+/// emitted validation code for recursion and structural behavior.
+///
+/// This is intentionally different from `StructureKind`, which tracks the FHIR
+/// specification category of the type.
+pub fn classify_parent_kind(
+    type_name: &str,
+    structure_kind: StructureKind,
+    def_json: &Value,
+) -> ParentKind {
     match type_name {
-        "Resource" => return TypeKind::Resource,
-        "DomainResource" => return TypeKind::DomainResource,
-        "Element" => return TypeKind::Element,
-        "BackboneElement" => return TypeKind::BackboneElement,
+        "Resource" => return ParentKind::Resource,
+        "DomainResource" => return ParentKind::DomainResource,
+        "Element" => return ParentKind::Element,
+        "BackboneElement" => return ParentKind::BackboneElement,
         _ => {}
     }
 
     if let Some(base_name) = structure_base_name(def_json) {
         match base_name {
-            "Resource" => return TypeKind::Resource,
-            "DomainResource" => return TypeKind::DomainResource,
-            "Element" => return TypeKind::Element,
-            "BackboneElement" => return TypeKind::BackboneElement,
+            "Resource" => return ParentKind::Resource,
+            "DomainResource" => return ParentKind::DomainResource,
+            "Element" => return ParentKind::Element,
+            "BackboneElement" => return ParentKind::BackboneElement,
             _ => {}
         }
     }
 
     match structure_kind {
-        StructureKind::PrimitiveType => TypeKind::Primitive,
-        StructureKind::ComplexType => TypeKind::ComplexType,
-        StructureKind::Resource => TypeKind::Resource,
-        StructureKind::Logical | StructureKind::Unknown => TypeKind::Unknown,
+        StructureKind::PrimitiveType => ParentKind::Primitive,
+        StructureKind::ComplexType => ParentKind::ComplexType,
+        StructureKind::Resource => ParentKind::Resource,
+        StructureKind::Logical | StructureKind::Unknown => ParentKind::Unknown,
     }
 }
 
-pub fn classify_type_kind_for_path(
+/// Classify the `ParentKind` for a specific generated path inside a snapshot.
+///
+/// Nested paths first inspect their typed element declarations (for example,
+/// `BackboneElement` or `Element`) before falling back to root-level structure
+/// metadata.
+pub fn classify_parent_kind_for_path(
     path: &str,
     structure_kind: StructureKind,
     def_json: &Value,
     elements: &[ElementDefinition],
-) -> TypeKind {
+) -> ParentKind {
     if let Some(element) = find_element_by_path(elements, path) {
         let type_codes = element_type_codes_typed(element);
 
         if type_codes.iter().any(|code| code == "BackboneElement") {
-            return TypeKind::BackboneElement;
+            return ParentKind::BackboneElement;
         }
         if type_codes.iter().any(|code| code == "Element") {
-            return TypeKind::Element;
+            return ParentKind::Element;
         }
         if type_codes.iter().any(|code| code == "Resource") {
-            return TypeKind::Resource;
+            return ParentKind::Resource;
         }
         if type_codes.iter().any(|code| code == "DomainResource") {
-            return TypeKind::DomainResource;
+            return ParentKind::DomainResource;
         }
     }
 
     let type_name = rust_type_name(path);
-    classify_type_kind(&type_name, structure_kind, def_json)
+    classify_parent_kind(&type_name, structure_kind, def_json)
 }
 
+/// Classify the FHIR specification category for a generated path.
+///
+/// `StructureKind` follows `StructureDefinition.kind` semantics:
+/// `resource`, `complex-type`, `primitive-type`, or `logical`.
+///
+/// Nested generated helper types inside resources are treated as
+/// `ComplexType` even when their parent resource root is a `Resource`.
+/// Inheritance-specific distinctions such as `BackboneElement` are tracked
+/// separately in `ParentKind`.
+pub fn classify_structure_kind_for_path(
+    path: &str,
+    root_path: &str,
+    root_structure_kind: StructureKind,
+    elements: &[ElementDefinition],
+) -> StructureKind {
+    if path == root_path {
+        return root_structure_kind;
+    }
+
+    if let Some(element) = find_element_by_path(elements, path) {
+        let type_codes = element_type_codes_typed(element);
+
+        if type_codes
+            .iter()
+            .any(|code| code == "BackboneElement" || code == "Element")
+        {
+            return StructureKind::ComplexType;
+        }
+        if type_codes
+            .iter()
+            .any(|code| code == "Resource" || code == "DomainResource")
+        {
+            return StructureKind::Resource;
+        }
+    }
+
+    match root_structure_kind {
+        StructureKind::PrimitiveType => StructureKind::PrimitiveType,
+        StructureKind::Resource => StructureKind::ComplexType,
+        StructureKind::ComplexType => StructureKind::ComplexType,
+        StructureKind::Logical => StructureKind::Logical,
+        StructureKind::Unknown => StructureKind::Unknown,
+    }
+}
 
 fn snapshot_elements_typed(def: &StructureDefinition) -> Option<&[ElementDefinition]> {
     def.snapshot
@@ -345,6 +481,11 @@ fn snapshot_elements_typed(def: &StructureDefinition) -> Option<&[ElementDefinit
         .map(|elements| elements.as_slice())
 }
 
+/// Determine all snapshot paths that become generated Rust validation types.
+///
+/// The root path is always included. Additional paths are included when the
+/// element type indicates a generated nested structure such as
+/// `BackboneElement` or `Element`.
 fn generated_type_paths(elements: &[ElementDefinition], root_path: &str) -> Vec<String> {
     let mut paths = vec![root_path.to_string()];
 
@@ -355,7 +496,10 @@ fn generated_type_paths(elements: &[ElementDefinition], root_path: &str) -> Vec<
         }
 
         let type_codes = element_type_codes_typed(element);
-        if type_codes.iter().any(|code| code == "BackboneElement" || code == "Element") {
+        if type_codes
+            .iter()
+            .any(|code| code == "BackboneElement" || code == "Element")
+        {
             paths.push(path.to_string());
         }
     }
@@ -376,6 +520,7 @@ fn structure_root_path(def: &StructureDefinition) -> Option<&str> {
         .map(|e| e.path.as_str())
 }
 
+/// Parse raw `StructureDefinition.kind` into the normalized generator enum.
 fn parse_structure_kind(def_json: &Value) -> StructureKind {
     match json_str_field(def_json, "kind") {
         Some("primitive-type") => StructureKind::PrimitiveType,
@@ -546,17 +691,44 @@ fn root_rust_type_name(def_json: &Value, root_path: &str) -> String {
     rust_type_name(root_path)
 }
 
-fn should_emit_type_model(path: &str, root_path: &str, rust_type: &str) -> bool {
+/// Decide whether a generated validation model should be emitted for this path.
+///
+/// Rules:
+/// - nested generated paths are always eligible
+/// - primitive root definitions are skipped
+/// - abstract root definitions are skipped
+/// - known infrastructure / interface / base-only root types are skipped
+///
+/// This prevents the generator from emitting validation impls for abstract or
+/// non-concrete artifacts such as `Base`, `DataType`, or `CanonicalResource`.
+fn should_emit_type_model(path: &str, root_path: &str, def_json: &Value, rust_type: &str) -> bool {
     if path != root_path {
         return true;
+    }
+
+    if json_str_field(def_json, "kind") == Some("primitive-type") {
+        return false;
+    }
+
+    if def_json
+        .get("abstract")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return false;
     }
 
     !matches!(
         rust_type,
         "Element"
             | "BackboneElement"
+            | "BackboneType"
+            | "Base"
+            | "DataType"
+            | "PrimitiveType"
             | "Resource"
             | "DomainResource"
+            | "CanonicalResource"
             | "MetadataResource"
             | "MoneyQuantity"
             | "SimpleQuantity"
@@ -598,7 +770,7 @@ fn make_rust_safe(name: &str) -> String {
     let out = out.trim_matches('_').to_string();
     match out.as_str() {
         "type" | "match" | "ref" | "loop" | "self" | "super" | "crate" | "mod" | "move"
-        | "async" | "await" | "dyn" => format!("r#{out}"),
+        | "async" | "await" | "dyn" | "const" | "abstract" => format!("r#{out}"),
         _ => out,
     }
 }
