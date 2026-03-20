@@ -302,6 +302,22 @@ where
     let Some(coding) = coding else {
         return issues;
     };
+    let system = coding_system(coding).filter(|s| !s.is_empty());
+    let code = coding_code(coding).filter(|c| !c.is_empty());
+
+    if code.is_some() && system.is_none() {
+        issues.push(ValidationIssue {
+            severity: fhir_validation_types::Severity::Warning,
+            code: "terminology",
+            fhir_path: fhir_path.to_string(),
+            instance_path: None,
+            expression: Some(valueset_url.to_string()),
+            diagnostics:
+            "A code with no system has no defined meaning, and it cannot be validated. A system should be provided"
+                .to_string(),
+        });
+        return issues;
+    }
 
     match local_check(coding) {
         Ok(()) => issues,

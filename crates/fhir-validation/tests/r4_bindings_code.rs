@@ -145,6 +145,6 @@ fn r4_patient_invalid_gender() {
     );
     let issues = validate_resource(&resource, None);
     println!("{:#?}", issues);
-    assert_has_binding_issue(&issues, "Patient.gender");
+    assert_has_binding_issue(&issues, "Patient.gender",  "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1");
     assert_has_error(&issues);
 }

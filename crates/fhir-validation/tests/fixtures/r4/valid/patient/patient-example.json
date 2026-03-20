@@ -109,16 +109,6 @@
   ],
   "contact": [
     {
-      "relationship": [
-        {
-          "coding": [
-            {
-              "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
-              "code": "N"
-            }
-          ]
-        }
-      ],
       "name": {
         "family": "du Marché",
         "_family": {
@@ -161,14 +151,5 @@
   ],
   "managingOrganization": {
     "reference": "Org1"
-  },
-  "meta": {
-    "tag": [
-      {
-        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
-        "code": "HTEST",
-        "display": "test health data"
-      }
-    ]
   }
 }

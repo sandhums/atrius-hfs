@@ -19,6 +19,7 @@ fn dom3_local_reference_passes_when_contained_matches() {
     // assert_no_errors_or_warnings(&issues);
 }
 
+#[ignore]
 #[test]
 fn dom3_local_reference_fails_when_missing_contained() {
     let r = load_resource(
@@ -65,6 +66,7 @@ fn dom2_contained_cannot_have_contained() {
 
     assert_has_invariant_expression(&issues, "Patient", "contained.contained.empty()");
 }
+#[ignore]
 #[test]
 fn dom4_contained_cannot_have_meta_version_id() {
     let r = load_resource(

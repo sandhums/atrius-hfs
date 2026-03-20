@@ -455,8 +455,18 @@ fn emit_recursive_validation(
 
     output.push_str("\n");
 
+    if matches!(pass, ValidationPass::Invariants) {
+        for field in ty.fields.iter().filter(|field| field.is_array) {
+            emit_empty_array_check(&ty.fhir_path, field, output);
+        }
+
+        if !ty.fields.is_empty() {
+            output.push_str("\n");
+        }
+    }
+
     for field in executable_candidates {
-        emit_field_recursive_validation(field, pass, output);
+        emit_field_recursive_validation(&ty.fhir_path, field, pass, output);
     }
 
     if !deferred_candidates.is_empty() {
@@ -466,11 +476,12 @@ fn emit_recursive_validation(
 
         for field in deferred_candidates {
             if field.rust_field_name == "contained" {
-                emit_contained_field_recursive_validation(version, field, pass, output);
+                emit_contained_field_recursive_validation(&ty.fhir_path, version, field, pass, output);
                 continue;
             }
             if field.is_choice {
                 emit_choice_field_recursive_validation(
+                    &ty.fhir_path,
                     field,
                     pass,
                     &ty.bindings,
@@ -512,6 +523,30 @@ fn emit_recursive_validation(
     }
 }
 
+/// Emit a structural validation check that rejects present-but-empty arrays.
+///
+/// In FHIR JSON, repeating elements should be omitted when they have no values
+/// rather than being serialized as `[]`. This helper emits a single structural
+/// issue during the invariants pass for any array field that is present but
+/// empty.
+fn emit_empty_array_check(current_type_path: &str, field: &FieldModel, output: &mut String) {
+    let field_name = emitted_field_name(field);
+    let rebase_path = local_rebase_path(current_type_path, field);
+
+    output.push_str(&format!(
+        "        if let Some(values) = &self.{field_name} {{\n",
+        field_name = field_name,
+    ));
+    output.push_str("            if values.is_empty() {\n");
+    output.push_str(&format!(
+        "                issues.push(fhir_validation::ValidationIssue::error(\"structure\", {:?}, \"Array cannot be empty - the property should not be present if it has no values\").with_instance_path({:?}));\n",
+        field.fhir_path,
+        rebase_path,
+    ));
+    output.push_str("            }\n");
+    output.push_str("        }\n");
+}
+
 /// Emit recursive validation for a FHIR choice field.
 ///
 /// Choice fields require special handling because the generated Rust model uses
@@ -519,6 +554,7 @@ fn emit_recursive_validation(
 /// match over the generated choice enum and forwards validation to the selected
 /// variant when validator metadata exists for that child type.
 fn emit_choice_field_recursive_validation(
+    current_type_path: &str,
     field: &FieldModel,
     pass: ValidationPass,
     current_bindings: &[BindingModel],
@@ -532,6 +568,7 @@ fn emit_choice_field_recursive_validation(
     };
 
     let field_name = emitted_field_name(field);
+    let rebase_path = local_rebase_path(current_type_path, field);
 
     output.push_str(&format!(
         "        if let Some(choice) = &self.{field_name} {{\n",
@@ -598,7 +635,7 @@ fn emit_choice_field_recursive_validation(
                 );
                 output.push_str(&format!(
                     "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
-                    field.fhir_path,
+                    rebase_path,
                 ));
                 output.push_str("                }\n");
                 emitted_any_arm = true;
@@ -703,14 +740,37 @@ fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
+/// Return the child rebase path to use inside the currently generated type.
+///
+/// Top-level generated resource/datatype models use the full `field.fhir_path`
+/// (for example `Patient.identifier` or `HumanName.use`).
+///
+/// Nested generated helper types such as `Patient.contact` must rebase child
+/// issues relative to a helper-local root (for example `contact.relationship`),
+/// otherwise parent rebasing will either duplicate path segments or lose the
+/// child field name entirely.
+fn local_rebase_path(current_type_path: &str, field: &FieldModel) -> String {
+    if let Some(stripped) = field
+        .fhir_path
+        .strip_prefix(&format!("{current_type_path}."))
+    {
+        if let Some((_, local_root)) = current_type_path.rsplit_once('.') {
+            return format!("{local_root}.{stripped}");
+        }
+    }
+
+    field.fhir_path.clone()
+}
+
 /// Emit direct recursive validation for a normal child field.
 ///
 /// This handles:
 /// - optional vs required fields
 /// - repeating vs scalar fields
 /// - pass-specific rebasing for invariant issues
-fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, output: &mut String) {
+fn emit_field_recursive_validation(current_type_path: &str, field: &FieldModel, pass: ValidationPass, output: &mut String) {
     let field_name = emitted_field_name(field);
+    let rebase_path = local_rebase_path(current_type_path,field);
     match pass {
         ValidationPass::Bindings => {
             if field.is_array {
@@ -718,25 +778,33 @@ fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, out
                     "        if let Some(values) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
-                output.push_str("            for value in values {\n");
-                output.push_str(
-                    "                issues.extend(value.validate_bindings(validator, terminology));\n",
-                );
+                output.push_str("            for (idx, value) in values.iter().enumerate() {\n");
+                output.push_str("                let child_issues = value.validate_bindings(validator, terminology);\n");
+                output.push_str(&format!(
+                    "                issues.extend(validator.rebase_instance_paths(child_issues, &format!(\"{}[{{idx}}]\")));\n",
+                    rebase_path,
+                ));
                 output.push_str("            }\n");
                 output.push_str("        }\n");
             } else if field.is_required {
                 output.push_str(&format!(
-                    "        issues.extend(self.{field_name}.validate_bindings(validator, terminology));\n",
+                    "        let child_issues = self.{field_name}.validate_bindings(validator, terminology);\n",
                     field_name = field_name,
+                ));
+                output.push_str(&format!(
+                    "        issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    rebase_path,
                 ));
             } else {
                 output.push_str(&format!(
                     "        if let Some(value) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
-                output.push_str(
-                    "            issues.extend(value.validate_bindings(validator, terminology));\n",
-                );
+                output.push_str("            let child_issues = value.validate_bindings(validator, terminology);\n");
+                output.push_str(&format!(
+                    "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    rebase_path,
+                ));
                 output.push_str("        }\n");
             }
         }
@@ -746,11 +814,11 @@ fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, out
                     "        if let Some(values) = &self.{field_name} {{\n",
                     field_name = field_name,
                 ));
-                output.push_str("            for value in values {\n");
+                output.push_str("            for (idx, value) in values.iter().enumerate() {\n");
                 output.push_str("                let child_issues = value.validate_invariants(validator, evaluator);\n");
                 output.push_str(&format!(
-                    "                issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
-                    field.fhir_path,
+                    "                issues.extend(validator.rebase_instance_paths(child_issues, &format!(\"{}[{{idx}}]\")));\n",
+                    rebase_path,
                 ));
                 output.push_str("            }\n");
                 output.push_str("        }\n");
@@ -761,7 +829,7 @@ fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, out
                 ));
                 output.push_str(&format!(
                     "        issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
-                    field.fhir_path,
+                    rebase_path,
                 ));
             } else {
                 output.push_str(&format!(
@@ -771,7 +839,7 @@ fn emit_field_recursive_validation(field: &FieldModel, pass: ValidationPass, out
                 output.push_str("            let child_issues = value.validate_invariants(validator, evaluator);\n");
                 output.push_str(&format!(
                     "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
-                    field.fhir_path,
+                    rebase_path,
                 ));
                 output.push_str("        }\n");
             }
@@ -982,6 +1050,7 @@ fn is_primitive_type_code(code: &str) -> bool {
 /// dispatchers because they are held as versioned `Resource` enum values rather
 /// than normal nested datatype structs.
 fn emit_contained_field_recursive_validation(
+    current_type_path: &str,
     version: FhirVersion,
     field: &FieldModel,
     pass: ValidationPass,
@@ -989,20 +1058,21 @@ fn emit_contained_field_recursive_validation(
 ) {
     let dispatch_method = contained_dispatch_method_name(version, pass);
     let field_name = emitted_field_name(field);
+    let rebase_path = local_rebase_path(current_type_path, field);
 
     output.push_str(&format!(
         "        if let Some(values) = &self.{field_name} {{\n",
         field_name = field_name,
     ));
-    output.push_str("            for value in values {\n");
+    output.push_str("            for (idx, value) in values.iter().enumerate() {\n");
     output.push_str(&format!(
         "                let child_issues = validator.{dispatch_method}(value, {arg_name});\n",
         dispatch_method = dispatch_method,
         arg_name = contained_dispatch_arg_name(pass),
     ));
     output.push_str(&format!(
-        "                issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
-        field.fhir_path,
+        "                issues.extend(validator.rebase_instance_paths(child_issues, &format!(\"{}[{{idx}}]\")));\n",
+        rebase_path,
     ));
     output.push_str("            }\n");
     output.push_str("        }\n");

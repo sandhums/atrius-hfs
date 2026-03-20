@@ -101,10 +101,16 @@ fn render_terminology_mod_rs() -> String {
     // This MUST NOT depend on fhirpath crates to avoid circular dependencies.
     s.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
     s.push_str("pub enum TerminologyValidationError {\n");
-    s.push_str("    /// Missing required input (e.g., Coding.system or Coding.code).\n");
+    s.push_str("    /// Missing required terminology context or value.\n");
     s.push_str("    InvalidInput(String),\n");
-    s.push_str("    /// Locally decidable and not a member of the ValueSet.\n");
-    s.push_str("    NotInValueSet(String),\n");
+    s.push_str("    /// A primitive code was supplied without a system and local inference was not possible.\n");
+    s.push_str("    MissingSystem(String),\n");
+    s.push_str("    /// A code was supplied for a known CodeSystem, but the code itself is unknown.\n");
+    s.push_str("    UnknownCode { system: String, code: String },\n");
+    s.push_str("    /// The code is known, but not a member of the bound ValueSet.\n");
+    s.push_str("    NotInValueSet { valueset_url: String, system: Option<String>, code: String },\n");
+    s.push_str("    /// The provided display does not match the canonical display for the code.\n");
+    s.push_str("    WrongDisplay { system: String, code: String, expected: String, provided: String },\n");
     s.push_str("    /// Local rules insufficient; remote terminology validation is required.\n");
     s.push_str("    RemoteValidationRequired(String),\n");
     s.push_str("}\n\n");
@@ -113,7 +119,20 @@ fn render_terminology_mod_rs() -> String {
     s.push_str("    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n");
     s.push_str("        match self {\n");
     s.push_str("            Self::InvalidInput(msg) => write!(f, \"{}\", msg),\n");
-    s.push_str("            Self::NotInValueSet(msg) => write!(f, \"{}\", msg),\n");
+    s.push_str("            Self::MissingSystem(msg) => write!(f, \"{}\", msg),\n");
+    s.push_str("            Self::UnknownCode { system, code } => {\n");
+    s.push_str("                write!(f, \"Unknown code '{}' in CodeSystem '{}'\", code, system)\n");
+    s.push_str("            }\n");
+    s.push_str("            Self::NotInValueSet { valueset_url, system, code } => {\n");
+    s.push_str("                if let Some(system) = system {\n");
+    s.push_str("                    write!(f, \"Code '{}#{}' is not in ValueSet '{}'\", system, code, valueset_url)\n");
+    s.push_str("                } else {\n");
+    s.push_str("                    write!(f, \"Code '{}' is not in ValueSet '{}'\", code, valueset_url)\n");
+    s.push_str("                }\n");
+    s.push_str("            }\n");
+    s.push_str("            Self::WrongDisplay { system, code, expected, provided } => {\n");
+    s.push_str("                write!(f, \"Wrong display '{}' for {}#{}. Expected '{}'\", provided, system, code, expected)\n");
+    s.push_str("            }\n");
     s.push_str("            Self::RemoteValidationRequired(msg) => write!(f, \"{}\", msg),\n");
     s.push_str("        }\n");
     s.push_str("    }\n");
@@ -672,6 +691,110 @@ fn render_valueset_file(
     s.push_str("        None\n");
     s.push_str("    }\n");
 
+    s.push_str("\n    /// Best-effort local check for whether a code is known in a locally generated CodeSystem.\n");
+    s.push_str("    /// Returns Some(true/false) when the system is locally known; None when the\n");
+    s.push_str("    /// system cannot be decided locally.\n");
+    s.push_str("    pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {\n");
+    let mut emitted_known_any = false;
+    if let Some(compose) = vs.compose.as_ref() {
+        for inc in compose.include.as_deref().unwrap_or(&[]) {
+            let Some(sys) = inc.system.as_deref() else { continue; };
+            let concepts = indexer::extract_valueset_concepts(inc);
+            if !concepts.is_empty() {
+                emitted_known_any = true;
+                s.push_str(&format!("        if system == \"{sys}\" {{\n"));
+                s.push_str("            return Some(matches!(code, ");
+                let mut first = true;
+                for c in concepts {
+                    let code = c.code.as_str();
+                    if first {
+                        s.push_str(&format!("\"{}\"", escape_str(code)));
+                        first = false;
+                    } else {
+                        s.push_str(&format!(" | \"{}\"", escape_str(code)));
+                    }
+                }
+                s.push_str("));\n");
+                s.push_str("        }\n");
+                continue;
+            }
+            let has_filters = inc.filter.as_ref().map(|f| !f.is_empty()).unwrap_or(false);
+            let has_vs_refs = inc.value_set.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
+            if !has_filters && !has_vs_refs {
+                if index.cs_concepts_by_url.contains_key(sys) {
+                    if let Some(cs_info) = index.cs_by_url.get(sys) {
+                        let cs_type = cs_info.type_name.as_str();
+                        emitted_known_any = true;
+                        s.push_str(&format!("        if system == \"{sys}\" {{\n"));
+                        s.push_str(&format!(
+                            "            return Some(super::super::code_systems::{}::try_from_code(code).is_some());\n",
+                            cs_type
+                        ));
+                        s.push_str("        }\n");
+                    }
+                }
+            }
+        }
+    }
+    if !emitted_known_any {
+        s.push_str("        let _ = (system, code);\n");
+    }
+    s.push_str("        None\n");
+    s.push_str("    }\n\n");
+
+    s.push_str("    /// Best-effort canonical display lookup for a locally known code.\n");
+    s.push_str("    pub fn expected_display(system: &str, code: &str) -> Option<&'static str> {\n");
+    let mut emitted_display_any = false;
+    if let Some(compose) = vs.compose.as_ref() {
+        for inc in compose.include.as_deref().unwrap_or(&[]) {
+            let Some(sys) = inc.system.as_deref() else { continue; };
+            let concepts = indexer::extract_valueset_concepts(inc);
+            if !concepts.is_empty() {
+                emitted_display_any = true;
+                s.push_str(&format!("        if system == \"{sys}\" {{\n"));
+                s.push_str("            return match code {\n");
+                for c in concepts {
+                    match c.display.as_deref() {
+                        Some(d) => s.push_str(&format!(
+                            "                \"{}\" => Some(\"{}\"),\n",
+                            escape_str(c.code.as_str()),
+                            escape_str(d),
+                        )),
+                        None => s.push_str(&format!(
+                            "                \"{}\" => None,\n",
+                            escape_str(c.code.as_str()),
+                        )),
+                    }
+                }
+                s.push_str("                _ => None,\n");
+                s.push_str("            };\n");
+                s.push_str("        }\n");
+                continue;
+            }
+            let has_filters = inc.filter.as_ref().map(|f| !f.is_empty()).unwrap_or(false);
+            let has_vs_refs = inc.value_set.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
+            if !has_filters && !has_vs_refs {
+                if index.cs_concepts_by_url.contains_key(sys) {
+                    if let Some(cs_info) = index.cs_by_url.get(sys) {
+                        let cs_type = cs_info.type_name.as_str();
+                        emitted_display_any = true;
+                        s.push_str(&format!("        if system == \"{sys}\" {{\n"));
+                        s.push_str(&format!(
+                            "            return super::super::code_systems::{}::try_from_code(code).and_then(|c| c.display());\n",
+                            cs_type
+                        ));
+                        s.push_str("        }\n");
+                    }
+                }
+            }
+        }
+    }
+    if !emitted_display_any {
+        s.push_str("        let _ = (system, code);\n");
+    }
+    s.push_str("        None\n");
+    s.push_str("    }\n");
+
     s.push_str("\n    /// Best-effort local membership check for a Coding.\n");
     s.push_str(
         "    /// Returns None when missing system/code or when remote validation is required.\n",
@@ -704,26 +827,34 @@ fn render_valueset_file(
     s.push_str("        if any_none { None } else { Some(false) }\n");
     s.push_str("    }\n");
 
-    s.push_str("\n    /// Validate a primitive `code` against a generated local ValueSet when available.\n");
-    s.push_str("    /// Returns Ok(()) when locally decidable and in the set.\n");
-    s.push_str("    /// Returns Err when not in the set, or when remote terminology validation is required.\n");
+    s.push_str("\n    /// Validate a system+code pair against this ValueSet using best-effort local logic.\n");
     s.push_str("    pub fn validate(system: &str, code: &str) -> Result<(), TerminologyValidationError> {\n");
     s.push_str("        match Self::contains(system, code) {\n");
     s.push_str("            Some(true) => Ok(()),\n");
-    s.push_str("            Some(false) => Err(TerminologyValidationError::NotInValueSet(\"Code not in ValueSet\".to_string())),\n");
+    s.push_str("            Some(false) => {\n");
+    s.push_str("                match Self::code_known_in_system(system, code) {\n");
+    s.push_str("                    Some(false) => Err(TerminologyValidationError::UnknownCode { system: system.to_string(), code: code.to_string() }),\n");
+    s.push_str("                    _ => Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some(system.to_string()), code: code.to_string() }),\n");
+    s.push_str("                }\n");
+    s.push_str("            }\n");
     s.push_str("            None => Err(TerminologyValidationError::RemoteValidationRequired(\"Remote terminology validation required\".to_string())),\n");
     s.push_str("        }\n");
     s.push_str("    }\n\n");
-    s.push_str("\n    /// Validate a code against this ValueSet using best-effort local logic.\n");
-    s.push_str("    /// Returns Ok(()) when locally decidable and in the set.\n");
-    s.push_str("    /// Returns Err when not in the set, or when remote terminology validation is required.\n");
-    s.push_str(
-        "    pub fn validate_code(code: &str) -> Result<(), TerminologyValidationError> {\n",
-    );
+    s.push_str("\n    /// Validate a primitive `code` against this ValueSet using best-effort local logic.\n");
+    s.push_str("    pub fn validate_code(code: &str) -> Result<(), TerminologyValidationError> {\n");
     s.push_str("        match Self::contains_implicit_code(code) {\n");
     s.push_str("            Some(true) => Ok(()),\n");
-    s.push_str("            Some(false) => Err(TerminologyValidationError::NotInValueSet(\"Code not in ValueSet\".to_string())),\n");
-    s.push_str("            None => Err(TerminologyValidationError::RemoteValidationRequired(\"Remote terminology validation required\".to_string())),\n");
+    s.push_str("            Some(false) => {\n");
+    if implicit_systems.len() == 1 {
+        s.push_str(&format!(
+            "                Err(TerminologyValidationError::NotInValueSet {{ valueset_url: Self::URL.to_string(), system: Some(\"{}\".to_string()), code: code.to_string() }})\n",
+            escape_str(&implicit_systems[0])
+        ));
+    } else {
+        s.push_str("                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: code.to_string() })\n");
+    }
+    s.push_str("            }\n");
+    s.push_str("            None => Err(TerminologyValidationError::MissingSystem(\"The System URI could not be determined for this code in the bound ValueSet\".to_string())),\n");
     s.push_str("        }\n");
     s.push_str("    }\n\n");
 
@@ -742,26 +873,40 @@ fn render_valueset_file(
     s.push_str("    }\n\n");
 
     s.push_str("    /// Validate a Coding against this ValueSet using best-effort local logic.\n");
-    s.push_str(
-        "    pub fn validate_coding(coding: &Coding) -> Result<(), TerminologyValidationError> {\n",
-    );
-    s.push_str("        let system = coding.system.as_ref().and_then(|e| e.value.as_deref()).ok_or_else(|| TerminologyValidationError::InvalidInput(\"Coding.system is required\".to_string()))?;\n");
-    s.push_str("        let code = coding.code.as_ref().and_then(|e| e.value.as_deref()).ok_or_else(|| TerminologyValidationError::InvalidInput(\"Coding.code is required\".to_string()))?;\n");
+    s.push_str("    pub fn validate_coding(coding: &Coding) -> Result<(), TerminologyValidationError> {\n");
+    s.push_str("        let code = coding.code.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::InvalidInput(\"Coding.code is required\".to_string()))?;\n");
+    s.push_str("        let system = coding.system.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::MissingSystem(\"Coding.system is required\".to_string()))?;\n");
+    s.push_str("        if let Some(provided) = coding.display.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()) {\n");
+    s.push_str("            if let Some(expected) = Self::expected_display(system, code) {\n");
+    s.push_str("                if provided != expected {\n");
+    s.push_str("                    return Err(TerminologyValidationError::WrongDisplay { system: system.to_string(), code: code.to_string(), expected: expected.to_string(), provided: provided.to_string() });\n");
+    s.push_str("                }\n");
+    s.push_str("            }\n");
+    s.push_str("        }\n");
     s.push_str("        Self::validate(system, code)\n");
     s.push_str("    }\n\n");
 
-    s.push_str(
-        "    /// Validate a CodeableConcept against this ValueSet using best-effort local logic.\n",
-    );
+    s.push_str("    /// Validate a CodeableConcept against this ValueSet using best-effort local logic.\n");
     s.push_str("    pub fn validate_codeable_concept(cc: &CodeableConcept) -> Result<(), TerminologyValidationError> {\n");
     s.push_str("        let codings = cc.coding.as_ref().ok_or_else(|| TerminologyValidationError::InvalidInput(\"CodeableConcept.coding is required\".to_string()))?;\n");
     s.push_str("        if codings.is_empty() {\n");
     s.push_str("            return Err(TerminologyValidationError::InvalidInput(\"CodeableConcept.coding must not be empty\".to_string()));\n");
     s.push_str("        }\n");
-    s.push_str("        match Self::contains_codeable_concept(cc) {\n");
-    s.push_str("            Some(true) => Ok(()),\n");
-    s.push_str("            Some(false) => Err(TerminologyValidationError::NotInValueSet(\"Code not in ValueSet\".to_string())),\n");
-    s.push_str("            None => Err(TerminologyValidationError::RemoteValidationRequired(\"Remote terminology validation required\".to_string())),\n");
+    s.push_str("        let mut last_error: Option<TerminologyValidationError> = None;\n");
+    s.push_str("        let mut saw_remote = false;\n");
+    s.push_str("        for coding in codings {\n");
+    s.push_str("            match Self::validate_coding(coding) {\n");
+    s.push_str("                Ok(()) => return Ok(()),\n");
+    s.push_str("                Err(TerminologyValidationError::RemoteValidationRequired(_)) => saw_remote = true,\n");
+    s.push_str("                Err(err) => last_error = Some(err),\n");
+    s.push_str("            }\n");
+    s.push_str("        }\n");
+    s.push_str("        if saw_remote {\n");
+    s.push_str("            Err(TerminologyValidationError::RemoteValidationRequired(\"Remote terminology validation required\".to_string()))\n");
+    s.push_str("        } else if let Some(err) = last_error {\n");
+    s.push_str("            Err(err)\n");
+    s.push_str("        } else {\n");
+    s.push_str("            Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: \"\".to_string() })\n");
     s.push_str("        }\n");
     s.push_str("    }\n");
     s.push_str("  }\n");

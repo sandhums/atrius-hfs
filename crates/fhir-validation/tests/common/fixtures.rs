@@ -5,7 +5,6 @@ use fhir_validation::R4FhirPathEvaluator;
 use fhir_validation::{
     R5FhirPathEvaluator, Severity, TerminologyService, ValidationIssue, Validator,
 };
-use fhir_validation_types::BindingStrength;
 use helios_fhir::{FhirResource, FhirVersion};
 
 pub fn fixture_path(rel: &str) -> PathBuf {
@@ -66,6 +65,10 @@ pub fn load_resource(version: FhirVersion, rel: &str) -> FhirResource {
         }
     }
 }
+pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
+    let json = load_fixture(FhirVersion::R5, rel);
+    serde_json::from_str(&json).unwrap()
+}
 
 pub fn validate_resource(
     resource: &FhirResource,
@@ -100,6 +103,7 @@ pub fn validator() -> Validator {
     Validator::default()
 }
 
+#[allow(dead_code)]
 fn issue_matches_requested_severity(issue: &ValidationIssue, severity: Severity) -> bool {
     match severity {
         Severity::Warning => {
@@ -110,7 +114,7 @@ fn issue_matches_requested_severity(issue: &ValidationIssue, severity: Severity)
         Severity::Fatal => issue.severity == Severity::Fatal,
     }
 }
-
+#[allow(dead_code)]
 fn assert_has_severity_like(issues: &[ValidationIssue], severity: Severity, label: &str) {
     assert!(
         issues
@@ -119,7 +123,7 @@ fn assert_has_severity_like(issues: &[ValidationIssue], severity: Severity, labe
         "expected {label}, got issues: {issues:#?}"
     );
 }
-
+#[allow(dead_code)]
 pub fn assert_has_invariant_issue(
     issues: &[ValidationIssue],
     path: &str,
@@ -135,24 +139,29 @@ pub fn assert_has_invariant_issue(
         "expected issue at path {path:?} with expression {expression:?} and severity {severity:?}, got issues: {issues:#?}"
     );
 }
-pub fn assert_has_binding_issue(issues: &[ValidationIssue], path: &str) {
+#[allow(dead_code)]
+pub fn assert_has_binding_issue(issues: &[ValidationIssue], path: &str, expression: &str) {
     assert!(
         issues.iter().any(|issue| {
             issue.instance_path.as_deref() == Some(path)
-            // && issue.expression.as_deref() == Some(expression)
+            && issue.expression.as_deref() == Some(expression)
         }),
-        "expected issue at path {path:?}, got issues: {issues:#?}"
+        "expected issue at path {path:?}, for value set {expression:?}, got issues: {issues:#?}"
     );
 }
+#[allow(dead_code)]
 pub fn assert_has_error(issues: &[ValidationIssue]) {
     assert_has_severity_like(issues, Severity::Error, "error/fatal issue");
 }
+#[allow(dead_code)]
 pub fn assert_has_warning(issues: &[ValidationIssue]) {
     assert_has_severity_like(issues, Severity::Warning, "warning/info issue");
 }
+#[allow(dead_code)]
 pub fn assert_has_info(issues: &[ValidationIssue]) {
     assert_has_severity_like(issues, Severity::Information, "info issue");
 }
+#[allow(dead_code)]
 pub fn assert_no_errors(issues: &[ValidationIssue]) {
     let errors: Vec<_> = issues
         .iter()
@@ -208,7 +217,7 @@ pub fn assert_has_issue_at_path(issues: &[ValidationIssue], code: &str, instance
         "expected issue code {code:?} at path {instance_path:?}, got issues: {issues:#?}"
     );
 }
-
+#[allow(dead_code)]
 pub fn assert_has_invariant(
     issues: &[ValidationIssue],
     instance_path: &str,
@@ -252,6 +261,18 @@ pub fn eval_r4_patient_expr(
 ) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, String> {
     let root = helios_fhir::r4::Resource::Patient(Box::new(patient.clone()));
     let evaluator = fhir_validation::R4FhirPathEvaluator::new(root);
+
+    evaluator
+        .eval_expression(expr)
+        .map_err(|e| format!("{e:?}"))
+}
+#[allow(dead_code)]
+pub fn eval_r5_patient_expr(
+    patient: &helios_fhir::r5::Patient,
+    expr: &str,
+) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, String> {
+    let root = helios_fhir::r5::Resource::Patient(Box::new(patient.clone()));
+    let evaluator = fhir_validation::R5FhirPathEvaluator::new(root);
 
     evaluator
         .eval_expression(expr)

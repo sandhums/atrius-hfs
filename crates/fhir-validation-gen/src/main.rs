@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use emit::emit_types;
-use extract::extract_type_validation_models;
+use extract::{build_structure_definition_index, extract_type_validation_models_with_index};
 use helios_fhir_gen::initial_fhir_model::StructureDefinition;
 use serde_json::Value;
 use versions::FhirVersion;
@@ -40,11 +40,14 @@ fn run() -> Result<(), String> {
         all_defs.extend(defs);
     }
 
+    let sd_index = build_structure_definition_index(&all_defs);
+
     let mut models = Vec::new();
     for def in &all_defs {
-        let extracted = extract_type_validation_models(version, def).ok_or_else(|| {
-            "could not extract validation models from one of the input bundles".to_string()
-        })?;
+        let extracted = extract_type_validation_models_with_index(version, def, Some(&sd_index))
+            .ok_or_else(|| {
+                "could not extract validation models from one of the input bundles".to_string()
+            })?;
         models.extend(extracted);
     }
 

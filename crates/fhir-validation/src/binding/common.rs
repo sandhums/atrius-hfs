@@ -103,7 +103,14 @@ pub(crate) fn collect_json_values_with_paths<'a>(
     out: &mut Vec<(&'a Value, String)>,
 ) {
     if remaining_segments.is_empty() {
-        out.push((value, current_path.to_string()));
+        match value {
+            Value::Array(items) => {
+                for (idx, item) in items.iter().enumerate() {
+                    out.push((item, format!("{current_path}[{idx}]")));
+                }
+            }
+            _ => out.push((value, current_path.to_string())),
+        }
         return;
     }
 
@@ -128,29 +135,45 @@ pub(crate) fn collect_json_values_with_paths<'a>(
         _ => {}
     }
 }
-
-/// Extract the top-level validation root from a generated binding path.
+/// Extract the current generated-type root from a generated binding path.
 ///
-/// For example, `Patient.gender` becomes `Patient`, and
-/// `Observation.component.code` becomes `Observation`.
+/// Binding definitions are attached to direct child fields of the current
+/// generated type, so runtime path resolution needs the parent path of the
+/// bound field rather than only the first segment.
 ///
-/// Version-specific binding modules then refine this into concrete indexed
-/// instance paths during traversal.
+/// Examples:
+/// - `Patient.gender` -> `Patient`
+/// - `HumanName.use` -> `HumanName`
+/// - `Patient.contact.relationship` -> `Patient.contact`
+/// - `Observation.component.code` -> `Observation.component`
+///
+/// Version-specific binding modules then resolve the final child segment
+/// relative to this root to build concrete indexed instance paths.
 pub(crate) fn root_instance_path(binding_path: &str) -> &str {
-    binding_path.split('.').next().unwrap_or(binding_path)
+    binding_path
+        .rsplit_once('.')
+        .map(|(head, _)| head)
+        .unwrap_or(binding_path)
 }
 
-/// Strip the leading type/resource name from a generated binding path.
+/// Return the direct child binding path relative to the serialized focus object
+/// being validated.
 ///
-/// For example:
+/// Generated binding definitions are always attached to direct child fields of
+/// the current generated type. For top-level types this means:
 /// - `Patient.gender` → `gender`
 /// - `HumanName.use` → `use`
 ///
-/// This allows the binding resolver to apply paths relative to the serialized
-/// focus object being validated.
+/// For nested helper types such as `Patient.contact`, the generated binding path
+/// still carries the full logical path:
+/// - `Patient.contact.relationship` → `relationship`
+/// - `Patient.contact.gender` → `gender`
+///
+/// Using the final path segment keeps runtime binding resolution aligned with
+/// the local serialized helper object shape.
 pub(crate) fn relative_binding_path(binding_path: &str) -> &str {
     binding_path
-        .split_once('.')
-        .map(|(_, rest)| rest)
+        .rsplit_once('.')
+        .map(|(_, tail)| tail)
         .unwrap_or(binding_path)
 }

@@ -18,6 +18,7 @@
 //! This normalization step is intentionally separate from emission so code
 //! generation can operate on a stable, FHIR-aware intermediate model.
 
+use std::collections::HashMap;
 use serde_json::Value;
 
 use crate::model::{
@@ -26,6 +27,35 @@ use crate::model::{
 };
 use crate::versions::FhirVersion;
 use helios_fhir_gen::initial_fhir_model::{ElementDefinition, StructureDefinition};
+
+/// Lookup index for resolving ancestor `StructureDefinition`s during inherited
+/// invariant extraction.
+#[derive(Debug, Clone)]
+pub struct StructureDefinitionIndex<'a> {
+    by_url: HashMap<String, &'a StructureDefinition>,
+    by_type: HashMap<String, &'a StructureDefinition>,
+}
+
+/// Build a lookup index over the supplied StructureDefinitions.
+///
+/// The index supports resolution by canonical URL and by `type` name.
+pub fn build_structure_definition_index<'a>(
+    defs: & 'a [StructureDefinition],
+) -> StructureDefinitionIndex<'a> {
+    let mut by_url = HashMap::new();
+    let mut by_type = HashMap::new();
+
+    for def in defs {
+        if let url = &def.url {
+            by_url.insert(url.to_string(), def);
+        }
+        if let type_name = &def.r#type {
+            by_type.insert(type_name.to_string(), def);
+        }
+    }
+
+    StructureDefinitionIndex { by_url, by_type }
+}
 
 /// Extract all validation models implied by a single StructureDefinition.
 ///
@@ -36,9 +66,23 @@ use helios_fhir_gen::initial_fhir_model::{ElementDefinition, StructureDefinition
 ///
 /// Returns `None` when the definition cannot be normalized into typed snapshot
 /// elements.
+///
+/// This backward-compatible entry point extracts only direct invariants declared
+/// on the current type/path. Use `extract_type_validation_models_with_index(...)`
+/// to also merge inherited invariants from ancestor StructureDefinitions.
 pub fn extract_type_validation_models(
     version: FhirVersion,
     def: &StructureDefinition,
+) -> Option<Vec<TypeValidationModel>> {
+    extract_type_validation_models_with_index(version, def, None)
+}
+
+/// Extract all validation models implied by a single StructureDefinition,
+/// optionally merging inherited invariants through a StructureDefinition index.
+pub fn extract_type_validation_models_with_index<'a>(
+    version: FhirVersion,
+    def: &'a StructureDefinition,
+    index: Option<&StructureDefinitionIndex<'a>>,
 ) -> Option<Vec<TypeValidationModel>> {
     let def_json = serde_json::to_value(def).ok()?;
     let root_path = structure_root_path(def)?;
@@ -49,7 +93,13 @@ pub fn extract_type_validation_models(
 
     for path in type_paths {
         if let Some(model) = extract_type_validation_model_for_path(
-            version, def, &def_json, elements, root_path, &path,
+            version,
+            def,
+            &def_json,
+            elements,
+            root_path,
+            &path,
+            index,
         ) {
             models.push(model);
         }
@@ -72,13 +122,14 @@ pub fn extract_type_validation_models(
 /// Root paths and nested paths are treated differently:
 /// - the root path uses StructureDefinition metadata directly
 /// - nested paths infer their classification from the typed element tree
-fn extract_type_validation_model_for_path(
+fn extract_type_validation_model_for_path<'a>(
     version: FhirVersion,
-    def: &StructureDefinition,
+    def: &'a StructureDefinition,
     def_json: &Value,
     elements: &[ElementDefinition],
     root_path: &str,
     path: &str,
+    index: Option<&StructureDefinitionIndex<'a>>,
 ) -> Option<TypeValidationModel> {
     let rust_type = if path == root_path {
         root_rust_type_name(def_json, path)
@@ -102,7 +153,14 @@ fn extract_type_validation_model_for_path(
 
     let _ = (version, def);
 
-    model.invariants = extract_invariants_from_elements(elements, path);
+    model.invariants = extract_invariants_with_inheritance(
+        elements,
+        path,
+        root_path,
+        def,
+        parent_kind,
+        index,
+    );
     model.bindings = extract_bindings_from_elements(elements, path);
     model.fields = extract_direct_fields_from_elements(elements, path);
 
@@ -181,6 +239,135 @@ fn normalize_invariant_expression(key: &str, expression: &str) -> String {
         .replace(".as(canonical)", ".ofType(canonical)")
         .replace(".as(uri)", ".ofType(uri)")
         .replace(".as(url)", ".ofType(url)")
+}
+
+/// Extract direct invariants for the current generated type path and merge
+/// inherited invariants from ancestor StructureDefinitions when an index is
+/// available.
+fn extract_invariants_with_inheritance<'a>(
+    elements: &[ElementDefinition],
+    path: &str,
+    root_path: &str,
+    def: &'a StructureDefinition,
+    parent_kind: ParentKind,
+    index: Option<&StructureDefinitionIndex<'a>>,
+) -> Vec<InvariantModel> {
+    let mut out = extract_invariants_from_elements(elements, path);
+
+    let Some(index) = index else {
+        return out;
+    };
+
+    let inherited = if path == root_path {
+        inherited_invariants_for_root(def, path, index)
+    } else {
+        inherited_invariants_for_nested_path(path, parent_kind, index)
+    };
+
+    for invariant in inherited {
+        if !out.iter().any(|existing| existing.key == invariant.key) {
+            out.push(invariant);
+        }
+    }
+
+    out
+}
+
+/// Walk the `baseDefinition` chain for a root StructureDefinition and collect
+/// rebased root-level invariants from each ancestor.
+fn inherited_invariants_for_root<'a>(
+    def: &'a StructureDefinition,
+    rebased_path: &str,
+    index: &StructureDefinitionIndex<'a>,
+) -> Vec<InvariantModel> {
+    let mut out = Vec::new();
+    let mut current = def
+        .base_definition
+        .as_deref()
+        .and_then(|url| index.by_url.get(url).copied());
+
+    while let Some(sd) = current {
+        out.extend(extract_root_invariants_from_structure_definition(sd, rebased_path));
+        current = sd
+            .base_definition
+            .as_deref()
+            .and_then(|url| index.by_url.get(url).copied());
+    }
+
+    out
+}
+
+/// Collect inherited invariants for a nested generated path by seeding the walk
+/// from the corresponding core base type implied by `ParentKind`.
+fn inherited_invariants_for_nested_path<'a>(
+    rebased_path: &str,
+    parent_kind: ParentKind,
+    index: &StructureDefinitionIndex<'a>,
+) -> Vec<InvariantModel> {
+    let start_type = match parent_kind {
+        ParentKind::BackboneElement => Some("BackboneElement"),
+        ParentKind::Element => Some("Element"),
+        ParentKind::DomainResource => Some("DomainResource"),
+        ParentKind::Resource => Some("Resource"),
+        _ => None,
+    };
+
+    let mut out = Vec::new();
+    let mut current = start_type.and_then(|type_name| index.by_type.get(type_name).copied());
+
+    while let Some(sd) = current {
+        out.extend(extract_root_invariants_from_structure_definition(sd, rebased_path));
+        current = sd
+            .base_definition
+            .as_deref()
+            .and_then(|url| index.by_url.get(url).copied());
+    }
+
+    out
+}
+
+/// Extract root-level invariants from a StructureDefinition and rebase them to
+/// the current generated type path.
+fn extract_root_invariants_from_structure_definition(
+    def: &StructureDefinition,
+    rebased_path: &str,
+) -> Vec<InvariantModel> {
+    let Some(elements) = snapshot_elements_typed(def) else {
+        return Vec::new();
+    };
+
+    let Some(root_element) = elements.first() else {
+        return Vec::new();
+    };
+
+    let Some(constraints) = root_element.constraint.as_ref() else {
+        return Vec::new();
+    };
+
+    let mut out = Vec::new();
+
+    for constraint in constraints {
+        let Some(expression) = constraint.expression.as_deref() else {
+            continue;
+        };
+        if expression.is_empty() {
+            continue;
+        }
+
+        let normalized_expression = normalize_invariant_expression(&constraint.key, expression);
+
+        out.push(InvariantModel {
+            key: constraint.key.clone(),
+            severity: parse_severity(Some(constraint.severity.as_str())),
+            path: rebased_path.to_string(),
+            expression: normalized_expression,
+            human: constraint.human.clone(),
+            source: constraint.source.clone(),
+            element_id: rebased_path.to_string(),
+        });
+    }
+
+    out
 }
 
 /// Extract direct child bindings declared under the supplied generated type root.
@@ -644,7 +831,7 @@ fn direct_child_field_name(parent: &str, child: &str) -> String {
         return child.to_string();
     }
 
-    make_rust_safe(child[parent.len() + 1..].trim_end_matches("[x]"))
+    helios_fhir_gen::make_rust_safe(child[parent.len() + 1..].trim_end_matches("[x]"))
 }
 
 fn direct_child_fhir_field_name(parent: &str, child: &str) -> String {
@@ -740,38 +927,6 @@ fn capitalize_first_letter(s: &str) -> String {
     match chars.next() {
         Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
         None => String::new(),
-    }
-}
-
-fn make_rust_safe(name: &str) -> String {
-    let mut out = String::with_capacity(name.len());
-    let mut prev_is_lower_or_digit = false;
-
-    for ch in name.chars() {
-        if ch.is_ascii_alphanumeric() {
-            if ch.is_ascii_uppercase() {
-                if prev_is_lower_or_digit {
-                    out.push('_');
-                }
-                out.push(ch.to_ascii_lowercase());
-                prev_is_lower_or_digit = false;
-            } else {
-                out.push(ch);
-                prev_is_lower_or_digit = ch.is_ascii_lowercase() || ch.is_ascii_digit();
-            }
-        } else {
-            if !out.ends_with('_') {
-                out.push('_');
-            }
-            prev_is_lower_or_digit = false;
-        }
-    }
-
-    let out = out.trim_matches('_').to_string();
-    match out.as_str() {
-        "type" | "match" | "ref" | "loop" | "self" | "super" | "crate" | "mod" | "move"
-        | "async" | "await" | "dyn" | "const" | "abstract" => format!("r#{out}"),
-        _ => out,
     }
 }
 

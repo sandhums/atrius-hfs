@@ -6259,21 +6259,34 @@ fn call_function(
                 now.nanosecond() / 1_000_000 // Convert nanoseconds to milliseconds
             )))
         }
+
         "children" => {
-            // Returns a collection with all immediate child nodes of all items in the input collection
+            // New Code
+            // Returns a collection with all immediate child nodes of all items in
+            // the input collection.
+            //
+            // Empty primitive values are filtered out so `children()` reflects
+            // meaningful FHIR element content for checks such as `ele-1`.
             Ok(match invocation_base {
                 EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::Object { map, type_info: _ } => {
-                    // Get all values in the map (excluding the resourceType field)
+                    // Collect all immediate child values except `resourceType`.
                     let mut children: Vec<EvaluationResult> = Vec::new();
                     for (key, value) in map {
                         if key != "resourceType" {
                             match value {
                                 EvaluationResult::Collection { items, .. } => {
-                                    // Destructure
-                                    children.extend(items.clone());
+                                    for item in items {
+                                        if contributes_meaningful_child_content(item) {
+                                            children.push(item.clone());
+                                        }
+                                    }
                                 }
-                                _ => children.push(value.clone()),
+                                _ => {
+                                    if contributes_meaningful_child_content(value) {
+                                        children.push(value.clone());
+                                    }
+                                }
                             }
                         }
                     }
@@ -6389,19 +6402,35 @@ fn call_function(
             crate::reference_key_functions::get_reference_key_function(invocation_base, args)
         }
         "hasValue" => {
-            // hasValue() returns true if the element is a primitive with an actual value
-            // Returns false if element is empty or is a primitive with extensions but no value
+            // New Code
+            // `hasValue()` returns true only when the focus itself is a primitive
+            // value.
+            //
+            // Complex objects (for example `HumanName`, `Coding`,
+            // `CodeableConcept`, `Resource`, `BackboneElement`, or other element
+            // wrappers) do not themselves have a primitive value, even if they
+            // have children.
             match invocation_base {
                 EvaluationResult::Empty => Ok(EvaluationResult::boolean(false)),
-                EvaluationResult::Object { type_info, .. } => {
-                    // Check if this is an Element (primitive with extensions but no value)
-                    let is_element = type_info
-                        .as_ref()
-                        .map(|ti| ti.name == "Element")
-                        .unwrap_or(false);
-                    Ok(EvaluationResult::boolean(!is_element))
-                }
-                _ => Ok(EvaluationResult::boolean(true)),
+
+                // Primitive/scalar values carry an actual value.
+                EvaluationResult::Boolean(..)
+                | EvaluationResult::Integer(..)
+                | EvaluationResult::Integer64(..)
+                | EvaluationResult::Decimal(..)
+                | EvaluationResult::String(..)
+                | EvaluationResult::Date(..)
+                | EvaluationResult::DateTime(..)
+                | EvaluationResult::Time(..)
+                | EvaluationResult::Quantity(..) => Ok(EvaluationResult::boolean(true)),
+
+                EvaluationResult::EmptyWithMeta(..) => Ok(EvaluationResult::boolean(false)),
+                // Objects are complex elements, not primitive values.
+                EvaluationResult::Object { .. } => Ok(EvaluationResult::boolean(false)),
+
+                // Collections should already be singleton-checked by callers in invariant
+                // evaluation paths, but hasValue() over a collection is not itself a primitive value.
+                EvaluationResult::Collection { .. } => Ok(EvaluationResult::boolean(false)),
             }
         }
         "encode" => {
@@ -6730,7 +6759,40 @@ fn add_duration_to_date(
         new_date.format("%Y-%m-%d").to_string(),
     ))
 }
+/// Return true when an `EvaluationResult` contributes meaningful child content
+/// for the FHIRPath `children()` function.
+///
+/// This is used to make `children()` align better with FHIR `ele-1` semantics:
+/// empty primitive values such as `""` should not count as meaningful child
+/// content, while populated primitive values and complex objects should.
+// New Code
+fn contributes_meaningful_child_content(value: &EvaluationResult) -> bool {
+    match value {
+        EvaluationResult::Empty => false,
+        EvaluationResult::EmptyWithMeta(..) => false,
 
+        // Empty primitive string values should not count as meaningful child content.
+        EvaluationResult::String(s, ..) => !s.is_empty(),
+
+        // Primitive/scalar values with an actual value do count as child content.
+        EvaluationResult::Boolean(..)
+        | EvaluationResult::Integer(..)
+        | EvaluationResult::Integer64(..)
+        | EvaluationResult::Decimal(..)
+        | EvaluationResult::Date(..)
+        | EvaluationResult::DateTime(..)
+        | EvaluationResult::Time(..)
+        | EvaluationResult::Quantity(..) => true,
+
+        // Complex nodes count as children.
+        EvaluationResult::Object { .. } => true,
+
+        // Collections contribute content only if any contained item does.
+        EvaluationResult::Collection { items, .. } => {
+            items.iter().any(contributes_meaningful_child_content)
+        }
+    }
+}
 /// Adds a duration to a datetime string
 fn add_duration_to_datetime(
     dt_str: &str,

@@ -93,16 +93,80 @@ where
             }
         }
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet {
+                valueset_url: _err_valueset_url,
+                system,
+                code: err_code,
+            }) => {
+            let diagnostics = if let Some(system) = system {
+                format!(
+                    "The provided code '{}', from CodeSystem '{}' was not found in ValueSet {}",
+                    err_code, system, valueset_url
+                )
+            } else {
+                format!(
+                    "The provided code '{}' was not found in ValueSet {}",
+                    err_code, valueset_url
+                )
+            };
+
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
-                valueset_url,
+                &valueset_url,
                 strength,
-                format!("Code '{}' is not in ValueSet {}", code, valueset_url),
+                diagnostics,
             ) {
                 issues.push(issue);
             }
+            issues
+        }
+
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                &valueset_url,
+                msg.clone(),
+            ));
+
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                &valueset_url,
+                strength,
+                format!(
+                    "The value provided ('{}') was not found in the value set '{}'. ({})",
+                    code, valueset_url, msg
+                ),
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                &valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
             issues
         }
 
@@ -155,7 +219,7 @@ where
     match local_check(cc) {
         Ok(()) => issues,
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet { .. }) => {
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
@@ -165,6 +229,41 @@ where
             ) {
                 issues.push(issue);
             }
+            issues
+        }
+
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
             issues
         }
 
@@ -266,11 +365,27 @@ where
     let Some(coding) = coding else {
         return issues;
     };
+    let system = coding_system(coding).filter(|s| !s.is_empty());
+    let code = coding_code(coding).filter(|c| !c.is_empty());
+
+    if code.is_some() && system.is_none() {
+        issues.push(ValidationIssue {
+            severity: fhir_validation_types::Severity::Warning,
+            code: "terminology",
+            fhir_path: fhir_path.to_string(),
+            instance_path: None,
+            expression: Some(valueset_url.to_string()),
+            diagnostics:
+                "A code with no system has no defined meaning, and it cannot be validated. A system should be provided"
+                    .to_string(),
+        });
+        return issues;
+    }
 
     match local_check(coding) {
         Ok(()) => issues,
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet { .. }) => {
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
@@ -280,6 +395,41 @@ where
             ) {
                 issues.push(issue);
             }
+            issues
+        }
+
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
             issues
         }
 
@@ -342,6 +492,18 @@ where
         }
     }
 }
+fn local_binding_instance_path(binding_path: &str, matched_instance_path: &str) -> String {
+    let root = root_instance_path(binding_path);
+
+    if let Some((_, local_root)) = root.rsplit_once('.') {
+        if let Some(suffix) = matched_instance_path.strip_prefix(root) {
+            return format!("{}{}", local_root, suffix);
+        }
+    }
+
+    matched_instance_path.to_string()
+}
+
 pub fn apply_r5_bindings<T>(
     validator: &Validator,
     focus: &T,
@@ -372,7 +534,21 @@ where
             root_instance_path(&binding.path),
             relative_path,
         );
-
+        // println!(
+        //     "binding path={}, target={:?}, matches={:?}",
+        //     binding.path,
+        //     binding.target_kind,
+        //     field_values
+        //         .iter()
+        //         .map(|(_, p)| p.clone())
+        //         .collect::<Vec<_>>()
+        // );
+        println!(
+            "binding path={}, relative={}, matches={:?}",
+            binding.path,
+            relative_binding_path(binding.path),
+            field_values.iter().map(|(_, p)| p.clone()).collect::<Vec<_>>()
+        );
         match binding.target_kind {
             BindingTargetKind::Code => {
                 for (field_value, instance_path) in &field_values {
@@ -387,9 +563,10 @@ where
                         |code| terminology_index::validate_code(binding.value_set, code),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);
@@ -409,9 +586,10 @@ where
                         |coding| terminology_index::validate_coding(binding.value_set, coding),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);
@@ -432,9 +610,10 @@ where
                         |cc| terminology_index::validate_codeable_concept(binding.value_set, cc),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);

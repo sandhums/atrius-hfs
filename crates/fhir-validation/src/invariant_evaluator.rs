@@ -142,6 +142,21 @@ impl GenericFhirPathEvaluator {
 
         Ok(collect_focus_items(result))
     }
+        fn from_fhir_resource_with_focus(
+            resource: FhirResource,
+            focus: EvaluationResult,
+        ) -> Self {
+            let mut context = EvaluationContext::new(vec![resource]);
+
+            if let Some(root) = context.this.clone() {
+                context.set_variable_result("%rootResource", root.clone());
+                context.set_variable_result("%resource", root);
+            }
+
+            context.set_this(focus);
+            Self { context }
+        }
+
 }
 
 pub struct R4FhirPathEvaluator {
@@ -159,6 +174,17 @@ impl R4FhirPathEvaluator {
 
     pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_expression(expr)
+    }
+    pub fn new_with_focus(
+        resource: Resource,
+        focus: EvaluationResult,
+    ) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
+                FhirResource::R4(Box::new(resource)),
+                focus,
+            ),
+        }
     }
 }
 
@@ -200,6 +226,17 @@ impl R5FhirPathEvaluator {
     pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_expression(expr)
     }
+    pub fn new_with_focus(
+        resource: R5Resource,
+        focus: EvaluationResult,
+    ) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
+                FhirResource::R5(Box::new(resource)),
+                focus,
+            ),
+        }
+    }
 }
 
 impl FhirPathEvaluator for R5FhirPathEvaluator {
@@ -223,6 +260,7 @@ impl FhirPathEvaluator for R5FhirPathEvaluator {
     fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_path(path)
     }
+    
 }
 
 fn normalize_declared_path(declared_path: &str) -> String {

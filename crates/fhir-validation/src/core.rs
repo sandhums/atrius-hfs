@@ -84,7 +84,11 @@ impl ValidationIssue {
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
-            diagnostics: invariant.human.to_string(),
+            diagnostics: if invariant.human.is_empty() {
+                format!("Constraint failed: {}", invariant.key)
+            } else {
+                format!("Constraint failed: {}: '{}'", invariant.key, invariant.human)
+            },
         }
     }
     /// Convert an invariant evaluation failure into an exception-style validation issue
@@ -95,7 +99,15 @@ impl ValidationIssue {
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
-            diagnostics: format!("Invariant evaluation error: {}", err),
+            diagnostics: if invariant.human.is_empty() {
+                format!("Constraint evaluation error: {}: {err}", invariant.key)
+            } else {
+                format!(
+                    "Constraint evaluation error: {}: '{}': {err}",
+                    invariant.key,
+                    invariant.human
+                )
+            },
         }
     }
     /// Attach a concrete instance path to this issue.
