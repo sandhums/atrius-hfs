@@ -17,7 +17,8 @@ default-members = [
 	"crates/persistence",
 	"crates/rest",
 	"crates/sof",
-	"crates/fhir-valueset-gen"
+	"crates/fhir-valueset-gen",
+	"crates/cds-hooks",
 ]
 resolver = "2"
 
