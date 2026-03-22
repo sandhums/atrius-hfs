@@ -310,7 +310,7 @@ fn evaluation_result_to_json_values(
     result: &EvaluationResult,
 ) -> Result<Vec<Value>, ExtractionError> {
     match result {
-        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => Ok(Vec::new()),
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => Ok(Vec::new()),
         EvaluationResult::Boolean(b, _, _) => Ok(vec![Value::Bool(*b)]),
         EvaluationResult::String(s, _, _) => Ok(vec![Value::String(s.clone())]),
         EvaluationResult::Integer(i, _, _) => Ok(vec![Value::Number((*i).into())]),

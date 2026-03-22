@@ -19,6 +19,9 @@ default-members = [
 	"crates/sof",
 	"crates/fhir-valueset-gen",
 	"crates/cds-hooks",
+	"crates/fhir-validation",
+	"crates/fhir-validation-gen",
+	"crates/fhir-validation-types"
 ]
 resolver = "2"
 

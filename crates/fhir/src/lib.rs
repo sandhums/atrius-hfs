@@ -2771,14 +2771,19 @@ where
     }
 }
 
-// For Element<V, E> - Returns System primitive with attached PrimitiveMeta if present
+// For Element<V, E> - Returns a FHIR primitive value with attached PrimitiveMeta if present.
+//
+// Important semantic distinction:
+// - valued primitive elements must preserve their FHIR primitive type (e.g. `FHIR.integer`)
+//   rather than collapsing to the underlying System type (e.g. `System.Integer`)
+// - metadata-only primitives (id/extension with no value) are represented as
+//   `EmptyWithMeta` carrying the FHIR primitive type
 impl<V, E> IntoEvaluationResult for Element<V, E>
 where
-    V: IntoEvaluationResult + Clone + 'static,
+    V: IntoEvaluationResult + Clone + FhirPrimitiveTypeCode + 'static,
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        // Completely empty element
         if self.value.is_none()
             && self.id.is_none()
             && self.extension.as_ref().is_none_or(|e| e.is_empty())
@@ -2786,7 +2791,6 @@ where
             return EvaluationResult::Empty;
         }
 
-        // Build PrimitiveMeta from id/extension (drop empty meta)
         let meta: Option<PrimitiveMeta> = {
             let extension = self.extension.as_ref().map(|ext| {
                 ext.iter()
@@ -2799,7 +2803,6 @@ where
                 extension,
             };
 
-            // Normalize empty extension vec to None
             if let Some(ext) = m.extension.as_ref() {
                 if ext.is_empty() {
                     m.extension = None;
@@ -2809,30 +2812,77 @@ where
             if m.is_empty() { None } else { Some(m) }
         };
 
-        // If we have a value, return the underlying *System* value and attach meta
         if let Some(v) = &self.value {
             let value_result = v.to_evaluation_result();
-            if value_result == EvaluationResult::Empty {
-                return EvaluationResult::Empty;
-            }
-            return value_result.with_primitive_meta(meta);
+
+            let typed_result = match value_result {
+                EvaluationResult::Boolean(b, _, _) => EvaluationResult::Boolean(
+                    b,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                EvaluationResult::Integer(i, _, _) => EvaluationResult::Integer(
+                    i,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                #[cfg(not(any(feature = "R4", feature = "R4B")))]
+                EvaluationResult::Integer64(i, _, _) => EvaluationResult::Integer64(
+                    i,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                EvaluationResult::String(s, _, _) => {
+                    EvaluationResult::fhir_string(s, V::FHIR_CODE)
+                }
+                EvaluationResult::Date(s, _, _) => EvaluationResult::Date(
+                    s,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                EvaluationResult::DateTime(s, _, _) => EvaluationResult::DateTime(
+                    s,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                EvaluationResult::Time(s, _, _) => EvaluationResult::Time(
+                    s,
+                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
+                    None,
+                ),
+                EvaluationResult::Empty => {
+                    return meta
+                        .map(|meta| {
+                            EvaluationResult::empty_fhir_primitive_with_meta(meta, V::FHIR_CODE)
+                        })
+                        .unwrap_or(EvaluationResult::Empty);
+                }
+                other => other,
+            };
+
+            return typed_result.with_primitive_meta(meta);
         }
 
-        // Underscore-only primitive (id/extension with no value):
-        // In this representation, there is no System value to return.
-        // (If you later want `_x.id`/`_x.extension` without a value, you can consider
-        // attaching meta to Empty via a dedicated variant.)
+        if let Some(meta) = meta {
+            return EvaluationResult::empty_fhir_primitive_with_meta(meta, V::FHIR_CODE);
+        }
+
         EvaluationResult::Empty
     }
 }
-
-// For DecimalElement<E> - Returns Decimal value if present, attaches PrimitiveMeta if present
+/// Converts FHIR decimal primitives into evaluation results while preserving
+/// primitive element metadata (`id` / `extension`) even when the decimal has
+/// no numeric value.
+///
+/// Semantics:
+/// - valued decimal -> `EvaluationResult::fhir_decimal(...)` with attached meta
+/// - metadata-only decimal -> `EvaluationResult::EmptyWithMeta { ... }` typed as `FHIR.decimal`
+/// - completely empty decimal element -> `EvaluationResult::Empty`
 impl<E> IntoEvaluationResult for DecimalElement<E>
 where
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        // Completely empty
         if self.value.is_none()
             && self.id.is_none()
             && self.extension.as_ref().is_none_or(|e| e.is_empty())
@@ -2840,7 +2890,6 @@ where
             return EvaluationResult::Empty;
         }
 
-        // Build PrimitiveMeta
         let meta: Option<PrimitiveMeta> = {
             let extension = self.extension.as_ref().map(|ext| {
                 ext.iter()
@@ -2862,18 +2911,38 @@ where
             if m.is_empty() { None } else { Some(m) }
         };
 
-        // Value present: return fhir_decimal and attach meta
         if let Some(precise_decimal) = &self.value {
             if let Some(decimal_val) = precise_decimal.value() {
                 return EvaluationResult::fhir_decimal(decimal_val).with_primitive_meta(meta);
             }
+
+            return meta
+                .map(|meta| EvaluationResult::empty_fhir_primitive_with_meta(meta, "decimal"))
+                .unwrap_or(EvaluationResult::Empty);
         }
 
-        // Underscore-only: no numeric System value to return
+        if let Some(meta) = meta {
+            return EvaluationResult::empty_fhir_primitive_with_meta(meta, "decimal");
+        }
+
         EvaluationResult::Empty
     }
 }
+impl FhirPrimitiveTypeCode for PrecisionDate {
+    const FHIR_CODE: &'static str = "date";
+}
 
+impl FhirPrimitiveTypeCode for PrecisionTime {
+    const FHIR_CODE: &'static str = "time";
+}
+
+impl FhirPrimitiveTypeCode for PrecisionDateTime {
+    const FHIR_CODE: &'static str = "dateTime";
+}
+
+impl FhirPrimitiveTypeCode for PrecisionInstant {
+    const FHIR_CODE: &'static str = "instant";
+}
 // Implement the trait for the top-level enum
 impl IntoEvaluationResult for FhirResource {
     fn to_evaluation_result(&self) -> EvaluationResult {
@@ -2891,7 +2960,39 @@ impl IntoEvaluationResult for FhirResource {
         }
     }
 }
+/// Maps a Rust primitive carrier type to its default FHIR primitive code.
+///
+/// Note: this is exact for carriers like `bool`, `i32`, `i64`, `Decimal`,
+/// but only a default for `std::string::String`, because many FHIR primitives
+/// (`string`, `code`, `uri`, `canonical`, `id`, etc.) share the same Rust type.
+/// Generated code can override that later when it knows the exact alias.
+pub trait FhirPrimitiveTypeCode {
+    const FHIR_CODE: &'static str;
+}
 
+impl FhirPrimitiveTypeCode for bool {
+    const FHIR_CODE: &'static str = "boolean";
+}
+
+impl FhirPrimitiveTypeCode for std::string::String {
+    const FHIR_CODE: &'static str = "string";
+}
+
+impl FhirPrimitiveTypeCode for i32 {
+    const FHIR_CODE: &'static str = "integer";
+}
+
+impl FhirPrimitiveTypeCode for i64 {
+    const FHIR_CODE: &'static str = "integer64";
+}
+
+impl FhirPrimitiveTypeCode for PreciseDecimal {
+    const FHIR_CODE: &'static str = "decimal";
+}
+
+impl FhirPrimitiveTypeCode for f64 {
+    const FHIR_CODE: &'static str = "decimal";
+}
 #[cfg(test)]
 mod tests {
     use super::*;

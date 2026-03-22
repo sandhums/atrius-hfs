@@ -977,8 +977,9 @@ pub fn evaluate(
             let left_bool = match &left_eval {
                 // Direct boolean values
                 EvaluationResult::Boolean(_, _, _) => left_eval.to_boolean_for_logic()?,
-                // Empty evaluates to empty in logical context
-                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                // Metadata-only FHIR primitives are still valueless for boolean logic.
+                // They preserve element metadata, but they do not contribute a primitive value.
+                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                     EvaluationResult::Empty
                 }
                 // For non-boolean singletons, apply singleton evaluation:
@@ -1002,7 +1003,8 @@ pub fn evaluate(
                                 EvaluationResult::Boolean(_, _, _) => {
                                     items[0].to_boolean_for_logic()?
                                 }
-                                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                                // A singleton metadata-only primitive still has no boolean value.
+                                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                                     EvaluationResult::Empty
                                 }
                                 _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
@@ -1028,10 +1030,9 @@ pub fn evaluate(
                     let right_bool = match &right_eval {
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
-                        // Empty evaluates to empty in logical context
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                             EvaluationResult::Empty
-                        }
+                        },
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1053,7 +1054,9 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty => EvaluationResult::Empty,
+                                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
+                                            EvaluationResult::Empty
+                                        },
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -1079,8 +1082,8 @@ pub fn evaluate(
                     let right_bool = match &right_eval {
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
-                        // Empty evaluates to empty in logical context
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+                        // Metadata-only FHIR primitives behave like empty in logical evaluation.
+                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                             EvaluationResult::Empty
                         }
                         // For non-boolean singletons, apply singleton evaluation:
@@ -1104,7 +1107,9 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty => EvaluationResult::Empty,
+                                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
+                                            EvaluationResult::Empty
+                                        },
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -1457,8 +1462,15 @@ fn flatten_collections_recursive(result: EvaluationResult) -> (Vec<EvaluationRes
                 }
             }
         }
-        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
-            // Skip empty results
+        EvaluationResult::Empty => {
+            // Skip truly absent results when flattening.
+        }
+        EvaluationResult::EmptyWithMeta { .. } => {
+            // Preserve metadata-only FHIR primitives as collection members.
+            // They are valueless for boolean/scalar semantics, but they still represent
+            // real element nodes needed by path traversal, select(), where(), hasValue(),
+            // and member access such as `.id` / `.extension`.
+            flattened_items.push(result);
         }
         other => {
             // Add non-collection, non-empty items directly
@@ -2139,7 +2151,7 @@ fn evaluate_invocation(
                 }
                 // New Code
                 // Special handling for primitive types with primitive meta (id/extension access)
-                EvaluationResult::EmptyWithMeta(_)
+                EvaluationResult::EmptyWithMeta { .. }
                 | EvaluationResult::Boolean(_, _, _)
                 | EvaluationResult::String(_, _, _)
                 | EvaluationResult::Integer(_, _, _)
@@ -3802,8 +3814,9 @@ fn call_function(
                 EvaluationResult::Integer64(_, _, _) => EvaluationResult::boolean(true),
                 // Objects are not convertible to String via this function
                 EvaluationResult::Object { .. } => EvaluationResult::boolean(false),
-                EvaluationResult::Empty => EvaluationResult::Empty,
-                EvaluationResult::EmptyWithMeta(_) => EvaluationResult::Empty,
+                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
+                    EvaluationResult::Empty
+                },
                 EvaluationResult::Collection { .. } => unreachable!(), // Already handled by singleton check
             })
         }
@@ -6404,12 +6417,10 @@ fn call_function(
         "hasValue" => {
             // New Code
             // `hasValue()` returns true only when the focus itself is a primitive
-            // value.
+            // with an actual scalar value.
             //
-            // Complex objects (for example `HumanName`, `Coding`,
-            // `CodeableConcept`, `Resource`, `BackboneElement`, or other element
-            // wrappers) do not themselves have a primitive value, even if they
-            // have children.
+            // Metadata-only primitives (represented as `EmptyWithMeta`) are real FHIR
+            // element nodes, but still return false because they do not carry a value.
             match invocation_base {
                 EvaluationResult::Empty => Ok(EvaluationResult::boolean(false)),
 
@@ -6424,7 +6435,7 @@ fn call_function(
                 | EvaluationResult::Time(..)
                 | EvaluationResult::Quantity(..) => Ok(EvaluationResult::boolean(true)),
 
-                EvaluationResult::EmptyWithMeta(..) => Ok(EvaluationResult::boolean(false)),
+                EvaluationResult::EmptyWithMeta{ .. } => Ok(EvaluationResult::boolean(false)),
                 // Objects are complex elements, not primitive values.
                 EvaluationResult::Object { .. } => Ok(EvaluationResult::boolean(false)),
 
@@ -6769,7 +6780,7 @@ fn add_duration_to_date(
 fn contributes_meaningful_child_content(value: &EvaluationResult) -> bool {
     match value {
         EvaluationResult::Empty => false,
-        EvaluationResult::EmptyWithMeta(..) => false,
+        EvaluationResult::EmptyWithMeta{ .. } => false,
 
         // Empty primitive string values should not count as meaningful child content.
         EvaluationResult::String(s, ..) => !s.is_empty(),

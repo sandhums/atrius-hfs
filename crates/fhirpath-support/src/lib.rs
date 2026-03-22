@@ -222,6 +222,21 @@ impl PrimitiveMeta {
         self.id.is_none() && self.extension.as_ref().is_none_or(|v| v.is_empty())
     }
 }
+
+impl PartialOrd for PrimitiveMeta {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PrimitiveMeta {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.id.cmp(&other.id) {
+            Ordering::Equal => self.extension.cmp(&other.extension),
+            other => other,
+        }
+    }
+}
 // End New
 #[derive(Debug, Clone)]
 pub enum EvaluationResult {
@@ -314,7 +329,10 @@ pub enum EvaluationResult {
         /// Optional type information
         type_info: Option<TypeInfoResult>,
     },
-    EmptyWithMeta(PrimitiveMeta),
+    EmptyWithMeta {
+        meta: PrimitiveMeta,
+        type_info: Option<TypeInfoResult>,
+    }
 }
 
 /// Comprehensive error type for FHIRPath evaluation failures.
@@ -594,12 +612,22 @@ impl Ord for EvaluationResult {
             (EvaluationResult::Empty, _) => Ordering::Less,
             (_, EvaluationResult::Empty) => Ordering::Greater,
 
-            (EvaluationResult::EmptyWithMeta(_), EvaluationResult::EmptyWithMeta(_)) => {
-                Ordering::Equal
-            }
+            (
+                EvaluationResult::EmptyWithMeta {
+                    meta: a_meta,
+                    type_info: a_type,
+                },
+                EvaluationResult::EmptyWithMeta {
+                    meta: b_meta,
+                    type_info: b_type,
+                },
+            ) => match a_type.into_iter().cmp(b_type) {
+                Ordering::Equal => a_meta.cmp(b_meta),
+                other => other,
+            },
 
-            (EvaluationResult::EmptyWithMeta(_), _) => Ordering::Less,
-            (_, EvaluationResult::EmptyWithMeta(_)) => Ordering::Greater,
+            (EvaluationResult::EmptyWithMeta { .. }, _) => Ordering::Less,
+            (_, EvaluationResult::EmptyWithMeta { .. }) => Ordering::Greater,
 
             (EvaluationResult::Boolean(a, _, _), EvaluationResult::Boolean(b, _, _)) => a.cmp(b),
             (EvaluationResult::Boolean(_, _, _), _) => Ordering::Less,
@@ -725,7 +753,11 @@ impl Hash for EvaluationResult {
         core::mem::discriminant(self).hash(state);
         match self {
             // Empty has no additional data to hash
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {}
+            EvaluationResult::Empty => {}
+            EvaluationResult::EmptyWithMeta { meta, type_info } => {
+                meta.hash(state);
+                type_info.hash(state);
+            }
             EvaluationResult::Boolean(b, _, _) => b.hash(state),
             EvaluationResult::String(s, _, _) => s.hash(state),
             // Hash normalized decimal for consistency with equality
@@ -1082,7 +1114,7 @@ impl EvaluationResult {
     /// ```
     pub fn to_string_value(&self) -> String {
         match self {
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => "".to_string(),
+            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => "".to_string(),
             EvaluationResult::Boolean(b, _, _) => b.to_string(),
             EvaluationResult::String(s, _, _) => s.clone(),
             EvaluationResult::Decimal(d, _, _) => d.to_string(),
@@ -1215,7 +1247,7 @@ impl EvaluationResult {
             | EvaluationResult::Time(_, _, _)
             | EvaluationResult::Quantity(_, _, _, _)
             | EvaluationResult::Object { .. } => Ok(EvaluationResult::Empty),
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_) => {
+            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                 Ok(EvaluationResult::Empty)
             }
         }
@@ -1266,7 +1298,7 @@ impl EvaluationResult {
     pub fn type_name(&self) -> &'static str {
         match self {
             EvaluationResult::Empty => "Empty",
-            EvaluationResult::EmptyWithMeta(_) => "Empty",
+            EvaluationResult::EmptyWithMeta { .. } => "Empty",
             EvaluationResult::Boolean(_, _, _) => "Boolean",
             EvaluationResult::String(_, _, _) => "String",
             EvaluationResult::Decimal(_, _, _) => "Decimal",
@@ -1284,7 +1316,7 @@ impl EvaluationResult {
     // Also added PrimitiveMeta to enum variants
     pub fn primitive_meta(&self) -> Option<&PrimitiveMeta> {
         match self {
-            EvaluationResult::EmptyWithMeta(m) => Some(m),
+            EvaluationResult::EmptyWithMeta { meta, .. } => Some(meta),
             EvaluationResult::Boolean(_, _, m)
             | EvaluationResult::String(_, _, m)
             | EvaluationResult::Integer(_, _, m)
@@ -1302,10 +1334,13 @@ impl EvaluationResult {
         let meta = meta.filter(|m| !m.is_empty());
         match self {
             EvaluationResult::Empty => meta
-                .map(EvaluationResult::EmptyWithMeta)
+                .map(|meta| EvaluationResult::EmptyWithMeta {
+                    meta,
+                    type_info: None,
+                })
                 .unwrap_or(EvaluationResult::Empty),
-            EvaluationResult::EmptyWithMeta(_) => meta
-                .map(EvaluationResult::EmptyWithMeta)
+            EvaluationResult::EmptyWithMeta { type_info, .. } => meta
+                .map(|meta| EvaluationResult::EmptyWithMeta { meta, type_info })
                 .unwrap_or(EvaluationResult::Empty),
             EvaluationResult::Boolean(v, t, _) => EvaluationResult::Boolean(v, t, meta),
             EvaluationResult::String(v, t, _) => EvaluationResult::String(v, t, meta),
@@ -1322,8 +1357,14 @@ impl EvaluationResult {
     pub fn is_effectively_empty(&self) -> bool {
         matches!(
             self,
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta(_)
+            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. }
         )
+    }
+    pub fn empty_fhir_primitive_with_meta(meta: PrimitiveMeta, fhir_type: &str) -> Self {
+        EvaluationResult::EmptyWithMeta {
+            meta,
+            type_info: Some(TypeInfoResult::new("FHIR", fhir_type)),
+        }
     }
     // End New
 }
@@ -1512,4 +1553,8 @@ fn format_unit_for_display(unit: &str) -> String {
         // UCUM code units: display with quotes
         format!("'{}'", unit)
     }
+
+// --- Patch: Update all remaining tuple-style EmptyWithMeta patterns to struct-style
+
+// (No further code, all changes above.)
 }
