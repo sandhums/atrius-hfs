@@ -19,6 +19,11 @@ impl ConsentCategoryCodes {
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[
         "http://terminology.hl7.org/ValueSet/v3-ActConsentType",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://terminology.hl7.org/CodeSystem/consentscope",
+        "http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+        "http://loinc.org",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

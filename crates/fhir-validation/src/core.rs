@@ -22,7 +22,9 @@ pub use fhir_validation_types::{
     BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
 };
 
-use crate::{FhirPathEvaluator, TerminologyService};
+use crate::{
+    FhirPathEvaluator, TerminologyRemoteError, TerminologyService, TerminologyServiceSync,
+};
 use serde_json::Value;
 use std::fmt;
 
@@ -87,7 +89,10 @@ impl ValidationIssue {
             diagnostics: if invariant.human.is_empty() {
                 format!("Constraint failed: {}", invariant.key)
             } else {
-                format!("Constraint failed: {}: '{}'", invariant.key, invariant.human)
+                format!(
+                    "Constraint failed: {}: '{}'",
+                    invariant.key, invariant.human
+                )
             },
         }
     }
@@ -104,8 +109,7 @@ impl ValidationIssue {
             } else {
                 format!(
                     "Constraint evaluation error: {}: '{}': {err}",
-                    invariant.key,
-                    invariant.human
+                    invariant.key, invariant.human
                 )
             },
         }
@@ -139,6 +143,7 @@ impl Default for ValidationConfig {
 pub enum ValidationError {
     FhirPath(helios_fhirpath_support::EvaluationError),
     Terminology(String),
+    TerminologyRemote(TerminologyRemoteError),
     Other(String),
 }
 
@@ -147,6 +152,21 @@ impl fmt::Display for ValidationError {
         match self {
             Self::FhirPath(e) => write!(f, "{}", e),
             Self::Terminology(e) => write!(f, "{}", e),
+            ValidationError::TerminologyRemote(err) => {
+                if !err.diagnostics.is_empty() {
+                    write!(f, "{}", err.diagnostics.join("; "))
+                } else if let Some(body) = &err.raw_body {
+                    write!(f, "{}", body)
+                } else if let Some(status) = err.status {
+                    write!(
+                        f,
+                        "Remote terminology validation failed with status {}",
+                        status
+                    )
+                } else {
+                    write!(f, "Remote terminology validation failed")
+                }
+            }
             Self::Other(e) => write!(f, "{}", e),
         }
     }
@@ -202,7 +222,7 @@ impl Validator {
     pub fn validate_resource(
         &self,
         resource: &helios_fhir::FhirResource,
-        terminology: Option<&dyn TerminologyService>,
+        terminology: Option<&dyn TerminologyServiceSync>,
         evaluator: &dyn FhirPathEvaluator,
     ) -> Vec<ValidationIssue> {
         match resource {
@@ -227,15 +247,58 @@ impl Validator {
             }
         }
     }
+    pub async fn validate_resource_async(
+        &self,
+        resource: &helios_fhir::FhirResource,
+        terminology: Option<&dyn TerminologyService>,
+        evaluator: &dyn FhirPathEvaluator,
+    ) -> Vec<ValidationIssue> {
+        match resource {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirResource::R4(res) => {
+                self.validate_r4_resource_async(res.as_ref(), terminology, evaluator)
+                    .await
+            }
+
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirResource::R4B(res) => {
+                self.validate_r4b_resource(res, terminology, evaluator)
+            }
+
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirResource::R5(res) => {
+                self.validate_r5_resource_async(res, terminology, evaluator)
+                    .await
+            }
+
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirResource::R6(res) => {
+                self.validate_r6_resource(res, terminology, evaluator)
+            }
+        }
+    }
     /// Validate an R4 resource by applying generated bindings first, then invariants.
     #[cfg(feature = "R4")]
     pub fn validate_r4_resource(
         &self,
         resource: &helios_fhir::r4::Resource,
-        terminology: Option<&dyn TerminologyService>,
+        terminology: Option<&dyn TerminologyServiceSync>,
         evaluator: &dyn FhirPathEvaluator,
     ) -> Vec<ValidationIssue> {
         let mut issues = self.validate_r4_resource_bindings(resource, terminology);
+        issues.extend(self.validate_r4_resource_invariants(resource, evaluator));
+        issues
+    }
+    #[cfg(feature = "R4")]
+    pub async fn validate_r4_resource_async(
+        &self,
+        resource: &helios_fhir::r4::Resource,
+        terminology: Option<&dyn TerminologyService>,
+        evaluator: &dyn FhirPathEvaluator,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = self
+            .validate_r4_resource_bindings_async(resource, terminology)
+            .await;
         issues.extend(self.validate_r4_resource_invariants(resource, evaluator));
         issues
     }
@@ -244,10 +307,24 @@ impl Validator {
     pub fn validate_r5_resource(
         &self,
         resource: &helios_fhir::r5::Resource,
-        terminology: Option<&dyn TerminologyService>,
+        terminology: Option<&dyn TerminologyServiceSync>,
         evaluator: &dyn FhirPathEvaluator,
     ) -> Vec<ValidationIssue> {
         let mut issues = self.validate_r5_resource_bindings(resource, terminology);
+        issues.extend(self.validate_r5_resource_invariants(resource, evaluator));
+        issues
+    }
+
+    #[cfg(feature = "R5")]
+    pub async fn validate_r5_resource_async(
+        &self,
+        resource: &helios_fhir::r5::Resource,
+        terminology: Option<&dyn TerminologyService>,
+        evaluator: &dyn FhirPathEvaluator,
+    ) -> Vec<ValidationIssue> {
+        let mut issues = self
+            .validate_r5_resource_bindings_async(resource, terminology)
+            .await;
         issues.extend(self.validate_r5_resource_invariants(resource, evaluator));
         issues
     }
@@ -261,7 +338,7 @@ impl Validator {
         &self,
         focus: &T,
         bindings: &[BindingDef],
-        terminology: Option<&dyn TerminologyService>,
+        terminology: Option<&dyn TerminologyServiceSync>,
     ) -> Vec<ValidationIssue>
     where
         T: serde::Serialize,
@@ -278,12 +355,36 @@ impl Validator {
         &self,
         focus: &T,
         bindings: &[BindingDef],
-        terminology: Option<&dyn TerminologyService>,
+        terminology: Option<&dyn TerminologyServiceSync>,
     ) -> Vec<ValidationIssue>
     where
         T: serde::Serialize,
     {
         crate::r5::binding::apply_r5_bindings(self, focus, bindings, terminology)
+    }
+    #[cfg(feature = "R4")]
+    pub async fn apply_r4_bindings_async<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyService>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r4::binding::apply_r4_bindings_async(self, focus, bindings, terminology).await
+    }
+    #[cfg(feature = "R5")]
+    pub async fn apply_r5_bindings_async<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyService>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r5::binding::apply_r5_bindings_async(self, focus, bindings, terminology).await
     }
     /// Apply generated invariants to a focused value using the supplied
     /// `FhirPathEvaluator`.

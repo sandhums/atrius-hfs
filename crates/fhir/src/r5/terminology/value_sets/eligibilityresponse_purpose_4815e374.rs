@@ -17,6 +17,9 @@ impl EligibilityResponsePurpose {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://hl7.org/fhir/eligibilityresponse-purpose",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -95,7 +98,7 @@ impl EligibilityResponsePurpose {
             Some(false) => {
                 Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://hl7.org/fhir/eligibilityresponse-purpose".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 

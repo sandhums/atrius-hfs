@@ -17,6 +17,10 @@ impl VaccineAdministeredValueSet {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = true;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://hl7.org/fhir/sid/cvx",
+        "urn:oid:1.2.36.1.2001.1005.17",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

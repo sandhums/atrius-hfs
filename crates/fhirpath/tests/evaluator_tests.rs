@@ -3995,11 +3995,11 @@ fn test_resource_nested_field_access() {
     // TODO: Re-enable this test when .id access on primitives is implemented
     let given_ids = eval("name.given.id", &context).unwrap(); // (empty for John), given2-id, (empty for Johnny), (empty for Jane)
     let s2 = EvaluationResult::string("given2-id".to_string());
-    // assert!(
-    //     matches!(given_ids, s2),
-    //     "Expected String for name.given.id, got {:?}",
-    //     given_ids
-    // ); // Only one ID present
+    assert!(
+        matches!(given_ids, s2),
+        "Expected String for name.given.id, got {:?}",
+        given_ids
+    ); // Only one ID present
     assert_eq!(given_ids, EvaluationResult::string("given2-id".to_string()));
 
     // TODO: Re-enable these tests when .extension access on primitives is implemented
@@ -4010,7 +4010,7 @@ fn test_resource_nested_field_access() {
         "Expected Collection for birthDate.extension, got {:?}", // This message belongs inside the assert!
         bday_ext
     );
-    let bday_ext2 = eval("birthDate.extension", &context);
+    let _bday_ext2 = eval("birthDate.extension", &context);
     if let EvaluationResult::Collection { items: exts, .. } = bday_ext {
         assert_eq!(exts.len(), 1);
         // Further checks require Extension object structure

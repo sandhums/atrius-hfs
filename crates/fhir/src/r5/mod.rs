@@ -141,6 +141,7 @@ pub mod terminology;
 pub use complex_types::*;
 pub use primitives::*;
 pub use resources::*;
+pub use terminology::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FhirPath)]
 #[serde(tag = "resourceType")]

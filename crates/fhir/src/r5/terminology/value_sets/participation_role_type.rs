@@ -20,6 +20,10 @@ impl ParticipationRoleType {
         "http://terminology.hl7.org/ValueSet/provenance-agent-type",
         "http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_402.html",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://dicom.nema.org/resources/ontology/DCM",
+        "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -99,17 +103,16 @@ impl ParticipationRoleType {
         match Self::contains_implicit_code(code) {
             Some(true) => Ok(()),
             Some(false) => {
-                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: code.to_string() })
+                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://terminology.hl7.org/CodeSystem/extra-security-role-type".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 
     /// Best-effort local membership check for a primitive `code` when the
     /// ValueSet has exactly one unambiguous local system.
     pub fn contains_implicit_code(code: &str) -> Option<bool> {
-        let _ = code;
-        None
+        Self::contains("http://terminology.hl7.org/CodeSystem/extra-security-role-type", code)
     }
 
     /// Validate a Coding against this ValueSet using best-effort local logic.

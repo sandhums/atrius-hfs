@@ -19,6 +19,11 @@ pub enum BindingTargetKind {
     Code,
     Coding,
     CodeableConcept,
+    String,
+    Uri,
+    Choice,
+    CodeableReference,
+    Quantity,
     Unsupported,
 }
 

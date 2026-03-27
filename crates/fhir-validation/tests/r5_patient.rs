@@ -2,7 +2,7 @@ mod common {
     pub mod fixtures;
 }
 use crate::common::fixtures::{
-    assert_has_invariant, assert_issue_count, assert_no_errors, load_resource, validate_resource,
+    assert_has_invariant, assert_issue_count, load_resource, validate_resource,
 };
 use helios_fhir::FhirVersion;
 
@@ -10,7 +10,7 @@ use helios_fhir::FhirVersion;
 fn r5_patient_example_validates() {
     let r = load_resource(FhirVersion::R5, "valid/patient/patient-example.json");
 
-    let issues = validate_resource(&r, None);
+    let _issues = validate_resource(&r, None);
 
     // assert!(issues.is_empty());
     // assert_no_errors(&issues);

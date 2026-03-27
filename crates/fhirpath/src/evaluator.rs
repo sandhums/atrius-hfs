@@ -1004,9 +1004,8 @@ pub fn evaluate(
                                     items[0].to_boolean_for_logic()?
                                 }
                                 // A singleton metadata-only primitive still has no boolean value.
-                                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                                    EvaluationResult::Empty
-                                }
+                                EvaluationResult::Empty
+                                | EvaluationResult::EmptyWithMeta { .. } => EvaluationResult::Empty,
                                 _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                             }
                         }
@@ -1032,7 +1031,7 @@ pub fn evaluate(
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
                         EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                             EvaluationResult::Empty
-                        },
+                        }
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1054,9 +1053,10 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
+                                        EvaluationResult::Empty
+                                        | EvaluationResult::EmptyWithMeta { .. } => {
                                             EvaluationResult::Empty
-                                        },
+                                        }
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -1107,9 +1107,10 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
+                                        EvaluationResult::Empty
+                                        | EvaluationResult::EmptyWithMeta { .. } => {
                                             EvaluationResult::Empty
-                                        },
+                                        }
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -3816,7 +3817,7 @@ fn call_function(
                 EvaluationResult::Object { .. } => EvaluationResult::boolean(false),
                 EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                     EvaluationResult::Empty
-                },
+                }
                 EvaluationResult::Collection { .. } => unreachable!(), // Already handled by singleton check
             })
         }
@@ -6435,7 +6436,7 @@ fn call_function(
                 | EvaluationResult::Time(..)
                 | EvaluationResult::Quantity(..) => Ok(EvaluationResult::boolean(true)),
 
-                EvaluationResult::EmptyWithMeta{ .. } => Ok(EvaluationResult::boolean(false)),
+                EvaluationResult::EmptyWithMeta { .. } => Ok(EvaluationResult::boolean(false)),
                 // Objects are complex elements, not primitive values.
                 EvaluationResult::Object { .. } => Ok(EvaluationResult::boolean(false)),
 
@@ -6780,7 +6781,7 @@ fn add_duration_to_date(
 fn contributes_meaningful_child_content(value: &EvaluationResult) -> bool {
     match value {
         EvaluationResult::Empty => false,
-        EvaluationResult::EmptyWithMeta{ .. } => false,
+        EvaluationResult::EmptyWithMeta { .. } => false,
 
         // Empty primitive string values should not count as meaningful child content.
         EvaluationResult::String(s, ..) => !s.is_empty(),

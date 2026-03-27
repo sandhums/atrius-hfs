@@ -17,6 +17,9 @@ impl PatientMedicineChangeTypes {
     pub const IS_EXAMPLE: bool = true;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "urn:oid:1.2.36.1.2001.1001.101.104.16592",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -95,7 +98,7 @@ impl PatientMedicineChangeTypes {
             Some(false) => {
                 Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("urn:oid:1.2.36.1.2001.1001.101.104.16592".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 

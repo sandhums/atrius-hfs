@@ -2832,24 +2832,18 @@ where
                     Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
                     None,
                 ),
-                EvaluationResult::String(s, _, _) => {
-                    EvaluationResult::fhir_string(s, V::FHIR_CODE)
+                EvaluationResult::String(s, _, _) => EvaluationResult::fhir_string(s, V::FHIR_CODE),
+                EvaluationResult::Date(s, _, _) => {
+                    EvaluationResult::Date(s, Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)), None)
                 }
-                EvaluationResult::Date(s, _, _) => EvaluationResult::Date(
-                    s,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
                 EvaluationResult::DateTime(s, _, _) => EvaluationResult::DateTime(
                     s,
                     Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
                     None,
                 ),
-                EvaluationResult::Time(s, _, _) => EvaluationResult::Time(
-                    s,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
+                EvaluationResult::Time(s, _, _) => {
+                    EvaluationResult::Time(s, Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)), None)
+                }
                 EvaluationResult::Empty => {
                     return meta
                         .map(|meta| {

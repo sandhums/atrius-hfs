@@ -1,15 +1,36 @@
-use crate::{FhirPathEvaluator, ValidationError};
+use crate::ValidationError;
 use helios_fhir::FhirResource;
 use helios_fhir::r4::Resource;
 use helios_fhir::r5::Resource as R5Resource;
 use helios_fhirpath::{EvaluationContext, evaluate_expression};
 use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult};
 
+/// Internal evaluator used by the version-specific public evaluators.
+///
+/// `GenericFhirPathEvaluator` owns the shared `helios_fhirpath::EvaluationContext`
+/// setup and the common logic for evaluating expressions, resolving declared
+/// paths, and coercing invariant results to booleans.
+///
+/// It is intentionally not exposed publicly because callers should work through
+/// the version-specific wrappers (`R4FhirPathEvaluator`, `R5FhirPathEvaluator`),
+/// which know how to convert concrete FHIR resources into the cross-version
+/// `FhirResource` representation used by `helios_fhirpath`.
+///
+/// In short:
+/// - `GenericFhirPathEvaluator` implements the shared mechanics
+/// - `FhirPathEvaluator` is the public abstraction consumed by validation code
+/// - `R4FhirPathEvaluator` / `R5FhirPathEvaluator` bridge concrete model types
+///   to the generic implementation
 struct GenericFhirPathEvaluator {
     context: EvaluationContext,
 }
-
+/// Shared FHIRPath evaluation operations used by the public version-specific
+/// evaluators.
 impl GenericFhirPathEvaluator {
+    /// Create a generic evaluator rooted at the given FHIR resource.
+    ///
+    /// The evaluation context initializes `%rootResource` and `%resource` so
+    /// invariant expressions can use the standard FHIRPath variables.
     fn from_fhir_resource(resource: FhirResource) -> Self {
         let mut context = EvaluationContext::new(vec![resource]);
 
@@ -20,7 +41,10 @@ impl GenericFhirPathEvaluator {
 
         Self { context }
     }
-
+    /// Evaluate an arbitrary FHIRPath expression against the current context.
+    ///
+    /// The raw `helios_fhirpath` result is normalized into a flat collection of
+    /// `EvaluationResult` items for easier consumption by validation code.
     fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         let result = evaluate_expression(expr, &self.context).map_err(|e| {
             ValidationError::FhirPath(helios_fhirpath_support::EvaluationError::SemanticError(
@@ -30,7 +54,11 @@ impl GenericFhirPathEvaluator {
 
         Ok(collect_focus_items(result))
     }
-
+    /// Evaluate an invariant relative to its declared FHIR path.
+    ///
+    /// The declared path is first normalized relative to the current resource
+    /// root. If the path resolves to multiple focus items, the invariant must
+    /// hold for each item.
     fn eval_invariant(
         &self,
         declared_path: &str,
@@ -85,7 +113,10 @@ impl GenericFhirPathEvaluator {
 
         Ok(true)
     }
-
+    /// Evaluate an invariant on an explicit focus value.
+    ///
+    /// This is used when validation code has already identified the focus value
+    /// directly and does not need declared-path resolution.
     fn eval_invariant_on(
         &self,
         focus: EvaluationResult,
@@ -108,7 +139,9 @@ impl GenericFhirPathEvaluator {
 
         coerce_result_to_bool(result)
     }
-
+    /// Evaluate a declared FHIR path and return the matching focus items.
+    ///
+    /// An empty normalized path resolves to the root resource itself.
     fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         let normalized_path = normalize_declared_path(path);
 
@@ -142,28 +175,72 @@ impl GenericFhirPathEvaluator {
 
         Ok(collect_focus_items(result))
     }
-        fn from_fhir_resource_with_focus(
-            resource: FhirResource,
-            focus: EvaluationResult,
-        ) -> Self {
-            let mut context = EvaluationContext::new(vec![resource]);
+    /// Create a generic evaluator rooted at the given resource but with an
+    /// explicit current focus value.
+    ///
+    /// This is useful for tests and for validation scenarios where evaluation
+    /// should begin from a nested focus item rather than the resource root.
+    fn from_fhir_resource_with_focus(resource: FhirResource, focus: EvaluationResult) -> Self {
+        let mut context = EvaluationContext::new(vec![resource]);
 
-            if let Some(root) = context.this.clone() {
-                context.set_variable_result("%rootResource", root.clone());
-                context.set_variable_result("%resource", root);
-            }
-
-            context.set_this(focus);
-            Self { context }
+        if let Some(root) = context.this.clone() {
+            context.set_variable_result("%rootResource", root.clone());
+            context.set_variable_result("%resource", root);
         }
 
+        context.set_this(focus);
+        Self { context }
+    }
+}
+/// Public abstraction over FHIRPath evaluation used by validation code.
+///
+/// Validation logic depends on this trait rather than the generic evaluator so
+/// the rest of the crate can stay agnostic to the concrete FHIR version being
+/// validated.
+///
+/// The separation between this trait and `GenericFhirPathEvaluator` exists so:
+/// - shared evaluation mechanics live in one place
+/// - version-specific wrappers can convert concrete resources into
+///   `FhirResource`
+/// - validation code can depend on a small, stable interface
+///
+/// Implementations provide helpers for:
+/// - evaluating invariants relative to a declared FHIR path
+/// - evaluating invariants on an explicit focus value
+/// - resolving FHIRPath expressions to collections
+pub trait FhirPathEvaluator {
+    /// Evaluate an invariant using the invariant's declared FHIR path as focus.
+    fn eval_invariant(
+        &self,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError>;
+
+    /// Evaluate an invariant on an already-resolved explicit focus value.
+    fn eval_invariant_on(
+        &self,
+        focus: helios_fhirpath_support::EvaluationResult,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError>;
+
+    /// Evaluate a FHIR path and return the resulting collection.
+    fn eval_path(
+        &self,
+        path: &str,
+    ) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, ValidationError>;
 }
 
+/// FHIRPath evaluator for R4 resources.
+///
+/// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
+/// R4 resources into `FhirResource` before evaluation.
 pub struct R4FhirPathEvaluator {
     inner: GenericFhirPathEvaluator,
 }
 
 impl R4FhirPathEvaluator {
+    /// Create an R4 evaluator rooted at the given resource.
     pub fn new(resource: Resource) -> Self {
         Self {
             inner: GenericFhirPathEvaluator::from_fhir_resource(FhirResource::R4(Box::new(
@@ -172,13 +249,12 @@ impl R4FhirPathEvaluator {
         }
     }
 
+    /// Evaluate an arbitrary FHIRPath expression against the R4 resource.
     pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_expression(expr)
     }
-    pub fn new_with_focus(
-        resource: Resource,
-        focus: EvaluationResult,
-    ) -> Self {
+    /// Create an R4 evaluator with an explicit current focus value.
+    pub fn new_with_focus(resource: Resource, focus: EvaluationResult) -> Self {
         Self {
             inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
                 FhirResource::R4(Box::new(resource)),
@@ -210,11 +286,16 @@ impl FhirPathEvaluator for R4FhirPathEvaluator {
         self.inner.eval_path(path)
     }
 }
+/// FHIRPath evaluator for R5 resources.
+///
+/// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
+/// R5 resources into `FhirResource` before evaluation.
 pub struct R5FhirPathEvaluator {
     inner: GenericFhirPathEvaluator,
 }
 
 impl R5FhirPathEvaluator {
+    /// Create an R5 evaluator rooted at the given resource.
     pub fn new(resource: R5Resource) -> Self {
         Self {
             inner: GenericFhirPathEvaluator::from_fhir_resource(FhirResource::R5(Box::new(
@@ -223,13 +304,12 @@ impl R5FhirPathEvaluator {
         }
     }
 
+    /// Evaluate an arbitrary FHIRPath expression against the R5 resource.
     pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_expression(expr)
     }
-    pub fn new_with_focus(
-        resource: R5Resource,
-        focus: EvaluationResult,
-    ) -> Self {
+    /// Create an R5 evaluator with an explicit current focus value.
+    pub fn new_with_focus(resource: R5Resource, focus: EvaluationResult) -> Self {
         Self {
             inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
                 FhirResource::R5(Box::new(resource)),
@@ -260,9 +340,13 @@ impl FhirPathEvaluator for R5FhirPathEvaluator {
     fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
         self.inner.eval_path(path)
     }
-    
 }
 
+/// Normalize a declared invariant path to a relative FHIRPath expression.
+///
+/// In StructureDefinition invariants, the declared path is usually of the form
+/// `Resource.field.subfield`. During evaluation we already have the resource as
+/// the root context, so the leading resource name is stripped.
 fn normalize_declared_path(declared_path: &str) -> String {
     let path = declared_path.trim();
     if path.is_empty() {
@@ -275,6 +359,10 @@ fn normalize_declared_path(declared_path: &str) -> String {
     }
 }
 
+/// Convert an EvaluationResult into a flat list of focus items.
+///
+/// FHIRPath may return a collection, a single value, or empty. This helper
+/// normalizes the result into a vector for easier invariant evaluation.
 fn collect_focus_items(result: EvaluationResult) -> Vec<EvaluationResult> {
     match result {
         EvaluationResult::Collection { items, .. } => items,
@@ -283,6 +371,13 @@ fn collect_focus_items(result: EvaluationResult) -> Vec<EvaluationResult> {
     }
 }
 
+/// Convert a FHIRPath evaluation result into a boolean invariant outcome.
+///
+/// According to FHIRPath rules:
+/// - empty result → true
+/// - single boolean → that value
+/// - single empty → true
+/// - multiple values → error
 fn coerce_result_to_bool(result: EvaluationResult) -> Result<bool, ValidationError> {
     match result {
         EvaluationResult::Boolean(b, _, _) => Ok(b),

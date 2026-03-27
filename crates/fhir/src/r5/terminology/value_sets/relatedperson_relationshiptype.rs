@@ -17,6 +17,12 @@ impl PatientRelationshipType {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        "http://terminology.hl7.org/CodeSystem/v3-RoleClass",
+        "http://terminology.hl7.org/CodeSystem/v2-0131",
+        "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

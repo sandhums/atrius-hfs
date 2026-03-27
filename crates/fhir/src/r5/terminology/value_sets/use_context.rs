@@ -24,6 +24,12 @@ impl ContextOfUseValueSet {
         "http://terminology.hl7.org/ValueSet/v3-ActTaskCode",
         "http://hl7.org/fhir/ValueSet/usage-context-agreement-scope",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://snomed.info/sct",
+        "urn:iso:std:iso:3166",
+        "http://unstats.un.org/unsd/methods/m49/m49.htm",
+        "http://nucc.org/provider-taxonomy",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

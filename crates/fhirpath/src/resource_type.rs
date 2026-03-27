@@ -276,9 +276,7 @@ pub fn is_of_type_with_context(
                 )
             }
         }
-        EvaluationResult::Empty => {
-            Ok(false)
-        }
+        EvaluationResult::Empty => Ok(false),
         EvaluationResult::EmptyWithMeta { type_info, .. } => {
             if let Some(type_info) = type_info {
                 check_type_match(
@@ -514,9 +512,7 @@ pub fn is_of_type_for_of_type(
             // Collections are not simple types and don't match single type checks
             Ok(false)
         }
-        EvaluationResult::Empty => {
-            Ok(false)
-        }
+        EvaluationResult::Empty => Ok(false),
         EvaluationResult::EmptyWithMeta { type_info, .. } => {
             if let Some(type_info) = type_info {
                 check_type_match_with_cross_namespace(
@@ -770,9 +766,7 @@ pub fn is_of_type(
             // Collections are not simple types and don't match single type checks
             Ok(false)
         }
-        EvaluationResult::Empty => {
-            Ok(false)
-        }
+        EvaluationResult::Empty => Ok(false),
         EvaluationResult::EmptyWithMeta { type_info, .. } => {
             if let Some(type_info) = type_info {
                 check_type_match(
@@ -1929,97 +1923,6 @@ pub fn of_type(
         }
     }
 }
-
-/// Strict type match used for `is()` where FHIR and System are distinct.
-///
-/// Rules:
-/// - If both sides are explicitly FHIR, honor the generated FHIR subtype hierarchy.
-/// - If the target is `System.Quantity` (or unqualified `Quantity` that parsed as System),
-///   allow FHIR Quantity subtypes such as Age/Duration/Distance/Count/SimpleQuantity/Money
-///   to match.
-/// - If the target namespace is omitted, match by exact type name first, then allow
-///   FHIR hierarchy matches when the runtime value is a FHIR type.
-/// - Otherwise, namespaces must match exactly.
-fn check_type_match_strict(
-    value_namespace: &Option<String>,
-    value_type: &str,
-    target_namespace: &Option<String>,
-    target_type: &str,
-) -> Result<bool, EvaluationError> {
-    let value_ns = value_namespace.as_deref().unwrap_or("");
-    let target_ns = target_namespace.as_deref();
-
-    // Helper: generated FHIR subtype hierarchy for the active version.
-    let is_fhir_subtype = |child: &str, parent: &str| {
-        #[cfg(feature = "R4")]
-        {
-            if helios_fhir::r4::type_hierarchy::is_subtype_of(child, parent) {
-                return true;
-            }
-        }
-        #[cfg(feature = "R4B")]
-        {
-            if helios_fhir::r4b::type_hierarchy::is_subtype_of(child, parent) {
-                return true;
-            }
-        }
-        #[cfg(feature = "R5")]
-        {
-            if helios_fhir::r5::type_hierarchy::is_subtype_of(child, parent) {
-                return true;
-            }
-        }
-        #[cfg(feature = "R6")]
-        {
-            if helios_fhir::r6::type_hierarchy::is_subtype_of(child, parent) {
-                return true;
-            }
-        }
-        false
-    };
-
-    match target_ns {
-        Some(target_ns) => {
-            // Exact FHIR-vs-FHIR strict matching still honors FHIR inheritance.
-            if value_ns.eq_ignore_ascii_case("FHIR") && target_ns.eq_ignore_ascii_case("FHIR") {
-                if is_fhir_subtype(value_type, target_type) {
-                    return Ok(true);
-                }
-                return Ok(value_type.eq_ignore_ascii_case(target_type));
-            }
-
-            // Bridge FHIR Quantity-derived types to System.Quantity for `is(Quantity)`.
-            if value_ns.eq_ignore_ascii_case("FHIR")
-                && target_ns.eq_ignore_ascii_case("System")
-                && target_type.eq_ignore_ascii_case("Quantity")
-            {
-                if is_fhir_subtype(value_type, "Quantity") {
-                    return Ok(true);
-                }
-            }
-
-            // Otherwise strict namespace equality is required.
-            if !value_ns.eq_ignore_ascii_case(target_ns) {
-                return Ok(false);
-            }
-
-            Ok(value_type.eq_ignore_ascii_case(target_type))
-        }
-        None => {
-            // Unqualified type: exact name match first.
-            if value_type.eq_ignore_ascii_case(target_type) {
-                return Ok(true);
-            }
-
-            // If the runtime value is a FHIR type, allow FHIR inheritance for unqualified targets.
-            if value_ns.eq_ignore_ascii_case("FHIR") && is_fhir_subtype(value_type, target_type) {
-                return Ok(true);
-            }
-
-            Ok(false)
-        }
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2299,5 +2202,3 @@ mod tests {
         assert_eq!(decimal_result, EvaluationResult::Empty);
     }
 }
-
-

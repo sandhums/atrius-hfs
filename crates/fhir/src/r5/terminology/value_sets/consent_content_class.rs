@@ -19,6 +19,10 @@ impl ConsentContentClass {
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[
         "http://hl7.org/fhir/ValueSet/doc-typecodes",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "urn:ietf:rfc:3986",
+        "urn:ietf:bcp:13",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

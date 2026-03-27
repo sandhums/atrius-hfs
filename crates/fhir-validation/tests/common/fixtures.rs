@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use fhir_validation::R4FhirPathEvaluator;
+use fhir_validation::{R4FhirPathEvaluator, TerminologyServiceSync};
 use fhir_validation::{
     R5FhirPathEvaluator, Severity, TerminologyService, ValidationIssue, Validator,
 };
@@ -65,14 +65,15 @@ pub fn load_resource(version: FhirVersion, rel: &str) -> FhirResource {
         }
     }
 }
+#[allow(dead_code)]
 pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
     let json = load_fixture(FhirVersion::R5, rel);
     serde_json::from_str(&json).unwrap()
 }
-
+#[allow(dead_code)]
 pub fn validate_resource(
     resource: &FhirResource,
-    terminology: Option<&dyn TerminologyService>,
+    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue> {
     match resource {
         #[cfg(feature = "R4")]
@@ -90,6 +91,39 @@ pub fn validate_resource(
         FhirResource::R5(r) => {
             let evaluator = R5FhirPathEvaluator::new((**r).clone());
             validator().validate_r5_resource(r.as_ref(), terminology, &evaluator)
+        }
+
+        #[cfg(feature = "R6")]
+        FhirResource::R6(r) => {
+            todo!("R6 validator")
+        }
+    }
+}
+#[allow(dead_code)]
+pub async fn validate_resource_async(
+    resource: &FhirResource,
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue> {
+    match resource {
+        #[cfg(feature = "R4")]
+        FhirResource::R4(r) => {
+            let evaluator = R4FhirPathEvaluator::new((**r).clone());
+            validator()
+                .validate_r4_resource_async(r.as_ref(), terminology, &evaluator)
+                .await
+        }
+
+        #[cfg(feature = "R4B")]
+        FhirResource::R4B(r) => {
+            todo!("R4B validator")
+        }
+
+        #[cfg(feature = "R5")]
+        FhirResource::R5(r) => {
+            let evaluator = R5FhirPathEvaluator::new((**r).clone());
+            validator()
+                .validate_r5_resource_async(r.as_ref(), terminology, &evaluator)
+                .await
         }
 
         #[cfg(feature = "R6")]
@@ -144,7 +178,7 @@ pub fn assert_has_binding_issue(issues: &[ValidationIssue], path: &str, expressi
     assert!(
         issues.iter().any(|issue| {
             issue.instance_path.as_deref() == Some(path)
-            && issue.expression.as_deref() == Some(expression)
+                && issue.expression.as_deref() == Some(expression)
         }),
         "expected issue at path {path:?}, for value set {expression:?}, got issues: {issues:#?}"
     );

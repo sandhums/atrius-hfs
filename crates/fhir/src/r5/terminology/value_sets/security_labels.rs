@@ -24,6 +24,7 @@ impl AllSecurityLabels {
         "http://terminology.hl7.org/ValueSet/v3-SecurityControlObservationValue",
         "http://terminology.hl7.org/ValueSet/v3-ActUSPrivacyLaw",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

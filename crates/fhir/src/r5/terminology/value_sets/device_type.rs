@@ -17,6 +17,11 @@ impl DeviceType {
     pub const IS_EXAMPLE: bool = true;
     pub const HAS_NONLOCAL_RULES: bool = true;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "urn:iso:std:iso:11073:10101",
+        "urn:oid:2.16.840.1.113883.6.276",
+        "http://snomed.info/sct",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

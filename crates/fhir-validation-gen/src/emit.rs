@@ -79,7 +79,7 @@ pub fn emit_validatable_impl_for_type(
     output.push_str("    fn validate_bindings(\n");
     output.push_str("        &self,\n");
     output.push_str("        validator: &fhir_validation::Validator,\n");
-    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyService>,\n");
+    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,\n");
     output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
     output.push_str("        let mut issues = Vec::new();\n");
 
@@ -102,7 +102,6 @@ pub fn emit_validatable_impl_for_type(
         type_index_by_rust_type,
         output,
     );
-
     output.push_str("        issues\n");
     output.push_str("    }\n\n");
 
@@ -135,6 +134,45 @@ pub fn emit_validatable_impl_for_type(
     output.push_str("        issues\n");
     output.push_str("    }\n");
     output.push_str("}\n\n");
+
+    let trait_name_async = version.validatable_trait_name_async();
+
+    output.push_str(&format!("#[cfg(feature = {:?})]\n", feature_name));
+    output.push_str("#[async_trait::async_trait]\n");
+    output.push_str(&format!(
+        "impl {validation_module_path}::{} for {} {{\n",
+        trait_name_async, ty.rust_type
+    ));
+
+    output.push_str("    async fn validate_bindings_async(\n");
+    output.push_str("        &self,\n");
+    output.push_str("        validator: &fhir_validation::Validator,\n");
+    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyService>,\n");
+    output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
+    output.push_str("        let mut issues = Vec::new();\n");
+
+    if ty.bindings.is_empty() {
+        output.push_str("        let _ = (validator, terminology);\n");
+    } else {
+        let apply_bindings_method_async = apply_bindings_method_name_async(version);
+        output.push_str(&format!(
+            "        issues.extend(validator.{apply_bindings_method_async}(self, {}, terminology).await);\n",
+            bindings_const_name(ty),
+            apply_bindings_method_async = apply_bindings_method_async,
+        ));
+    }
+
+    emit_recursive_validation(
+        version,
+        ty,
+        ValidationPass::BindingsAsync,
+        type_index_by_path,
+        type_index_by_rust_type,
+        output,
+    );
+    output.push_str("        issues\n");
+    output.push_str("    }\n");
+    output.push_str("    }\n\n");
 }
 
 /// Emit all generated validation code for a set of normalized type models.
@@ -162,6 +200,7 @@ pub fn emit_types(version: FhirVersion, types: &[TypeValidationModel], output: &
     //     eprintln!("{} -> {:?} - {:?}", ty.rust_type, ty.structure_kind, ty.parent_kind);
     // }
     emit_resource_bindings_dispatcher(version, types, output);
+    emit_resource_bindings_async_dispatcher(version, types, output);
     emit_resource_invariants_dispatcher(version, types, output);
 }
 
@@ -226,7 +265,7 @@ fn emit_resource_bindings_dispatcher(
         "        &self,\n        resource: &{resource_enum_path},\n",
         resource_enum_path = resource_enum_path,
     ));
-    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyService>,\n");
+    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,\n");
     output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
     output.push_str("        match resource {\n");
 
@@ -238,6 +277,60 @@ fn emit_resource_bindings_dispatcher(
             rust_type = rust_type,
             validation_module_path = validation_module_path,
             trait_name = trait_name,
+        ));
+    }
+
+    output.push_str("        }\n");
+    output.push_str("    }\n");
+    output.push_str("}\n\n");
+}
+
+/// Emit the version-specific resource dispatcher for async binding validation.
+///
+/// The generated method matches over the versioned `Resource` enum and forwards
+/// to each concrete resource type's generated `validate_bindings_async` impl.
+fn emit_resource_bindings_async_dispatcher(
+    version: FhirVersion,
+    types: &[TypeValidationModel],
+    output: &mut String,
+) {
+    let resources: Vec<&TypeValidationModel> = types
+        .iter()
+        .filter(|ty| is_dispatchable_resource(ty))
+        .collect();
+
+    if resources.is_empty() {
+        return;
+    }
+
+    let feature_name = version.validation_feature();
+    let trait_name_async = version.validatable_trait_name_async();
+    let validation_module_path = validation_trait_module_path(version);
+    let resource_enum_path = resource_enum_path(version);
+    let method_name = contained_dispatch_method_name(version, ValidationPass::BindingsAsync);
+
+    output.push_str(&format!("#[cfg(feature = {:?})]\n", feature_name));
+    output.push_str("impl fhir_validation::Validator {\n");
+    output.push_str(&format!(
+        "    pub async fn {method_name}(\n",
+        method_name = method_name,
+    ));
+    output.push_str(&format!(
+        "        &self,\n        resource: &{resource_enum_path},\n",
+        resource_enum_path = resource_enum_path,
+    ));
+    output.push_str("        terminology: Option<&dyn fhir_validation::TerminologyService>,\n");
+    output.push_str("    ) -> Vec<fhir_validation::ValidationIssue> {\n");
+    output.push_str("        match resource {\n");
+
+    for resource in resources {
+        let rust_type = &resource.rust_type;
+        output.push_str(&format!(
+            "            {resource_enum_path}::{rust_type}(value) => <{rust_type} as {validation_module_path}::{trait_name_async}>::validate_bindings_async(value.as_ref(), self, terminology).await,\n",
+            resource_enum_path = resource_enum_path,
+            rust_type = rust_type,
+            validation_module_path = validation_module_path,
+            trait_name_async = trait_name_async,
         ));
     }
 
@@ -312,6 +405,14 @@ fn apply_bindings_method_name(version: FhirVersion) -> &'static str {
         FhirVersion::R6 => "apply_r6_bindings",
     }
 }
+fn apply_bindings_method_name_async(version: FhirVersion) -> &'static str {
+    match version {
+        FhirVersion::R4 => "apply_r4_bindings_async",
+        FhirVersion::R4B => "apply_r4b_bindings_async",
+        FhirVersion::R5 => "apply_r5_bindings_async",
+        FhirVersion::R6 => "apply_r6_bindings_async",
+    }
+}
 
 /// Return the version-specific validation trait module path used in generated impls.
 fn validation_trait_module_path(version: FhirVersion) -> &'static str {
@@ -332,12 +433,21 @@ fn resource_enum_path(version: FhirVersion) -> &'static str {
         FhirVersion::R6 => "helios_fhir::r6::Resource",
     }
 }
+fn terminology_module_path(version: FhirVersion) -> &'static str {
+    match version {
+        FhirVersion::R4 => "helios_fhir::r4::terminology",
+        FhirVersion::R4B => "helios_fhir::r4b::terminology",
+        FhirVersion::R5 => "helios_fhir::r5::terminology",
+        FhirVersion::R6 => "helios_fhir::r6::terminology",
+    }
+}
 
 /// Which validation phase the emitter is currently generating code for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ValidationPass {
     Bindings,
     Invariants,
+    BindingsAsync,
 }
 
 /// Emit the generated invariant metadata constant for one type.
@@ -466,7 +576,7 @@ fn emit_recursive_validation(
     }
 
     for field in executable_candidates {
-        emit_field_recursive_validation(&ty.fhir_path, field, pass, output);
+        emit_field_recursive_validation(&ty.fhir_path, version, field, pass, output);
     }
 
     if !deferred_candidates.is_empty() {
@@ -476,11 +586,18 @@ fn emit_recursive_validation(
 
         for field in deferred_candidates {
             if field.rust_field_name == "contained" {
-                emit_contained_field_recursive_validation(&ty.fhir_path, version, field, pass, output);
+                emit_contained_field_recursive_validation(
+                    &ty.fhir_path,
+                    version,
+                    field,
+                    pass,
+                    output,
+                );
                 continue;
             }
             if field.is_choice {
                 emit_choice_field_recursive_validation(
+                    version,
                     &ty.fhir_path,
                     field,
                     pass,
@@ -496,6 +613,7 @@ fn emit_recursive_validation(
             let pass_name = match pass {
                 ValidationPass::Bindings => "bindings",
                 ValidationPass::Invariants => "invariants",
+                ValidationPass::BindingsAsync => "bindings_async",
             };
 
             let cardinality = if field.is_array {
@@ -554,6 +672,7 @@ fn emit_empty_array_check(current_type_path: &str, field: &FieldModel, output: &
 /// match over the generated choice enum and forwards validation to the selected
 /// variant when validator metadata exists for that child type.
 fn emit_choice_field_recursive_validation(
+    version: FhirVersion,
     current_type_path: &str,
     field: &FieldModel,
     pass: ValidationPass,
@@ -569,6 +688,8 @@ fn emit_choice_field_recursive_validation(
 
     let field_name = emitted_field_name(field);
     let rebase_path = local_rebase_path(current_type_path, field);
+    let validation_module_path = validation_trait_module_path(version);
+    let terminology_module_path = terminology_module_path(version);
 
     output.push_str(&format!(
         "        if let Some(choice) = &self.{field_name} {{\n",
@@ -596,14 +717,66 @@ fn emit_choice_field_recursive_validation(
             });
 
         match (pass, child_model) {
-            (ValidationPass::Bindings, Some(model)) if !model.bindings.is_empty() => {
-                output.push_str(&format!(
-                    "                {enum_name}::{variant_name}(value) => {{\n"
-                ));
-                output.push_str(
-                    "                    issues.extend(value.validate_bindings(validator, terminology));\n",
-                );
-                output.push_str("                }\n");
+            (ValidationPass::Bindings, Some(model)) => {
+                let handled_by_field_binding = direct_choice_binding
+                    .map(|binding| {
+                        binding
+                            .bindable_type_codes
+                            .iter()
+                            .any(|bindable| bindable == type_code)
+                    })
+                    .unwrap_or(false);
+
+                if handled_by_field_binding && is_parent_bound_choice_complex_binding_type_code(type_code) {
+                    if let Some(binding) = direct_choice_binding {
+                        let helper_name = complex_choice_binding_helper_name(pass, type_code);
+                        let local_validator_name = complex_choice_local_validator_name(type_code);
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology);\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            fhir_path = binding.path,
+                            value_set = binding.value_set,
+                            strength = binding.strength.as_rust_tokens(),
+                            terminology_module_path = terminology_module_path,
+                            local_validator_name = local_validator_name,
+                        ));
+                        output.push_str("                    issues.extend(child_issues);\n");
+                        output.push_str("                }\n");
+                    } else {
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(
+                            "                    let child_issues = value.validate_bindings(validator, terminology);\n",
+                        );
+                        output.push_str(&format!(
+                            "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                            rebase_path,
+                        ));
+                        output.push_str("                }\n");
+                    }
+                } else if !model.bindings.is_empty() {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(value) => {{\n"
+                    ));
+                    output.push_str(
+                        "                    let child_issues = value.validate_bindings(validator, terminology);\n",
+                    );
+                    output.push_str(&format!(
+                        "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                        rebase_path,
+                    ));
+                    output.push_str("                }\n");
+                } else {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(_value) => {{\n"
+                    ));
+                    output.push_str("                }\n");
+                }
                 emitted_any_arm = true;
             }
             (ValidationPass::Bindings, _) => {
@@ -616,15 +789,141 @@ fn emit_choice_field_recursive_validation(
                     })
                     .unwrap_or(false);
 
-                output.push_str(&format!(
-                    "                {enum_name}::{variant_name}(_value) => {{\n"
-                ));
-                if handled_by_field_binding {
-                    output.push_str(
-                        "                    // Binding for this choice variant is handled by Self::BINDINGS on the parent field.\n",
-                    );
+                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code) {
+                    if let Some(binding) = direct_choice_binding {
+                        let helper_name = primitive_choice_binding_helper_name(pass, type_code);
+                        let local_validator_name = primitive_choice_local_validator_name(type_code);
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology);\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            fhir_path = binding.path,
+                            value_set = binding.value_set,
+                            strength = binding.strength.as_rust_tokens(),
+                            terminology_module_path = terminology_module_path,
+                            local_validator_name = local_validator_name,
+                        ));
+                        output.push_str("                    issues.extend(child_issues);\n");
+                        output.push_str("                }\n");
+                    } else {
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(_value) => {{\n"
+                        ));
+                        output.push_str("                }\n");
+                    }
+                } else {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(_value) => {{\n"
+                    ));
+                    output.push_str("                }\n");
                 }
-                output.push_str("                }\n");
+            }
+            (ValidationPass::BindingsAsync, Some(model)) => {
+                let handled_by_field_binding = direct_choice_binding
+                    .map(|binding| {
+                        binding
+                            .bindable_type_codes
+                            .iter()
+                            .any(|bindable| bindable == type_code)
+                    })
+                    .unwrap_or(false);
+
+                if handled_by_field_binding && is_parent_bound_choice_complex_binding_type_code(type_code) {
+                    if let Some(binding) = direct_choice_binding {
+                        let helper_name = complex_choice_binding_helper_name(pass, type_code);
+                        let local_validator_name = complex_choice_local_validator_name(type_code);
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology).await;\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            fhir_path = binding.path,
+                            value_set = binding.value_set,
+                            strength = binding.strength.as_rust_tokens(),
+                            terminology_module_path = terminology_module_path,
+                            local_validator_name = local_validator_name,
+                        ));
+                        output.push_str("                    issues.extend(child_issues);\n");
+                        output.push_str("                }\n");
+                    } else {
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(
+                            "                    let child_issues = value.validate_bindings_async(validator, terminology).await;\n",
+                        );
+                        output.push_str(&format!(
+                            "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                            rebase_path,
+                        ));
+                        output.push_str("                }\n");
+                    }
+                } else if !model.bindings.is_empty() {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(value) => {{\n"
+                    ));
+                    output.push_str(
+                        "                    let child_issues = value.validate_bindings_async(validator, terminology).await;\n",
+                    );
+                    output.push_str(&format!(
+                        "                    issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                        rebase_path,
+                    ));
+                    output.push_str("                }\n");
+                } else {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(_value) => {{\n"
+                    ));
+                    output.push_str("                }\n");
+                }
+                emitted_any_arm = true;
+            }
+            (ValidationPass::BindingsAsync, _) => {
+                let handled_by_field_binding = direct_choice_binding
+                    .map(|binding| {
+                        binding
+                            .bindable_type_codes
+                            .iter()
+                            .any(|bindable| bindable == type_code)
+                    })
+                    .unwrap_or(false);
+
+                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code) {
+                    if let Some(binding) = direct_choice_binding {
+                        let helper_name = primitive_choice_binding_helper_name(pass, type_code);
+                        let local_validator_name = primitive_choice_local_validator_name(type_code);
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(value) => {{\n"
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology).await;\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            fhir_path = binding.path,
+                            value_set = binding.value_set,
+                            strength = binding.strength.as_rust_tokens(),
+                            terminology_module_path = terminology_module_path,
+                            local_validator_name = local_validator_name,
+                        ));
+                        output.push_str("                    issues.extend(child_issues);\n");
+                        output.push_str("                }\n");
+                    } else {
+                        output.push_str(&format!(
+                            "                {enum_name}::{variant_name}(_value) => {{\n"
+                        ));
+                        output.push_str("                }\n");
+                    }
+                } else {
+                    output.push_str(&format!(
+                        "                {enum_name}::{variant_name}(_value) => {{\n"
+                    ));
+                    output.push_str("                }\n");
+                }
             }
             (ValidationPass::Invariants, Some(model)) if !model.invariants.is_empty() => {
                 output.push_str(&format!(
@@ -641,30 +940,12 @@ fn emit_choice_field_recursive_validation(
                 emitted_any_arm = true;
             }
             (ValidationPass::Invariants, _) => {
-                let reason = match (child_path.as_deref(), child_rust_type.as_deref()) {
-                    (Some(path), _) => format!("no generated validator metadata for {path}"),
-                    (None, Some(name)) => format!("no generated validator metadata for {name}"),
-                    (None, None) => format!("no resolvable child type for {type_code}"),
-                };
                 output.push_str(&format!(
                     "                {enum_name}::{variant_name}(_value) => {{\n"
-                ));
-                output.push_str(&format!(
-                    "                    // TODO({pass_name}): {reason}\n",
-                    pass_name = validation_pass_name(pass),
-                    reason = reason,
                 ));
                 output.push_str("                }\n");
             }
         }
-    }
-
-    if !emitted_any_arm && field.type_codes.is_empty() {
-        output.push_str(&format!(
-            "                // TODO({}): no choice variants discovered for {}\n",
-            validation_pass_name(pass),
-            field.fhir_path,
-        ));
     }
 
     output.push_str("            }\n");
@@ -691,6 +972,7 @@ fn validation_pass_name(pass: ValidationPass) -> &'static str {
     match pass {
         ValidationPass::Bindings => "bindings",
         ValidationPass::Invariants => "invariants",
+        ValidationPass::BindingsAsync => "bindings_async",
     }
 }
 
@@ -730,6 +1012,62 @@ fn normalize_choice_variant_base(type_code: &str) -> String {
 fn child_type_path_for_choice_variant(type_code: &str) -> Option<String> {
     Some(choice_variant_name_from_type_code(type_code))
 }
+fn is_parent_bound_choice_primitive_type_code(type_code: &str) -> bool {
+    matches!(type_code, "code" | "string" | "uri")
+}
+
+fn is_parent_bound_choice_complex_binding_type_code(type_code: &str) -> bool {
+    matches!(type_code, "Coding" | "CodeableConcept" | "Quantity" | "CodeableReference")
+}
+
+fn primitive_choice_binding_helper_name(pass: ValidationPass, type_code: &str) -> &'static str {
+    match (pass, type_code) {
+        (ValidationPass::Bindings, "code") => "validate_primitive_code_binding",
+        (ValidationPass::BindingsAsync, "code") => "validate_primitive_code_binding_async",
+        (ValidationPass::Bindings, "string") | (ValidationPass::Bindings, "uri") => {
+            "validate_primitive_value_binding"
+        }
+        (ValidationPass::BindingsAsync, "string")
+        | (ValidationPass::BindingsAsync, "uri") => "validate_primitive_value_binding_async",
+        _ => unreachable!("unsupported primitive choice binding type: {type_code}"),
+    }
+}
+
+fn primitive_choice_local_validator_name(type_code: &str) -> &'static str {
+    match type_code {
+        "code" | "string" | "uri" => "validate_code",
+        _ => unreachable!("unsupported primitive choice local validator type: {type_code}"),
+    }
+}
+
+fn complex_choice_binding_helper_name(pass: ValidationPass, type_code: &str) -> &'static str {
+    match (pass, type_code) {
+        (ValidationPass::Bindings, "Coding") => "validate_coding_binding",
+        (ValidationPass::BindingsAsync, "Coding") => "validate_coding_binding_async",
+        (ValidationPass::Bindings, "CodeableConcept") => "validate_codeable_concept_binding",
+        (ValidationPass::BindingsAsync, "CodeableConcept") => {
+            "validate_codeable_concept_binding_async"
+        }
+        (ValidationPass::Bindings, "CodeableReference") => "validate_codeable_reference_binding",
+        (ValidationPass::BindingsAsync, "CodeableReference") => {
+            "validate_codeable_reference_binding_async"
+        }
+        (ValidationPass::Bindings, "Quantity") => "validate_quantity_binding",
+        (ValidationPass::BindingsAsync, "Quantity") => {
+            "validate_quantity_binding_async"
+        }
+        _ => unreachable!("unsupported complex choice binding type: {type_code}"),
+    }
+}
+
+fn complex_choice_local_validator_name(type_code: &str) -> &'static str {
+    match type_code {
+        "Coding" => "validate_coding",
+        "CodeableConcept" => "validate_codeable_concept",
+        "Quantity" => "validate_quantity",
+        _ => unreachable!("unsupported complex choice local validator type: {type_code}"),
+    }
+}
 
 /// Capitalize the first character of a string for generated Rust type/variant names.
 fn capitalize_first_letter(s: &str) -> String {
@@ -768,9 +1106,72 @@ fn local_rebase_path(current_type_path: &str, field: &FieldModel) -> String {
 /// - optional vs required fields
 /// - repeating vs scalar fields
 /// - pass-specific rebasing for invariant issues
-fn emit_field_recursive_validation(current_type_path: &str, field: &FieldModel, pass: ValidationPass, output: &mut String) {
+fn emit_field_recursive_validation(
+    current_type_path: &str,
+    version: FhirVersion,
+    field: &FieldModel,
+    pass: ValidationPass,
+    output: &mut String,
+) {
     let field_name = emitted_field_name(field);
-    let rebase_path = local_rebase_path(current_type_path,field);
+    let rebase_path = local_rebase_path(current_type_path, field);
+
+    if field.type_codes.len() == 1 && field.type_codes[0] == "Resource" && !field.is_array && !field.is_choice {
+        let dispatch_method = contained_dispatch_method_name(version, pass);
+        let arg_name = contained_dispatch_arg_name(pass);
+
+        if field.is_required {
+            match pass {
+                ValidationPass::BindingsAsync => {
+                    output.push_str(&format!(
+                        "        let child_issues = validator.{dispatch_method}(&self.{field_name}, {arg_name}).await;\n",
+                        dispatch_method = dispatch_method,
+                        field_name = field_name,
+                        arg_name = arg_name,
+                    ));
+                }
+                _ => {
+                    output.push_str(&format!(
+                        "        let child_issues = validator.{dispatch_method}(&self.{field_name}, {arg_name});\n",
+                        dispatch_method = dispatch_method,
+                        field_name = field_name,
+                        arg_name = arg_name,
+                    ));
+                }
+            }
+            output.push_str(&format!(
+                "        issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                rebase_path,
+            ));
+        } else {
+            output.push_str(&format!(
+                "        if let Some(value) = &self.{field_name} {{\n",
+                field_name = field_name,
+            ));
+            match pass {
+                ValidationPass::BindingsAsync => {
+                    output.push_str(&format!(
+                        "            let child_issues = validator.{dispatch_method}(value, {arg_name}).await;\n",
+                        dispatch_method = dispatch_method,
+                        arg_name = arg_name,
+                    ));
+                }
+                _ => {
+                    output.push_str(&format!(
+                        "            let child_issues = validator.{dispatch_method}(value, {arg_name});\n",
+                        dispatch_method = dispatch_method,
+                        arg_name = arg_name,
+                    ));
+                }
+            }
+            output.push_str(&format!(
+                "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                rebase_path,
+            ));
+            output.push_str("        }\n");
+        }
+        return;
+    }
     match pass {
         ValidationPass::Bindings => {
             if field.is_array {
@@ -801,6 +1202,42 @@ fn emit_field_recursive_validation(current_type_path: &str, field: &FieldModel, 
                     field_name = field_name,
                 ));
                 output.push_str("            let child_issues = value.validate_bindings(validator, terminology);\n");
+                output.push_str(&format!(
+                    "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    rebase_path,
+                ));
+                output.push_str("        }\n");
+            }
+        }
+        ValidationPass::BindingsAsync => {
+            if field.is_array {
+                output.push_str(&format!(
+                    "        if let Some(values) = &self.{field_name} {{\n",
+                    field_name = field_name,
+                ));
+                output.push_str("            for (idx, value) in values.iter().enumerate() {\n");
+                output.push_str("                let child_issues = value.validate_bindings_async(validator, terminology).await;\n");
+                output.push_str(&format!(
+                    "                issues.extend(validator.rebase_instance_paths(child_issues, &format!(\"{}[{{idx}}]\")));\n",
+                    rebase_path,
+                ));
+                output.push_str("            }\n");
+                output.push_str("        }\n");
+            } else if field.is_required {
+                output.push_str(&format!(
+                    "        let child_issues = self.{field_name}.validate_bindings_async(validator, terminology).await;\n",
+                    field_name = field_name,
+                ));
+                output.push_str(&format!(
+                    "        issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
+                    rebase_path,
+                ));
+            } else {
+                output.push_str(&format!(
+                    "        if let Some(value) = &self.{field_name} {{\n",
+                    field_name = field_name,
+                ));
+                output.push_str("            let child_issues = value.validate_bindings_async(validator, terminology).await;\n");
                 output.push_str(&format!(
                     "            issues.extend(validator.rebase_instance_paths(child_issues, {:?}));\n",
                     rebase_path,
@@ -867,7 +1304,13 @@ fn should_emit_executable_recursion(
     if field.rust_field_name == "contained" {
         return false;
     }
-
+    if field.type_codes.len() == 1
+        && field.type_codes[0] == "Resource"
+        && !field.is_array
+        && !field.is_choice
+    {
+        return true;
+    }
     let child_model = resolve_child_model(field, type_index_by_path, type_index_by_rust_type);
     let Some(child_model) = child_model else {
         return false;
@@ -876,6 +1319,7 @@ fn should_emit_executable_recursion(
     match pass {
         ValidationPass::Bindings => !child_model.bindings.is_empty(),
         ValidationPass::Invariants => !child_model.invariants.is_empty(),
+        ValidationPass::BindingsAsync => !child_model.bindings.is_empty(),
     }
 }
 
@@ -1065,11 +1509,22 @@ fn emit_contained_field_recursive_validation(
         field_name = field_name,
     ));
     output.push_str("            for (idx, value) in values.iter().enumerate() {\n");
-    output.push_str(&format!(
-        "                let child_issues = validator.{dispatch_method}(value, {arg_name});\n",
-        dispatch_method = dispatch_method,
-        arg_name = contained_dispatch_arg_name(pass),
-    ));
+    match pass {
+        ValidationPass::BindingsAsync => {
+            output.push_str(&format!(
+                "                let child_issues = validator.{dispatch_method}(value, {arg_name}).await;\n",
+                dispatch_method = dispatch_method,
+                arg_name = contained_dispatch_arg_name(pass),
+            ));
+        }
+        _ => {
+            output.push_str(&format!(
+                "                let child_issues = validator.{dispatch_method}(value, {arg_name});\n",
+                dispatch_method = dispatch_method,
+                arg_name = contained_dispatch_arg_name(pass),
+            ));
+        }
+    }
     output.push_str(&format!(
         "                issues.extend(validator.rebase_instance_paths(child_issues, &format!(\"{}[{{idx}}]\")));\n",
         rebase_path,
@@ -1104,6 +1559,10 @@ fn contained_dispatch_method_name(version: FhirVersion, pass: ValidationPass) ->
         (FhirVersion::R5, ValidationPass::Invariants) => "validate_r5_resource_invariants",
         (FhirVersion::R6, ValidationPass::Bindings) => "validate_r6_resource_bindings",
         (FhirVersion::R6, ValidationPass::Invariants) => "validate_r6_resource_invariants",
+        (FhirVersion::R4, ValidationPass::BindingsAsync) => "validate_r4_resource_bindings_async",
+        (FhirVersion::R4B, ValidationPass::BindingsAsync) => "validate_r4b_resource_bindings_async",
+        (FhirVersion::R5, ValidationPass::BindingsAsync) => "validate_r5_resource_bindings_async",
+        (FhirVersion::R6, ValidationPass::BindingsAsync) => "validate_r6_resource_bindings_async",
     }
 }
 
@@ -1113,6 +1572,7 @@ fn contained_dispatch_arg_name(pass: ValidationPass) -> &'static str {
     match pass {
         ValidationPass::Bindings => "terminology",
         ValidationPass::Invariants => "evaluator",
+        ValidationPass::BindingsAsync => "terminology",
     }
 }
 
@@ -1157,4 +1617,15 @@ fn upper_snake_case(name: &str) -> String {
     }
 
     out.trim_matches('_').to_string()
+}
+
+/// Return the argument type for contained dispatchers for each validation pass.
+
+#[allow(dead_code)]
+fn contained_dispatch_arg_type(pass: ValidationPass) -> &'static str {
+    match pass {
+        ValidationPass::Bindings => "Option<&dyn fhir_validation::TerminologyServiceSync>",
+        ValidationPass::BindingsAsync => "Option<&dyn fhir_validation::TerminologyService>",
+        ValidationPass::Invariants => "&dyn fhir_validation::FhirPathEvaluator",
+    }
 }

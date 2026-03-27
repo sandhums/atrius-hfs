@@ -35,7 +35,6 @@ fn is_dynamic_codesystem(url: &str) -> bool {
     DYNAMIC_CODE_SYSTEMS.iter().any(|u| *u == url)
 }
 
-
 /// Stable generation metadata for one CodeSystem.
 ///
 /// This is the minimal information needed later by code generation and local

@@ -18,8 +18,8 @@
 //! This normalization step is intentionally separate from emission so code
 //! generation can operate on a stable, FHIR-aware intermediate model.
 
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 use crate::model::{
     BindingModel, BindingStrengthModel, BindingTargetKindModel, FieldModel, InvariantModel,
@@ -40,18 +40,16 @@ pub struct StructureDefinitionIndex<'a> {
 ///
 /// The index supports resolution by canonical URL and by `type` name.
 pub fn build_structure_definition_index<'a>(
-    defs: & 'a [StructureDefinition],
+    defs: &'a [StructureDefinition],
 ) -> StructureDefinitionIndex<'a> {
     let mut by_url = HashMap::new();
     let mut by_type = HashMap::new();
 
     for def in defs {
-        if let url = &def.url {
-            by_url.insert(url.to_string(), def);
-        }
-        if let type_name = &def.r#type {
-            by_type.insert(type_name.to_string(), def);
-        }
+        let url = &def.url;
+        by_url.insert(url.to_string(), def);
+        let type_name = &def.r#type;
+        by_type.insert(type_name.to_string(), def);
     }
 
     StructureDefinitionIndex { by_url, by_type }
@@ -70,6 +68,7 @@ pub fn build_structure_definition_index<'a>(
 /// This backward-compatible entry point extracts only direct invariants declared
 /// on the current type/path. Use `extract_type_validation_models_with_index(...)`
 /// to also merge inherited invariants from ancestor StructureDefinitions.
+#[allow(dead_code)]
 pub fn extract_type_validation_models(
     version: FhirVersion,
     def: &StructureDefinition,
@@ -93,13 +92,7 @@ pub fn extract_type_validation_models_with_index<'a>(
 
     for path in type_paths {
         if let Some(model) = extract_type_validation_model_for_path(
-            version,
-            def,
-            &def_json,
-            elements,
-            root_path,
-            &path,
-            index,
+            version, def, &def_json, elements, root_path, &path, index,
         ) {
             models.push(model);
         }
@@ -153,14 +146,8 @@ fn extract_type_validation_model_for_path<'a>(
 
     let _ = (version, def);
 
-    model.invariants = extract_invariants_with_inheritance(
-        elements,
-        path,
-        root_path,
-        def,
-        parent_kind,
-        index,
-    );
+    model.invariants =
+        extract_invariants_with_inheritance(elements, path, root_path, def, parent_kind, index);
     model.bindings = extract_bindings_from_elements(elements, path);
     model.fields = extract_direct_fields_from_elements(elements, path);
 
@@ -287,7 +274,10 @@ fn inherited_invariants_for_root<'a>(
         .and_then(|url| index.by_url.get(url).copied());
 
     while let Some(sd) = current {
-        out.extend(extract_root_invariants_from_structure_definition(sd, rebased_path));
+        out.extend(extract_root_invariants_from_structure_definition(
+            sd,
+            rebased_path,
+        ));
         current = sd
             .base_definition
             .as_deref()
@@ -316,7 +306,10 @@ fn inherited_invariants_for_nested_path<'a>(
     let mut current = start_type.and_then(|type_name| index.by_type.get(type_name).copied());
 
     while let Some(sd) = current {
-        out.extend(extract_root_invariants_from_structure_definition(sd, rebased_path));
+        out.extend(extract_root_invariants_from_structure_definition(
+            sd,
+            rebased_path,
+        ));
         current = sd
             .base_definition
             .as_deref()
@@ -412,7 +405,7 @@ pub fn extract_bindings_from_elements(
             .unwrap_or_else(|| element_path.to_string());
         let bindable_type_codes = type_codes
             .iter()
-            .filter(|code| matches!(code.as_str(), "code" | "Coding" | "CodeableConcept"))
+            .filter(|code| matches!(code.as_str(), "code" | "string" | "uri" | "Coding" | "CodeableConcept" | "CodeableReference" | "Quantity"))
             .cloned()
             .collect::<Vec<_>>();
 
@@ -530,18 +523,36 @@ pub fn parse_binding_strength(strength: Option<&str>) -> BindingStrengthModel {
 
 /// Determine which bindable runtime shape a binding applies to.
 ///
-/// Only single-type bindings to `code`, `Coding`, or `CodeableConcept` are
-/// currently mapped to supported target kinds. Other shapes are marked
-/// unsupported for version-specific binding handling.
+/// For single-type bindings, this returns the concrete target kind.
+///
+/// For choice fields (`[x]`) with more than one type code, this returns
+/// `BindingTargetKindModel::Choice` when any variant is bindable at runtime.
+/// The concrete runtime dispatch for choice fields is handled later during
+/// code emission based on the actual selected variant.
 pub fn binding_target_kind(type_codes: &[String]) -> BindingTargetKindModel {
     if type_codes.len() != 1 {
-        return BindingTargetKindModel::Unsupported;
+        let has_bindable_choice_variant = type_codes.iter().any(|code| {
+            matches!(
+                code.as_str(),
+                "code" | "string" | "uri" | "Coding" | "CodeableConcept" | "CodeableReference" | "Quantity"
+            )
+        });
+
+        return if has_bindable_choice_variant {
+            BindingTargetKindModel::Choice
+        } else {
+            BindingTargetKindModel::Unsupported
+        };
     }
 
     match type_codes[0].as_str() {
         "code" => BindingTargetKindModel::Code,
+        "string" => BindingTargetKindModel::String,
+        "uri" => BindingTargetKindModel::Uri,
         "Coding" => BindingTargetKindModel::Coding,
         "CodeableConcept" => BindingTargetKindModel::CodeableConcept,
+        "CodeableReference" => BindingTargetKindModel::CodeableReference,
+        "Quantity" => BindingTargetKindModel::Quantity,
         _ => BindingTargetKindModel::Unsupported,
     }
 }

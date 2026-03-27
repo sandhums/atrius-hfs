@@ -332,7 +332,7 @@ pub enum EvaluationResult {
     EmptyWithMeta {
         meta: PrimitiveMeta,
         type_info: Option<TypeInfoResult>,
-    }
+    },
 }
 
 /// Comprehensive error type for FHIRPath evaluation failures.
@@ -1554,7 +1554,7 @@ fn format_unit_for_display(unit: &str) -> String {
         format!("'{}'", unit)
     }
 
-// --- Patch: Update all remaining tuple-style EmptyWithMeta patterns to struct-style
+    // --- Patch: Update all remaining tuple-style EmptyWithMeta patterns to struct-style
 
-// (No further code, all changes above.)
+    // (No further code, all changes above.)
 }

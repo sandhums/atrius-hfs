@@ -17,6 +17,10 @@ impl SignatureTypeCodes {
     pub const IS_EXAMPLE: bool = true;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://uri.etsi.org/01903/v1.2.2",
+        "urn:iso-astm:E1762-95:2013",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

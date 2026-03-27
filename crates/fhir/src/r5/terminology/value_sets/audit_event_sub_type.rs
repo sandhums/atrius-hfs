@@ -20,6 +20,10 @@ impl AuditEventSubType {
         "http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_401.html",
         "http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_403.html",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://dicom.nema.org/resources/ontology/DCM",
+        "http://hl7.org/fhir/restful-interaction",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -107,7 +111,7 @@ impl AuditEventSubType {
             Some(false) => {
                 Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://hl7.org/fhir/restful-interaction".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 

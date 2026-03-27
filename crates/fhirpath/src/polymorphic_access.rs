@@ -774,7 +774,7 @@ pub fn apply_polymorphic_type_operation(
                         Ok(EvaluationResult::boolean(is_quantity_type))
                     }
                     // These cases should never happen due to earlier checks
-                    EvaluationResult::Empty | EvaluationResult::EmptyWithMeta{ .. } => {
+                    EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
                         Ok(EvaluationResult::boolean(false))
                     }
                     EvaluationResult::Collection { .. } => Ok(EvaluationResult::boolean(false)),

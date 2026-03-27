@@ -918,7 +918,9 @@ mod r5_impl {
                     ViewDefinitionConstantValue::Decimal(d) => {
                         if let Some(precise_decimal) = &d.value {
                             match precise_decimal.original_string().parse() {
-                                Ok(decimal_value) => EvaluationResult::Decimal(decimal_value, None, None),
+                                Ok(decimal_value) => {
+                                    EvaluationResult::Decimal(decimal_value, None, None)
+                                }
                                 Err(_) => {
                                     return Err(SofError::InvalidViewDefinition(format!(
                                         "Invalid decimal value for constant '{}'",
@@ -932,7 +934,8 @@ mod r5_impl {
                     }
                     ViewDefinitionConstantValue::Date(d) => EvaluationResult::Date(
                         d.value.clone().unwrap_or_default().to_string(),
-                        None, None,
+                        None,
+                        None,
                     ),
                     ViewDefinitionConstantValue::DateTime(dt) => {
                         let value_str = dt.value.clone().unwrap_or_default().to_string();
@@ -944,7 +947,8 @@ mod r5_impl {
                         };
                         EvaluationResult::DateTime(
                             prefixed,
-                            Some(TypeInfoResult::new("FHIR", "dateTime")), None,
+                            Some(TypeInfoResult::new("FHIR", "dateTime")),
+                            None,
                         )
                     }
                     ViewDefinitionConstantValue::Time(t) => {
@@ -977,7 +981,8 @@ mod r5_impl {
                         EvaluationResult::DateTime(
                             prefixed,
                             Some(TypeInfoResult::new("FHIR", "instant")),
-                            None,)
+                            None,
+                        )
                     }
                     ViewDefinitionConstantValue::Oid(o) => {
                         EvaluationResult::String(o.value.clone().unwrap_or_default(), None, None)

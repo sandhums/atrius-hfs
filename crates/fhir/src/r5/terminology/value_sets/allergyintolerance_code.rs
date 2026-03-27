@@ -19,6 +19,9 @@ impl SubstanceProductAndConditionAndNegationCodes {
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[
         "http://hl7.org/fhir/ValueSet/substance-code",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://snomed.info/sct",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

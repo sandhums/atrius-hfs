@@ -643,7 +643,7 @@ fn compare_evaluation_results(a: &EvaluationResult, b: &EvaluationResult) -> std
         // Different types - define a type ordering
         _ => {
             let type_order = |v: &EvaluationResult| match v {
-                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta{ .. } => 0,
+                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => 0,
                 EvaluationResult::Boolean(_, _, _) => 1,
                 EvaluationResult::Integer(_, _, _) => 2,
                 EvaluationResult::Integer64(_, _, _) => 3,

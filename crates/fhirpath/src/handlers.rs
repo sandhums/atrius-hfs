@@ -737,7 +737,7 @@ fn convert_object_to_json(map: &std::collections::HashMap<String, EvaluationResu
 /// Convert EvaluationResult to JSON Value
 fn convert_evaluation_result_to_json(result: &EvaluationResult) -> Value {
     match result {
-        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta {.. }  => Value::Null,
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => Value::Null,
         EvaluationResult::Boolean(b, _, _) => json!(b),
         EvaluationResult::String(s, _, _) => json!(s),
         EvaluationResult::Integer(i, _, _) => json!(i),
@@ -768,7 +768,7 @@ fn evaluation_result_to_result_value(result: EvaluationResult) -> FhirPathResult
     // In a full implementation, we'd need proper type detection
 
     match result {
-        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta{..} => Ok(json!({
+        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => Ok(json!({
             "name": "null"
         })),
         EvaluationResult::Boolean(b, type_info, _) => {

@@ -19,6 +19,9 @@ impl ElementDefinitionTypes {
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[
         "http://hl7.org/fhir/ValueSet/fhir-types",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://hl7.org/fhir/CodeSystem/fhirpath-types",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -108,7 +111,7 @@ impl ElementDefinitionTypes {
             Some(false) => {
                 Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://hl7.org/fhir/CodeSystem/fhirpath-types".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 

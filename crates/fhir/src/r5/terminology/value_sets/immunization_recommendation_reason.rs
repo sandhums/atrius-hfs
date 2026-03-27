@@ -17,6 +17,9 @@ impl ImmunizationRecommendationReasonCodes {
     pub const IS_EXAMPLE: bool = true;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://snomed.info/sct",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
@@ -97,17 +100,16 @@ impl ImmunizationRecommendationReasonCodes {
         match Self::contains_implicit_code(code) {
             Some(true) => Ok(()),
             Some(false) => {
-                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: code.to_string() })
+                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://snomed.info/sct".to_string()), code: code.to_string() })
             }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 
     /// Best-effort local membership check for a primitive `code` when the
     /// ValueSet has exactly one unambiguous local system.
     pub fn contains_implicit_code(code: &str) -> Option<bool> {
-        let _ = code;
-        None
+        Self::contains("http://snomed.info/sct", code)
     }
 
     /// Validate a Coding against this ValueSet using best-effort local logic.

@@ -25,7 +25,7 @@
 use crate::binding::common::{
     get_json_values_with_instance_paths, relative_binding_path, root_instance_path,
 };
-use crate::{TerminologyService, ValidationIssue, Validator};
+use crate::{TerminologyService, TerminologyServiceSync, ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
 use helios_fhir::r4::terminology::TerminologyValidationError;
 use helios_fhir::r4::terminology::index as terminology_index;
@@ -46,9 +46,85 @@ fn coding_code(coding: &Coding) -> Option<&str> {
 pub fn coding_display(coding: &Coding) -> Option<&str> {
     coding.display.as_ref().and_then(|v| v.value.as_deref())
 }
+fn prettify_remote_terminology_error(valueset_url: &str, err: &crate::ValidationError) -> String {
+    match err {
+        crate::ValidationError::TerminologyRemote(remote) => {
+            // if remote
+            //     .diagnostics
+            //     .iter()
+            //     .any(|d| d.contains("does not support this ValueSet property filter"))
+            // {
+            //     return format!(
+            //         "Remote terminology server could not validate ValueSet '{}' because the server does not support the required ValueSet property filters",
+            //         valueset_url
+            //     );
+            // }
+
+            if !remote.diagnostics.is_empty() {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}': {}",
+                    valueset_url,
+                    remote.diagnostics.join("; ")
+                );
+            }
+            if let Some(body) = &remote.raw_body {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}': {}",
+                    valueset_url, body
+                );
+            }
+
+            if let Some(status) = remote.status {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}' with status {}",
+                    valueset_url, status
+                );
+            }
+
+            format!(
+                "Remote terminology validation failed for ValueSet '{}'",
+                valueset_url
+            )
+        }
+        _ => format!("Remote terminology validation failed: {}", err),
+    }
+}
+
+fn summarize_codeable_concept_codings(cc: &helios_fhir::r4::CodeableConcept) -> String {
+    let Some(codings) = cc.coding.as_ref() else {
+        return "CodeableConcept has no codings".to_string();
+    };
+
+    let mut rendered = Vec::new();
+    for coding in codings {
+        let system = coding
+            .system
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty());
+        let code = coding
+            .code
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty());
+
+        match (system, code) {
+            (Some(system), Some(code)) => rendered.push(format!("{}#{}", system, code)),
+            (None, Some(code)) => rendered.push(code.to_string()),
+            (Some(system), None) => rendered.push(format!("{}#<missing-code>", system)),
+            (None, None) => rendered.push("<empty-coding>".to_string()),
+        }
+    }
+
+    if rendered.is_empty() {
+        "CodeableConcept has no codings".to_string()
+    } else {
+        rendered.join(", ")
+    }
+}
 /// Validate a primitive FHIR `code` binding.
 ///
-/// This is used for fields such as:
+/// This is used for fields such as -
 /// - `Patient.gender`
 /// - `Observation.status`
 /// - `Encounter.status`
@@ -68,7 +144,7 @@ pub fn validate_primitive_code_binding<F>(
     strength: BindingStrength,
     code_value: Option<&str>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
+    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&str) -> Result<(), TerminologyValidationError>,
@@ -95,8 +171,8 @@ where
             };
 
             match terminology.member_of(valueset_url, None, code, None) {
-                Ok(true) => issues,
-                Ok(false) => {
+                Ok(outcome) if outcome.is_member => issues,
+                Ok(_outcome) => {
                     if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                         validator,
                         fhir_path,
@@ -112,28 +188,236 @@ where
                     issues.push(crate::binding::common::terminology_issue(
                         fhir_path,
                         valueset_url,
-                        format!("Remote terminology validation failed: {}", e),
+                        prettify_remote_terminology_error(valueset_url, &e),
                     ));
                     issues
                 }
             }
         }
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet {
+            valueset_url: _err_valueset_url,
+            system,
+            code: err_code,
+        }) => {
+            let diagnostics = if let Some(system) = system {
+                format!(
+                    "The provided code '{}', from CodeSystem '{}' was not found in ValueSet {}",
+                    err_code, system, valueset_url
+                )
+            } else {
+                format!(
+                    "The provided code '{}' was not found in ValueSet {}",
+                    err_code, valueset_url
+                )
+            };
+
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
-                valueset_url,
+                &valueset_url,
                 strength,
-                format!("Code '{}' is not in ValueSet {}", code, valueset_url),
+                diagnostics,
             ) {
                 issues.push(issue);
             }
             issues
         }
 
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                &valueset_url,
+                msg.clone(),
+            ));
+
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                &valueset_url,
+                strength,
+                format!(
+                    "The value provided ('{}') was not found in the value set '{}'. ({})",
+                    code, valueset_url, msg
+                ),
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                &valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
+            issues
+        }
+
         Err(TerminologyValidationError::InvalidInput(msg)) => {
             issues.push(crate::binding::common::value_issue(
+                fhir_path,
+                valueset_url,
+                format!("Local ValueSet validation failed: {}", msg),
+            ));
+            issues
+        }
+    }
+}
+
+pub async fn validate_primitive_code_binding_async<F>(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    code: Option<&str>,
+    local_check: F,
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue>
+where
+    F: Fn(&str) -> Result<(), helios_fhir::r4::terminology::TerminologyValidationError>,
+{
+    let mut issues = Vec::new();
+
+    let Some(code) = code.filter(|c| !c.is_empty()) else {
+        return issues;
+    };
+
+    match local_check(code) {
+        Ok(()) => issues,
+
+        Err(TerminologyValidationError::NotInValueSet {
+            valueset_url,
+            system,
+            code: err_code,
+        }) => {
+            let diagnostics = if let Some(system) = system {
+                format!(
+                    "The provided code '{}', from CodeSystem '{}' was not found in ValueSet {}",
+                    err_code, system, valueset_url
+                )
+            } else {
+                format!(
+                    "The provided code '{}' was not found in ValueSet {}",
+                    err_code, valueset_url
+                )
+            };
+
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                &*valueset_url,
+                strength,
+                diagnostics,
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::UnknownCode {
+            system,
+            code,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
+            issues
+        }
+
+        Err(
+            helios_fhir::r4::terminology::TerminologyValidationError::RemoteValidationRequired(_),
+        ) => {
+            let Some(terminology) = terminology else {
+                issues.push(crate::binding::common::terminology_issue(
+                    fhir_path,
+                    valueset_url,
+                    "Remote terminology validation required but no TerminologyService was provided"
+                        .to_string(),
+                ));
+                return issues;
+            };
+
+            match terminology.member_of(valueset_url, None, code, None).await {
+                Ok(outcome) if outcome.is_member => issues,
+                Ok(outcome) => {
+                    let diagnostics = outcome.message.unwrap_or_else(|| {
+                        format!(
+                            "The provided code '{}' was not found in ValueSet {}",
+                            code, valueset_url
+                        )
+                    });
+
+                    if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                        validator,
+                        fhir_path,
+                        valueset_url,
+                        strength,
+                        diagnostics,
+                    ) {
+                        issues.push(issue);
+                    }
+                    issues
+                }
+                Err(e) => {
+                    issues.push(crate::binding::common::terminology_issue(
+                        fhir_path,
+                        valueset_url,
+                        prettify_remote_terminology_error(valueset_url, &e),
+                    ));
+                    issues
+                }
+            }
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::InvalidInput(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
                 fhir_path,
                 valueset_url,
                 format!("Local ValueSet validation failed: {}", msg),
@@ -162,7 +446,7 @@ pub fn validate_codeable_concept_binding<F>(
     strength: BindingStrength,
     codeable_concept: Option<&CodeableConcept>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
+    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
@@ -181,16 +465,55 @@ where
     match local_check(cc) {
         Ok(()) => issues,
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet { .. }) => {
+            let coding_summary = summarize_codeable_concept_codings(cc);
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
                 valueset_url,
                 strength,
-                format!("CodeableConcept is not in ValueSet {}", valueset_url),
+                format!(
+                    "The provided coding(s) {} were not found in ValueSet {}",
+                    coding_summary, valueset_url
+                ),
             ) {
                 issues.push(issue);
             }
+            issues
+        }
+
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
             issues
         }
 
@@ -220,18 +543,18 @@ where
                 any_usable_coding = true;
 
                 match terminology.member_of(valueset_url, system, code, display) {
-                    Ok(true) => {
+                    Ok(outcome) if outcome.is_member => {
                         any_match = true;
                         break;
                     }
-                    Ok(false) => {
+                    Ok(_outcome) => {
                         // Keep checking other codings.
                     }
                     Err(e) => {
                         issues.push(crate::binding::common::terminology_issue(
                             fhir_path,
                             valueset_url,
-                            format!("Remote terminology validation failed: {}", e),
+                            prettify_remote_terminology_error(valueset_url, &e),
                         ));
                         return issues;
                     }
@@ -251,18 +574,21 @@ where
                 ));
                 return issues;
             }
-
+            let coding_summary = summarize_codeable_concept_codings(cc);
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
                 valueset_url,
                 strength,
-                format!("CodeableConcept is not in ValueSet {}", valueset_url),
+                format!(
+                    "The provided coding(s) {} were not found in ValueSet {}",
+                    coding_summary, valueset_url
+                ),
             ) {
                 issues.push(issue);
             }
 
-            return issues;
+            issues
         }
 
         Err(TerminologyValidationError::InvalidInput(msg)) => {
@@ -275,16 +601,176 @@ where
         }
     }
 }
+pub async fn validate_codeable_concept_binding_async<F>(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    codeable_concept: Option<&helios_fhir::r4::CodeableConcept>,
+    local_check: F,
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue>
+where
+    F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
+{
+    let mut issues = Vec::new();
 
-/// Validate a `Coding` binding.
-///
-/// Semantics:
-/// - if the value is absent, do nothing here
-/// - try local generated ValueSet validation first
-/// - if local validation requires remote terminology, validate using the
-///   supplied `TerminologyService`
-/// - if the coding is definitively not in the bound ValueSet, emit a
-///   `ValidationIssue` according to binding strength
+    let Some(cc) = codeable_concept else {
+        return issues;
+    };
+
+    let codings = match cc.coding.as_ref() {
+        Some(codings) if !codings.is_empty() => codings,
+        _ => return issues,
+    };
+
+    match local_check(cc) {
+        Ok(()) => issues,
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::NotInValueSet { .. }) => {
+            let coding_summary = summarize_codeable_concept_codings(cc);
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                valueset_url,
+                strength,
+                format!(
+                    "The provided coding(s) {} were not found in ValueSet {}",
+                    coding_summary, valueset_url
+                ),
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::UnknownCode {
+            system,
+            code,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
+            issues
+        }
+
+        Err(
+            helios_fhir::r4::terminology::TerminologyValidationError::RemoteValidationRequired(_),
+        ) => {
+            let Some(terminology) = terminology else {
+                issues.push(crate::binding::common::terminology_issue(
+                    fhir_path,
+                    valueset_url,
+                    "Remote terminology validation required but no TerminologyService was provided"
+                        .to_string(),
+                ));
+                return issues;
+            };
+
+            let mut any_usable_coding = false;
+            let mut any_match = false;
+
+            for coding in codings {
+                let system = crate::r4::binding::coding_system(coding);
+                let code = crate::r4::binding::coding_code(coding);
+                let display = crate::r4::binding::coding_display(coding);
+
+                let Some(code) = code else {
+                    continue;
+                };
+
+                any_usable_coding = true;
+
+                match terminology
+                    .member_of(valueset_url, system, code, display)
+                    .await
+                {
+                    Ok(outcome) if outcome.is_member => {
+                        any_match = true;
+                        break;
+                    }
+                    Ok(_outcome) => {
+                        // Keep checking other codings.
+                    }
+                    Err(e) => {
+                        issues.push(crate::binding::common::terminology_issue(
+                            fhir_path,
+                            valueset_url,
+                            prettify_remote_terminology_error(valueset_url, &e),
+                        ));
+                        return issues;
+                    }
+                }
+            }
+
+            if any_match {
+                return issues;
+            }
+
+            if !any_usable_coding {
+                issues.push(crate::binding::common::value_issue(
+                    fhir_path,
+                    valueset_url,
+                    "CodeableConcept has no usable coding with a code value for terminology validation"
+                        .to_string(),
+                ));
+                return issues;
+            }
+            let coding_summary = summarize_codeable_concept_codings(cc);
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                valueset_url,
+                strength,
+                format!(
+                    "The provided coding(s) {} were not found in ValueSet {}",
+                    coding_summary, valueset_url
+                ),
+            ) {
+                issues.push(issue);
+            }
+
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::InvalidInput(msg)) => {
+            issues.push(crate::binding::common::value_issue(
+                fhir_path,
+                valueset_url,
+                format!("Local ValueSet validation failed: {}", msg),
+            ));
+            issues
+        }
+    }
+}
 pub fn validate_coding_binding<F>(
     validator: &Validator,
     fhir_path: &str,
@@ -292,7 +778,7 @@ pub fn validate_coding_binding<F>(
     strength: BindingStrength,
     coding: Option<&Coding>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
+    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&Coding) -> Result<(), TerminologyValidationError>,
@@ -313,8 +799,8 @@ where
             instance_path: None,
             expression: Some(valueset_url.to_string()),
             diagnostics:
-            "A code with no system has no defined meaning, and it cannot be validated. A system should be provided"
-                .to_string(),
+                "A code with no system has no defined meaning, and it cannot be validated. A system should be provided"
+                    .to_string(),
         });
         return issues;
     }
@@ -322,16 +808,62 @@ where
     match local_check(coding) {
         Ok(()) => issues,
 
-        Err(TerminologyValidationError::NotInValueSet(_)) => {
+        Err(TerminologyValidationError::NotInValueSet { system, code, .. }) => {
+            let diagnostics = if let Some(system) = system {
+                format!(
+                    "The provided coding {}#{} was not found in ValueSet {}",
+                    system, code, valueset_url
+                )
+            } else {
+                format!(
+                    "The provided code '{}' was not found in ValueSet {}",
+                    code, valueset_url
+                )
+            };
             if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                 validator,
                 fhir_path,
                 valueset_url,
                 strength,
-                format!("Coding is not in ValueSet {}", valueset_url),
+                diagnostics,
             ) {
                 issues.push(issue);
             }
+            issues
+        }
+
+        Err(TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::UnknownCode { system, code }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
             issues
         }
 
@@ -360,14 +892,25 @@ where
             };
 
             match terminology.member_of(valueset_url, system, code, display) {
-                Ok(true) => issues,
-                Ok(false) => {
+                Ok(outcome) if outcome.is_member => issues,
+                Ok(_outcome) => {
+                    let diagnostics = if let Some(system) = system {
+                        format!(
+                            "The provided coding {}#{} was not found in ValueSet {}",
+                            system, code, valueset_url
+                        )
+                    } else {
+                        format!(
+                            "The provided code '{}' was not found in ValueSet {}",
+                            code, valueset_url
+                        )
+                    };
                     if let Some(issue) = crate::binding::common::issue_for_binding_miss(
                         validator,
                         fhir_path,
                         valueset_url,
                         strength,
-                        format!("Coding is not in ValueSet {}", valueset_url),
+                        diagnostics,
                     ) {
                         issues.push(issue);
                     }
@@ -377,7 +920,7 @@ where
                     issues.push(crate::binding::common::terminology_issue(
                         fhir_path,
                         valueset_url,
-                        format!("Remote terminology validation failed: {}", e),
+                        prettify_remote_terminology_error(valueset_url, &e),
                     ));
                     issues
                 }
@@ -394,28 +937,203 @@ where
         }
     }
 }
+pub async fn validate_coding_binding_async<F>(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    coding: Option<&helios_fhir::r4::Coding>,
+    local_check: F,
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue>
+where
+    F: Fn(
+        &helios_fhir::r4::Coding,
+    ) -> Result<(), helios_fhir::r4::terminology::TerminologyValidationError>,
+{
+    let mut issues = Vec::new();
 
-/// Apply generated R4 binding definitions to the current focus value.
-///
-/// This function is the main entry point used by generated R4 validation code.
-/// It serializes the focused value, resolves every generated binding path to one
-/// or more concrete JSON values, and validates each value according to the
-/// binding target kind.
-///
-/// Important behavior:
-/// - repeated arrays are expanded and validated element-by-element
-/// - concrete indexed instance paths are preserved, such as
-///   `Patient.name[1].use` or `Patient.telecom[2].system`
-/// - primitive `code`, `Coding`, and `CodeableConcept` are validated through
-///   their dedicated helper functions
-/// - local generated terminology validation is attempted first
-/// - remote terminology validation is used when local validation reports that
-///   remote validation is required
+    let Some(coding) = coding else {
+        return issues;
+    };
+    let system = crate::r4::binding::coding_system(coding).filter(|s| !s.is_empty());
+    let code = crate::r4::binding::coding_code(coding).filter(|c| !c.is_empty());
+
+    if code.is_some() && system.is_none() {
+        issues.push(ValidationIssue {
+            severity: fhir_validation_types::Severity::Warning,
+            code: "terminology",
+            fhir_path: fhir_path.to_string(),
+            instance_path: None,
+            expression: Some(valueset_url.to_string()),
+            diagnostics:
+            "A code with no system has no defined meaning, and it cannot be validated. A system should be provided"
+                .to_string(),
+        });
+        return issues;
+    }
+
+    match local_check(coding) {
+        Ok(()) => issues,
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::NotInValueSet {
+            system,
+            code,
+            ..
+        }) => {
+            let diagnostics = if let Some(system) = system {
+                format!(
+                    "The provided coding {}#{} was not found in ValueSet {}",
+                    system, code, valueset_url
+                )
+            } else {
+                format!(
+                    "The provided code '{}' was not found in ValueSet {}",
+                    code, valueset_url
+                )
+            };
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                valueset_url,
+                strength,
+                diagnostics,
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::MissingSystem(msg)) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                msg,
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::UnknownCode {
+            system,
+            code,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in CodeSystem '{}'", code, system),
+            ));
+            issues
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for {}#{}. Expected '{}'",
+                    provided, system, code, expected
+                ),
+            ));
+            issues
+        }
+
+        Err(
+            helios_fhir::r4::terminology::TerminologyValidationError::RemoteValidationRequired(_),
+        ) => {
+            let Some(terminology) = terminology else {
+                issues.push(crate::binding::common::terminology_issue(
+                    fhir_path,
+                    valueset_url,
+                    "Remote terminology validation required but no TerminologyService was provided"
+                        .to_string(),
+                ));
+                return issues;
+            };
+
+            let system = crate::r4::binding::coding_system(coding);
+            let code = crate::r4::binding::coding_code(coding);
+            let display = crate::r4::binding::coding_display(coding);
+
+            let Some(code) = code else {
+                issues.push(crate::binding::common::value_issue(
+                    fhir_path,
+                    valueset_url,
+                    "Coding has no code value for terminology validation".to_string(),
+                ));
+                return issues;
+            };
+
+            match terminology
+                .member_of(valueset_url, system, code, display)
+                .await
+            {
+                Ok(outcome) if outcome.is_member => issues,
+                Ok(_outcome) => {
+                    let diagnostics = if let Some(system) = system {
+                        format!(
+                            "The provided coding {}#{} was not found in ValueSet {}",
+                            system, code, valueset_url
+                        )
+                    } else {
+                        format!(
+                            "The provided code '{}' was not found in ValueSet {}",
+                            code, valueset_url
+                        )
+                    };
+                    if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                        validator,
+                        fhir_path,
+                        valueset_url,
+                        strength,
+                        diagnostics,
+                    ) {
+                        issues.push(issue);
+                    }
+                    issues
+                }
+                Err(e) => {
+                    issues.push(crate::binding::common::terminology_issue(
+                        fhir_path,
+                        valueset_url,
+                        prettify_remote_terminology_error(valueset_url, &e),
+                    ));
+                    issues
+                }
+            }
+        }
+
+        Err(helios_fhir::r4::terminology::TerminologyValidationError::InvalidInput(msg)) => {
+            issues.push(crate::binding::common::value_issue(
+                fhir_path,
+                valueset_url,
+                format!("Local ValueSet validation failed: {}", msg),
+            ));
+            issues
+        }
+    }
+}
+fn local_binding_instance_path(binding_path: &str, matched_instance_path: &str) -> String {
+    let root = root_instance_path(binding_path);
+
+    if let Some((_, local_root)) = root.rsplit_once('.') {
+        if let Some(suffix) = matched_instance_path.strip_prefix(root) {
+            return format!("{}{}", local_root, suffix);
+        }
+    }
+
+    matched_instance_path.to_string()
+}
+
 pub fn apply_r4_bindings<T>(
     validator: &Validator,
     focus: &T,
     bindings: &[BindingDef],
-    terminology: Option<&dyn TerminologyService>,
+    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     T: Serialize,
@@ -441,7 +1159,21 @@ where
             root_instance_path(&binding.path),
             relative_path,
         );
-
+        // println!(
+        //     "binding path={}, target={:?}, matches={:?}",
+        //     binding.path,
+        //     binding.target_kind,
+        //     field_values
+        //         .iter()
+        //         .map(|(_, p)| p.clone())
+        //         .collect::<Vec<_>>()
+        // );
+        // println!(
+        //     "binding path={}, relative={}, matches={:?}",
+        //     binding.path,
+        //     relative_binding_path(binding.path),
+        //     field_values.iter().map(|(_, p)| p.clone()).collect::<Vec<_>>()
+        // );
         match binding.target_kind {
             BindingTargetKind::Code => {
                 for (field_value, instance_path) in &field_values {
@@ -456,9 +1188,10 @@ where
                         |code| terminology_index::validate_code(binding.value_set, code),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);
@@ -478,9 +1211,10 @@ where
                         |coding| terminology_index::validate_coding(binding.value_set, coding),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);
@@ -501,9 +1235,10 @@ where
                         |cc| terminology_index::validate_codeable_concept(binding.value_set, cc),
                         terminology,
                     );
-
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
-                        issue.instance_path = Some(instance_path.clone());
+                        issue.instance_path = Some(stamped_instance_path.clone());
                     }
 
                     issues.extend(child_issues);
@@ -513,6 +1248,128 @@ where
             _ => {
                 // no-op for unsupported / unhandled target kinds
             }
+        }
+    }
+
+    issues
+}
+pub async fn apply_r4_bindings_async<T>(
+    validator: &Validator,
+    focus: &T,
+    bindings: &[BindingDef],
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue>
+where
+    T: Serialize,
+{
+    let mut issues = Vec::new();
+    let focus_json = match serde_json::to_value(focus) {
+        Ok(v) => v,
+        Err(e) => {
+            issues.push(ValidationIssue::error(
+                "structure",
+                "",
+                format!("Failed to serialize focus for binding validation: {}", e),
+            ));
+            return issues;
+        }
+    };
+
+    for binding in bindings {
+        let relative_path = relative_binding_path(&binding.path);
+        let field_values = get_json_values_with_instance_paths(
+            &focus_json,
+            root_instance_path(&binding.path),
+            relative_path,
+        );
+
+        match binding.target_kind {
+            BindingTargetKind::Code => {
+                for (field_value, instance_path) in &field_values {
+                    let code_value = field_value.as_str();
+
+                    let mut child_issues =
+                        crate::r4::binding::validate_primitive_code_binding_async(
+                            validator,
+                            &binding.path,
+                            binding.value_set,
+                            binding.strength,
+                            code_value,
+                            |code| terminology_index::validate_code(binding.value_set, code),
+                            terminology,
+                        )
+                        .await;
+
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
+                    for issue in &mut child_issues {
+                        issue.instance_path = Some(stamped_instance_path.clone());
+                    }
+
+                    issues.extend(child_issues);
+                }
+            }
+
+            BindingTargetKind::Coding => {
+                for (field_value, instance_path) in &field_values {
+                    let coding =
+                        serde_json::from_value::<helios_fhir::r4::Coding>((*field_value).clone())
+                            .ok();
+
+                    let mut child_issues = crate::r4::binding::validate_coding_binding_async(
+                        validator,
+                        &binding.path,
+                        binding.value_set,
+                        binding.strength,
+                        coding.as_ref(),
+                        |coding| terminology_index::validate_coding(binding.value_set, coding),
+                        terminology,
+                    )
+                    .await;
+
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
+                    for issue in &mut child_issues {
+                        issue.instance_path = Some(stamped_instance_path.clone());
+                    }
+
+                    issues.extend(child_issues);
+                }
+            }
+
+            BindingTargetKind::CodeableConcept => {
+                for (field_value, instance_path) in &field_values {
+                    let codeable_concept =
+                        serde_json::from_value::<helios_fhir::r4::CodeableConcept>(
+                            (*field_value).clone(),
+                        )
+                        .ok();
+
+                    let mut child_issues =
+                        crate::r4::binding::validate_codeable_concept_binding_async(
+                            validator,
+                            &binding.path,
+                            binding.value_set,
+                            binding.strength,
+                            codeable_concept.as_ref(),
+                            |cc| {
+                                terminology_index::validate_codeable_concept(binding.value_set, cc)
+                            },
+                            terminology,
+                        )
+                        .await;
+
+                    let stamped_instance_path =
+                        local_binding_instance_path(&binding.path, instance_path);
+                    for issue in &mut child_issues {
+                        issue.instance_path = Some(stamped_instance_path.clone());
+                    }
+
+                    issues.extend(child_issues);
+                }
+            }
+
+            _ => {}
         }
     }
 

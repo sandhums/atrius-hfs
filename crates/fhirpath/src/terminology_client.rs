@@ -185,12 +185,31 @@ impl TerminologyClient {
         display: Option<&str>,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/ValueSet/$validate-code", self.base_url);
+        let local_valueset_id = Self::local_valueset_id_from_canonical(value_set_url);
+        let (base_valueset_url, valueset_version) = Self::split_valueset_canonical(value_set_url);
 
-        let mut parameters = vec![json!({
-            "name": "url",
-            "valueUri": value_set_url
-        })];
+        let url = if let Some(valueset_id) = local_valueset_id {
+            format!("{}/ValueSet/{}/$validate-code", self.base_url, valueset_id)
+        } else {
+            format!("{}/ValueSet/$validate-code", self.base_url)
+        };
+
+        let mut parameters = Vec::new();
+
+        if local_valueset_id.is_none() {
+            parameters.push(json!({
+        "name": "url",
+        "valueUri": base_valueset_url
+    }));
+
+            if let Some(version) = valueset_version {
+                parameters.push(json!({
+            "name": "valueSetVersion",
+            "valueString": version
+        }));
+            }
+
+        }
 
         // If we have a system, use coding parameter, otherwise use code parameter
         if let Some(system) = system {
@@ -248,7 +267,6 @@ impl TerminologyClient {
             .send()
             .await
             .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
         if response.status().is_success() {
             let result: Value = response
                 .json()
@@ -264,6 +282,7 @@ impl TerminologyClient {
                 status, body
             )))
         }
+        
     }
 
     /// Validates a code against a CodeSystem
@@ -521,6 +540,19 @@ impl TerminologyClient {
                 status, body
             )))
         }
+    }
+    fn split_valueset_canonical(valueset_url: &str) -> (&str, Option<&str>) {
+        if let Some((base, version)) = valueset_url.split_once('|') {
+            (base, Some(version))
+        } else {
+            (valueset_url, None)
+        }
+    }
+
+    fn local_valueset_id_from_canonical(valueset_url: &str) -> Option<&str> {
+        let (base, _version) = Self::split_valueset_canonical(valueset_url);
+        base.strip_prefix("http://hl7.org/fhir/ValueSet/")
+            .filter(|id| !id.is_empty())
     }
 }
 

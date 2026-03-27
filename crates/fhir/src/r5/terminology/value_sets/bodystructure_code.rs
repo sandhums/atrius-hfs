@@ -17,6 +17,9 @@ impl SNOMEDCTMorphologicAbnormalities {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = true;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://snomed.info/sct",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.

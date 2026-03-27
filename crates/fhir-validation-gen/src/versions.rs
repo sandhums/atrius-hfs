@@ -39,6 +39,14 @@ impl FhirVersion {
             Self::R6 => "R6Validatable",
         }
     }
+    pub fn validatable_trait_name_async(self) -> &'static str {
+        match self {
+            Self::R4 => "R4ValidatableAsync",
+            Self::R4B => "R4BValidatableAsync",
+            Self::R5 => "R5ValidatableAsync",
+            Self::R6 => "R6ValidatableAsync",
+        }
+    }
 
     /// `cfg(feature = ...)` feature gate used when emitting impl blocks.
     pub fn validation_feature(self) -> &'static str {

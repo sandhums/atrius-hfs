@@ -20,6 +20,7 @@ impl SecurityLabelExamples {
         "http://hl7.org/fhir/ValueSet/security-label-data-examples",
         "http://hl7.org/fhir/ValueSet/security-label-event-examples",
     ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
