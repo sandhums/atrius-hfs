@@ -267,6 +267,7 @@ impl TerminologyClient {
             .send()
             .await
             .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
+        println!("{:?}", response);
         if response.status().is_success() {
             let result: Value = response
                 .json()

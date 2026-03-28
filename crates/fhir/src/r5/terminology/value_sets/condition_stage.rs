@@ -25,10 +25,12 @@ impl ConditionStage {
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "416780008"));
+            if matches!(code, "416780008") { return Some(true); }
+            return None;
         }
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "715345007"));
+            if matches!(code, "715345007") { return Some(true); }
+            return None;
         }
         None
     }
@@ -38,10 +40,10 @@ impl ConditionStage {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "416780008"));
+            return None;
         }
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "715345007"));
+            return None;
         }
         None
     }

@@ -1,90 +1,12 @@
+pub mod types;
+pub mod requests;
+pub mod backend;
+pub mod service;
+pub mod helios;
+
 use crate::ValidationError;
-use async_trait::async_trait;
-use helios_fhir::FhirVersion;
-use helios_fhirpath::terminology_client::TerminologyClient;
-use tracing::debug;
+use types::{TerminologyMembershipOutcome, TerminologyRemoteError};
 
-#[derive(Debug, Clone)]
-pub struct TerminologyMembershipOutcome {
-    pub is_member: bool,
-    pub message: Option<String>,
-    pub diagnostics: Vec<String>,
-    pub system: Option<String>,
-    pub code: Option<String>,
-    pub version: Option<String>,
-    pub display: Option<String>,
-}
-#[derive(Debug, Clone)]
-pub struct TerminologyRemoteError {
-    pub status: Option<u16>,
-    pub diagnostics: Vec<String>,
-    pub raw_body: Option<String>,
-}
-/// Trait representing a terminology validation service.
-///
-/// This allows the validator to remain independent of the specific
-/// terminology backend (Snowstorm, HAPI, local cache, etc.).
-#[async_trait]
-pub trait TerminologyService: Send + Sync {
-    async fn member_of(
-        &self,
-        valueset_url: &str,
-        system: Option<&str>,
-        code: &str,
-        display: Option<&str>,
-    ) -> Result<TerminologyMembershipOutcome, ValidationError>;
-}
-/// Synchronous terminology validation interface used by backward-compatible
-/// sync validation paths.
-///
-/// This trait is intended for local-only or explicitly synchronous terminology
-/// integrations. Production remote terminology lookups should generally prefer
-/// the asynchronous [`TerminologyService`] path.
-pub trait TerminologyServiceSync {
-    fn member_of(
-        &self,
-        valueset_url: &str,
-        system: Option<&str>,
-        code: &str,
-        display: Option<&str>,
-    ) -> Result<TerminologyMembershipOutcome, ValidationError>;
-}
-
-/// Terminology service backed by a remote FHIR terminology server.
-///
-/// This adapter uses the FHIR `$validate-code` operation via the
-/// `helios_fhirpath::terminology_client::TerminologyClient`.
-pub struct RemoteTerminologyService {
-    client: TerminologyClient,
-}
-impl RemoteTerminologyService {
-    /// Create a remote terminology service with the default HTTP client.
-    ///
-    /// This is suitable for local development and simple integration setups.
-    /// For production use, prefer `with_client(...)` so timeouts, connection
-    /// pooling, authentication, and other transport behavior can be configured
-    /// explicitly.
-    pub fn new(base_url: String, fhir_version: FhirVersion) -> Self {
-        Self {
-            client: TerminologyClient::new(base_url, fhir_version),
-        }
-    }
-
-    /// Create a remote terminology service with a caller-provided HTTP client.
-    ///
-    /// This allows production callers to configure request timeout, connect
-    /// timeout, connection pooling, keepalive, authentication, proxies, and
-    /// related transport settings once and reuse them across terminology calls.
-    pub fn with_client(
-        client: reqwest::Client,
-        base_url: String,
-        fhir_version: FhirVersion,
-    ) -> Self {
-        Self {
-            client: TerminologyClient::with_client(client, base_url, fhir_version),
-        }
-    }
-}
 fn extract_operation_outcome_diagnostics(body: &str) -> Vec<String> {
     let Ok(json) = serde_json::from_str::<serde_json::Value>(body) else {
         return Vec::new();
@@ -136,36 +58,6 @@ pub fn build_remote_terminology_error(msg: &str) -> TerminologyRemoteError {
         status,
         diagnostics: Vec::new(),
         raw_body: Some(msg.to_string()),
-    }
-}
-
-#[async_trait]
-impl TerminologyService for RemoteTerminologyService {
-    async fn member_of(
-        &self,
-        valueset_url: &str,
-        system: Option<&str>,
-        code: &str,
-        display: Option<&str>,
-    ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-        let response = self
-            .client
-            .validate_vs(valueset_url, system, code, display, None)
-            .await
-            .map_err(|e| {
-                ValidationError::TerminologyRemote(build_remote_terminology_error(&e.to_string()))
-            })?;
-
-        // parse_validate_vs_result(&response)
-        let outcome = parse_validate_vs_result(&response)?;
-        debug!(
-            valueset_url,
-            system,
-            code,
-            ?outcome,
-            "remote terminology outcome"
-        );
-        Ok(outcome)
     }
 }
 

@@ -3996,7 +3996,7 @@ fn test_resource_nested_field_access() {
     let given_ids = eval("name.given.id", &context).unwrap(); // (empty for John), given2-id, (empty for Johnny), (empty for Jane)
     let s2 = EvaluationResult::string("given2-id".to_string());
     assert!(
-        matches!(given_ids, s2),
+        matches!(given_ids, ref s2),
         "Expected String for name.given.id, got {:?}",
         given_ids
     ); // Only one ID present

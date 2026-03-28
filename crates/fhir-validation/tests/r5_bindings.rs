@@ -6,10 +6,12 @@ mod common {
 #[cfg(test)]
 mod tests {
     use crate::common::fixtures::{assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient, load_resource, validate_resource, validate_resource_async};
-    use fhir_validation::{RemoteTerminologyService, TerminologyMembershipOutcome, TerminologyServiceSync, ValidationError};
+    use fhir_validation::ValidationError;
     use helios_fhir::FhirVersion;
     use reqwest::Client;
     use std::time::Duration;
+    use fhir_validation::terminology::service::{RemoteTerminologyService, TerminologyServiceSync};
+    use fhir_validation::terminology::types::TerminologyMembershipOutcome;
 
     struct MockTerminologyService {
         result: Result<TerminologyMembershipOutcome, ValidationError>,
@@ -174,4 +176,27 @@ mod tests {
         let issues = validate_resource_async(&resource, Some(&terminology)).await;
         println!("{:#?}", issues);
     }
+
+#[tokio::test]
+async fn r5_obs_async() {
+    let client = Client::builder()
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(8))
+        .pool_idle_timeout(Duration::from_secs(30))
+        .pool_max_idle_per_host(8)
+        .tcp_keepalive(Duration::from_secs(30))
+        .build()
+        .expect("failed to build reqwest client");
+
+    let terminology = RemoteTerminologyService::with_client(
+        client,
+        "http://localhost:8080/fhir".to_string(),
+        FhirVersion::R5,
+    );
+
+    let resource = load_resource(FhirVersion::R5, "invalid/obs-resource-element-test.json");
+    let issues = validate_resource_async(&resource, Some(&terminology)).await;
+    println!("{:#?}", issues);
 }
+}
+

@@ -88,6 +88,7 @@ pub mod terminology;
 pub use core::*;
 pub use evaluators::*;
 pub use terminology::*;
+use terminology::service::{TerminologyService, TerminologyServiceSync};
 
 #[cfg(feature = "R4")]
 pub mod r4;

@@ -96,34 +96,3 @@ impl std::str::FromStr for FhirVersion {
     }
 }
 
-// impl StructureKind {
-//     pub fn is_type_like(self) -> bool {
-//         matches!(self, Self::PrimitiveType | Self::ComplexType)
-//     }
-//
-//     pub fn is_resource_like(self) -> bool {
-//         matches!(self, Self::Resource)
-//     }
-// }
-
-// /// Minimal ancestry hint used by extraction/emission before richer hierarchy is added.
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-// pub enum TypeFamily {
-//     Primitive,
-//     Element,
-//     BackboneElement,
-//     Resource,
-//     DomainResource,
-//     #[default]
-//     Unknown,
-// }
-//
-// impl TypeFamily {
-//     pub fn is_element_like(self) -> bool {
-//         matches!(self, Self::Element | Self::BackboneElement)
-//     }
-//
-//     pub fn is_resource_like(self) -> bool {
-//         matches!(self, Self::Resource | Self::DomainResource)
-//     }
-// }

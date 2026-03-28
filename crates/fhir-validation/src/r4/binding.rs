@@ -25,12 +25,13 @@
 use crate::binding::common::{
     get_json_values_with_instance_paths, relative_binding_path, root_instance_path,
 };
-use crate::{TerminologyService, TerminologyServiceSync, ValidationIssue, Validator};
+use crate::{ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
 use helios_fhir::r4::terminology::TerminologyValidationError;
 use helios_fhir::r4::terminology::index as terminology_index;
 use helios_fhir::r4::{CodeableConcept, Coding};
 use serde::Serialize;
+use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 
 #[cfg(feature = "R4")]
 pub fn coding_system(coding: &Coding) -> Option<&str> {

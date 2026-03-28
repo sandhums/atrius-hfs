@@ -22,11 +22,11 @@ pub use fhir_validation_types::{
     BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
 };
 
-use crate::{
-    FhirPathEvaluator, TerminologyRemoteError, TerminologyService, TerminologyServiceSync,
-};
+use crate::FhirPathEvaluator;
 use serde_json::Value;
 use std::fmt;
+use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
+use crate::terminology::types::TerminologyRemoteError;
 
 /// A single validation issue that can later be mapped to
 /// `OperationOutcome.issue`.
@@ -128,13 +128,17 @@ pub struct ValidationConfig {
 
     /// Emit warnings for preferred bindings
     pub warn_on_preferred_bindings: bool,
+
+    /// Emit warnings for preferred bindings
+    pub warn_on_example_bindings: bool,
 }
 
 impl Default for ValidationConfig {
     fn default() -> Self {
         Self {
-            strict_extensible_bindings: false,
-            warn_on_preferred_bindings: false,
+            strict_extensible_bindings: true,
+            warn_on_preferred_bindings: true,
+            warn_on_example_bindings: true,
         }
     }
 }
@@ -214,7 +218,11 @@ impl Validator {
             } else {
                 Severity::Information
             }),
-            BindingStrength::Example => None,
+            BindingStrength::Example => Some(if self.config.warn_on_example_bindings {
+                Severity::Warning
+            } else {
+                Severity::Information
+        }),
         }
     }
     /// Validate a versioned `FhirResource` by dispatching to the appropriate

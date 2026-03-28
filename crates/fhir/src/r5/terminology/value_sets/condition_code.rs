@@ -25,7 +25,8 @@ impl ConditionProblemDiagnosisCodes {
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "160245001"));
+            if matches!(code, "160245001") { return Some(true); }
+            return None;
         }
         None
     }
@@ -35,7 +36,7 @@ impl ConditionProblemDiagnosisCodes {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "160245001"));
+            return None;
         }
         None
     }

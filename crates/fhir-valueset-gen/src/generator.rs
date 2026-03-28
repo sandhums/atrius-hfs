@@ -527,6 +527,7 @@ fn render_valueset_file(
     let mut include_vs_urls: Vec<String> = Vec::new();
     let mut implicit_systems: Vec<String> = Vec::new();
     let mut included_systems: Vec<String> = Vec::new();
+    let mut systems_with_nonlocal_rules: Vec<String> = Vec::new();
 
     if let Some(compose) = vs.compose.as_ref() {
         for inc in compose.include.as_deref().unwrap_or(&[]) {
@@ -543,11 +544,21 @@ fn render_valueset_file(
                     included_systems.push(sys.to_string());
                 }
 
+                let concepts = indexer::extract_valueset_concepts(inc);
                 let has_filters = inc.filter.as_ref().map(|f| !f.is_empty()).unwrap_or(false);
                 let has_vs_refs = inc.value_set.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
                 if !has_filters && !has_vs_refs && !implicit_systems.iter().any(|s| s == sys) {
                     implicit_systems.push(sys.to_string());
+                }
+
+                let has_nonlocal_on_this_include = has_filters
+                    || has_vs_refs
+                    || (concepts.is_empty() && !index.cs_concepts_by_url.contains_key(sys));
+                if has_nonlocal_on_this_include
+                    && !systems_with_nonlocal_rules.iter().any(|s| s == sys)
+                {
+                    systems_with_nonlocal_rules.push(sys.to_string());
                 }
             }
         }
@@ -642,22 +653,36 @@ fn render_valueset_file(
             // Case 1: inline concepts -> local match list
             if !concepts.is_empty() {
                 emitted_any = true;
+                let system_has_nonlocal_rules = systems_with_nonlocal_rules.iter().any(|s| s == sys);
                 s.push_str(&format!("        if system == \"{sys}\" {{\n"));
-                s.push_str("            return Some(matches!(code, ");
-
-                let mut first = true;
-                for c in concepts {
-                    let code = c.code.as_str();
-                    if first {
-                        s.push_str(&format!("\"{code}\""));
-                        first = false;
-                    } else {
-                        s.push_str(&format!(" | \"{code}\""));
+                if system_has_nonlocal_rules {
+                    s.push_str("            if matches!(code, ");
+                    let mut first = true;
+                    for c in concepts {
+                        let code = c.code.as_str();
+                        if first {
+                            s.push_str(&format!("\"{}\"", escape_str(code)));
+                            first = false;
+                        } else {
+                            s.push_str(&format!(" | \"{}\"", escape_str(code)));
+                        }
                     }
+                    s.push_str(") { return Some(true); }\n");
+                    s.push_str("            return None;\n");
+                } else {
+                    s.push_str("            return Some(matches!(code, ");
+                    let mut first = true;
+                    for c in concepts {
+                        let code = c.code.as_str();
+                        if first {
+                            s.push_str(&format!("\"{}\"", escape_str(code)));
+                            first = false;
+                        } else {
+                            s.push_str(&format!(" | \"{}\"", escape_str(code)));
+                        }
+                    }
+                    s.push_str("));\n");
                 }
-
-                // If for some reason no codes were emitted, fall back to nonlocal.
-                s.push_str("));\n");
                 s.push_str("        }\n");
                 continue;
             }
@@ -743,19 +768,24 @@ fn render_valueset_file(
             let concepts = indexer::extract_valueset_concepts(inc);
             if !concepts.is_empty() {
                 emitted_known_any = true;
+                let system_has_nonlocal_rules = systems_with_nonlocal_rules.iter().any(|s| s == sys);
                 s.push_str(&format!("        if system == \"{sys}\" {{\n"));
-                s.push_str("            return Some(matches!(code, ");
-                let mut first = true;
-                for c in concepts {
-                    let code = c.code.as_str();
-                    if first {
-                        s.push_str(&format!("\"{}\"", escape_str(code)));
-                        first = false;
-                    } else {
-                        s.push_str(&format!(" | \"{}\"", escape_str(code)));
+                if system_has_nonlocal_rules {
+                    s.push_str("            return None;\n");
+                } else {
+                    s.push_str("            return Some(matches!(code, ");
+                    let mut first = true;
+                    for c in concepts {
+                        let code = c.code.as_str();
+                        if first {
+                            s.push_str(&format!("\"{}\"", escape_str(code)));
+                            first = false;
+                        } else {
+                            s.push_str(&format!(" | \"{}\"", escape_str(code)));
+                        }
                     }
+                    s.push_str("));\n");
                 }
-                s.push_str("));\n");
                 s.push_str("        }\n");
                 continue;
             }

@@ -10,9 +10,11 @@ mod common {
 mod tests {
     use fhir_validation::r4::binding::validate_primitive_code_binding;
     use fhir_validation::{
-        TerminologyMembershipOutcome, TerminologyServiceSync, ValidationConfig, ValidationError,
+        ValidationConfig, ValidationError,
         Validator,
     };
+    use fhir_validation::terminology::service::TerminologyServiceSync;
+    use fhir_validation::terminology::types::TerminologyMembershipOutcome;
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::r4::terminology::TerminologyValidationError;
 
@@ -128,7 +130,7 @@ mod tests {
         );
 
         assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].severity, Severity::Warning);
+        assert_eq!(issues[0].severity, Severity::Error);
         assert_eq!(issues[0].code, "value");
     }
 

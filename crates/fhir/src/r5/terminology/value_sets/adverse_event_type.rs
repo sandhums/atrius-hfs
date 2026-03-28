@@ -25,7 +25,8 @@ impl AdverseEventType {
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "1912002"));
+            if matches!(code, "1912002") { return Some(true); }
+            return None;
         }
         None
     }
@@ -35,7 +36,7 @@ impl AdverseEventType {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "1912002"));
+            return None;
         }
         None
     }
