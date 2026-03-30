@@ -111,5 +111,4 @@ impl ConditionQuestionnairePurpose {
             })
             .unwrap_or(false)
     }
-
 }

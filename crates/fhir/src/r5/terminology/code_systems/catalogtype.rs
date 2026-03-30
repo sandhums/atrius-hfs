@@ -111,5 +111,4 @@ impl CatalogType {
             })
             .unwrap_or(false)
     }
-
 }

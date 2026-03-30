@@ -198,17 +198,16 @@ impl TerminologyClient {
 
         if local_valueset_id.is_none() {
             parameters.push(json!({
-        "name": "url",
-        "valueUri": base_valueset_url
-    }));
+                "name": "url",
+                "valueUri": base_valueset_url
+            }));
 
             if let Some(version) = valueset_version {
                 parameters.push(json!({
-            "name": "valueSetVersion",
-            "valueString": version
-        }));
+                    "name": "valueSetVersion",
+                    "valueString": version
+                }));
             }
-
         }
 
         // If we have a system, use coding parameter, otherwise use code parameter
@@ -267,7 +266,7 @@ impl TerminologyClient {
             .send()
             .await
             .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-        println!("{:?}", response);
+
         if response.status().is_success() {
             let result: Value = response
                 .json()
@@ -283,7 +282,6 @@ impl TerminologyClient {
                 status, body
             )))
         }
-        
     }
 
     /// Validates a code against a CodeSystem

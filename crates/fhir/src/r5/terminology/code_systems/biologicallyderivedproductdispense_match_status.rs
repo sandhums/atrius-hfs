@@ -16,7 +16,8 @@ pub enum BiologicallyDerivedProductDispenseMatchStatus {
 }
 
 impl BiologicallyDerivedProductDispenseMatchStatus {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-match-status";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-match-status";
     pub const VERSION: &'static str = "5.0.0";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -54,10 +55,16 @@ impl BiologicallyDerivedProductDispenseMatchStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Crossmatched => Some("The product has been serologically or electronically crossmatched for the recipient"),
-            Self::Selected => Some("The product has been selected for the specific use of the recipient"),
+            Self::Crossmatched => Some(
+                "The product has been serologically or electronically crossmatched for the recipient",
+            ),
+            Self::Selected => {
+                Some("The product has been selected for the specific use of the recipient")
+            }
             Self::Unmatched => Some("No specific matching has been carried out"),
-            Self::LeastIncompatible => Some("The product has been selected through crossmatching as least incompatible"),
+            Self::LeastIncompatible => {
+                Some("The product has been selected through crossmatching as least incompatible")
+            }
         }
     }
 
@@ -118,5 +125,4 @@ impl BiologicallyDerivedProductDispenseMatchStatus {
             })
             .unwrap_or(false)
     }
-
 }

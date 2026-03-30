@@ -70,14 +70,30 @@ impl TriggerType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NamedEvent => Some("The trigger occurs in response to a specific named event, and no other information about the trigger is specified. Named events are completely pre-coordinated, and the formal semantics of the trigger are not provided."),
-            Self::Periodic => Some("The trigger occurs at a specific time or periodically as described by a timing or schedule. A periodic event cannot have any data elements, but may have a name assigned as a shorthand for the event."),
-            Self::DataChanged => Some("The trigger occurs whenever data of a particular type is changed in any way, either added, modified, or removed."),
-            Self::DataAdded => Some("The trigger occurs whenever data of a particular type is added."),
-            Self::DataModified => Some("The trigger occurs whenever data of a particular type is modified."),
-            Self::DataRemoved => Some("The trigger occurs whenever data of a particular type is removed."),
-            Self::DataAccessed => Some("The trigger occurs whenever data of a particular type is accessed."),
-            Self::DataAccessEnded => Some("The trigger occurs whenever access to data of a particular type is completed."),
+            Self::NamedEvent => Some(
+                "The trigger occurs in response to a specific named event, and no other information about the trigger is specified. Named events are completely pre-coordinated, and the formal semantics of the trigger are not provided.",
+            ),
+            Self::Periodic => Some(
+                "The trigger occurs at a specific time or periodically as described by a timing or schedule. A periodic event cannot have any data elements, but may have a name assigned as a shorthand for the event.",
+            ),
+            Self::DataChanged => Some(
+                "The trigger occurs whenever data of a particular type is changed in any way, either added, modified, or removed.",
+            ),
+            Self::DataAdded => {
+                Some("The trigger occurs whenever data of a particular type is added.")
+            }
+            Self::DataModified => {
+                Some("The trigger occurs whenever data of a particular type is modified.")
+            }
+            Self::DataRemoved => {
+                Some("The trigger occurs whenever data of a particular type is removed.")
+            }
+            Self::DataAccessed => {
+                Some("The trigger occurs whenever data of a particular type is accessed.")
+            }
+            Self::DataAccessEnded => Some(
+                "The trigger occurs whenever access to data of a particular type is completed.",
+            ),
         }
     }
 
@@ -146,5 +162,4 @@ impl TriggerType {
             })
             .unwrap_or(false)
     }
-
 }

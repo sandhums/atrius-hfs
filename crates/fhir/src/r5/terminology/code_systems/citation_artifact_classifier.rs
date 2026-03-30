@@ -163,35 +163,69 @@ impl CitationArtifactClassifier {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Audio => Some("The article cited is an audio file."),
-            Self::D001877 => Some("Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers."),
-            Self::CdsArtifact => Some("The artifact is used for decision support for healthcare decisions."),
+            Self::D001877 => Some(
+                "Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers.",
+            ),
+            Self::CdsArtifact => {
+                Some("The artifact is used for decision support for healthcare decisions.")
+            }
             Self::D016420 => Some("Comment"),
-            Self::CommonShare => Some("Citation Resource containing value added data that is openly shared"),
-            Self::D019991 => Some("A structured file of information or a set of logically related data stored and retrieved using computer-based means."),
-            Self::D064886 => Some("Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing."),
-            Self::DatasetUnpublished => Some("An organized collection of data that is not stored permanently for communication."),
+            Self::CommonShare => {
+                Some("Citation Resource containing value added data that is openly shared")
+            }
+            Self::D019991 => Some(
+                "A structured file of information or a set of logically related data stored and retrieved using computer-based means.",
+            ),
+            Self::D064886 => Some(
+                "Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing.",
+            ),
+            Self::DatasetUnpublished => Some(
+                "An organized collection of data that is not stored permanently for communication.",
+            ),
             Self::Electronic => Some("the journal is published in electronic format only"),
-            Self::ElectronicECollection => Some("used for electronic-only journals that publish individual articles first and then later collect them into an \"issue\" date that is typically called an eCollection."),
-            Self::ElectronicPrint => Some("the journal is published first in electronic format followed by print (this value is currently used for just one journal, Nucleic Acids Research)"),
+            Self::ElectronicECollection => Some(
+                "used for electronic-only journals that publish individual articles first and then later collect them into an \"issue\" date that is typically called an eCollection.",
+            ),
+            Self::ElectronicPrint => Some(
+                "the journal is published first in electronic format followed by print (this value is currently used for just one journal, Nucleic Acids Research)",
+            ),
             Self::ExecutableApp => Some("Executable app"),
             Self::FhirResource => Some("The article cited is a FHIR resource."),
             Self::Image => Some("The article cited is an image file."),
-            Self::InteractiveForm => Some("A user interface that supports data entry and data display."),
+            Self::InteractiveForm => {
+                Some("A user interface that supports data entry and data display.")
+            }
             Self::D016428 => Some("Journal Article"),
             Self::D016422 => Some("Letter"),
             Self::MachineCode => Some("The article cited is machine code."),
             Self::MedlineBase => Some("Citation Resource containing only data from Medline"),
-            Self::PredictionModel => Some("A formula or expression used to calculate an outcome representing a predicted result."),
+            Self::PredictionModel => Some(
+                "A formula or expression used to calculate an outcome representing a predicted result.",
+            ),
             Self::D000076942 => Some("Scientific manuscript made available prior to PEER REVIEW."),
             Self::Print => Some("the journal is published in print format only"),
-            Self::PrintElectronic => Some("the journal is published in both print and electronic format"),
-            Self::ProjectSpecific => Some("Citation Resource containing value added data specific to a project"),
-            Self::Protocol => Some("The article cited is the protocol of an activity and not the results or findings."),
-            Self::Pseudocode => Some("A non-executable, human-readable representation of software code."),
+            Self::PrintElectronic => {
+                Some("the journal is published in both print and electronic format")
+            }
+            Self::ProjectSpecific => {
+                Some("Citation Resource containing value added data specific to a project")
+            }
+            Self::Protocol => Some(
+                "The article cited is the protocol of an activity and not the results or findings.",
+            ),
+            Self::Pseudocode => {
+                Some("A non-executable, human-readable representation of software code.")
+            }
             Self::D016425 => Some("Published Erratum"),
-            Self::StandardSpecification => Some("An explicit set of requirements for an item, material, component, system or service, often used to define a technical standard which is an established norm or requirement for a repeatable technical task."),
-            Self::Terminology => Some("A structured set of codes and display values, which may be subtyped as a code system, value set, taxonomy, or ontology."),
-            Self::D059040 => Some("Used with articles which include video files or clips, or for articles which are entirely video."),
+            Self::StandardSpecification => Some(
+                "An explicit set of requirements for an item, material, component, system or service, often used to define a technical standard which is an established norm or requirement for a repeatable technical task.",
+            ),
+            Self::Terminology => Some(
+                "A structured set of codes and display values, which may be subtyped as a code system, value set, taxonomy, or ontology.",
+            ),
+            Self::D059040 => Some(
+                "Used with articles which include video files or clips, or for articles which are entirely video.",
+            ),
             Self::Webpage => Some("Webpage"),
         }
     }
@@ -307,5 +341,4 @@ impl CitationArtifactClassifier {
             })
             .unwrap_or(false)
     }
-
 }

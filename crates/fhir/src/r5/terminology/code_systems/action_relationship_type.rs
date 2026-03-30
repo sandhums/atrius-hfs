@@ -75,14 +75,28 @@ impl ActionRelationshipType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Before => Some("The action must be performed before the related action."),
-            Self::BeforeStart => Some("The action must be performed before the start of the related action."),
-            Self::BeforeEnd => Some("The action must be performed before the end of the related action."),
-            Self::Concurrent => Some("The action must be performed concurrent with the related action."),
-            Self::ConcurrentWithStart => Some("The action must be performed concurrent with the start of the related action."),
-            Self::ConcurrentWithEnd => Some("The action must be performed concurrent with the end of the related action."),
+            Self::BeforeStart => {
+                Some("The action must be performed before the start of the related action.")
+            }
+            Self::BeforeEnd => {
+                Some("The action must be performed before the end of the related action.")
+            }
+            Self::Concurrent => {
+                Some("The action must be performed concurrent with the related action.")
+            }
+            Self::ConcurrentWithStart => Some(
+                "The action must be performed concurrent with the start of the related action.",
+            ),
+            Self::ConcurrentWithEnd => {
+                Some("The action must be performed concurrent with the end of the related action.")
+            }
             Self::After => Some("The action must be performed after the related action."),
-            Self::AfterStart => Some("The action must be performed after the start of the related action."),
-            Self::AfterEnd => Some("The action must be performed after the end of the related action."),
+            Self::AfterStart => {
+                Some("The action must be performed after the start of the related action.")
+            }
+            Self::AfterEnd => {
+                Some("The action must be performed after the end of the related action.")
+            }
         }
     }
 
@@ -153,5 +167,4 @@ impl ActionRelationshipType {
             })
             .unwrap_or(false)
     }
-
 }

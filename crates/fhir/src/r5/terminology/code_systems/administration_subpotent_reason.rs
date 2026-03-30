@@ -62,7 +62,9 @@ impl AdministrationSubPotentReason {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Partialdose => Some("The full amount of the dose was not administered to the patient."),
+            Self::Partialdose => {
+                Some("The full amount of the dose was not administered to the patient.")
+            }
             Self::Vomited => Some("The patient vomited part of the dose."),
             Self::Coldchainbreak => Some("The medication experienced a cold chain break."),
             Self::Recall => Some("The medication was recalled by the manufacturer."),
@@ -132,5 +134,4 @@ impl AdministrationSubPotentReason {
             })
             .unwrap_or(false)
     }
-
 }

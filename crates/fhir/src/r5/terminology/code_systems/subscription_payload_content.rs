@@ -52,7 +52,9 @@ impl SubscriptionPayloadContent {
         match self {
             Self::Empty => Some("No resource content is transacted in the notification payload."),
             Self::IdOnly => Some("Only the resource id is transacted in the notification payload."),
-            Self::FullResource => Some("The entire resource is transacted in the notification payload."),
+            Self::FullResource => {
+                Some("The entire resource is transacted in the notification payload.")
+            }
         }
     }
 
@@ -111,5 +113,4 @@ impl SubscriptionPayloadContent {
             })
             .unwrap_or(false)
     }
-
 }

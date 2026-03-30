@@ -118,5 +118,4 @@ impl ActionParticipantFunction {
             })
             .unwrap_or(false)
     }
-
 }

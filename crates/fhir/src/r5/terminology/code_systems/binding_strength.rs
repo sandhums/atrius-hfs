@@ -54,10 +54,18 @@ impl BindingStrength {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Required => Some("To be conformant, the concept in this element SHALL be from the specified value set."),
-            Self::Extensible => Some("To be conformant, the concept in this element SHALL be from the specified value set if any of the codes within the value set can apply to the concept being communicated.  If the value set does not cover the concept (based on human review), alternate codings (or, data type allowing, text) may be included instead."),
-            Self::Preferred => Some("Instances are encouraged to draw from the specified codes for interoperability purposes but are not required to do so to be considered conformant."),
-            Self::Example => Some("Instances are not expected or even encouraged to draw from the specified value set.  The value set merely provides examples of the types of concepts intended to be included."),
+            Self::Required => Some(
+                "To be conformant, the concept in this element SHALL be from the specified value set.",
+            ),
+            Self::Extensible => Some(
+                "To be conformant, the concept in this element SHALL be from the specified value set if any of the codes within the value set can apply to the concept being communicated.  If the value set does not cover the concept (based on human review), alternate codings (or, data type allowing, text) may be included instead.",
+            ),
+            Self::Preferred => Some(
+                "Instances are encouraged to draw from the specified codes for interoperability purposes but are not required to do so to be considered conformant.",
+            ),
+            Self::Example => Some(
+                "Instances are not expected or even encouraged to draw from the specified value set.  The value set merely provides examples of the types of concepts intended to be included.",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl BindingStrength {
             })
             .unwrap_or(false)
     }
-
 }

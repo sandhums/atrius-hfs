@@ -122,27 +122,69 @@ impl StatisticsCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Average => Some("The [mean](https://en.wikipedia.org/wiki/Arithmetic_mean) of N measurements over the stated period."),
-            Self::Maximum => Some("The [maximum](https://en.wikipedia.org/wiki/Maximal_element) value of N measurements over the stated period."),
-            Self::Minimum => Some("The [minimum](https://en.wikipedia.org/wiki/Minimal_element) value of N measurements over the stated period."),
-            Self::Count => Some("The [number] of valid measurements over the stated period that contributed to the other statistical outputs."),
-            Self::TotalCount => Some("The total [number] of valid measurements over the stated period, including observations that were ignored because they did not contain valid result values."),
-            Self::Median => Some("The [median](https://en.wikipedia.org/wiki/Median) of N measurements over the stated period."),
-            Self::StdDev => Some("The [standard deviation](https://en.wikipedia.org/wiki/Standard_deviation) of N measurements over the stated period."),
-            Self::Sum => Some("The [sum](https://en.wikipedia.org/wiki/Summation) of N measurements over the stated period."),
-            Self::Variance => Some("The [variance](https://en.wikipedia.org/wiki/Variance) of N measurements over the stated period."),
-            Self::_20Percent => Some("The 20th [Percentile](https://en.wikipedia.org/wiki/Percentile) of N measurements over the stated period."),
-            Self::_80Percent => Some("The 80th [Percentile](https://en.wikipedia.org/wiki/Percentile) of N measurements over the stated period."),
-            Self::_4Lower => Some("The lower [Quartile](https://en.wikipedia.org/wiki/Quartile) Boundary of N measurements over the stated period."),
-            Self::_4Upper => Some("The upper [Quartile](https://en.wikipedia.org/wiki/Quartile) Boundary of N measurements over the stated period."),
-            Self::_4Dev => Some("The difference between the upper and lower [Quartiles](https://en.wikipedia.org/wiki/Quartile) is called the Interquartile range. (IQR = Q3-Q1) Quartile deviation or Semi-interquartile range is one-half the difference between the first and the third quartiles."),
-            Self::_51 => Some("The lowest of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population."),
-            Self::_52 => Some("The second of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population."),
-            Self::_53 => Some("The third of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population."),
-            Self::_54 => Some("The fourth of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population."),
-            Self::Skew => Some("Skewness is a measure of the asymmetry of the probability distribution of a real-valued random variable about its mean. The skewness value can be positive or negative, or even undefined.  Source: [Wikipedia](https://en.wikipedia.org/wiki/Skewness)."),
-            Self::Kurtosis => Some("Kurtosis  is a measure of the \"tailedness\" of the probability distribution of a real-valued random variable.   Source: [Wikipedia](https://en.wikipedia.org/wiki/Kurtosis)."),
-            Self::Regression => Some("Linear regression is an approach for modeling two-dimensional sample points with one independent variable and one dependent variable (conventionally, the x and y coordinates in a Cartesian coordinate system) and finds a linear function (a non-vertical straight line) that, as accurately as possible, predicts the dependent variable values as a function of the independent variables. Source: [Wikipedia](https://en.wikipedia.org/wiki/Simple_linear_regression)  This Statistic code will return both a gradient and an intercept value."),
+            Self::Average => Some(
+                "The [mean](https://en.wikipedia.org/wiki/Arithmetic_mean) of N measurements over the stated period.",
+            ),
+            Self::Maximum => Some(
+                "The [maximum](https://en.wikipedia.org/wiki/Maximal_element) value of N measurements over the stated period.",
+            ),
+            Self::Minimum => Some(
+                "The [minimum](https://en.wikipedia.org/wiki/Minimal_element) value of N measurements over the stated period.",
+            ),
+            Self::Count => Some(
+                "The [number] of valid measurements over the stated period that contributed to the other statistical outputs.",
+            ),
+            Self::TotalCount => Some(
+                "The total [number] of valid measurements over the stated period, including observations that were ignored because they did not contain valid result values.",
+            ),
+            Self::Median => Some(
+                "The [median](https://en.wikipedia.org/wiki/Median) of N measurements over the stated period.",
+            ),
+            Self::StdDev => Some(
+                "The [standard deviation](https://en.wikipedia.org/wiki/Standard_deviation) of N measurements over the stated period.",
+            ),
+            Self::Sum => Some(
+                "The [sum](https://en.wikipedia.org/wiki/Summation) of N measurements over the stated period.",
+            ),
+            Self::Variance => Some(
+                "The [variance](https://en.wikipedia.org/wiki/Variance) of N measurements over the stated period.",
+            ),
+            Self::_20Percent => Some(
+                "The 20th [Percentile](https://en.wikipedia.org/wiki/Percentile) of N measurements over the stated period.",
+            ),
+            Self::_80Percent => Some(
+                "The 80th [Percentile](https://en.wikipedia.org/wiki/Percentile) of N measurements over the stated period.",
+            ),
+            Self::_4Lower => Some(
+                "The lower [Quartile](https://en.wikipedia.org/wiki/Quartile) Boundary of N measurements over the stated period.",
+            ),
+            Self::_4Upper => Some(
+                "The upper [Quartile](https://en.wikipedia.org/wiki/Quartile) Boundary of N measurements over the stated period.",
+            ),
+            Self::_4Dev => Some(
+                "The difference between the upper and lower [Quartiles](https://en.wikipedia.org/wiki/Quartile) is called the Interquartile range. (IQR = Q3-Q1) Quartile deviation or Semi-interquartile range is one-half the difference between the first and the third quartiles.",
+            ),
+            Self::_51 => Some(
+                "The lowest of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population.",
+            ),
+            Self::_52 => Some(
+                "The second of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population.",
+            ),
+            Self::_53 => Some(
+                "The third of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population.",
+            ),
+            Self::_54 => Some(
+                "The fourth of four values that divide the N measurements into a frequency distribution of five classes with each containing one fifth of the total population.",
+            ),
+            Self::Skew => Some(
+                "Skewness is a measure of the asymmetry of the probability distribution of a real-valued random variable about its mean. The skewness value can be positive or negative, or even undefined.  Source: [Wikipedia](https://en.wikipedia.org/wiki/Skewness).",
+            ),
+            Self::Kurtosis => Some(
+                "Kurtosis  is a measure of the \"tailedness\" of the probability distribution of a real-valued random variable.   Source: [Wikipedia](https://en.wikipedia.org/wiki/Kurtosis).",
+            ),
+            Self::Regression => Some(
+                "Linear regression is an approach for modeling two-dimensional sample points with one independent variable and one dependent variable (conventionally, the x and y coordinates in a Cartesian coordinate system) and finds a linear function (a non-vertical straight line) that, as accurately as possible, predicts the dependent variable values as a function of the independent variables. Source: [Wikipedia](https://en.wikipedia.org/wiki/Simple_linear_regression)  This Statistic code will return both a gradient and an intercept value.",
+            ),
         }
     }
 
@@ -237,5 +279,4 @@ impl StatisticsCode {
             })
             .unwrap_or(false)
     }
-
 }

@@ -111,5 +111,4 @@ impl TestReportResult {
             })
             .unwrap_or(false)
     }
-
 }

@@ -46,8 +46,12 @@ impl SortDirection {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Ascending => Some("Sort by the value ascending, so that lower values appear first."),
-            Self::Descending => Some("Sort by the value descending, so that lower values appear last."),
+            Self::Ascending => {
+                Some("Sort by the value ascending, so that lower values appear first.")
+            }
+            Self::Descending => {
+                Some("Sort by the value descending, so that lower values appear last.")
+            }
         }
     }
 
@@ -104,5 +108,4 @@ impl SortDirection {
             })
             .unwrap_or(false)
     }
-
 }

@@ -140,7 +140,9 @@ impl CitationStatusType {
             Self::MedlineOldmedline => Some("Medline Citation Status of OLDMEDLINE"),
             Self::PubmedPublicationStatusPpublish => Some("PubMed PublicationStatus of ppublish"),
             Self::PubmedPublicationStatusEpublish => Some("PubMed PublicationStatus of epublish"),
-            Self::PubmedPublicationStatusAheadofprint => Some("PubMed PublicationStatus of aheadofprint"),
+            Self::PubmedPublicationStatusAheadofprint => {
+                Some("PubMed PublicationStatus of aheadofprint")
+            }
         }
     }
 
@@ -171,8 +173,12 @@ impl CitationStatusType {
             Self::MedlineMedline => Some("Medline Citation Status of MEDLINE"),
             Self::MedlineOldmedline => Some("Medline Citation Status of OLDMEDLINE"),
             Self::PubmedPublicationStatusPpublish => Some("published in print"),
-            Self::PubmedPublicationStatusEpublish => Some("electronically published only, never published in print"),
-            Self::PubmedPublicationStatusAheadofprint => Some("electronically published, but followed by print"),
+            Self::PubmedPublicationStatusEpublish => {
+                Some("electronically published only, never published in print")
+            }
+            Self::PubmedPublicationStatusAheadofprint => {
+                Some("electronically published, but followed by print")
+            }
         }
     }
 
@@ -279,5 +285,4 @@ impl CitationStatusType {
             })
             .unwrap_or(false)
     }
-
 }

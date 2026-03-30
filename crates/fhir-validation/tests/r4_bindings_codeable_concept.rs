@@ -1,12 +1,9 @@
 #[cfg(test)]
 mod tests {
     use fhir_validation::r4::binding::validate_codeable_concept_binding;
-    use fhir_validation::{
-        ValidationConfig, ValidationError,
-        Validator,
-    };
     use fhir_validation::terminology::service::TerminologyServiceSync;
     use fhir_validation::terminology::types::TerminologyMembershipOutcome;
+    use fhir_validation::{ValidationConfig, ValidationError, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::Element;
     use helios_fhir::r4::terminology::TerminologyValidationError;

@@ -1126,5 +1126,4 @@ impl ColorCodes {
             })
             .unwrap_or(false)
     }
-
 }

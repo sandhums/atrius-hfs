@@ -727,7 +727,9 @@ fn emit_choice_field_recursive_validation(
                     })
                     .unwrap_or(false);
 
-                if handled_by_field_binding && is_parent_bound_choice_complex_binding_type_code(type_code) {
+                if handled_by_field_binding
+                    && is_parent_bound_choice_complex_binding_type_code(type_code)
+                {
                     if let Some(binding) = direct_choice_binding {
                         let helper_name = complex_choice_binding_helper_name(pass, type_code);
                         let local_validator_name = complex_choice_local_validator_name(type_code);
@@ -789,7 +791,8 @@ fn emit_choice_field_recursive_validation(
                     })
                     .unwrap_or(false);
 
-                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code) {
+                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code)
+                {
                     if let Some(binding) = direct_choice_binding {
                         let helper_name = primitive_choice_binding_helper_name(pass, type_code);
                         let local_validator_name = primitive_choice_local_validator_name(type_code);
@@ -831,7 +834,9 @@ fn emit_choice_field_recursive_validation(
                     })
                     .unwrap_or(false);
 
-                if handled_by_field_binding && is_parent_bound_choice_complex_binding_type_code(type_code) {
+                if handled_by_field_binding
+                    && is_parent_bound_choice_complex_binding_type_code(type_code)
+                {
                     if let Some(binding) = direct_choice_binding {
                         let helper_name = complex_choice_binding_helper_name(pass, type_code);
                         let local_validator_name = complex_choice_local_validator_name(type_code);
@@ -893,7 +898,8 @@ fn emit_choice_field_recursive_validation(
                     })
                     .unwrap_or(false);
 
-                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code) {
+                if handled_by_field_binding && is_parent_bound_choice_primitive_type_code(type_code)
+                {
                     if let Some(binding) = direct_choice_binding {
                         let helper_name = primitive_choice_binding_helper_name(pass, type_code);
                         let local_validator_name = primitive_choice_local_validator_name(type_code);
@@ -1017,7 +1023,10 @@ fn is_parent_bound_choice_primitive_type_code(type_code: &str) -> bool {
 }
 
 fn is_parent_bound_choice_complex_binding_type_code(type_code: &str) -> bool {
-    matches!(type_code, "Coding" | "CodeableConcept" | "Quantity" | "CodeableReference")
+    matches!(
+        type_code,
+        "Coding" | "CodeableConcept" | "Quantity" | "CodeableReference"
+    )
 }
 
 fn primitive_choice_binding_helper_name(pass: ValidationPass, type_code: &str) -> &'static str {
@@ -1027,8 +1036,9 @@ fn primitive_choice_binding_helper_name(pass: ValidationPass, type_code: &str) -
         (ValidationPass::Bindings, "string") | (ValidationPass::Bindings, "uri") => {
             "validate_primitive_value_binding"
         }
-        (ValidationPass::BindingsAsync, "string")
-        | (ValidationPass::BindingsAsync, "uri") => "validate_primitive_value_binding_async",
+        (ValidationPass::BindingsAsync, "string") | (ValidationPass::BindingsAsync, "uri") => {
+            "validate_primitive_value_binding_async"
+        }
         _ => unreachable!("unsupported primitive choice binding type: {type_code}"),
     }
 }
@@ -1053,9 +1063,7 @@ fn complex_choice_binding_helper_name(pass: ValidationPass, type_code: &str) -> 
             "validate_codeable_reference_binding_async"
         }
         (ValidationPass::Bindings, "Quantity") => "validate_quantity_binding",
-        (ValidationPass::BindingsAsync, "Quantity") => {
-            "validate_quantity_binding_async"
-        }
+        (ValidationPass::BindingsAsync, "Quantity") => "validate_quantity_binding_async",
         _ => unreachable!("unsupported complex choice binding type: {type_code}"),
     }
 }
@@ -1116,7 +1124,11 @@ fn emit_field_recursive_validation(
     let field_name = emitted_field_name(field);
     let rebase_path = local_rebase_path(current_type_path, field);
 
-    if field.type_codes.len() == 1 && field.type_codes[0] == "Resource" && !field.is_array && !field.is_choice {
+    if field.type_codes.len() == 1
+        && field.type_codes[0] == "Resource"
+        && !field.is_array
+        && !field.is_choice
+    {
         let dispatch_method = contained_dispatch_method_name(version, pass);
         let arg_name = contained_dispatch_arg_name(pass);
 

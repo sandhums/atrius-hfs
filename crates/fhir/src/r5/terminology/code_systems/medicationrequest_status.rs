@@ -74,15 +74,31 @@ impl MedicationRequestStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The request is \'actionable\', but not all actions that are implied by it have occurred yet."),
-            Self::OnHold => Some("Actions implied by the request are to be temporarily halted. The request might or might not be resumed. May also be called \'suspended\'."),
-            Self::Ended => Some("The request is no longer active and the subject should no longer be taking the medication."),
-            Self::Stopped => Some("Actions implied by the request are to be permanently halted, before all of the administrations occurred. This should not be used if the original order was entered in error"),
+            Self::Active => Some(
+                "The request is \'actionable\', but not all actions that are implied by it have occurred yet.",
+            ),
+            Self::OnHold => Some(
+                "Actions implied by the request are to be temporarily halted. The request might or might not be resumed. May also be called \'suspended\'.",
+            ),
+            Self::Ended => Some(
+                "The request is no longer active and the subject should no longer be taking the medication.",
+            ),
+            Self::Stopped => Some(
+                "Actions implied by the request are to be permanently halted, before all of the administrations occurred. This should not be used if the original order was entered in error",
+            ),
             Self::Completed => Some("All actions that are implied by the request have occurred."),
-            Self::Cancelled => Some("The request has been withdrawn before any administrations have occurred"),
-            Self::EnteredInError => Some("The request was recorded against the wrong patient or for some reason should not have been recorded (e.g. wrong medication, wrong dose, etc.). Some of the actions that are implied by the medication request may have occurred. For example, the medication may have been dispensed and the patient may have taken some of the medication."),
-            Self::Draft => Some("The request is not yet \'actionable\', e.g. it is a work in progress, requires sign-off, verification\u{a0}or\u{a0}needs to be run through decision support process."),
-            Self::Unknown => Some("The authoring/source system does not know which of the status values currently applies for this request. Note: This concept is not to be used for \'other\' - one of the listed statuses is presumed to apply, but the authoring/source system does not know which."),
+            Self::Cancelled => {
+                Some("The request has been withdrawn before any administrations have occurred")
+            }
+            Self::EnteredInError => Some(
+                "The request was recorded against the wrong patient or for some reason should not have been recorded (e.g. wrong medication, wrong dose, etc.). Some of the actions that are implied by the medication request may have occurred. For example, the medication may have been dispensed and the patient may have taken some of the medication.",
+            ),
+            Self::Draft => Some(
+                "The request is not yet \'actionable\', e.g. it is a work in progress, requires sign-off, verification\u{a0}or\u{a0}needs to be run through decision support process.",
+            ),
+            Self::Unknown => Some(
+                "The authoring/source system does not know which of the status values currently applies for this request. Note: This concept is not to be used for \'other\' - one of the listed statuses is presumed to apply, but the authoring/source system does not know which.",
+            ),
         }
     }
 
@@ -153,5 +169,4 @@ impl MedicationRequestStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

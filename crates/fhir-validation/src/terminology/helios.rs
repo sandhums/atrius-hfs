@@ -3,12 +3,13 @@
 //! This module adapts the internal `ValidateVsRequest` model into calls to the
 //! Helios `TerminologyClient` and returns raw FHIR responses for further
 //! processing by the service layer.
+use crate::ValidationError;
+use crate::backend::TerminologyBackend;
+use crate::helpers::build_remote_terminology_error;
+use crate::requests::ValidateVsRequest;
 use async_trait::async_trait;
 use helios_fhir::FhirVersion;
 use helios_fhirpath::terminology_client::TerminologyClient;
-use crate::backend::TerminologyBackend;
-use crate::requests::ValidateVsRequest;
-use crate::ValidationError;
 
 pub struct HeliosTerminologyBackend {
     client: TerminologyClient,
@@ -39,11 +40,9 @@ impl TerminologyBackend for HeliosTerminologyBackend {
         req: &ValidateVsRequest,
     ) -> Result<serde_json::Value, ValidationError> {
         let code = req.code.as_deref().ok_or_else(|| {
-            ValidationError::TerminologyRemote(
-                crate::build_remote_terminology_error(
-                    "ValidateVsRequest.code is required for HeliosTerminologyBackend::validate_vs",
-                ),
-            )
+            ValidationError::TerminologyRemote(build_remote_terminology_error(
+                "ValidateVsRequest.code is required for HeliosTerminologyBackend::validate_vs",
+            ))
         })?;
 
         self.client
@@ -56,9 +55,7 @@ impl TerminologyBackend for HeliosTerminologyBackend {
             )
             .await
             .map_err(|e| {
-                ValidationError::TerminologyRemote(
-                    crate::build_remote_terminology_error(&e.to_string()),
-                )
+                ValidationError::TerminologyRemote(build_remote_terminology_error(&e.to_string()))
             })
     }
 }

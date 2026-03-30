@@ -125,5 +125,4 @@ impl AccountBalanceTerm {
             })
             .unwrap_or(false)
     }
-
 }

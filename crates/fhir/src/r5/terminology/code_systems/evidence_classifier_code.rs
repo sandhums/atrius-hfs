@@ -128,7 +128,9 @@ impl EvidenceClassifier {
         match self {
             Self::COVID19Specific => Some("COVID-19 specific article"),
             Self::COVID19Relevant => Some("COVID-19 relevant (but not specific) article"),
-            Self::COVID19HumanResearch => Some("COVID-19 human data in population, exposure, or outcome"),
+            Self::COVID19HumanResearch => {
+                Some("COVID-19 human data in population, exposure, or outcome")
+            }
             Self::OriginalResearch => Some("Article includes original research"),
             Self::ResearchSynthesis => Some("Article includes synthesis of research"),
             Self::Guideline => Some("Article includes guideline"),
@@ -142,10 +144,16 @@ impl EvidenceClassifier {
             Self::RatedAsNo => Some("Rated as no, negative, absent, or exclude"),
             Self::NotAssessed => Some("Not rated, not assessed"),
             Self::RatedAsRCT => Some("classified as randomized controlled trial"),
-            Self::RatedAsControlledTrial => Some("classified as nonrandomized controlled trial (experimental)"),
-            Self::RatedAsComparativeCohort => Some("classified as comparative cohort study (observational)"),
+            Self::RatedAsControlledTrial => {
+                Some("classified as nonrandomized controlled trial (experimental)")
+            }
+            Self::RatedAsComparativeCohort => {
+                Some("classified as comparative cohort study (observational)")
+            }
             Self::RatedAsCaseControl => Some("classified as case-control study"),
-            Self::RatedAsUncontrolledSeries => Some("classified as uncontrolled cohort (case series)"),
+            Self::RatedAsUncontrolledSeries => {
+                Some("classified as uncontrolled cohort (case series)")
+            }
             Self::RatedAsMixedMethods => Some("classified as mixed-methods study"),
             Self::RatedAsOther => Some("classified as other concept (not elsewhere classified)"),
             Self::RiskOfBias => Some("Risk of bias assessment"),
@@ -163,25 +171,43 @@ impl EvidenceClassifier {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::COVID19Specific => Some("About COVID-19."),
-            Self::COVID19Relevant => Some("Not about COVID-19 but relevant to COVID-19 management or understanding."),
-            Self::COVID19HumanResearch => Some("contains human COVID-19 disease in the research data as any variable (population, exposure or outcome)."),
+            Self::COVID19Relevant => {
+                Some("Not about COVID-19 but relevant to COVID-19 management or understanding.")
+            }
+            Self::COVID19HumanResearch => Some(
+                "contains human COVID-19 disease in the research data as any variable (population, exposure or outcome).",
+            ),
             Self::OriginalResearch => Some("such as randomized trial, observational study."),
-            Self::ResearchSynthesis => Some("such as systematic review, meta-analysis, rapid review."),
+            Self::ResearchSynthesis => {
+                Some("such as systematic review, meta-analysis, rapid review.")
+            }
             Self::Guideline => Some("for clinical practice guidelines."),
             Self::ResearchProtocol => Some("for research protocols."),
-            Self::NotResearchNotGuideline => Some("for things that are not research reports, research protocols or guidelines."),
+            Self::NotResearchNotGuideline => {
+                Some("for things that are not research reports, research protocols or guidelines.")
+            }
             Self::Treatment => Some("about therapeutic interventions."),
             Self::PreventionAndControl => Some("about preventive care and interventions."),
-            Self::Diagnosis => Some("about methods to distinguish having or not having a condition."),
-            Self::PrognosisPrediction => Some("about predicting risk for something or risk factors for it."),
+            Self::Diagnosis => {
+                Some("about methods to distinguish having or not having a condition.")
+            }
+            Self::PrognosisPrediction => {
+                Some("about predicting risk for something or risk factors for it.")
+            }
             Self::RatedAsYes => None,
             Self::RatedAsNo => Some("Rated as no, negative, absent, or exclude."),
             Self::NotAssessed => Some("Neither rated as yes nor rated as no."),
             Self::RatedAsRCT => Some("classified as randomized controlled trial."),
-            Self::RatedAsControlledTrial => Some("classified as nonrandomized controlled trial (experimental)."),
-            Self::RatedAsComparativeCohort => Some("classified as comparative cohort study (observational)."),
+            Self::RatedAsControlledTrial => {
+                Some("classified as nonrandomized controlled trial (experimental).")
+            }
+            Self::RatedAsComparativeCohort => {
+                Some("classified as comparative cohort study (observational).")
+            }
             Self::RatedAsCaseControl => Some("classified as case-control study."),
-            Self::RatedAsUncontrolledSeries => Some("classified as uncontrolled cohort (case series)."),
+            Self::RatedAsUncontrolledSeries => {
+                Some("classified as uncontrolled cohort (case series).")
+            }
             Self::RatedAsMixedMethods => Some("classified as mixed-methods study."),
             Self::RatedAsOther => Some("classified as other concept (not elsewhere classified)."),
             Self::RiskOfBias => Some("Risk of bias assessment."),
@@ -191,7 +217,9 @@ impl EvidenceClassifier {
             Self::NoITT => Some("No intention-to-treat analysis."),
             Self::Preprint => Some("Results presented in preprint (pre-final publication) form."),
             Self::PreliminaryAnalysis => Some("Preliminary analysis."),
-            Self::BaselineImbalance => Some("Differences between groups at start of trial may confound or bias the findings."),
+            Self::BaselineImbalance => Some(
+                "Differences between groups at start of trial may confound or bias the findings.",
+            ),
             Self::SubgroupAnalysis => Some("Subgroup analysis."),
         }
     }
@@ -307,5 +335,4 @@ impl EvidenceClassifier {
             })
             .unwrap_or(false)
     }
-
 }

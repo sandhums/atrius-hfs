@@ -54,10 +54,14 @@ impl ClaimProcessingCodes_36c63d8c {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Queued => Some("The Claim/Pre-authorization/Pre-determination has been received but processing has not begun."),
+            Self::Queued => Some(
+                "The Claim/Pre-authorization/Pre-determination has been received but processing has not begun.",
+            ),
             Self::Complete => Some("The processing has completed without errors"),
             Self::Error => Some("One or more errors have been detected in the Claim"),
-            Self::Partial => Some("No errors have been detected in the Claim and some of the adjudication has been performed."),
+            Self::Partial => Some(
+                "No errors have been detected in the Claim and some of the adjudication has been performed.",
+            ),
         }
     }
 
@@ -118,5 +122,4 @@ impl ClaimProcessingCodes_36c63d8c {
             })
             .unwrap_or(false)
     }
-
 }

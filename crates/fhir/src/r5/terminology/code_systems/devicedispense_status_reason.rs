@@ -63,10 +63,18 @@ impl DeviceDispenseStatusReasonCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::OutOfStock => Some("The device was not dispensed because it was not available."),
-            Self::OffMarket => Some("The device was not dispensed because it is of-market - for example not authorized, withdrawn or recalled."),
-            Self::Contraindication => Some("The device was not dispensed because a contraindication was found - for example pregnancy, allergy to a device component..."),
-            Self::IncompatibleDevice => Some("The device was not dispensed because an incompatibility has been found with the device or between the device and other devices being used in the same context."),
-            Self::OrderExpired => Some("The device was not dispensed because the order has expired or been invalidated."),
+            Self::OffMarket => Some(
+                "The device was not dispensed because it is of-market - for example not authorized, withdrawn or recalled.",
+            ),
+            Self::Contraindication => Some(
+                "The device was not dispensed because a contraindication was found - for example pregnancy, allergy to a device component...",
+            ),
+            Self::IncompatibleDevice => Some(
+                "The device was not dispensed because an incompatibility has been found with the device or between the device and other devices being used in the same context.",
+            ),
+            Self::OrderExpired => Some(
+                "The device was not dispensed because the order has expired or been invalidated.",
+            ),
             Self::VerbalOrder => Some("The device not dispensed because there was a verbal order."),
         }
     }
@@ -132,5 +140,4 @@ impl DeviceDispenseStatusReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

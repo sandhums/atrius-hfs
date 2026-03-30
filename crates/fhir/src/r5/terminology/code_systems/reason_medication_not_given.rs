@@ -57,7 +57,9 @@ impl ReasonMedicationNotGivenCodes {
             Self::A => Some("No reason known."),
             Self::B => Some("The patient was not available when the dose was scheduled."),
             Self::C => Some("The patient was asleep when the dose was scheduled."),
-            Self::D => Some("The patient was given the medication and immediately vomited it back."),
+            Self::D => {
+                Some("The patient was given the medication and immediately vomited it back.")
+            }
         }
     }
 
@@ -118,5 +120,4 @@ impl ReasonMedicationNotGivenCodes {
             })
             .unwrap_or(false)
     }
-
 }

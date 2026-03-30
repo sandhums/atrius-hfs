@@ -1929,7 +1929,7 @@ fn evaluate_invocation_with_context(
 ///
 /// An EvaluationResult representation of the resource, typically as an Object
 #[inline] // Suggest inlining this simple function call
-fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
+pub fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
     // Now that FhirResource implements IntoEvaluationResult, just call the method.
     resource.to_evaluation_result()
 }

@@ -111,5 +111,4 @@ impl SubstanceStereochemistry {
             })
             .unwrap_or(false)
     }
-
 }

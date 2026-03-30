@@ -62,7 +62,9 @@ impl QuantityComparator {
             Self::Code_2 => Some("The actual value is less than or equal to the given value."),
             Self::Code_3 => Some("The actual value is greater than or equal to the given value."),
             Self::Code_4 => Some("The actual value is greater than the given value."),
-            Self::Ad => Some("The actual value is sufficient for the total quantity to equal the given value."),
+            Self::Ad => Some(
+                "The actual value is sufficient for the total quantity to equal the given value.",
+            ),
         }
     }
 
@@ -125,5 +127,4 @@ impl QuantityComparator {
             })
             .unwrap_or(false)
     }
-
 }

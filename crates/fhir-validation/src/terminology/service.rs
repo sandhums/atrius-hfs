@@ -4,15 +4,16 @@
 //! the validation engine, along with the remote service implementation that
 //! adapts simple membership queries into typed backend requests and converts
 //! backend `$validate-code` responses into validation-friendly outcomes.
-use std::sync::Arc;
-use async_trait::async_trait;
-use helios_fhir::FhirVersion;
-use tracing::debug;
-use crate::{terminology, ValidationError};
+use crate::ValidationError;
 use crate::backend::TerminologyBackend;
+use crate::helpers::parse_validate_vs_result;
 use crate::requests::ValidateVsRequest;
 use crate::terminology::helios::HeliosTerminologyBackend;
 use crate::terminology::types::TerminologyMembershipOutcome;
+use async_trait::async_trait;
+use helios_fhir::FhirVersion;
+use std::sync::Arc;
+use tracing::debug;
 
 /// Trait representing a terminology validation service.
 ///
@@ -111,7 +112,7 @@ impl TerminologyService for RemoteTerminologyService {
         let response = self.backend.validate_vs(&req).await?;
 
         // parse_validate_vs_result(&response)
-        let outcome = terminology::parse_validate_vs_result(&response)?;
+        let outcome = parse_validate_vs_result(&response)?;
         debug!(
             valueset_url,
             system,

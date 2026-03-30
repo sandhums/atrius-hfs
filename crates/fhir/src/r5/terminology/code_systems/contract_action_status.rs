@@ -97,5 +97,4 @@ impl ContractActionStatus {
             })
             .unwrap_or(false)
     }
-
 }

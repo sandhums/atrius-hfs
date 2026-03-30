@@ -47,7 +47,9 @@ impl ConstraintSeverity {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Error => Some("If the constraint is violated, the resource is not conformant."),
-            Self::Warning => Some("If the constraint is violated, the resource is conformant, but it is not necessarily following best practice."),
+            Self::Warning => Some(
+                "If the constraint is violated, the resource is conformant, but it is not necessarily following best practice.",
+            ),
         }
     }
 
@@ -104,5 +106,4 @@ impl ConstraintSeverity {
             })
             .unwrap_or(false)
     }
-
 }

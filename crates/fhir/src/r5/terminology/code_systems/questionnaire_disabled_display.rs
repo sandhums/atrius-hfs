@@ -46,8 +46,12 @@ impl QuestionnaireItemDisabledDisplay {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Hidden => Some("The item (and its children) should not be visible to the user at all."),
-            Self::Protected => Some("The item (and possibly its children) should not be selectable or editable but should still be visible - to allow the user to see what questions *could* have been completed had other answers caused the item to be enabled."),
+            Self::Hidden => {
+                Some("The item (and its children) should not be visible to the user at all.")
+            }
+            Self::Protected => Some(
+                "The item (and possibly its children) should not be selectable or editable but should still be visible - to allow the user to see what questions *could* have been completed had other answers caused the item to be enabled.",
+            ),
         }
     }
 
@@ -104,5 +108,4 @@ impl QuestionnaireItemDisabledDisplay {
             })
             .unwrap_or(false)
     }
-
 }

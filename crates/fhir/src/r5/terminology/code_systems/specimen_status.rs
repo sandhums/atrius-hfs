@@ -55,9 +55,15 @@ impl SpecimenStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Available => Some("The physical specimen is present and in good condition."),
-            Self::Unavailable => Some("There is no physical specimen because it is either lost, destroyed or consumed."),
-            Self::Unsatisfactory => Some("The specimen cannot be used because of a quality issue such as a broken container, contamination, or too old."),
-            Self::EnteredInError => Some("The specimen was entered in error and therefore nullified."),
+            Self::Unavailable => Some(
+                "There is no physical specimen because it is either lost, destroyed or consumed.",
+            ),
+            Self::Unsatisfactory => Some(
+                "The specimen cannot be used because of a quality issue such as a broken container, contamination, or too old.",
+            ),
+            Self::EnteredInError => {
+                Some("The specimen was entered in error and therefore nullified.")
+            }
         }
     }
 
@@ -118,5 +124,4 @@ impl SpecimenStatus {
             })
             .unwrap_or(false)
     }
-
 }

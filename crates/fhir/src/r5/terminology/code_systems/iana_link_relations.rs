@@ -394,250 +394,618 @@ impl LinkRelationTypes {
     pub fn display(self) -> Option<&'static str> {
         match self {
             Self::About => Some("Refers to a resource that is the subject of the link\'s context."),
-            Self::Acl => Some("Asserts that the link target provides an access control description for the link context."),
+            Self::Acl => Some(
+                "Asserts that the link target provides an access control description for the link context.",
+            ),
             Self::Alternate => Some("Refers to a substitute for this context"),
-            Self::Amphtml => Some("Used to reference alternative content that uses the AMP profile of the HTML format."),
+            Self::Amphtml => Some(
+                "Used to reference alternative content that uses the AMP profile of the HTML format.",
+            ),
             Self::Appendix => Some("Refers to an appendix."),
             Self::AppleTouchIcon => Some("Refers to an icon for the context. Synonym for icon."),
             Self::AppleTouchStartupImage => Some("Refers to a launch screen for the context."),
-            Self::Archives => Some("Refers to a collection of records, documents, or other\n      materials of historical interest."),
+            Self::Archives => Some(
+                "Refers to a collection of records, documents, or other\n      materials of historical interest.",
+            ),
             Self::Author => Some("Refers to the context\'s author."),
-            Self::BlockedBy => Some("Identifies the entity that blocks access to a resource\n      following receipt of a legal demand."),
+            Self::BlockedBy => Some(
+                "Identifies the entity that blocks access to a resource\n      following receipt of a legal demand.",
+            ),
             Self::Bookmark => Some("Gives a permanent link to use for bookmarking purposes."),
-            Self::Canonical => Some("Designates the preferred version of a resource (the IRI and its contents)."),
+            Self::Canonical => {
+                Some("Designates the preferred version of a resource (the IRI and its contents).")
+            }
             Self::Chapter => Some("Refers to a chapter in a collection of resources."),
-            Self::CiteAs => Some("Indicates that the link target is preferred over the link context for the purpose of permanent citation."),
-            Self::Collection => Some("The target IRI points to a resource which represents the collection resource for the context IRI."),
+            Self::CiteAs => Some(
+                "Indicates that the link target is preferred over the link context for the purpose of permanent citation.",
+            ),
+            Self::Collection => Some(
+                "The target IRI points to a resource which represents the collection resource for the context IRI.",
+            ),
             Self::Contents => Some("Refers to a table of contents."),
-            Self::ConvertedFrom => Some("The document linked to was later converted to the\n      document that contains this link relation.  For example, an RFC can\n      have a link to the Internet-Draft that became the RFC; in that case,\n      the link relation would be \"convertedFrom\"."),
-            Self::Copyright => Some("Refers to a copyright statement that applies to the\n    link\'s context."),
-            Self::CreateForm => Some("The target IRI points to a resource where a submission form can be obtained."),
-            Self::Current => Some("Refers to a resource containing the most recent\n      item(s) in a collection of resources."),
-            Self::Describedby => Some("Refers to a resource providing information about the\n      link\'s context."),
-            Self::Describes => Some("The relationship A \'describes\' B asserts that\n      resource A provides a description of resource B. There are no\n      constraints on the format or representation of either A or B,\n      neither are there any further constraints on either resource."),
-            Self::Disclosure => Some("Refers to a list of patent disclosures made with respect to \n      material for which \'disclosure\' relation is specified."),
-            Self::DnsPrefetch => Some("Used to indicate an origin that will be used to fetch required \n      resources for the link context, and that the user agent ought to resolve \n      as early as possible."),
-            Self::Duplicate => Some("Refers to a resource whose available representations\n      are byte-for-byte identical with the corresponding representations of\n      the context IRI."),
-            Self::Edit => Some("Refers to a resource that can be used to edit the\n      link\'s context."),
-            Self::EditForm => Some("The target IRI points to a resource where a submission form for\n      editing associated resource can be obtained."),
-            Self::EditMedia => Some("Refers to a resource that can be used to edit media\n      associated with the link\'s context."),
-            Self::Enclosure => Some("Identifies a related resource that is potentially\n      large and might require special handling."),
-            Self::External => Some("Refers to a resource that is not part of the same site as the current context."),
-            Self::First => Some("An IRI that refers to the furthest preceding resource\n    in a series of resources."),
+            Self::ConvertedFrom => Some(
+                "The document linked to was later converted to the\n      document that contains this link relation.  For example, an RFC can\n      have a link to the Internet-Draft that became the RFC; in that case,\n      the link relation would be \"convertedFrom\".",
+            ),
+            Self::Copyright => {
+                Some("Refers to a copyright statement that applies to the\n    link\'s context.")
+            }
+            Self::CreateForm => {
+                Some("The target IRI points to a resource where a submission form can be obtained.")
+            }
+            Self::Current => Some(
+                "Refers to a resource containing the most recent\n      item(s) in a collection of resources.",
+            ),
+            Self::Describedby => {
+                Some("Refers to a resource providing information about the\n      link\'s context.")
+            }
+            Self::Describes => Some(
+                "The relationship A \'describes\' B asserts that\n      resource A provides a description of resource B. There are no\n      constraints on the format or representation of either A or B,\n      neither are there any further constraints on either resource.",
+            ),
+            Self::Disclosure => Some(
+                "Refers to a list of patent disclosures made with respect to \n      material for which \'disclosure\' relation is specified.",
+            ),
+            Self::DnsPrefetch => Some(
+                "Used to indicate an origin that will be used to fetch required \n      resources for the link context, and that the user agent ought to resolve \n      as early as possible.",
+            ),
+            Self::Duplicate => Some(
+                "Refers to a resource whose available representations\n      are byte-for-byte identical with the corresponding representations of\n      the context IRI.",
+            ),
+            Self::Edit => {
+                Some("Refers to a resource that can be used to edit the\n      link\'s context.")
+            }
+            Self::EditForm => Some(
+                "The target IRI points to a resource where a submission form for\n      editing associated resource can be obtained.",
+            ),
+            Self::EditMedia => Some(
+                "Refers to a resource that can be used to edit media\n      associated with the link\'s context.",
+            ),
+            Self::Enclosure => Some(
+                "Identifies a related resource that is potentially\n      large and might require special handling.",
+            ),
+            Self::External => Some(
+                "Refers to a resource that is not part of the same site as the current context.",
+            ),
+            Self::First => Some(
+                "An IRI that refers to the furthest preceding resource\n    in a series of resources.",
+            ),
             Self::Glossary => Some("Refers to a glossary of terms."),
             Self::Help => Some("Refers to context-sensitive help."),
-            Self::Hosts => Some("Refers to a resource hosted by the server indicated by\n      the link context."),
-            Self::Hub => Some("Refers to a hub that enables registration for\n    notification of updates to the context."),
+            Self::Hosts => Some(
+                "Refers to a resource hosted by the server indicated by\n      the link context.",
+            ),
+            Self::Hub => Some(
+                "Refers to a hub that enables registration for\n    notification of updates to the context.",
+            ),
             Self::Icon => Some("Refers to an icon representing the link\'s context."),
             Self::Index => Some("Refers to an index."),
-            Self::IntervalAfter => Some("refers to a resource associated with a time interval that ends before the beginning of the time interval associated with the context resource"),
-            Self::IntervalBefore => Some("refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource"),
-            Self::IntervalContains => Some("refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource"),
-            Self::IntervalDisjoint => Some("refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource, or ends before the beginning of the time interval associated with the context resource"),
-            Self::IntervalDuring => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::IntervalEquals => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalFinishedBy => Some("refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalFinishes => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalIn => Some("refers to a resource associated with a time interval that begins before or is coincident with the beginning of the time interval associated with the context resource, and ends after or is coincident with the end of the time interval associated with the context resource"),
-            Self::IntervalMeets => Some("refers to a resource associated with a time interval whose beginning coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalMetBy => Some("refers to a resource associated with a time interval whose end coincides with the beginning of the time interval associated with the context resource"),
-            Self::IntervalOverlappedBy => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the beginning of the time interval associated with the context resource"),
-            Self::IntervalOverlaps => Some("refers to a resource associated with a time interval that begins before the end of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::IntervalStartedBy => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource"),
-            Self::IntervalStarts => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::Item => Some("The target IRI points to a resource that is a member of the collection represented by the context IRI."),
-            Self::Last => Some("An IRI that refers to the furthest following resource\n      in a series of resources."),
-            Self::LatestVersion => Some("Points to a resource containing the latest (e.g.,\n      current) version of the context."),
+            Self::IntervalAfter => Some(
+                "refers to a resource associated with a time interval that ends before the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalBefore => Some(
+                "refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalContains => Some(
+                "refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalDisjoint => Some(
+                "refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource, or ends before the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalDuring => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalEquals => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalFinishedBy => Some(
+                "refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalFinishes => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalIn => Some(
+                "refers to a resource associated with a time interval that begins before or is coincident with the beginning of the time interval associated with the context resource, and ends after or is coincident with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalMeets => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalMetBy => Some(
+                "refers to a resource associated with a time interval whose end coincides with the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalOverlappedBy => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalOverlaps => Some(
+                "refers to a resource associated with a time interval that begins before the end of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalStartedBy => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalStarts => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::Item => Some(
+                "The target IRI points to a resource that is a member of the collection represented by the context IRI.",
+            ),
+            Self::Last => Some(
+                "An IRI that refers to the furthest following resource\n      in a series of resources.",
+            ),
+            Self::LatestVersion => Some(
+                "Points to a resource containing the latest (e.g.,\n      current) version of the context.",
+            ),
             Self::License => Some("Refers to a license associated with this context."),
-            Self::Linkset => Some("The link target of a link with the \"linkset\" relation\n      type provides a set of links, including links in which the link\n      context of the link participates.\n    "),
-            Self::Lrdd => Some("Refers to further information about the link\'s context,\n      expressed as a LRDD (\"Link-based Resource Descriptor Document\")\n      resource.  See  for information about\n      processing this relation type in host-meta documents. When used\n      elsewhere, it refers to additional links and other metadata.\n      Multiple instances indicate additional LRDD resources. LRDD\n      resources MUST have an \"application/xrd+xml\" representation, and\n      MAY have others."),
+            Self::Linkset => Some(
+                "The link target of a link with the \"linkset\" relation\n      type provides a set of links, including links in which the link\n      context of the link participates.\n    ",
+            ),
+            Self::Lrdd => Some(
+                "Refers to further information about the link\'s context,\n      expressed as a LRDD (\"Link-based Resource Descriptor Document\")\n      resource.  See  for information about\n      processing this relation type in host-meta documents. When used\n      elsewhere, it refers to additional links and other metadata.\n      Multiple instances indicate additional LRDD resources. LRDD\n      resources MUST have an \"application/xrd+xml\" representation, and\n      MAY have others.",
+            ),
             Self::Manifest => Some("Links to a manifest file for the context."),
-            Self::MaskIcon => Some("Refers to a mask that can be applied to the icon for the context."),
-            Self::MediaFeed => Some("Refers to a feed of personalised media recommendations relevant to the link context."),
-            Self::Memento => Some("The Target IRI points to a Memento, a fixed resource that will not change state anymore."),
+            Self::MaskIcon => {
+                Some("Refers to a mask that can be applied to the icon for the context.")
+            }
+            Self::MediaFeed => Some(
+                "Refers to a feed of personalised media recommendations relevant to the link context.",
+            ),
+            Self::Memento => Some(
+                "The Target IRI points to a Memento, a fixed resource that will not change state anymore.",
+            ),
             Self::Micropub => Some("Links to the context\'s Micropub endpoint."),
-            Self::Modulepreload => Some("Refers to a module that the user agent is to preemptively fetch and store for use in the current context."),
-            Self::Monitor => Some("Refers to a resource that can be used to monitor changes in an HTTP resource.\n    "),
-            Self::MonitorGroup => Some("Refers to a resource that can be used to monitor changes in a specified group of HTTP resources.\n    "),
-            Self::Next => Some("Indicates that the link\'s context is a part of a series, and\n      that the next in the series is the link target.\n    "),
+            Self::Modulepreload => Some(
+                "Refers to a module that the user agent is to preemptively fetch and store for use in the current context.",
+            ),
+            Self::Monitor => Some(
+                "Refers to a resource that can be used to monitor changes in an HTTP resource.\n    ",
+            ),
+            Self::MonitorGroup => Some(
+                "Refers to a resource that can be used to monitor changes in a specified group of HTTP resources.\n    ",
+            ),
+            Self::Next => Some(
+                "Indicates that the link\'s context is a part of a series, and\n      that the next in the series is the link target.\n    ",
+            ),
             Self::NextArchive => Some("Refers to the immediately following archive resource."),
-            Self::Nofollow => Some("Indicates that the context\u{2019}s original author or publisher does not endorse the link target."),
-            Self::Noopener => Some("Indicates that any newly created top-level browsing context which results from following the link will not be an auxiliary browsing context."),
-            Self::Noreferrer => Some("Indicates that no referrer information is to be leaked when following the link."),
-            Self::Opener => Some("Indicates that any newly created top-level browsing context which results from following the link will be an auxiliary browsing context."),
-            Self::Openid2LocalId => Some("Refers to an OpenID Authentication server on which the context relies for an assertion that the end user controls an Identifier."),
-            Self::Openid2Provider => Some("Refers to a resource which accepts OpenID Authentication protocol messages for the context."),
+            Self::Nofollow => Some(
+                "Indicates that the context\u{2019}s original author or publisher does not endorse the link target.",
+            ),
+            Self::Noopener => Some(
+                "Indicates that any newly created top-level browsing context which results from following the link will not be an auxiliary browsing context.",
+            ),
+            Self::Noreferrer => Some(
+                "Indicates that no referrer information is to be leaked when following the link.",
+            ),
+            Self::Opener => Some(
+                "Indicates that any newly created top-level browsing context which results from following the link will be an auxiliary browsing context.",
+            ),
+            Self::Openid2LocalId => Some(
+                "Refers to an OpenID Authentication server on which the context relies for an assertion that the end user controls an Identifier.",
+            ),
+            Self::Openid2Provider => Some(
+                "Refers to a resource which accepts OpenID Authentication protocol messages for the context.",
+            ),
             Self::Original => Some("The Target IRI points to an Original Resource."),
             Self::P3Pv1 => Some("Refers to a P3P privacy policy for the context."),
             Self::Payment => Some("Indicates a resource where payment is accepted."),
-            Self::Pingback => Some("Gives the address of the pingback resource for the link context."),
-            Self::Preconnect => Some("Used to indicate an origin that will be used to fetch required \n      resources for the link context. Initiating an early connection, which \n      includes the DNS lookup, TCP handshake, and optional TLS negotiation, \n      allows the user agent to mask the high latency costs of establishing a \n      connection."),
-            Self::PredecessorVersion => Some("Points to a resource containing the predecessor\n      version in the version history.\n    "),
-            Self::Prefetch => Some("The prefetch link relation type is used to identify a resource \n      that might be required by the next navigation from the link context, and \n      that the user agent ought to fetch, such that the user agent can deliver a \n      faster response once the resource is requested in the future."),
-            Self::Preload => Some("Refers to a resource that should be loaded early in the \n      processing of the link\'s context, without blocking rendering."),
-            Self::Prerender => Some("Used to identify a resource that might be required by the next \n      navigation from the link context, and that the user agent ought to fetch \n      and execute, such that the user agent can deliver a faster response once \n      the resource is requested in the future."),
-            Self::Prev => Some("Indicates that the link\'s context is a part of a series, and\n      that the previous in the series is the link target.\n    "),
-            Self::Preview => Some("Refers to a resource that provides a preview of the link\'s context."),
-            Self::Previous => Some("Refers to the previous resource in an ordered series\n      of resources.  Synonym for \"prev\"."),
+            Self::Pingback => {
+                Some("Gives the address of the pingback resource for the link context.")
+            }
+            Self::Preconnect => Some(
+                "Used to indicate an origin that will be used to fetch required \n      resources for the link context. Initiating an early connection, which \n      includes the DNS lookup, TCP handshake, and optional TLS negotiation, \n      allows the user agent to mask the high latency costs of establishing a \n      connection.",
+            ),
+            Self::PredecessorVersion => Some(
+                "Points to a resource containing the predecessor\n      version in the version history.\n    ",
+            ),
+            Self::Prefetch => Some(
+                "The prefetch link relation type is used to identify a resource \n      that might be required by the next navigation from the link context, and \n      that the user agent ought to fetch, such that the user agent can deliver a \n      faster response once the resource is requested in the future.",
+            ),
+            Self::Preload => Some(
+                "Refers to a resource that should be loaded early in the \n      processing of the link\'s context, without blocking rendering.",
+            ),
+            Self::Prerender => Some(
+                "Used to identify a resource that might be required by the next \n      navigation from the link context, and that the user agent ought to fetch \n      and execute, such that the user agent can deliver a faster response once \n      the resource is requested in the future.",
+            ),
+            Self::Prev => Some(
+                "Indicates that the link\'s context is a part of a series, and\n      that the previous in the series is the link target.\n    ",
+            ),
+            Self::Preview => {
+                Some("Refers to a resource that provides a preview of the link\'s context.")
+            }
+            Self::Previous => Some(
+                "Refers to the previous resource in an ordered series\n      of resources.  Synonym for \"prev\".",
+            ),
             Self::PrevArchive => Some("Refers to the immediately preceding archive resource."),
-            Self::PrivacyPolicy => Some("Refers to a privacy policy associated with the link\'s context."),
-            Self::Profile => Some("Identifying that a resource representation conforms\nto a certain profile, without affecting the non-profile semantics\nof the resource representation."),
-            Self::Publication => Some("Links to a publication manifest. A manifest represents \n      structured information about a publication, such as informative metadata, \n      a list of resources, and a default reading order."),
+            Self::PrivacyPolicy => {
+                Some("Refers to a privacy policy associated with the link\'s context.")
+            }
+            Self::Profile => Some(
+                "Identifying that a resource representation conforms\nto a certain profile, without affecting the non-profile semantics\nof the resource representation.",
+            ),
+            Self::Publication => Some(
+                "Links to a publication manifest. A manifest represents \n      structured information about a publication, such as informative metadata, \n      a list of resources, and a default reading order.",
+            ),
             Self::Related => Some("Identifies a related resource."),
-            Self::Restconf => Some("Identifies the root of RESTCONF API as configured on this HTTP server.\n      The \"restconf\" relation defines the root of the API defined in RFC8040.\n      Subsequent revisions of RESTCONF will use alternate relation values to support \n      protocol versioning."),
-            Self::Replies => Some("Identifies a resource that is a reply to the context\n      of the link.\n    "),
-            Self::Ruleinput => Some("The resource identified by the link target provides an input value to an \n    instance of a rule, where the resource which represents the rule instance is \n    identified by the link context.\n    "),
-            Self::Search => Some("Refers to a resource that can be used to search through\n      the link\'s context and related resources."),
+            Self::Restconf => Some(
+                "Identifies the root of RESTCONF API as configured on this HTTP server.\n      The \"restconf\" relation defines the root of the API defined in RFC8040.\n      Subsequent revisions of RESTCONF will use alternate relation values to support \n      protocol versioning.",
+            ),
+            Self::Replies => Some(
+                "Identifies a resource that is a reply to the context\n      of the link.\n    ",
+            ),
+            Self::Ruleinput => Some(
+                "The resource identified by the link target provides an input value to an \n    instance of a rule, where the resource which represents the rule instance is \n    identified by the link context.\n    ",
+            ),
+            Self::Search => Some(
+                "Refers to a resource that can be used to search through\n      the link\'s context and related resources.",
+            ),
             Self::Section => Some("Refers to a section in a collection of resources."),
             Self::Self_ => Some("Conveys an identifier for the link\'s context.\n    "),
-            Self::Service => Some("Indicates a URI that can be used to retrieve a\n      service document."),
-            Self::ServiceDesc => Some("Identifies service description for the context that\n      is primarily intended for consumption by machines."),
-            Self::ServiceDoc => Some("Identifies service documentation for the context that\n      is primarily intended for human consumption."),
-            Self::ServiceMeta => Some("Identifies general metadata for the context that is\n      primarily intended for consumption by machines."),
-            Self::Sponsored => Some("Refers to a resource that is within a context that is \n\t\tsponsored (such as advertising or another compensation agreement)."),
-            Self::Start => Some("Refers to the first resource in a collection of\n      resources."),
-            Self::Status => Some("Identifies a resource that represents the context\'s\n      status."),
+            Self::Service => {
+                Some("Indicates a URI that can be used to retrieve a\n      service document.")
+            }
+            Self::ServiceDesc => Some(
+                "Identifies service description for the context that\n      is primarily intended for consumption by machines.",
+            ),
+            Self::ServiceDoc => Some(
+                "Identifies service documentation for the context that\n      is primarily intended for human consumption.",
+            ),
+            Self::ServiceMeta => Some(
+                "Identifies general metadata for the context that is\n      primarily intended for consumption by machines.",
+            ),
+            Self::Sponsored => Some(
+                "Refers to a resource that is within a context that is \n\t\tsponsored (such as advertising or another compensation agreement).",
+            ),
+            Self::Start => {
+                Some("Refers to the first resource in a collection of\n      resources.")
+            }
+            Self::Status => {
+                Some("Identifies a resource that represents the context\'s\n      status.")
+            }
             Self::Stylesheet => Some("Refers to a stylesheet."),
-            Self::Subsection => Some("Refers to a resource serving as a subsection in a\n      collection of resources."),
-            Self::SuccessorVersion => Some("Points to a resource containing the successor version\n      in the version history.\n    "),
-            Self::Sunset => Some("Identifies a resource that provides information about\n      the context\'s retirement policy.\n    "),
-            Self::Tag => Some("Gives a tag (identified by the given address) that applies to\n      the current document.\n    "),
-            Self::TermsOfService => Some("Refers to the terms of service associated with the link\'s context."),
+            Self::Subsection => Some(
+                "Refers to a resource serving as a subsection in a\n      collection of resources.",
+            ),
+            Self::SuccessorVersion => Some(
+                "Points to a resource containing the successor version\n      in the version history.\n    ",
+            ),
+            Self::Sunset => Some(
+                "Identifies a resource that provides information about\n      the context\'s retirement policy.\n    ",
+            ),
+            Self::Tag => Some(
+                "Gives a tag (identified by the given address) that applies to\n      the current document.\n    ",
+            ),
+            Self::TermsOfService => {
+                Some("Refers to the terms of service associated with the link\'s context.")
+            }
             Self::Timegate => Some("The Target IRI points to a TimeGate for an Original Resource."),
             Self::Timemap => Some("The Target IRI points to a TimeMap for an Original Resource."),
-            Self::Type_ => Some("Refers to a resource identifying the abstract semantic type of which the link\'s context is considered to be an instance."),
-            Self::Ugc => Some("Refers to a resource that is within a context that is User Generated Content.\n    "),
-            Self::Up => Some("Refers to a parent document in a hierarchy of\n      documents.\n    "),
-            Self::VersionHistory => Some("Points to a resource containing the version history\n      for the context.\n    "),
-            Self::Via => Some("Identifies a resource that is the source of the\n      information in the link\'s context.\n    "),
-            Self::Webmention => Some("Identifies a target URI that supports the Webmention protocol.\n    This allows clients that mention a resource in some form of publishing process\n    to contact that endpoint and inform it that this resource has been mentioned."),
+            Self::Type_ => Some(
+                "Refers to a resource identifying the abstract semantic type of which the link\'s context is considered to be an instance.",
+            ),
+            Self::Ugc => Some(
+                "Refers to a resource that is within a context that is User Generated Content.\n    ",
+            ),
+            Self::Up => {
+                Some("Refers to a parent document in a hierarchy of\n      documents.\n    ")
+            }
+            Self::VersionHistory => Some(
+                "Points to a resource containing the version history\n      for the context.\n    ",
+            ),
+            Self::Via => Some(
+                "Identifies a resource that is the source of the\n      information in the link\'s context.\n    ",
+            ),
+            Self::Webmention => Some(
+                "Identifies a target URI that supports the Webmention protocol.\n    This allows clients that mention a resource in some form of publishing process\n    to contact that endpoint and inform it that this resource has been mentioned.",
+            ),
             Self::WorkingCopy => Some("Points to a working copy for this resource."),
-            Self::WorkingCopyOf => Some("Points to the versioned resource from which this\n      working copy was obtained.\n    "),
+            Self::WorkingCopyOf => Some(
+                "Points to the versioned resource from which this\n      working copy was obtained.\n    ",
+            ),
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::About => Some("Refers to a resource that is the subject of the link\'s context."),
-            Self::Acl => Some("Asserts that the link target provides an access control description for the link context."),
+            Self::Acl => Some(
+                "Asserts that the link target provides an access control description for the link context.",
+            ),
             Self::Alternate => Some("Refers to a substitute for this context"),
-            Self::Amphtml => Some("Used to reference alternative content that uses the AMP profile of the HTML format."),
+            Self::Amphtml => Some(
+                "Used to reference alternative content that uses the AMP profile of the HTML format.",
+            ),
             Self::Appendix => Some("Refers to an appendix."),
             Self::AppleTouchIcon => Some("Refers to an icon for the context. Synonym for icon."),
             Self::AppleTouchStartupImage => Some("Refers to a launch screen for the context."),
-            Self::Archives => Some("Refers to a collection of records, documents, or other\n      materials of historical interest."),
+            Self::Archives => Some(
+                "Refers to a collection of records, documents, or other\n      materials of historical interest.",
+            ),
             Self::Author => Some("Refers to the context\'s author."),
-            Self::BlockedBy => Some("Identifies the entity that blocks access to a resource\n      following receipt of a legal demand."),
+            Self::BlockedBy => Some(
+                "Identifies the entity that blocks access to a resource\n      following receipt of a legal demand.",
+            ),
             Self::Bookmark => Some("Gives a permanent link to use for bookmarking purposes."),
-            Self::Canonical => Some("Designates the preferred version of a resource (the IRI and its contents)."),
+            Self::Canonical => {
+                Some("Designates the preferred version of a resource (the IRI and its contents).")
+            }
             Self::Chapter => Some("Refers to a chapter in a collection of resources."),
-            Self::CiteAs => Some("Indicates that the link target is preferred over the link context for the purpose of permanent citation."),
-            Self::Collection => Some("The target IRI points to a resource which represents the collection resource for the context IRI."),
+            Self::CiteAs => Some(
+                "Indicates that the link target is preferred over the link context for the purpose of permanent citation.",
+            ),
+            Self::Collection => Some(
+                "The target IRI points to a resource which represents the collection resource for the context IRI.",
+            ),
             Self::Contents => Some("Refers to a table of contents."),
-            Self::ConvertedFrom => Some("The document linked to was later converted to the\n      document that contains this link relation.  For example, an RFC can\n      have a link to the Internet-Draft that became the RFC; in that case,\n      the link relation would be \"convertedFrom\"."),
-            Self::Copyright => Some("Refers to a copyright statement that applies to the\n    link\'s context."),
-            Self::CreateForm => Some("The target IRI points to a resource where a submission form can be obtained."),
-            Self::Current => Some("Refers to a resource containing the most recent\n      item(s) in a collection of resources."),
-            Self::Describedby => Some("Refers to a resource providing information about the\n      link\'s context."),
-            Self::Describes => Some("The relationship A \'describes\' B asserts that\n      resource A provides a description of resource B. There are no\n      constraints on the format or representation of either A or B,\n      neither are there any further constraints on either resource."),
-            Self::Disclosure => Some("Refers to a list of patent disclosures made with respect to \n      material for which \'disclosure\' relation is specified."),
-            Self::DnsPrefetch => Some("Used to indicate an origin that will be used to fetch required \n      resources for the link context, and that the user agent ought to resolve \n      as early as possible."),
-            Self::Duplicate => Some("Refers to a resource whose available representations\n      are byte-for-byte identical with the corresponding representations of\n      the context IRI."),
-            Self::Edit => Some("Refers to a resource that can be used to edit the\n      link\'s context."),
-            Self::EditForm => Some("The target IRI points to a resource where a submission form for\n      editing associated resource can be obtained."),
-            Self::EditMedia => Some("Refers to a resource that can be used to edit media\n      associated with the link\'s context."),
-            Self::Enclosure => Some("Identifies a related resource that is potentially\n      large and might require special handling."),
-            Self::External => Some("Refers to a resource that is not part of the same site as the current context."),
-            Self::First => Some("An IRI that refers to the furthest preceding resource\n    in a series of resources."),
+            Self::ConvertedFrom => Some(
+                "The document linked to was later converted to the\n      document that contains this link relation.  For example, an RFC can\n      have a link to the Internet-Draft that became the RFC; in that case,\n      the link relation would be \"convertedFrom\".",
+            ),
+            Self::Copyright => {
+                Some("Refers to a copyright statement that applies to the\n    link\'s context.")
+            }
+            Self::CreateForm => {
+                Some("The target IRI points to a resource where a submission form can be obtained.")
+            }
+            Self::Current => Some(
+                "Refers to a resource containing the most recent\n      item(s) in a collection of resources.",
+            ),
+            Self::Describedby => {
+                Some("Refers to a resource providing information about the\n      link\'s context.")
+            }
+            Self::Describes => Some(
+                "The relationship A \'describes\' B asserts that\n      resource A provides a description of resource B. There are no\n      constraints on the format or representation of either A or B,\n      neither are there any further constraints on either resource.",
+            ),
+            Self::Disclosure => Some(
+                "Refers to a list of patent disclosures made with respect to \n      material for which \'disclosure\' relation is specified.",
+            ),
+            Self::DnsPrefetch => Some(
+                "Used to indicate an origin that will be used to fetch required \n      resources for the link context, and that the user agent ought to resolve \n      as early as possible.",
+            ),
+            Self::Duplicate => Some(
+                "Refers to a resource whose available representations\n      are byte-for-byte identical with the corresponding representations of\n      the context IRI.",
+            ),
+            Self::Edit => {
+                Some("Refers to a resource that can be used to edit the\n      link\'s context.")
+            }
+            Self::EditForm => Some(
+                "The target IRI points to a resource where a submission form for\n      editing associated resource can be obtained.",
+            ),
+            Self::EditMedia => Some(
+                "Refers to a resource that can be used to edit media\n      associated with the link\'s context.",
+            ),
+            Self::Enclosure => Some(
+                "Identifies a related resource that is potentially\n      large and might require special handling.",
+            ),
+            Self::External => Some(
+                "Refers to a resource that is not part of the same site as the current context.",
+            ),
+            Self::First => Some(
+                "An IRI that refers to the furthest preceding resource\n    in a series of resources.",
+            ),
             Self::Glossary => Some("Refers to a glossary of terms."),
             Self::Help => Some("Refers to context-sensitive help."),
-            Self::Hosts => Some("Refers to a resource hosted by the server indicated by\n      the link context."),
-            Self::Hub => Some("Refers to a hub that enables registration for\n    notification of updates to the context."),
+            Self::Hosts => Some(
+                "Refers to a resource hosted by the server indicated by\n      the link context.",
+            ),
+            Self::Hub => Some(
+                "Refers to a hub that enables registration for\n    notification of updates to the context.",
+            ),
             Self::Icon => Some("Refers to an icon representing the link\'s context."),
             Self::Index => Some("Refers to an index."),
-            Self::IntervalAfter => Some("refers to a resource associated with a time interval that ends before the beginning of the time interval associated with the context resource"),
-            Self::IntervalBefore => Some("refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource"),
-            Self::IntervalContains => Some("refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource"),
-            Self::IntervalDisjoint => Some("refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource, or ends before the beginning of the time interval associated with the context resource"),
-            Self::IntervalDuring => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::IntervalEquals => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalFinishedBy => Some("refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalFinishes => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalIn => Some("refers to a resource associated with a time interval that begins before or is coincident with the beginning of the time interval associated with the context resource, and ends after or is coincident with the end of the time interval associated with the context resource"),
-            Self::IntervalMeets => Some("refers to a resource associated with a time interval whose beginning coincides with the end of the time interval associated with the context resource"),
-            Self::IntervalMetBy => Some("refers to a resource associated with a time interval whose end coincides with the beginning of the time interval associated with the context resource"),
-            Self::IntervalOverlappedBy => Some("refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the beginning of the time interval associated with the context resource"),
-            Self::IntervalOverlaps => Some("refers to a resource associated with a time interval that begins before the end of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::IntervalStartedBy => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource"),
-            Self::IntervalStarts => Some("refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource"),
-            Self::Item => Some("The target IRI points to a resource that is a member of the collection represented by the context IRI."),
-            Self::Last => Some("An IRI that refers to the furthest following resource\n      in a series of resources."),
-            Self::LatestVersion => Some("Points to a resource containing the latest (e.g.,\n      current) version of the context."),
+            Self::IntervalAfter => Some(
+                "refers to a resource associated with a time interval that ends before the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalBefore => Some(
+                "refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalContains => Some(
+                "refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalDisjoint => Some(
+                "refers to a resource associated with a time interval that begins after the end of the time interval associated with the context resource, or ends before the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalDuring => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalEquals => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalFinishedBy => Some(
+                "refers to a resource associated with a time interval that begins after the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalFinishes => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and whose end coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalIn => Some(
+                "refers to a resource associated with a time interval that begins before or is coincident with the beginning of the time interval associated with the context resource, and ends after or is coincident with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalMeets => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalMetBy => Some(
+                "refers to a resource associated with a time interval whose end coincides with the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalOverlappedBy => Some(
+                "refers to a resource associated with a time interval that begins before the beginning of the time interval associated with the context resource, and ends after the beginning of the time interval associated with the context resource",
+            ),
+            Self::IntervalOverlaps => Some(
+                "refers to a resource associated with a time interval that begins before the end of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalStartedBy => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends before the end of the time interval associated with the context resource",
+            ),
+            Self::IntervalStarts => Some(
+                "refers to a resource associated with a time interval whose beginning coincides with the beginning of the time interval associated with the context resource, and ends after the end of the time interval associated with the context resource",
+            ),
+            Self::Item => Some(
+                "The target IRI points to a resource that is a member of the collection represented by the context IRI.",
+            ),
+            Self::Last => Some(
+                "An IRI that refers to the furthest following resource\n      in a series of resources.",
+            ),
+            Self::LatestVersion => Some(
+                "Points to a resource containing the latest (e.g.,\n      current) version of the context.",
+            ),
             Self::License => Some("Refers to a license associated with this context."),
-            Self::Linkset => Some("The link target of a link with the \"linkset\" relation\n      type provides a set of links, including links in which the link\n      context of the link participates.\n    "),
-            Self::Lrdd => Some("Refers to further information about the link\'s context,\n      expressed as a LRDD (\"Link-based Resource Descriptor Document\")\n      resource.  See  for information about\n      processing this relation type in host-meta documents. When used\n      elsewhere, it refers to additional links and other metadata.\n      Multiple instances indicate additional LRDD resources. LRDD\n      resources MUST have an \"application/xrd+xml\" representation, and\n      MAY have others."),
+            Self::Linkset => Some(
+                "The link target of a link with the \"linkset\" relation\n      type provides a set of links, including links in which the link\n      context of the link participates.\n    ",
+            ),
+            Self::Lrdd => Some(
+                "Refers to further information about the link\'s context,\n      expressed as a LRDD (\"Link-based Resource Descriptor Document\")\n      resource.  See  for information about\n      processing this relation type in host-meta documents. When used\n      elsewhere, it refers to additional links and other metadata.\n      Multiple instances indicate additional LRDD resources. LRDD\n      resources MUST have an \"application/xrd+xml\" representation, and\n      MAY have others.",
+            ),
             Self::Manifest => Some("Links to a manifest file for the context."),
-            Self::MaskIcon => Some("Refers to a mask that can be applied to the icon for the context."),
-            Self::MediaFeed => Some("Refers to a feed of personalised media recommendations relevant to the link context."),
-            Self::Memento => Some("The Target IRI points to a Memento, a fixed resource that will not change state anymore."),
+            Self::MaskIcon => {
+                Some("Refers to a mask that can be applied to the icon for the context.")
+            }
+            Self::MediaFeed => Some(
+                "Refers to a feed of personalised media recommendations relevant to the link context.",
+            ),
+            Self::Memento => Some(
+                "The Target IRI points to a Memento, a fixed resource that will not change state anymore.",
+            ),
             Self::Micropub => Some("Links to the context\'s Micropub endpoint."),
-            Self::Modulepreload => Some("Refers to a module that the user agent is to preemptively fetch and store for use in the current context."),
-            Self::Monitor => Some("Refers to a resource that can be used to monitor changes in an HTTP resource.\n    "),
-            Self::MonitorGroup => Some("Refers to a resource that can be used to monitor changes in a specified group of HTTP resources.\n    "),
-            Self::Next => Some("Indicates that the link\'s context is a part of a series, and\n      that the next in the series is the link target.\n    "),
+            Self::Modulepreload => Some(
+                "Refers to a module that the user agent is to preemptively fetch and store for use in the current context.",
+            ),
+            Self::Monitor => Some(
+                "Refers to a resource that can be used to monitor changes in an HTTP resource.\n    ",
+            ),
+            Self::MonitorGroup => Some(
+                "Refers to a resource that can be used to monitor changes in a specified group of HTTP resources.\n    ",
+            ),
+            Self::Next => Some(
+                "Indicates that the link\'s context is a part of a series, and\n      that the next in the series is the link target.\n    ",
+            ),
             Self::NextArchive => Some("Refers to the immediately following archive resource."),
-            Self::Nofollow => Some("Indicates that the context\u{2019}s original author or publisher does not endorse the link target."),
-            Self::Noopener => Some("Indicates that any newly created top-level browsing context which results from following the link will not be an auxiliary browsing context."),
-            Self::Noreferrer => Some("Indicates that no referrer information is to be leaked when following the link."),
-            Self::Opener => Some("Indicates that any newly created top-level browsing context which results from following the link will be an auxiliary browsing context."),
-            Self::Openid2LocalId => Some("Refers to an OpenID Authentication server on which the context relies for an assertion that the end user controls an Identifier."),
-            Self::Openid2Provider => Some("Refers to a resource which accepts OpenID Authentication protocol messages for the context."),
+            Self::Nofollow => Some(
+                "Indicates that the context\u{2019}s original author or publisher does not endorse the link target.",
+            ),
+            Self::Noopener => Some(
+                "Indicates that any newly created top-level browsing context which results from following the link will not be an auxiliary browsing context.",
+            ),
+            Self::Noreferrer => Some(
+                "Indicates that no referrer information is to be leaked when following the link.",
+            ),
+            Self::Opener => Some(
+                "Indicates that any newly created top-level browsing context which results from following the link will be an auxiliary browsing context.",
+            ),
+            Self::Openid2LocalId => Some(
+                "Refers to an OpenID Authentication server on which the context relies for an assertion that the end user controls an Identifier.",
+            ),
+            Self::Openid2Provider => Some(
+                "Refers to a resource which accepts OpenID Authentication protocol messages for the context.",
+            ),
             Self::Original => Some("The Target IRI points to an Original Resource."),
             Self::P3Pv1 => Some("Refers to a P3P privacy policy for the context."),
             Self::Payment => Some("Indicates a resource where payment is accepted."),
-            Self::Pingback => Some("Gives the address of the pingback resource for the link context."),
-            Self::Preconnect => Some("Used to indicate an origin that will be used to fetch required \n      resources for the link context. Initiating an early connection, which \n      includes the DNS lookup, TCP handshake, and optional TLS negotiation, \n      allows the user agent to mask the high latency costs of establishing a \n      connection."),
-            Self::PredecessorVersion => Some("Points to a resource containing the predecessor\n      version in the version history.\n    "),
-            Self::Prefetch => Some("The prefetch link relation type is used to identify a resource \n      that might be required by the next navigation from the link context, and \n      that the user agent ought to fetch, such that the user agent can deliver a \n      faster response once the resource is requested in the future."),
-            Self::Preload => Some("Refers to a resource that should be loaded early in the \n      processing of the link\'s context, without blocking rendering."),
-            Self::Prerender => Some("Used to identify a resource that might be required by the next \n      navigation from the link context, and that the user agent ought to fetch \n      and execute, such that the user agent can deliver a faster response once \n      the resource is requested in the future."),
-            Self::Prev => Some("Indicates that the link\'s context is a part of a series, and\n      that the previous in the series is the link target.\n    "),
-            Self::Preview => Some("Refers to a resource that provides a preview of the link\'s context."),
-            Self::Previous => Some("Refers to the previous resource in an ordered series\n      of resources.  Synonym for \"prev\"."),
+            Self::Pingback => {
+                Some("Gives the address of the pingback resource for the link context.")
+            }
+            Self::Preconnect => Some(
+                "Used to indicate an origin that will be used to fetch required \n      resources for the link context. Initiating an early connection, which \n      includes the DNS lookup, TCP handshake, and optional TLS negotiation, \n      allows the user agent to mask the high latency costs of establishing a \n      connection.",
+            ),
+            Self::PredecessorVersion => Some(
+                "Points to a resource containing the predecessor\n      version in the version history.\n    ",
+            ),
+            Self::Prefetch => Some(
+                "The prefetch link relation type is used to identify a resource \n      that might be required by the next navigation from the link context, and \n      that the user agent ought to fetch, such that the user agent can deliver a \n      faster response once the resource is requested in the future.",
+            ),
+            Self::Preload => Some(
+                "Refers to a resource that should be loaded early in the \n      processing of the link\'s context, without blocking rendering.",
+            ),
+            Self::Prerender => Some(
+                "Used to identify a resource that might be required by the next \n      navigation from the link context, and that the user agent ought to fetch \n      and execute, such that the user agent can deliver a faster response once \n      the resource is requested in the future.",
+            ),
+            Self::Prev => Some(
+                "Indicates that the link\'s context is a part of a series, and\n      that the previous in the series is the link target.\n    ",
+            ),
+            Self::Preview => {
+                Some("Refers to a resource that provides a preview of the link\'s context.")
+            }
+            Self::Previous => Some(
+                "Refers to the previous resource in an ordered series\n      of resources.  Synonym for \"prev\".",
+            ),
             Self::PrevArchive => Some("Refers to the immediately preceding archive resource."),
-            Self::PrivacyPolicy => Some("Refers to a privacy policy associated with the link\'s context."),
-            Self::Profile => Some("Identifying that a resource representation conforms\nto a certain profile, without affecting the non-profile semantics\nof the resource representation."),
-            Self::Publication => Some("Links to a publication manifest. A manifest represents \n      structured information about a publication, such as informative metadata, \n      a list of resources, and a default reading order."),
+            Self::PrivacyPolicy => {
+                Some("Refers to a privacy policy associated with the link\'s context.")
+            }
+            Self::Profile => Some(
+                "Identifying that a resource representation conforms\nto a certain profile, without affecting the non-profile semantics\nof the resource representation.",
+            ),
+            Self::Publication => Some(
+                "Links to a publication manifest. A manifest represents \n      structured information about a publication, such as informative metadata, \n      a list of resources, and a default reading order.",
+            ),
             Self::Related => Some("Identifies a related resource."),
-            Self::Restconf => Some("Identifies the root of RESTCONF API as configured on this HTTP server.\n      The \"restconf\" relation defines the root of the API defined in RFC8040.\n      Subsequent revisions of RESTCONF will use alternate relation values to support \n      protocol versioning."),
-            Self::Replies => Some("Identifies a resource that is a reply to the context\n      of the link.\n    "),
-            Self::Ruleinput => Some("The resource identified by the link target provides an input value to an \n    instance of a rule, where the resource which represents the rule instance is \n    identified by the link context.\n    "),
-            Self::Search => Some("Refers to a resource that can be used to search through\n      the link\'s context and related resources."),
+            Self::Restconf => Some(
+                "Identifies the root of RESTCONF API as configured on this HTTP server.\n      The \"restconf\" relation defines the root of the API defined in RFC8040.\n      Subsequent revisions of RESTCONF will use alternate relation values to support \n      protocol versioning.",
+            ),
+            Self::Replies => Some(
+                "Identifies a resource that is a reply to the context\n      of the link.\n    ",
+            ),
+            Self::Ruleinput => Some(
+                "The resource identified by the link target provides an input value to an \n    instance of a rule, where the resource which represents the rule instance is \n    identified by the link context.\n    ",
+            ),
+            Self::Search => Some(
+                "Refers to a resource that can be used to search through\n      the link\'s context and related resources.",
+            ),
             Self::Section => Some("Refers to a section in a collection of resources."),
             Self::Self_ => Some("Conveys an identifier for the link\'s context.\n    "),
-            Self::Service => Some("Indicates a URI that can be used to retrieve a\n      service document."),
-            Self::ServiceDesc => Some("Identifies service description for the context that\n      is primarily intended for consumption by machines."),
-            Self::ServiceDoc => Some("Identifies service documentation for the context that\n      is primarily intended for human consumption."),
-            Self::ServiceMeta => Some("Identifies general metadata for the context that is\n      primarily intended for consumption by machines."),
-            Self::Sponsored => Some("Refers to a resource that is within a context that is \n\t\tsponsored (such as advertising or another compensation agreement)."),
-            Self::Start => Some("Refers to the first resource in a collection of\n      resources."),
-            Self::Status => Some("Identifies a resource that represents the context\'s\n      status."),
+            Self::Service => {
+                Some("Indicates a URI that can be used to retrieve a\n      service document.")
+            }
+            Self::ServiceDesc => Some(
+                "Identifies service description for the context that\n      is primarily intended for consumption by machines.",
+            ),
+            Self::ServiceDoc => Some(
+                "Identifies service documentation for the context that\n      is primarily intended for human consumption.",
+            ),
+            Self::ServiceMeta => Some(
+                "Identifies general metadata for the context that is\n      primarily intended for consumption by machines.",
+            ),
+            Self::Sponsored => Some(
+                "Refers to a resource that is within a context that is \n\t\tsponsored (such as advertising or another compensation agreement).",
+            ),
+            Self::Start => {
+                Some("Refers to the first resource in a collection of\n      resources.")
+            }
+            Self::Status => {
+                Some("Identifies a resource that represents the context\'s\n      status.")
+            }
             Self::Stylesheet => Some("Refers to a stylesheet."),
-            Self::Subsection => Some("Refers to a resource serving as a subsection in a\n      collection of resources."),
-            Self::SuccessorVersion => Some("Points to a resource containing the successor version\n      in the version history.\n    "),
-            Self::Sunset => Some("Identifies a resource that provides information about\n      the context\'s retirement policy.\n    "),
-            Self::Tag => Some("Gives a tag (identified by the given address) that applies to\n      the current document.\n    "),
-            Self::TermsOfService => Some("Refers to the terms of service associated with the link\'s context."),
+            Self::Subsection => Some(
+                "Refers to a resource serving as a subsection in a\n      collection of resources.",
+            ),
+            Self::SuccessorVersion => Some(
+                "Points to a resource containing the successor version\n      in the version history.\n    ",
+            ),
+            Self::Sunset => Some(
+                "Identifies a resource that provides information about\n      the context\'s retirement policy.\n    ",
+            ),
+            Self::Tag => Some(
+                "Gives a tag (identified by the given address) that applies to\n      the current document.\n    ",
+            ),
+            Self::TermsOfService => {
+                Some("Refers to the terms of service associated with the link\'s context.")
+            }
             Self::Timegate => Some("The Target IRI points to a TimeGate for an Original Resource."),
             Self::Timemap => Some("The Target IRI points to a TimeMap for an Original Resource."),
-            Self::Type_ => Some("Refers to a resource identifying the abstract semantic type of which the link\'s context is considered to be an instance."),
-            Self::Ugc => Some("Refers to a resource that is within a context that is User Generated Content.\n    "),
-            Self::Up => Some("Refers to a parent document in a hierarchy of\n      documents.\n    "),
-            Self::VersionHistory => Some("Points to a resource containing the version history\n      for the context.\n    "),
-            Self::Via => Some("Identifies a resource that is the source of the\n      information in the link\'s context.\n    "),
-            Self::Webmention => Some("Identifies a target URI that supports the Webmention protocol.\n    This allows clients that mention a resource in some form of publishing process\n    to contact that endpoint and inform it that this resource has been mentioned."),
+            Self::Type_ => Some(
+                "Refers to a resource identifying the abstract semantic type of which the link\'s context is considered to be an instance.",
+            ),
+            Self::Ugc => Some(
+                "Refers to a resource that is within a context that is User Generated Content.\n    ",
+            ),
+            Self::Up => {
+                Some("Refers to a parent document in a hierarchy of\n      documents.\n    ")
+            }
+            Self::VersionHistory => Some(
+                "Points to a resource containing the version history\n      for the context.\n    ",
+            ),
+            Self::Via => Some(
+                "Identifies a resource that is the source of the\n      information in the link\'s context.\n    ",
+            ),
+            Self::Webmention => Some(
+                "Identifies a target URI that supports the Webmention protocol.\n    This allows clients that mention a resource in some form of publishing process\n    to contact that endpoint and inform it that this resource has been mentioned.",
+            ),
             Self::WorkingCopy => Some("Points to a working copy for this resource."),
-            Self::WorkingCopyOf => Some("Points to the versioned resource from which this\n      working copy was obtained.\n    "),
+            Self::WorkingCopyOf => Some(
+                "Points to the versioned resource from which this\n      working copy was obtained.\n    ",
+            ),
         }
     }
 
@@ -930,5 +1298,4 @@ impl LinkRelationTypes {
             })
             .unwrap_or(false)
     }
-
 }

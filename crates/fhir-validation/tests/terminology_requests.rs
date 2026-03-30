@@ -185,15 +185,9 @@ fn to_parameters_json_emits_version_parameters() {
             "http://example.org/CodeSystem/test|1.0.0".into(),
             "http://example.org/CodeSystem/test|2.0.0".into(),
         ]),
-        default_valueset_version: Some(vec![
-            "http://example.org/ValueSet/test|1.0.0".into(),
-        ]),
-        check_valueset_version: Some(vec![
-            "http://example.org/ValueSet/test|2.0.0".into(),
-        ]),
-        force_valueset_version: Some(vec![
-            "http://example.org/ValueSet/test|3.0.0".into(),
-        ]),
+        default_valueset_version: Some(vec!["http://example.org/ValueSet/test|1.0.0".into()]),
+        check_valueset_version: Some(vec!["http://example.org/ValueSet/test|2.0.0".into()]),
+        force_valueset_version: Some(vec!["http://example.org/ValueSet/test|3.0.0".into()]),
         ..Default::default()
     };
 

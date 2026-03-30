@@ -110,24 +110,58 @@ impl ASTMSignatureTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::_128401006511211 => Some("the signature of the primary or sole author of a health information document. There can be only one primary author of a health information document."),
-            Self::_128401006511212 => Some("the signature of a health information document coauthor. There can be multiple coauthors of a health information document."),
-            Self::_128401006511213 => Some("the signature of an individual who is a participant in the health information document but is not an author or coauthor. (Example a surgeon who is required by institutional, regulatory, or legal rules to sign an operative report, but who was not involved in the authorship of that report.)"),
-            Self::_128401006511214 => Some("the signature of an individual who has transcribed a dictated document or recorded written text into a digital machine readable format."),
-            Self::_128401006511215 => Some("a signature verifying the information contained in a document. (Example a physician is required to countersign a verbal order that has previously been recorded in the medical record by a registered nurse who has carried out the verbal order.)"),
-            Self::_128401006511216 => Some("a signature validating a health information document for inclusion in the patient record. (Example a medical student or resident is credentialed to perform history or physical examinations and to write progress notes. The attending physician signs the history and physical examination to validate the entry for inclusion in the patient\'s medical record.)"),
-            Self::_128401006511217 => Some("the signature of an individual consenting to what is described in a health information document."),
+            Self::_128401006511211 => Some(
+                "the signature of the primary or sole author of a health information document. There can be only one primary author of a health information document.",
+            ),
+            Self::_128401006511212 => Some(
+                "the signature of a health information document coauthor. There can be multiple coauthors of a health information document.",
+            ),
+            Self::_128401006511213 => Some(
+                "the signature of an individual who is a participant in the health information document but is not an author or coauthor. (Example a surgeon who is required by institutional, regulatory, or legal rules to sign an operative report, but who was not involved in the authorship of that report.)",
+            ),
+            Self::_128401006511214 => Some(
+                "the signature of an individual who has transcribed a dictated document or recorded written text into a digital machine readable format.",
+            ),
+            Self::_128401006511215 => Some(
+                "a signature verifying the information contained in a document. (Example a physician is required to countersign a verbal order that has previously been recorded in the medical record by a registered nurse who has carried out the verbal order.)",
+            ),
+            Self::_128401006511216 => Some(
+                "a signature validating a health information document for inclusion in the patient record. (Example a medical student or resident is credentialed to perform history or physical examinations and to write progress notes. The attending physician signs the history and physical examination to validate the entry for inclusion in the patient\'s medical record.)",
+            ),
+            Self::_128401006511217 => Some(
+                "the signature of an individual consenting to what is described in a health information document.",
+            ),
             Self::_128401006511218 => Some("the signature of a witness to any other signature."),
-            Self::_128401006511219 => Some("the signature of a witness to an event. (Example the witness has observed a procedure and is attesting to this fact.)"),
-            Self::_1284010065112110 => Some("the signature of an individual who has witnessed another individual who is known to them signing a document. (Example the identity witness is a notary public.)"),
-            Self::_1284010065112111 => Some("the signature of an individual who has witnessed the health care provider counselling a patient."),
-            Self::_1284010065112112 => Some("the signature of an individual who has translated health care information during an event or the obtaining of consent to a treatment."),
-            Self::_1284010065112113 => Some("the signature of a person, device, or algorithm that has reviewed or filtered data for inclusion into the patient record. ( Examples: (1) a medical records clerk who scans a document for inclusion in the medical record, enters header information, or catalogues and classifies the data, or a combination thereof; (2) a gateway that receives data from another computer system and interprets that data or changes its format, or both, before entering it into the patient record.)"),
-            Self::_1284010065112114 => Some("the signature of an automated data source. (Examples: (1) the signature for an image that is generated by a device for inclusion in the patient record; (2) the signature for an ECG derived by an ECG system for inclusion in the patient record; (3) the data from a biomedical monitoring device or system that is for inclusion in the patient record.)"),
-            Self::_1284010065112115 => Some("the signature on a new amended document of an individual who has corrected, edited, or amended an original health information document. An addendum signature can either be a signature type or a signature sub-type (see 8.1). Any document with an addendum signature shall have a companion document that is the original document with its original, unaltered content, and original signatures. The original document shall be referenced via an attribute in the new document, which contains, for example, the digest of the old document. Whether the original, unaltered, document is always displayed with the addended document is a local matter, but the original, unaltered, document must remain as part of the patient record and be retrievable on demand."),
-            Self::_1284010065112116 => Some("the signature on an original document of an individual who has generated a new amended document. This (original) document shall reference the new document via an additional signature purpose. This is the inverse of an addendum signature and provides a pointer from the original to the amended document."),
-            Self::_1284010065112117 => Some("the signature of an individual who is certifying that the document is invalidated by an error(s), or is placed in the wrong chart. An administrative (error/edit) signature must include an addendum to the document and therefore shall have an addendum signature sub-type (see 8.1). This signature is reserved for the highest health information system administrative classification, since it is a statement that the entire document is invalidated by the error and that the document should no longer be used for patient care, although for legal reasons the document must remain part of the permanent patient record."),
-            Self::_1284010065112118 => Some("the signature by an entity or device trusted to provide accurate timestamps. This timestamp might be provided, for example, in the signature time attribute."),
+            Self::_128401006511219 => Some(
+                "the signature of a witness to an event. (Example the witness has observed a procedure and is attesting to this fact.)",
+            ),
+            Self::_1284010065112110 => Some(
+                "the signature of an individual who has witnessed another individual who is known to them signing a document. (Example the identity witness is a notary public.)",
+            ),
+            Self::_1284010065112111 => Some(
+                "the signature of an individual who has witnessed the health care provider counselling a patient.",
+            ),
+            Self::_1284010065112112 => Some(
+                "the signature of an individual who has translated health care information during an event or the obtaining of consent to a treatment.",
+            ),
+            Self::_1284010065112113 => Some(
+                "the signature of a person, device, or algorithm that has reviewed or filtered data for inclusion into the patient record. ( Examples: (1) a medical records clerk who scans a document for inclusion in the medical record, enters header information, or catalogues and classifies the data, or a combination thereof; (2) a gateway that receives data from another computer system and interprets that data or changes its format, or both, before entering it into the patient record.)",
+            ),
+            Self::_1284010065112114 => Some(
+                "the signature of an automated data source. (Examples: (1) the signature for an image that is generated by a device for inclusion in the patient record; (2) the signature for an ECG derived by an ECG system for inclusion in the patient record; (3) the data from a biomedical monitoring device or system that is for inclusion in the patient record.)",
+            ),
+            Self::_1284010065112115 => Some(
+                "the signature on a new amended document of an individual who has corrected, edited, or amended an original health information document. An addendum signature can either be a signature type or a signature sub-type (see 8.1). Any document with an addendum signature shall have a companion document that is the original document with its original, unaltered content, and original signatures. The original document shall be referenced via an attribute in the new document, which contains, for example, the digest of the old document. Whether the original, unaltered, document is always displayed with the addended document is a local matter, but the original, unaltered, document must remain as part of the patient record and be retrievable on demand.",
+            ),
+            Self::_1284010065112116 => Some(
+                "the signature on an original document of an individual who has generated a new amended document. This (original) document shall reference the new document via an additional signature purpose. This is the inverse of an addendum signature and provides a pointer from the original to the amended document.",
+            ),
+            Self::_1284010065112117 => Some(
+                "the signature of an individual who is certifying that the document is invalidated by an error(s), or is placed in the wrong chart. An administrative (error/edit) signature must include an addendum to the document and therefore shall have an addendum signature sub-type (see 8.1). This signature is reserved for the highest health information system administrative classification, since it is a statement that the entire document is invalidated by the error and that the document should no longer be used for patient care, although for legal reasons the document must remain part of the permanent patient record.",
+            ),
+            Self::_1284010065112118 => Some(
+                "the signature by an entity or device trusted to provide accurate timestamps. This timestamp might be provided, for example, in the signature time attribute.",
+            ),
         }
     }
 
@@ -216,5 +250,4 @@ impl ASTMSignatureTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

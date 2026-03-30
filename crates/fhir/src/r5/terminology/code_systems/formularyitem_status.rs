@@ -50,9 +50,15 @@ impl FormularyItemStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The service or product referred to by this FormularyItem is in active use within the drug database or inventory system."),
-            Self::EnteredInError => Some("The service or product referred to by this FormularyItem was entered in error within the drug database or inventory system."),
-            Self::Inactive => Some("The service or product referred to by this FormularyItem is not in active use within the drug database or inventory system."),
+            Self::Active => Some(
+                "The service or product referred to by this FormularyItem is in active use within the drug database or inventory system.",
+            ),
+            Self::EnteredInError => Some(
+                "The service or product referred to by this FormularyItem was entered in error within the drug database or inventory system.",
+            ),
+            Self::Inactive => Some(
+                "The service or product referred to by this FormularyItem is not in active use within the drug database or inventory system.",
+            ),
         }
     }
 
@@ -111,5 +117,4 @@ impl FormularyItemStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

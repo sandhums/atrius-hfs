@@ -52,7 +52,9 @@ impl RemittanceOutcome {
         match self {
             Self::Complete => Some("The processing completed without errors."),
             Self::Error => Some("The processing identified errors."),
-            Self::Partial => Some("No errors have been detected and some of the adjudication has been performed."),
+            Self::Partial => Some(
+                "No errors have been detected and some of the adjudication has been performed.",
+            ),
         }
     }
 
@@ -111,5 +113,4 @@ impl RemittanceOutcome {
             })
             .unwrap_or(false)
     }
-
 }

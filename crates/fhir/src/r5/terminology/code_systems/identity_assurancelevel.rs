@@ -118,5 +118,4 @@ impl IdentityAssuranceLevel {
             })
             .unwrap_or(false)
     }
-
 }

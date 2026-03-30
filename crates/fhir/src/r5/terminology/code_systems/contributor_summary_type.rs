@@ -67,12 +67,22 @@ impl ContributorSummaryType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::AuthorString => Some("Display of the author list as a complete string."),
-            Self::ContributorshipList => Some("Display of the list of contributors as a complete string."),
+            Self::ContributorshipList => {
+                Some("Display of the list of contributors as a complete string.")
+            }
             Self::ContributorshipStatement => Some("Compiled summary of contributions."),
-            Self::AcknowledgementList => Some("Display of the list of acknowledged parties as a complete string."),
-            Self::AcknowledgmentStatement => Some("Statement of acknowledgment of contributions beyond those compiled for formal contributorship statements."),
-            Self::FundingStatement => Some("Statement of financial support for the creation of the cited artifact."),
-            Self::CompetingInterestsStatement => Some("Statement of completing interests related to the creation of the cited artifact. Also called conflicts of interest or declaration of interests."),
+            Self::AcknowledgementList => {
+                Some("Display of the list of acknowledged parties as a complete string.")
+            }
+            Self::AcknowledgmentStatement => Some(
+                "Statement of acknowledgment of contributions beyond those compiled for formal contributorship statements.",
+            ),
+            Self::FundingStatement => {
+                Some("Statement of financial support for the creation of the cited artifact.")
+            }
+            Self::CompetingInterestsStatement => Some(
+                "Statement of completing interests related to the creation of the cited artifact. Also called conflicts of interest or declaration of interests.",
+            ),
         }
     }
 
@@ -139,5 +149,4 @@ impl ContributorSummaryType {
             })
             .unwrap_or(false)
     }
-
 }

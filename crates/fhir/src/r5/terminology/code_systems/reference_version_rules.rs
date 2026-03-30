@@ -50,7 +50,9 @@ impl ReferenceVersionRules {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Either => Some("The reference may be either version independent or version specific."),
+            Self::Either => {
+                Some("The reference may be either version independent or version specific.")
+            }
             Self::Independent => Some("The reference must be version independent."),
             Self::Specific => Some("The reference must be version specific."),
         }
@@ -111,5 +113,4 @@ impl ReferenceVersionRules {
             })
             .unwrap_or(false)
     }
-
 }

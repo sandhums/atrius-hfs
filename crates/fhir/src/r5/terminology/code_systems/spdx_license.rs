@@ -1143,16 +1143,36 @@ impl SPDXLicense {
             Self::CCBYNC25 => Some("Creative Commons Attribution Non Commercial 2.5 Generic"),
             Self::CCBYNC30 => Some("Creative Commons Attribution Non Commercial 3.0 Unported"),
             Self::CCBYNC40 => Some("Creative Commons Attribution Non Commercial 4.0 International"),
-            Self::CCBYNCND10 => Some("Creative Commons Attribution Non Commercial No Derivatives 1.0 Generic"),
-            Self::CCBYNCND20 => Some("Creative Commons Attribution Non Commercial No Derivatives 2.0 Generic"),
-            Self::CCBYNCND25 => Some("Creative Commons Attribution Non Commercial No Derivatives 2.5 Generic"),
-            Self::CCBYNCND30 => Some("Creative Commons Attribution Non Commercial No Derivatives 3.0 Unported"),
-            Self::CCBYNCND40 => Some("Creative Commons Attribution Non Commercial No Derivatives 4.0 International"),
-            Self::CCBYNCSA10 => Some("Creative Commons Attribution Non Commercial Share Alike 1.0 Generic"),
-            Self::CCBYNCSA20 => Some("Creative Commons Attribution Non Commercial Share Alike 2.0 Generic"),
-            Self::CCBYNCSA25 => Some("Creative Commons Attribution Non Commercial Share Alike 2.5 Generic"),
-            Self::CCBYNCSA30 => Some("Creative Commons Attribution Non Commercial Share Alike 3.0 Unported"),
-            Self::CCBYNCSA40 => Some("Creative Commons Attribution Non Commercial Share Alike 4.0 International"),
+            Self::CCBYNCND10 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 1.0 Generic")
+            }
+            Self::CCBYNCND20 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 2.0 Generic")
+            }
+            Self::CCBYNCND25 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 2.5 Generic")
+            }
+            Self::CCBYNCND30 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 3.0 Unported")
+            }
+            Self::CCBYNCND40 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 4.0 International")
+            }
+            Self::CCBYNCSA10 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 1.0 Generic")
+            }
+            Self::CCBYNCSA20 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 2.0 Generic")
+            }
+            Self::CCBYNCSA25 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 2.5 Generic")
+            }
+            Self::CCBYNCSA30 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 3.0 Unported")
+            }
+            Self::CCBYNCSA40 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 4.0 International")
+            }
             Self::CCBYND10 => Some("Creative Commons Attribution No Derivatives 1.0 Generic"),
             Self::CCBYND20 => Some("Creative Commons Attribution No Derivatives 2.0 Generic"),
             Self::CCBYND25 => Some("Creative Commons Attribution No Derivatives 2.5 Generic"),
@@ -1176,7 +1196,9 @@ impl SPDXLicense {
             Self::CECILLC => Some("CeCILL-C Free Software License Agreement"),
             Self::ClArtistic => Some("Clarified Artistic License"),
             Self::CNRIJython => Some("CNRI Jython License"),
-            Self::CNRIPythonGPLCompatible => Some("CNRI Python Open Source GPL Compatible License Agreement"),
+            Self::CNRIPythonGPLCompatible => {
+                Some("CNRI Python Open Source GPL Compatible License Agreement")
+            }
             Self::CNRIPython => Some("CNRI Python License"),
             Self::Condor11 => Some("Condor Public License v1.1"),
             Self::CPAL10 => Some("Common Public Attribution License 1.0"),
@@ -1263,8 +1285,12 @@ impl SPDXLicense {
             Self::Libpng => Some("libpng License"),
             Self::Libtiff => Some("libtiff License"),
             Self::LiLiQP11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} Permissive version 1.1"),
-            Self::LiLiQR11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} version 1.1"),
-            Self::LiLiQRplus11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} forte version 1.1"),
+            Self::LiLiQR11 => {
+                Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} version 1.1")
+            }
+            Self::LiLiQRplus11 => Some(
+                "Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} forte version 1.1",
+            ),
             Self::LinuxOpenIB => Some("Linux Kernel Variant of OpenIB.org license"),
             Self::LPL10 => Some("Lucent Public License Version 1.0"),
             Self::LPL102 => Some("Lucent Public License v1.02"),
@@ -1286,7 +1312,9 @@ impl SPDXLicense {
             Self::Mpich2 => Some("mpich2 License"),
             Self::MPL10 => Some("Mozilla Public License 1.0"),
             Self::MPL11 => Some("Mozilla Public License 1.1"),
-            Self::MPL20NoCopyleftException => Some("Mozilla Public License 2.0 (no copyleft exception)"),
+            Self::MPL20NoCopyleftException => {
+                Some("Mozilla Public License 2.0 (no copyleft exception)")
+            }
             Self::MPL20 => Some("Mozilla Public License 2.0"),
             Self::MSPL => Some("Microsoft Public License"),
             Self::MSRL => Some("Microsoft Reciprocal License"),
@@ -1385,8 +1413,12 @@ impl SPDXLicense {
             Self::TMate => Some("TMate Open Source License"),
             Self::TORQUE11 => Some("TORQUE v2.5+ Software License v1.1"),
             Self::TOSL => Some("Trusster Open Source License"),
-            Self::UnicodeDFS2015 => Some("Unicode License Agreement - Data Files and Software (2015)"),
-            Self::UnicodeDFS2016 => Some("Unicode License Agreement - Data Files and Software (2016)"),
+            Self::UnicodeDFS2015 => {
+                Some("Unicode License Agreement - Data Files and Software (2015)")
+            }
+            Self::UnicodeDFS2016 => {
+                Some("Unicode License Agreement - Data Files and Software (2016)")
+            }
             Self::UnicodeTOU => Some("Unicode Terms of Use"),
             Self::Unlicense => Some("The Unlicense"),
             Self::UPL10 => Some("Universal Permissive License v1.0"),
@@ -1493,22 +1525,46 @@ impl SPDXLicense {
             Self::CCBYNC20 => Some("Creative Commons Attribution Non Commercial 2.0 Generic."),
             Self::CCBYNC25 => Some("Creative Commons Attribution Non Commercial 2.5 Generic."),
             Self::CCBYNC30 => Some("Creative Commons Attribution Non Commercial 3.0 Unported."),
-            Self::CCBYNC40 => Some("Creative Commons Attribution Non Commercial 4.0 International."),
-            Self::CCBYNCND10 => Some("Creative Commons Attribution Non Commercial No Derivatives 1.0 Generic."),
-            Self::CCBYNCND20 => Some("Creative Commons Attribution Non Commercial No Derivatives 2.0 Generic."),
-            Self::CCBYNCND25 => Some("Creative Commons Attribution Non Commercial No Derivatives 2.5 Generic."),
-            Self::CCBYNCND30 => Some("Creative Commons Attribution Non Commercial No Derivatives 3.0 Unported."),
-            Self::CCBYNCND40 => Some("Creative Commons Attribution Non Commercial No Derivatives 4.0 International."),
-            Self::CCBYNCSA10 => Some("Creative Commons Attribution Non Commercial Share Alike 1.0 Generic."),
-            Self::CCBYNCSA20 => Some("Creative Commons Attribution Non Commercial Share Alike 2.0 Generic."),
-            Self::CCBYNCSA25 => Some("Creative Commons Attribution Non Commercial Share Alike 2.5 Generic."),
-            Self::CCBYNCSA30 => Some("Creative Commons Attribution Non Commercial Share Alike 3.0 Unported."),
-            Self::CCBYNCSA40 => Some("Creative Commons Attribution Non Commercial Share Alike 4.0 International."),
+            Self::CCBYNC40 => {
+                Some("Creative Commons Attribution Non Commercial 4.0 International.")
+            }
+            Self::CCBYNCND10 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 1.0 Generic.")
+            }
+            Self::CCBYNCND20 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 2.0 Generic.")
+            }
+            Self::CCBYNCND25 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 2.5 Generic.")
+            }
+            Self::CCBYNCND30 => {
+                Some("Creative Commons Attribution Non Commercial No Derivatives 3.0 Unported.")
+            }
+            Self::CCBYNCND40 => Some(
+                "Creative Commons Attribution Non Commercial No Derivatives 4.0 International.",
+            ),
+            Self::CCBYNCSA10 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 1.0 Generic.")
+            }
+            Self::CCBYNCSA20 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 2.0 Generic.")
+            }
+            Self::CCBYNCSA25 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 2.5 Generic.")
+            }
+            Self::CCBYNCSA30 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 3.0 Unported.")
+            }
+            Self::CCBYNCSA40 => {
+                Some("Creative Commons Attribution Non Commercial Share Alike 4.0 International.")
+            }
             Self::CCBYND10 => Some("Creative Commons Attribution No Derivatives 1.0 Generic."),
             Self::CCBYND20 => Some("Creative Commons Attribution No Derivatives 2.0 Generic."),
             Self::CCBYND25 => Some("Creative Commons Attribution No Derivatives 2.5 Generic."),
             Self::CCBYND30 => Some("Creative Commons Attribution No Derivatives 3.0 Unported."),
-            Self::CCBYND40 => Some("Creative Commons Attribution No Derivatives 4.0 International."),
+            Self::CCBYND40 => {
+                Some("Creative Commons Attribution No Derivatives 4.0 International.")
+            }
             Self::CCBYSA10 => Some("Creative Commons Attribution Share Alike 1.0 Generic."),
             Self::CCBYSA20 => Some("Creative Commons Attribution Share Alike 2.0 Generic."),
             Self::CCBYSA25 => Some("Creative Commons Attribution Share Alike 2.5 Generic."),
@@ -1527,7 +1583,9 @@ impl SPDXLicense {
             Self::CECILLC => Some("CeCILL-C Free Software License Agreement."),
             Self::ClArtistic => Some("Clarified Artistic License."),
             Self::CNRIJython => Some("CNRI Jython License."),
-            Self::CNRIPythonGPLCompatible => Some("CNRI Python Open Source GPL Compatible License Agreement."),
+            Self::CNRIPythonGPLCompatible => {
+                Some("CNRI Python Open Source GPL Compatible License Agreement.")
+            }
             Self::CNRIPython => Some("CNRI Python License."),
             Self::Condor11 => Some("Condor Public License v1.1."),
             Self::CPAL10 => Some("Common Public Attribution License 1.0."),
@@ -1614,8 +1672,12 @@ impl SPDXLicense {
             Self::Libpng => Some("libpng License."),
             Self::Libtiff => Some("libtiff License."),
             Self::LiLiQP11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} Permissive version 1.1."),
-            Self::LiLiQR11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} version 1.1."),
-            Self::LiLiQRplus11 => Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} forte version 1.1."),
+            Self::LiLiQR11 => {
+                Some("Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} version 1.1.")
+            }
+            Self::LiLiQRplus11 => Some(
+                "Licence Libre du Qu\u{e9}bec \u{2013} R\u{e9}ciprocit\u{e9} forte version 1.1.",
+            ),
             Self::LinuxOpenIB => Some("Linux Kernel Variant of OpenIB.org license."),
             Self::LPL10 => Some("Lucent Public License Version 1.0."),
             Self::LPL102 => Some("Lucent Public License v1.02."),
@@ -1637,7 +1699,9 @@ impl SPDXLicense {
             Self::Mpich2 => Some("mpich2 License."),
             Self::MPL10 => Some("Mozilla Public License 1.0."),
             Self::MPL11 => Some("Mozilla Public License 1.1."),
-            Self::MPL20NoCopyleftException => Some("Mozilla Public License 2.0 (no copyleft exception)."),
+            Self::MPL20NoCopyleftException => {
+                Some("Mozilla Public License 2.0 (no copyleft exception).")
+            }
             Self::MPL20 => Some("Mozilla Public License 2.0."),
             Self::MSPL => Some("Microsoft Public License."),
             Self::MSRL => Some("Microsoft Reciprocal License."),
@@ -1736,8 +1800,12 @@ impl SPDXLicense {
             Self::TMate => Some("TMate Open Source License."),
             Self::TORQUE11 => Some("TORQUE v2.5+ Software License v1.1."),
             Self::TOSL => Some("Trusster Open Source License."),
-            Self::UnicodeDFS2015 => Some("Unicode License Agreement - Data Files and Software (2015)."),
-            Self::UnicodeDFS2016 => Some("Unicode License Agreement - Data Files and Software (2016)."),
+            Self::UnicodeDFS2015 => {
+                Some("Unicode License Agreement - Data Files and Software (2015).")
+            }
+            Self::UnicodeDFS2016 => {
+                Some("Unicode License Agreement - Data Files and Software (2016).")
+            }
             Self::UnicodeTOU => Some("Unicode Terms of Use."),
             Self::Unlicense => Some("The Unlicense."),
             Self::UPL10 => Some("Universal Permissive License v1.0."),
@@ -2512,5 +2580,4 @@ impl SPDXLicense {
             })
             .unwrap_or(false)
     }
-
 }

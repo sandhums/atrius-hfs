@@ -405,7 +405,18 @@ pub fn extract_bindings_from_elements(
             .unwrap_or_else(|| element_path.to_string());
         let bindable_type_codes = type_codes
             .iter()
-            .filter(|code| matches!(code.as_str(), "code" | "string" | "uri" | "Coding" | "CodeableConcept" | "CodeableReference" | "Quantity"))
+            .filter(|code| {
+                matches!(
+                    code.as_str(),
+                    "code"
+                        | "string"
+                        | "uri"
+                        | "Coding"
+                        | "CodeableConcept"
+                        | "CodeableReference"
+                        | "Quantity"
+                )
+            })
             .cloned()
             .collect::<Vec<_>>();
 
@@ -534,7 +545,13 @@ pub fn binding_target_kind(type_codes: &[String]) -> BindingTargetKindModel {
         let has_bindable_choice_variant = type_codes.iter().any(|code| {
             matches!(
                 code.as_str(),
-                "code" | "string" | "uri" | "Coding" | "CodeableConcept" | "CodeableReference" | "Quantity"
+                "code"
+                    | "string"
+                    | "uri"
+                    | "Coding"
+                    | "CodeableConcept"
+                    | "CodeableReference"
+                    | "Quantity"
             )
         });
 

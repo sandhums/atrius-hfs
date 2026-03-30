@@ -22,11 +22,11 @@ pub use fhir_validation_types::{
     BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
 };
 
-use crate::FhirPathEvaluator;
-use serde_json::Value;
-use std::fmt;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::terminology::types::TerminologyRemoteError;
+use crate::{FhirPathEvaluator, InvariantExprRef};
+use helios_fhirpath::handlers::json_value_to_evaluation_result;
+use std::fmt;
 
 /// A single validation issue that can later be mapped to
 /// `OperationOutcome.issue`.
@@ -35,7 +35,7 @@ pub struct ValidationIssue {
     pub severity: Severity,
 
     /// Category such as "value", "invariant", "structure", "terminology"
-    pub code: &'static str,
+    pub code: String,
 
     /// Declared logical FHIR path from the StructureDefinition metadata,
     /// for example "Reference" or "Patient.contact".
@@ -57,10 +57,10 @@ pub struct ValidationIssue {
 
 impl ValidationIssue {
     /// Construct an error-level validation issue with a declared FHIR path.
-    pub fn error(code: &'static str, path: impl Into<String>, diag: impl Into<String>) -> Self {
+    pub fn error(code: impl Into<String>, path: impl Into<String>, diag: impl Into<String>) -> Self {
         Self {
             severity: Severity::Error,
-            code,
+            code: code.into(),
             fhir_path: path.into(),
             instance_path: None,
             expression: None,
@@ -68,10 +68,10 @@ impl ValidationIssue {
         }
     }
     /// Construct a warning-level validation issue with a declared FHIR path.
-    pub fn warning(code: &'static str, path: impl Into<String>, diag: impl Into<String>) -> Self {
+    pub fn warning(code: impl Into<String>, path: impl Into<String>, diag: impl Into<String>) -> Self {
         Self {
             severity: Severity::Warning,
-            code,
+            code: code.into(),
             fhir_path: path.into(),
             instance_path: None,
             expression: None,
@@ -82,7 +82,7 @@ impl ValidationIssue {
     pub fn from_invariant_def(invariant: &InvariantDef) -> Self {
         Self {
             severity: invariant.severity,
-            code: "invariant",
+            code: "invariant".to_string(),
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
@@ -100,7 +100,7 @@ impl ValidationIssue {
     pub fn from_invariant_error(invariant: &InvariantDef, err: ValidationError) -> Self {
         Self {
             severity: Severity::Error,
-            code: "exception",
+            code: "exception".to_string(),
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
@@ -129,7 +129,7 @@ pub struct ValidationConfig {
     /// Emit warnings for preferred bindings
     pub warn_on_preferred_bindings: bool,
 
-    /// Emit warnings for preferred bindings
+    /// Emit warnings for example bindings
     pub warn_on_example_bindings: bool,
 }
 
@@ -143,7 +143,7 @@ impl Default for ValidationConfig {
     }
 }
 /// Errors raised while evaluating invariants or terminology-backed validation.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ValidationError {
     FhirPath(helios_fhirpath_support::EvaluationError),
     Terminology(String),
@@ -222,7 +222,7 @@ impl Validator {
                 Severity::Warning
             } else {
                 Severity::Information
-        }),
+            }),
         }
     }
     /// Validate a versioned `FhirResource` by dispatching to the appropriate
@@ -413,7 +413,21 @@ impl Validator {
         let mut issues = Vec::new();
 
         let focus_value = match serde_json::to_value(focus) {
-            Ok(value) => json_value_to_evaluation_result(value),
+            Ok(value) => match json_value_to_evaluation_result(&value) {
+                Ok(result) => result,
+                Err(err) => {
+                    for invariant in invariants {
+                        issues.push(ValidationIssue::from_invariant_error(
+                            invariant,
+                            ValidationError::Other(format!(
+                                "Failed to convert focus into evaluation result: {}",
+                                err
+                            )),
+                        ));
+                    }
+                    return issues;
+                }
+            },
             Err(err) => {
                 for invariant in invariants {
                     issues.push(ValidationIssue::from_invariant_error(
@@ -428,12 +442,21 @@ impl Validator {
             }
         };
 
-        for invariant in invariants {
-            match evaluator.eval_invariant_on(
-                focus_value.clone(),
-                &invariant.path,
-                &invariant.expression,
-            ) {
+        // Build the focused evaluation context once, then batch all invariant
+        // expressions against it to avoid cloning the same evaluation tree for
+        // every invariant.
+        let invariant_refs: Vec<InvariantExprRef<'_>> = invariants
+            .iter()
+            .map(|inv| InvariantExprRef {
+                declared_path: inv.path,
+                expression: inv.expression,
+            })
+            .collect();
+
+        let results = evaluator.eval_invariants_on(focus_value, &invariant_refs);
+
+        for (invariant, result) in invariants.iter().zip(results.into_iter()) {
+            match result {
                 Ok(true) => {}
                 Ok(false) => {
                     issues.push(
@@ -490,41 +513,5 @@ fn rebase_instance_path(current: &str, actual_root_path: &str) -> String {
         actual_root_path.to_string()
     } else {
         format!("{}{}", actual_root_path, suffix)
-    }
-}
-/// Convert serialized JSON into a `helios_fhirpath_support::EvaluationResult`
-/// so the invariant engine can evaluate generated FHIRPath constraints against
-/// the current focus value.
-fn json_value_to_evaluation_result(value: Value) -> helios_fhirpath_support::EvaluationResult {
-    use helios_fhirpath_support::EvaluationResult;
-
-    match value {
-        Value::Null => EvaluationResult::Empty,
-        Value::Bool(b) => EvaluationResult::Boolean(b, None, None),
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                EvaluationResult::Integer(i, None, None)
-            } else if let Some(f) = n.as_i64() {
-                EvaluationResult::Decimal(f.into(), None, None)
-            } else {
-                EvaluationResult::Empty
-            }
-        }
-        Value::String(s) => EvaluationResult::String(s, None, None),
-        Value::Array(items) => EvaluationResult::Collection {
-            items: items
-                .into_iter()
-                .map(json_value_to_evaluation_result)
-                .collect(),
-            has_undefined_order: false,
-            type_info: None,
-        },
-        Value::Object(map) => {
-            let converted = map
-                .into_iter()
-                .map(|(k, v)| (k, json_value_to_evaluation_result(v)))
-                .collect();
-            EvaluationResult::object(converted)
-        }
     }
 }

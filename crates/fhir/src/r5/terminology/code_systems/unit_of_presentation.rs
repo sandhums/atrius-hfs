@@ -482,5 +482,4 @@ impl UnitOfPresentation {
             })
             .unwrap_or(false)
     }
-
 }

@@ -58,8 +58,12 @@ impl BiologicallyDerivedProductCategory {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Organ => Some("A collection of tissues joined in a structural unit to serve a common function."),
-            Self::Tissue => Some("An ensemble of similar cells and their extracellular matrix from the same origin that together carry out a specific function."),
+            Self::Organ => Some(
+                "A collection of tissues joined in a structural unit to serve a common function.",
+            ),
+            Self::Tissue => Some(
+                "An ensemble of similar cells and their extracellular matrix from the same origin that together carry out a specific function.",
+            ),
             Self::Fluid => Some("Body fluid."),
             Self::Cells => Some("Collection of cells."),
             Self::BiologicalAgent => Some("Biological agent of unspecified type."),
@@ -125,5 +129,4 @@ impl BiologicallyDerivedProductCategory {
             })
             .unwrap_or(false)
     }
-
 }

@@ -111,5 +111,4 @@ impl ACMECholCodesBlood {
             })
             .unwrap_or(false)
     }
-
 }

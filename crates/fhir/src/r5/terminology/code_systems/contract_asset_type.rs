@@ -97,5 +97,4 @@ impl ContractAssetType {
             })
             .unwrap_or(false)
     }
-
 }

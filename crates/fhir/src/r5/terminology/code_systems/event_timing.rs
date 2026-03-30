@@ -90,19 +90,45 @@ impl EventTiming {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::MORN => Some("Event occurs during the morning. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::MORNEarly => Some("Event occurs during the early morning. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::MORNLate => Some("Event occurs during the late morning. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::NOON => Some("Event occurs around 12:00pm. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::AFT => Some("Event occurs during the afternoon. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::AFTEarly => Some("Event occurs during the early afternoon. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::AFTLate => Some("Event occurs during the late afternoon. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::EVE => Some("Event occurs during the evening. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::EVEEarly => Some("Event occurs during the early evening. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::EVELate => Some("Event occurs during the late evening. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::NIGHT => Some("Event occurs during the night. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::PHS => Some("Event occurs [offset] after subject goes to sleep. The exact time is unspecified and established by institution convention or patient interpretation."),
-            Self::IMD => Some("Event occurs a single time (with no repetitions) as soon as possible after the scheduled or actual start of the overall event."),
+            Self::MORN => Some(
+                "Event occurs during the morning. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::MORNEarly => Some(
+                "Event occurs during the early morning. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::MORNLate => Some(
+                "Event occurs during the late morning. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::NOON => Some(
+                "Event occurs around 12:00pm. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::AFT => Some(
+                "Event occurs during the afternoon. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::AFTEarly => Some(
+                "Event occurs during the early afternoon. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::AFTLate => Some(
+                "Event occurs during the late afternoon. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::EVE => Some(
+                "Event occurs during the evening. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::EVEEarly => Some(
+                "Event occurs during the early evening. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::EVELate => Some(
+                "Event occurs during the late evening. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::NIGHT => Some(
+                "Event occurs during the night. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::PHS => Some(
+                "Event occurs [offset] after subject goes to sleep. The exact time is unspecified and established by institution convention or patient interpretation.",
+            ),
+            Self::IMD => Some(
+                "Event occurs a single time (with no repetitions) as soon as possible after the scheduled or actual start of the overall event.",
+            ),
         }
     }
 
@@ -181,5 +207,4 @@ impl EventTiming {
             })
             .unwrap_or(false)
     }
-
 }

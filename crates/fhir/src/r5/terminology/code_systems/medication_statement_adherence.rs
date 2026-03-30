@@ -92,7 +92,9 @@ impl MedicationStatementAdherenceCodes {
             Self::Stopped => Some("The medication is stopped."),
             Self::StoppedAsDirected => Some("The medication is stopped as directed."),
             Self::StoppedNotAsDirected => Some("The medication is stopped not as directed."),
-            Self::Unknown => Some("Whether the medication is being taken or not is not currently known."),
+            Self::Unknown => {
+                Some("Whether the medication is being taken or not is not currently known.")
+            }
         }
     }
 
@@ -167,5 +169,4 @@ impl MedicationStatementAdherenceCodes {
             })
             .unwrap_or(false)
     }
-
 }

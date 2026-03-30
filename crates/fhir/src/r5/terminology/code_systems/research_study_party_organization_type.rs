@@ -132,5 +132,4 @@ impl ResearchStudyPartyOrganizationType {
             })
             .unwrap_or(false)
     }
-
 }

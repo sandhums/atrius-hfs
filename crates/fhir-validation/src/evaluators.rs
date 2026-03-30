@@ -1,9 +1,91 @@
+//! # FHIRPath Evaluators (Atrius Validation Engine v1)
+//!
+//! ## Overview
+//!
+//! This module implements the FHIRPath evaluation layer used by the Atrius
+//! validation engine. It is responsible for:
+//!
+//! - Evaluating invariant expressions (FHIRPath)
+//! - Resolving declared paths into focus values
+//! - Supporting both single and bulk invariant execution
+//!
+//! ## Why this refactor?
+//!
+//! The original design evaluated invariants one-by-one:
+//!
+//! - Each invariant created its own evaluation context
+//! - Each invariant resolved its own focus
+//! - Each invariant executed independently
+//!
+//! This resulted in:
+//! - repeated context cloning
+//! - repeated FHIRPath evaluation
+//! - poor scaling for arrays and nested structures
+//!
+//! ## New Design (v1)
+//!
+//! We now use a **batch evaluation model**:
+//!
+//! - Resolve focus once
+//! - Evaluate multiple invariant expressions on that focus
+//!
+//! ```text
+//! Validator
+//!   → resolve focus values
+//!   → evaluator.eval_invariants_on(...)
+//!       → evaluate N expressions
+//!       → return results
+//! ```
+//!
+//! ## Key Decisions
+//!
+//! ### 1. Owned `EvaluationResult`
+//!
+//! Reasons:
+//! - avoids lifetime complexity
+//! - works cleanly with `EvaluationContext::set_this`
+//! - aligns with Helios FHIRPath internals
+//!
+//! Trade-off: cloning may occur, but correctness and simplicity are prioritized.
+//!
+//! ### 2. `InvariantExprRef`
+//!
+//! Instead of passing full `InvariantDef`, we use a lightweight struct:
+//!
+//! ```rust
+//! pub struct InvariantExprRef<'a> {
+//!     pub declared_path: &'a str,
+//!     pub expression: &'a str,
+//! }
+//! ```
+//!
+//! This:
+//! - decouples evaluator from generator
+//! - enables dynamic/runtime invariants
+//! - supports future StructureDefinition validation
+//!
+//! ### 3. Bulk Evaluation API
+//!
+//! This:
+//! - sets context once
+//! - evaluates multiple expressions
+//! - returns one result per invariant
+//!
+//! ## Summary
+//!
+//! This module provides a:
+//! - performant
+//! - decoupled
+//! - extensible
+//!
+//! foundation for FHIR invariant evaluation in Atrius.
 use crate::ValidationError;
 use helios_fhir::FhirResource;
 use helios_fhir::r4::Resource;
 use helios_fhir::r5::Resource as R5Resource;
+use helios_fhirpath::evaluator::convert_resource_to_result;
 use helios_fhirpath::{EvaluationContext, evaluate_expression};
-use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult};
+use helios_fhirpath_support::EvaluationResult;
 
 /// Internal evaluator used by the version-specific public evaluators.
 ///
@@ -113,15 +195,24 @@ impl GenericFhirPathEvaluator {
 
         Ok(true)
     }
-    /// Evaluate an invariant on an explicit focus value.
+    /// Evaluate multiple invariants on a single focus value.
     ///
-    /// This is used when validation code has already identified the focus value
-    /// directly and does not need declared-path resolution.
-    fn eval_invariant_on(
+    /// This is the core optimization in the Atrius validation engine:
+    ///
+    /// - The evaluation context is created once
+    /// - `%resource` and `%rootResource` are reused
+    /// - Multiple expressions are evaluated against the same focus
+    ///
+    /// Compared to per-invariant execution, this:
+    /// - reduces repeated context cloning
+    /// - improves performance on arrays and nested structures
+    ///
+    /// Returns one result per invariant expression.
+    fn eval_invariants_on(
         &self,
         focus: EvaluationResult,
-        expression: &str,
-    ) -> Result<bool, ValidationError> {
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>> {
         let mut focus_context = self.context.clone();
 
         if let Some(root) = self.context.this.clone() {
@@ -131,13 +222,47 @@ impl GenericFhirPathEvaluator {
 
         focus_context.set_this(focus);
 
-        let result = evaluate_expression(expression, &focus_context).map_err(|e| {
-            ValidationError::FhirPath(helios_fhirpath_support::EvaluationError::SemanticError(
-                format!("failed to evaluate invariant '{expression}' on focused value: {e}"),
-            ))
-        })?;
+        invariants
+            .iter()
+            .map(|invariant| {
+                let result =
+                    evaluate_expression(invariant.expression, &focus_context).map_err(|e| {
+                        ValidationError::FhirPath(
+                            helios_fhirpath_support::EvaluationError::SemanticError(format!(
+                                "failed to evaluate invariant '{}' at '{}' on focused value: {e}",
+                                invariant.expression, invariant.declared_path
+                            )),
+                        )
+                    })?;
 
-        coerce_result_to_bool(result)
+                coerce_result_to_bool(result)
+            })
+            .collect()
+    }
+
+    /// Evaluate a single invariant on a focus value.
+    ///
+    /// This is a thin wrapper over `eval_invariants_on` and exists for API
+    /// compatibility.
+    ///
+    /// All actual logic is delegated to the bulk evaluation path to ensure
+    /// consistent behavior.
+    fn eval_invariant_on(
+        &self,
+        focus: EvaluationResult,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError> {
+        self.eval_invariants_on(
+            focus,
+            &[InvariantExprRef {
+                declared_path,
+                expression,
+            }],
+        )
+        .into_iter()
+        .next()
+        .expect("single-expression bulk evaluation should return exactly one result")
     }
     /// Evaluate a declared FHIR path and return the matching focus items.
     ///
@@ -219,10 +344,21 @@ pub trait FhirPathEvaluator {
     /// Evaluate an invariant on an already-resolved explicit focus value.
     fn eval_invariant_on(
         &self,
-        focus: helios_fhirpath_support::EvaluationResult,
+        focus: EvaluationResult,
         declared_path: &str,
         expression: &str,
     ) -> Result<bool, ValidationError>;
+
+    /// Evaluate multiple invariants on an already-resolved explicit focus value.
+    ///
+    /// This avoids rebuilding or repeatedly cloning the same focused evaluation
+    /// context when several invariant expressions must be checked against the
+    /// same focus item.
+    fn eval_invariants_on(
+        &self,
+        focus: EvaluationResult,
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>>;
 
     /// Evaluate a FHIR path and return the resulting collection.
     fn eval_path(
@@ -231,6 +367,19 @@ pub trait FhirPathEvaluator {
     ) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, ValidationError>;
 }
 
+/// Lightweight reference to an invariant expression.
+///
+/// This struct borrows data instead of owning it, allowing the evaluator
+/// to operate independently of generator-specific types (`InvariantDef`).
+///
+/// Benefits:
+/// - enables bulk evaluation
+/// - reduces allocation overhead
+/// - supports dynamic validation rules in the future
+pub struct InvariantExprRef<'a> {
+    pub declared_path: &'a str,
+    pub expression: &'a str,
+}
 /// FHIRPath evaluator for R4 resources.
 ///
 /// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
@@ -276,10 +425,19 @@ impl FhirPathEvaluator for R4FhirPathEvaluator {
     fn eval_invariant_on(
         &self,
         focus: EvaluationResult,
-        _declared_path: &str,
+        declared_path: &str,
         expression: &str,
     ) -> Result<bool, ValidationError> {
-        self.inner.eval_invariant_on(focus, expression)
+        self.inner
+            .eval_invariant_on(focus, declared_path, expression)
+    }
+
+    fn eval_invariants_on(
+        &self,
+        focus: EvaluationResult,
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>> {
+        self.inner.eval_invariants_on(focus, invariants)
     }
 
     fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
@@ -331,10 +489,19 @@ impl FhirPathEvaluator for R5FhirPathEvaluator {
     fn eval_invariant_on(
         &self,
         focus: EvaluationResult,
-        _declared_path: &str,
+        declared_path: &str,
         expression: &str,
     ) -> Result<bool, ValidationError> {
-        self.inner.eval_invariant_on(focus, expression)
+        self.inner
+            .eval_invariant_on(focus, declared_path, expression)
+    }
+
+    fn eval_invariants_on(
+        &self,
+        focus: EvaluationResult,
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>> {
+        self.inner.eval_invariants_on(focus, invariants)
     }
 
     fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
@@ -410,9 +577,4 @@ fn coerce_result_to_bool(result: EvaluationResult) -> Result<bool, ValidationErr
             )),
         )),
     }
-}
-// TODO - Duplicate from fhirpath
-fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
-    // Now that FhirResource implements IntoEvaluationResult, just call the method.
-    resource.to_evaluation_result()
 }

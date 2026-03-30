@@ -97,5 +97,4 @@ impl ContractScope {
             })
             .unwrap_or(false)
     }
-
 }

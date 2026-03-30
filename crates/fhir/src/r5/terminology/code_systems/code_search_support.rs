@@ -50,9 +50,15 @@ impl CodeSearchSupport {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InCompose => Some("The search for code on ValueSet returns ValueSet resources where the code is included in the extensional definition of the ValueSet."),
-            Self::InExpansion => Some("The search for code on ValueSet returns ValueSet resources where the code is contained in the  ValueSet expansion."),
-            Self::InComposeOrExpansion => Some("The search for code on ValueSet returns ValueSet resources where the code is included in the extensional definition or contained in the ValueSet expansion."),
+            Self::InCompose => Some(
+                "The search for code on ValueSet returns ValueSet resources where the code is included in the extensional definition of the ValueSet.",
+            ),
+            Self::InExpansion => Some(
+                "The search for code on ValueSet returns ValueSet resources where the code is contained in the  ValueSet expansion.",
+            ),
+            Self::InComposeOrExpansion => Some(
+                "The search for code on ValueSet returns ValueSet resources where the code is included in the extensional definition or contained in the ValueSet expansion.",
+            ),
         }
     }
 
@@ -111,5 +117,4 @@ impl CodeSearchSupport {
             })
             .unwrap_or(false)
     }
-
 }

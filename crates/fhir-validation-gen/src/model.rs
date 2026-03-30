@@ -314,8 +314,10 @@ impl BindingTargetKindModel {
             Self::String => "fhir_validation_types::BindingTargetKind::String",
             Self::Uri => "fhir_validation_types::BindingTargetKind::Uri",
             Self::Choice => "fhir_validation_types::BindingTargetKind::Choice",
-            Self::CodeableReference => "fhir_validation_types::BindingTargetKind::CodeableReference",
-            Self::Quantity => "fhir_validation_types::BindingTargetKind::Quantity"
+            Self::CodeableReference => {
+                "fhir_validation_types::BindingTargetKind::CodeableReference"
+            }
+            Self::Quantity => "fhir_validation_types::BindingTargetKind::Quantity",
         }
     }
 }

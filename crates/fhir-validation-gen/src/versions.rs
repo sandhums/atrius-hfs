@@ -95,4 +95,3 @@ impl std::str::FromStr for FhirVersion {
         }
     }
 }
-

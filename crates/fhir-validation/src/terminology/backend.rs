@@ -4,9 +4,9 @@
 //! validation-facing terminology service. Concrete implementations execute
 //! remote terminology operations such as ValueSet `$validate-code`, while
 //! higher layers remain decoupled from transport and client-specific details.
-use async_trait::async_trait;
-use crate::terminology::requests::ValidateVsRequest;
 use crate::ValidationError;
+use crate::terminology::requests::ValidateVsRequest;
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait TerminologyBackend: Send + Sync {

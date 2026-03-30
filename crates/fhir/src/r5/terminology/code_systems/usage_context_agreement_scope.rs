@@ -62,12 +62,24 @@ impl UsageContextAgreementScope {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::RealmBase => Some("Defines use-case independent foundational expectations for exchange within a particular country or jurisdiction.  Should be accompanied by a jurisdiction.  Commonly used as a \'base\' for more restrictive artifacts."),
-            Self::Knowledge => Some("Defines use-case-specific information or guidance that is relevant to a specific business or health domain but is not mandated for particular use."),
-            Self::Domain => Some("Defines use-case-specific requirements for a specific business or health domain.  May vary in jurisdictional scope from international to small region and in business scope from broad to narrow."),
-            Self::Community => Some("Sets contractual or business expectations for systems participating in a particular exchange community."),
-            Self::SystemDesign => Some("Documents the specific capabilities of a single system as \'available\' for purchase or use.  May have some variability reflecting options that can be configured."),
-            Self::SystemImplementation => Some("Documents the specific points of a single production system or endpoint.  This may be time-specific - i.e. reflecting the system \'as it is now\' or \'as it was at some point in the past\'."),
+            Self::RealmBase => Some(
+                "Defines use-case independent foundational expectations for exchange within a particular country or jurisdiction.  Should be accompanied by a jurisdiction.  Commonly used as a \'base\' for more restrictive artifacts.",
+            ),
+            Self::Knowledge => Some(
+                "Defines use-case-specific information or guidance that is relevant to a specific business or health domain but is not mandated for particular use.",
+            ),
+            Self::Domain => Some(
+                "Defines use-case-specific requirements for a specific business or health domain.  May vary in jurisdictional scope from international to small region and in business scope from broad to narrow.",
+            ),
+            Self::Community => Some(
+                "Sets contractual or business expectations for systems participating in a particular exchange community.",
+            ),
+            Self::SystemDesign => Some(
+                "Documents the specific capabilities of a single system as \'available\' for purchase or use.  May have some variability reflecting options that can be configured.",
+            ),
+            Self::SystemImplementation => Some(
+                "Documents the specific points of a single production system or endpoint.  This may be time-specific - i.e. reflecting the system \'as it is now\' or \'as it was at some point in the past\'.",
+            ),
         }
     }
 
@@ -132,5 +144,4 @@ impl UsageContextAgreementScope {
             })
             .unwrap_or(false)
     }
-
 }

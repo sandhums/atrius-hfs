@@ -111,5 +111,4 @@ impl DeviceUsageAdherenceCode {
             })
             .unwrap_or(false)
     }
-
 }

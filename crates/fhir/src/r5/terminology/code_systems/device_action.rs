@@ -50,9 +50,15 @@ impl ProcedureDeviceActionCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Implanted => Some("The device was implanted in the patient during the procedure."),
-            Self::Explanted => Some("The device was explanted from the patient during the procedure."),
-            Self::Manipulated => Some("The device remains in the patient, but its location, settings, or functionality was changed."),
+            Self::Implanted => {
+                Some("The device was implanted in the patient during the procedure.")
+            }
+            Self::Explanted => {
+                Some("The device was explanted from the patient during the procedure.")
+            }
+            Self::Manipulated => Some(
+                "The device remains in the patient, but its location, settings, or functionality was changed.",
+            ),
         }
     }
 
@@ -111,5 +117,4 @@ impl ProcedureDeviceActionCodes {
             })
             .unwrap_or(false)
     }
-
 }

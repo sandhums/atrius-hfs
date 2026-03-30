@@ -118,5 +118,4 @@ impl PermissionStatus {
             })
             .unwrap_or(false)
     }
-
 }

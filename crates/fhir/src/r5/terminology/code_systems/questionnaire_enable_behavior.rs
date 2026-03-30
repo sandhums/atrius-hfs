@@ -46,8 +46,12 @@ impl EnableWhenBehavior {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::All => Some("Enable the question when all the enableWhen criteria are satisfied."),
-            Self::Any => Some("Enable the question when any of the enableWhen criteria are satisfied."),
+            Self::All => {
+                Some("Enable the question when all the enableWhen criteria are satisfied.")
+            }
+            Self::Any => {
+                Some("Enable the question when any of the enableWhen criteria are satisfied.")
+            }
         }
     }
 
@@ -104,5 +108,4 @@ impl EnableWhenBehavior {
             })
             .unwrap_or(false)
     }
-
 }

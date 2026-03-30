@@ -20,7 +20,7 @@
 //! - public terminology index functions first try exact canonical match, then
 //!   fall back from versioned canonicals (`url|version`) to base canonical URLs
 //! - primitive `code` validation supports implicit system inference only when a
-//!   single unambiguous local system can be derived from the ValueSet definition---------------------------------------------------------------------------
+//!   single unambiguous local system can be derived from the ValueSet definition
 
 use crate::indexer;
 use crate::indexer::valueset_has_nonlocal_rules;
@@ -546,7 +546,11 @@ fn render_valueset_file(
 
                 let concepts = indexer::extract_valueset_concepts(inc);
                 let has_filters = inc.filter.as_ref().map(|f| !f.is_empty()).unwrap_or(false);
-                let has_vs_refs = inc.value_set.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
+                let has_vs_refs = inc
+                    .value_set
+                    .as_ref()
+                    .map(|v| !v.is_empty())
+                    .unwrap_or(false);
 
                 if !has_filters && !has_vs_refs && !implicit_systems.iter().any(|s| s == sys) {
                     implicit_systems.push(sys.to_string());
@@ -653,7 +657,8 @@ fn render_valueset_file(
             // Case 1: inline concepts -> local match list
             if !concepts.is_empty() {
                 emitted_any = true;
-                let system_has_nonlocal_rules = systems_with_nonlocal_rules.iter().any(|s| s == sys);
+                let system_has_nonlocal_rules =
+                    systems_with_nonlocal_rules.iter().any(|s| s == sys);
                 s.push_str(&format!("        if system == \"{sys}\" {{\n"));
                 if system_has_nonlocal_rules {
                     s.push_str("            if matches!(code, ");
@@ -768,7 +773,8 @@ fn render_valueset_file(
             let concepts = indexer::extract_valueset_concepts(inc);
             if !concepts.is_empty() {
                 emitted_known_any = true;
-                let system_has_nonlocal_rules = systems_with_nonlocal_rules.iter().any(|s| s == sys);
+                let system_has_nonlocal_rules =
+                    systems_with_nonlocal_rules.iter().any(|s| s == sys);
                 s.push_str(&format!("        if system == \"{sys}\" {{\n"));
                 if system_has_nonlocal_rules {
                     s.push_str("            return None;\n");
@@ -1013,6 +1019,8 @@ fn render_valueset_file(
 ///   - `Coding`
 ///   - `CodeableConcept`
 ///
+/// binding code in fhir always tries generated terminology::index first;
+///RemoteValidationRequired (or equivalent) means valueset-gen intentionally did not encode those rules.
 /// Public validation helpers first attempt an exact canonical match. If that
 /// fails with `RemoteValidationRequired` and the canonical is versioned
 /// (`url|version`), they retry using the base unversioned canonical URL.
@@ -1052,7 +1060,9 @@ fn render_index_rs(index: &indexer::TerminologyIndex) -> String {
     s.push_str("    }\n}\n");
 
     // --- BEGIN implicit_system_exact/implicit_system helpers ---
-    s.push_str("\n/// Exact canonical lookup for a unique implicit system of a generated ValueSet.\n");
+    s.push_str(
+        "\n/// Exact canonical lookup for a unique implicit system of a generated ValueSet.\n",
+    );
     s.push_str("fn implicit_system_exact(valueset_url: &str) -> Option<&'static str> {\n");
     s.push_str("    match valueset_url {\n");
     for (url, (module, ty)) in &index.vs_by_url {

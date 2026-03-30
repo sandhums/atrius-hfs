@@ -54,10 +54,18 @@ impl FamilyHistoryStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Partial => Some("Some health information is known and captured, but not complete - see notes for details."),
-            Self::Completed => Some("All available related health information is captured as of the date (and possibly time) when the family member history was taken."),
-            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
-            Self::HealthUnknown => Some("Health information for this family member is unavailable/unknown."),
+            Self::Partial => Some(
+                "Some health information is known and captured, but not complete - see notes for details.",
+            ),
+            Self::Completed => Some(
+                "All available related health information is captured as of the date (and possibly time) when the family member history was taken.",
+            ),
+            Self::EnteredInError => {
+                Some("This instance should not have been part of this patient\'s medical record.")
+            }
+            Self::HealthUnknown => {
+                Some("Health information for this family member is unavailable/unknown.")
+            }
         }
     }
 
@@ -118,5 +126,4 @@ impl FamilyHistoryStatus {
             })
             .unwrap_or(false)
     }
-
 }

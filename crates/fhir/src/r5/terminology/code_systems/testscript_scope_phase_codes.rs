@@ -52,7 +52,9 @@ impl TestScriptScopePhaseType {
         match self {
             Self::Unit => Some("The development or implementation phase."),
             Self::Integration => Some("The internal system to system phase."),
-            Self::Production => Some("The live system to system phase (Note, this may involve pii/phi data)."),
+            Self::Production => {
+                Some("The live system to system phase (Note, this may involve pii/phi data).")
+            }
         }
     }
 
@@ -111,5 +113,4 @@ impl TestScriptScopePhaseType {
             })
             .unwrap_or(false)
     }
-
 }

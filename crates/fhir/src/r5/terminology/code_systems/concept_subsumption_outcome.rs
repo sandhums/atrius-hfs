@@ -55,7 +55,9 @@ impl ConceptSubsumptionOutcome {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Equivalent => Some("A equivalent to B if A subsumes B and B subsumes A"),
-            Self::Subsumes => Some("A subsumes B if there is a subsumption relationship between A and B"),
+            Self::Subsumes => {
+                Some("A subsumes B if there is a subsumption relationship between A and B")
+            }
             Self::SubsumedBy => Some("A subsumed by B if B subsumes A"),
             Self::NotSubsumed => Some("Neither A subsumes B nor B subsumes A"),
         }
@@ -118,5 +120,4 @@ impl ConceptSubsumptionOutcome {
             })
             .unwrap_or(false)
     }
-
 }

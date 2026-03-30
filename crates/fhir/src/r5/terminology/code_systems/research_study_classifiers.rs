@@ -54,10 +54,18 @@ impl ResearchStudyClassifiers {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::FdaRegulatedDrug => Some("A medication regulated by the U.S. Food and Drug Administration."),
-            Self::FdaRegulatedDevice => Some("A medical device regulated by the U.S. Food and Drug Administration."),
-            Self::MpgParagraph23b => Some("Research regulated by a specific German legal requirement (Medizinproduktegesetz MPG Paragraph 23b)."),
-            Self::IrbExempt => Some("Human subjects research that is excempt from oversight and monitoring by an institutional review board (IRB)."),
+            Self::FdaRegulatedDrug => {
+                Some("A medication regulated by the U.S. Food and Drug Administration.")
+            }
+            Self::FdaRegulatedDevice => {
+                Some("A medical device regulated by the U.S. Food and Drug Administration.")
+            }
+            Self::MpgParagraph23b => Some(
+                "Research regulated by a specific German legal requirement (Medizinproduktegesetz MPG Paragraph 23b).",
+            ),
+            Self::IrbExempt => Some(
+                "Human subjects research that is excempt from oversight and monitoring by an institutional review board (IRB).",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl ResearchStudyClassifiers {
             })
             .unwrap_or(false)
     }
-
 }

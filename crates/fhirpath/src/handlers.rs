@@ -632,7 +632,7 @@ fn preserve_underscore_properties(context: &mut EvaluationContext, resource_json
 }
 
 /// Convert JSON value to EvaluationResult
-fn json_value_to_evaluation_result(value: &Value) -> FhirPathResult<EvaluationResult> {
+pub fn json_value_to_evaluation_result(value: &Value) -> FhirPathResult<EvaluationResult> {
     match value {
         Value::Null => Ok(EvaluationResult::Empty),
         Value::Bool(b) => Ok(EvaluationResult::boolean(*b)),

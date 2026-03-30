@@ -97,5 +97,4 @@ impl ContractSecurityCategory {
             })
             .unwrap_or(false)
     }
-
 }

@@ -2,10 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use fhir_validation::R4FhirPathEvaluator;
-use fhir_validation::{
-    R5FhirPathEvaluator, Severity, ValidationIssue, Validator,
-};
 use fhir_validation::terminology::service::{TerminologyService, TerminologyServiceSync};
+use fhir_validation::{R5FhirPathEvaluator, Severity, ValidationIssue, Validator};
 use helios_fhir::{FhirResource, FhirVersion};
 
 pub fn fixture_path(rel: &str) -> PathBuf {

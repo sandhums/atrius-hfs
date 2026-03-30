@@ -111,5 +111,4 @@ impl DocumentReferenceStatus {
             })
             .unwrap_or(false)
     }
-
 }

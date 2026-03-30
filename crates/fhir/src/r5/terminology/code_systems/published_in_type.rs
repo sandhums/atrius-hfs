@@ -54,10 +54,18 @@ impl PublishedInType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::D020492 => Some("Publication intended to be issued on an ongoing basis, generally more frequently than annually, containing separate articles, stories, or writings."),
-            Self::D019991 => Some("A structured file of information or a set of logically related data stored and retrieved using computer-based means."),
-            Self::D001877 => Some("Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers."),
-            Self::D064886 => Some("Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing."),
+            Self::D020492 => Some(
+                "Publication intended to be issued on an ongoing basis, generally more frequently than annually, containing separate articles, stories, or writings.",
+            ),
+            Self::D019991 => Some(
+                "A structured file of information or a set of logically related data stored and retrieved using computer-based means.",
+            ),
+            Self::D001877 => Some(
+                "Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers.",
+            ),
+            Self::D064886 => Some(
+                "Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing.",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl PublishedInType {
             })
             .unwrap_or(false)
     }
-
 }

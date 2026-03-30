@@ -46,8 +46,12 @@ impl GroupMembershipBasis {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Definitional => Some("The Group.characteristics specified are both necessary and sufficient to determine membership. All entities that meet the criteria are considered to be members of the group, whether referenced by the group or not. If members are present, they are individuals that happen to be known as meeting the Group.characteristics. The list cannot be presumed to be complete."),
-            Self::Enumerated => Some("The Group.characteristics are necessary but not sufficient to determine membership. Membership is determined by being listed as one of the Group.member."),
+            Self::Definitional => Some(
+                "The Group.characteristics specified are both necessary and sufficient to determine membership. All entities that meet the criteria are considered to be members of the group, whether referenced by the group or not. If members are present, they are individuals that happen to be known as meeting the Group.characteristics. The list cannot be presumed to be complete.",
+            ),
+            Self::Enumerated => Some(
+                "The Group.characteristics are necessary but not sufficient to determine membership. Membership is determined by being listed as one of the Group.member.",
+            ),
         }
     }
 
@@ -104,5 +108,4 @@ impl GroupMembershipBasis {
             })
             .unwrap_or(false)
     }
-
 }

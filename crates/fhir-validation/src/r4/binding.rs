@@ -25,13 +25,13 @@
 use crate::binding::common::{
     get_json_values_with_instance_paths, relative_binding_path, root_instance_path,
 };
+use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
 use helios_fhir::r4::terminology::TerminologyValidationError;
 use helios_fhir::r4::terminology::index as terminology_index;
 use helios_fhir::r4::{CodeableConcept, Coding};
 use serde::Serialize;
-use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 
 #[cfg(feature = "R4")]
 pub fn coding_system(coding: &Coding) -> Option<&str> {
@@ -795,7 +795,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -963,7 +963,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),

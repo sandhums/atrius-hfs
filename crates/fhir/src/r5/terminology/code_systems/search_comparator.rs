@@ -74,15 +74,33 @@ impl SearchComparator {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Eq => Some("the value for the parameter in the resource is equal to the provided value."),
-            Self::Ne => Some("the value for the parameter in the resource is not equal to the provided value."),
-            Self::Gt => Some("the value for the parameter in the resource is greater than the provided value."),
-            Self::Lt => Some("the value for the parameter in the resource is less than the provided value."),
-            Self::Ge => Some("the value for the parameter in the resource is greater or equal to the provided value."),
-            Self::Le => Some("the value for the parameter in the resource is less or equal to the provided value."),
-            Self::Sa => Some("the value for the parameter in the resource starts after the provided value."),
-            Self::Eb => Some("the value for the parameter in the resource ends before the provided value."),
-            Self::Ap => Some("the value for the parameter in the resource is approximately the same to the provided value."),
+            Self::Eq => {
+                Some("the value for the parameter in the resource is equal to the provided value.")
+            }
+            Self::Ne => Some(
+                "the value for the parameter in the resource is not equal to the provided value.",
+            ),
+            Self::Gt => Some(
+                "the value for the parameter in the resource is greater than the provided value.",
+            ),
+            Self::Lt => {
+                Some("the value for the parameter in the resource is less than the provided value.")
+            }
+            Self::Ge => Some(
+                "the value for the parameter in the resource is greater or equal to the provided value.",
+            ),
+            Self::Le => Some(
+                "the value for the parameter in the resource is less or equal to the provided value.",
+            ),
+            Self::Sa => {
+                Some("the value for the parameter in the resource starts after the provided value.")
+            }
+            Self::Eb => {
+                Some("the value for the parameter in the resource ends before the provided value.")
+            }
+            Self::Ap => Some(
+                "the value for the parameter in the resource is approximately the same to the provided value.",
+            ),
         }
     }
 
@@ -153,5 +171,4 @@ impl SearchComparator {
             })
             .unwrap_or(false)
     }
-
 }

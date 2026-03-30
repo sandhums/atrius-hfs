@@ -46,8 +46,12 @@ impl LocationMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Instance => Some("The Location resource represents a specific instance of a location (e.g. Operating Theatre 1A)."),
-            Self::Kind => Some("The Location represents a class of locations (e.g. Any Operating Theatre) although this class of locations could be constrained within a specific boundary (such as organization, or parent location, address etc.)."),
+            Self::Instance => Some(
+                "The Location resource represents a specific instance of a location (e.g. Operating Theatre 1A).",
+            ),
+            Self::Kind => Some(
+                "The Location represents a class of locations (e.g. Any Operating Theatre) although this class of locations could be constrained within a specific boundary (such as organization, or parent location, address etc.).",
+            ),
         }
     }
 
@@ -104,5 +108,4 @@ impl LocationMode {
             })
             .unwrap_or(false)
     }
-
 }

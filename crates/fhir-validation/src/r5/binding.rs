@@ -25,13 +25,13 @@
 use crate::binding::common::{
     get_json_values_with_instance_paths, relative_binding_path, root_instance_path,
 };
+use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
 use helios_fhir::r5::terminology::TerminologyValidationError;
 use helios_fhir::r5::terminology::index as terminology_index;
 use helios_fhir::r5::{CodeableConcept, CodeableReference, Coding, Quantity};
 use serde::Serialize;
-use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 
 #[cfg(feature = "R5")]
 pub fn coding_system(coding: &Coding) -> Option<&str> {
@@ -201,7 +201,7 @@ where
                         fhir_path,
                         valueset_url,
                         strength,
-                        diagnostics
+                        diagnostics,
                     ) {
                         issues.push(issue);
                     }
@@ -352,7 +352,7 @@ where
                         fhir_path,
                         valueset_url,
                         strength,
-                        diagnostics
+                        diagnostics,
                     ) {
                         issues.push(issue);
                     }
@@ -370,10 +370,10 @@ where
         }
 
         Err(TerminologyValidationError::NotInValueSet {
-                valueset_url: _local_valueset_url,
-                system,
-                code,
-            }) => {
+            valueset_url: _local_valueset_url,
+            system,
+            code,
+        }) => {
             let diagnostics = if let Some(system) = system {
                 format!(
                     "The provided value '{}', from CodeSystem '{}' was not found in ValueSet {}",
@@ -430,11 +430,11 @@ where
         }
 
         Err(TerminologyValidationError::WrongDisplay {
-                system,
-                code,
-                expected,
-                provided,
-            }) => {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
             issues.push(crate::binding::common::terminology_issue(
                 fhir_path,
                 valueset_url,
@@ -557,7 +557,10 @@ where
                 return issues;
             };
 
-            match terminology.member_of(valueset_url, implicit_system, code, None).await {
+            match terminology
+                .member_of(valueset_url, implicit_system, code, None)
+                .await
+            {
                 Ok(outcome) if outcome.is_member => issues,
                 Ok(outcome) => {
                     let diagnostics = outcome.message.unwrap_or_else(|| {
@@ -621,10 +624,10 @@ where
         Ok(()) => issues,
 
         Err(TerminologyValidationError::NotInValueSet {
-                valueset_url: _local_valueset_url,
-                system,
-                code,
-            }) => {
+            valueset_url: _local_valueset_url,
+            system,
+            code,
+        }) => {
             let diagnostics = if let Some(system) = system {
                 format!(
                     "The provided value '{}', from CodeSystem '{}' was not found in ValueSet {}",
@@ -668,11 +671,11 @@ where
         }
 
         Err(TerminologyValidationError::WrongDisplay {
-                system,
-                code,
-                expected,
-                provided,
-            }) => {
+            system,
+            code,
+            expected,
+            provided,
+        }) => {
             issues.push(crate::binding::common::terminology_issue(
                 fhir_path,
                 valueset_url,
@@ -765,7 +768,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -935,7 +938,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -1032,7 +1035,10 @@ where
                 return issues;
             };
 
-            match terminology.member_of(valueset_url, system, code, None).await {
+            match terminology
+                .member_of(valueset_url, system, code, None)
+                .await
+            {
                 Ok(outcome) if outcome.is_member => issues,
                 Ok(outcome) => {
                     let diagnostics = outcome.message.unwrap_or_else(|| {
@@ -1552,7 +1558,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -1726,7 +1732,7 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology",
+            code: "terminology".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -2038,7 +2044,9 @@ where
                         binding.value_set,
                         binding.strength,
                         quantity.as_ref(),
-                        |quantity| terminology_index::validate_quantity(binding.value_set, quantity),
+                        |quantity| {
+                            terminology_index::validate_quantity(binding.value_set, quantity)
+                        },
                         terminology,
                     );
                     let stamped_instance_path =
@@ -2214,7 +2222,9 @@ where
                         binding.value_set,
                         binding.strength,
                         quantity.as_ref(),
-                        |quantity| terminology_index::validate_quantity(binding.value_set, quantity),
+                        |quantity| {
+                            terminology_index::validate_quantity(binding.value_set, quantity)
+                        },
                         terminology,
                     )
                     .await;

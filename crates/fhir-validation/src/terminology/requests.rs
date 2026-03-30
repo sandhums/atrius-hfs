@@ -5,9 +5,9 @@
 //! It centralizes request construction, structural validation, and FHIR
 //! `Parameters` serialization so that validator logic remains decoupled from
 //! backend/client-specific transport details.
-use serde::{Deserialize, Serialize};
 use helios_fhir::PrecisionDateTime;
 use helios_fhir::r5::{CodeableConcept, Coding, ValueSet};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ValidateVsRequest {
@@ -34,7 +34,6 @@ pub struct ValidateVsRequest {
     #[serde(rename = "valueSetVersion")]
     pub value_set_version: Option<String>,
     // exactly one of these should be set
-
     /// The code that is to be validated. If a code is provided, a system or a context must be provided
     /// (if a context is provided, then the server SHALL ensure that the code is not ambiguous without a system)
     pub code: Option<String>,
@@ -143,7 +142,6 @@ pub struct ValidateVsRequest {
     /// these resources are already known to the server (by URL and version) but differ from that information on the server.
     #[serde(rename = "tx-resource")]
     pub tx_resource: Option<Vec<TerminologyResource>>,
-
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -283,18 +281,18 @@ impl ValidateVsRequest {
         if let Some(langs) = &self.display_language {
             for lang in langs {
                 params.push(serde_json::json!({
-            "name": "displayLanguage",
-            "valueCode": lang
-        }));
+                    "name": "displayLanguage",
+                    "valueCode": lang
+                }));
             }
         }
 
-        if let Some(supps) = &self.use_supplement{
-            for supp in supps{
+        if let Some(supps) = &self.use_supplement {
+            for supp in supps {
                 params.push(serde_json::json!({
-            "name": "useSupplement",
-            "valueCode": supp
-        }));
+                    "name": "useSupplement",
+                    "valueCode": supp
+                }));
             }
         }
 
@@ -337,9 +335,9 @@ impl ValidateVsRequest {
         if let Some(values) = &self.force_valueset_version {
             for s in values {
                 params.push(serde_json::json!({
-            "name": "force-valueset-version",
-            "valueCanonical": s
-        }));
+                    "name": "force-valueset-version",
+                    "valueCanonical": s
+                }));
             }
         }
 

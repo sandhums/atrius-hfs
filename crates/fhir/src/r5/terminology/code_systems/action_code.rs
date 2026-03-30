@@ -74,15 +74,33 @@ impl ActionCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SendMessage => Some("The action indicates that a particular message should be sent to a participant in the process."),
-            Self::CollectInformation => Some("The action indicates that information should be collected from a participant in the process."),
-            Self::PrescribeMedication => Some("The action indicates that a particular medication should be prescribed to the patient."),
-            Self::RecommendImmunization => Some("The action indicates that a particular immunization should be performed."),
-            Self::OrderService => Some("The action indicates that a particular service should be provided."),
-            Self::ProposeDiagnosis => Some("The action indicates that a particular diagnosis should be proposed."),
-            Self::RecordDetectedIssue => Some("The action indicates that a particular detected issue should be recorded."),
-            Self::RecordInference => Some("The action indicates that a particular inference should be recorded."),
-            Self::ReportFlag => Some("The action indicates that a particular flag should be reported."),
+            Self::SendMessage => Some(
+                "The action indicates that a particular message should be sent to a participant in the process.",
+            ),
+            Self::CollectInformation => Some(
+                "The action indicates that information should be collected from a participant in the process.",
+            ),
+            Self::PrescribeMedication => Some(
+                "The action indicates that a particular medication should be prescribed to the patient.",
+            ),
+            Self::RecommendImmunization => {
+                Some("The action indicates that a particular immunization should be performed.")
+            }
+            Self::OrderService => {
+                Some("The action indicates that a particular service should be provided.")
+            }
+            Self::ProposeDiagnosis => {
+                Some("The action indicates that a particular diagnosis should be proposed.")
+            }
+            Self::RecordDetectedIssue => {
+                Some("The action indicates that a particular detected issue should be recorded.")
+            }
+            Self::RecordInference => {
+                Some("The action indicates that a particular inference should be recorded.")
+            }
+            Self::ReportFlag => {
+                Some("The action indicates that a particular flag should be reported.")
+            }
         }
     }
 
@@ -153,5 +171,4 @@ impl ActionCode {
             })
             .unwrap_or(false)
     }
-
 }

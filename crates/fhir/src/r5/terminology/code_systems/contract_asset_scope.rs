@@ -97,5 +97,4 @@ impl ContractAssetScope {
             })
             .unwrap_or(false)
     }
-
 }

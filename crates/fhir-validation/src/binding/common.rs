@@ -30,7 +30,7 @@ pub fn issue_for_binding_miss(
         .binding_miss_severity(strength)
         .map(|severity| ValidationIssue {
             severity,
-            code: "value",
+            code: "value".to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -49,7 +49,7 @@ pub fn terminology_issue(
 ) -> ValidationIssue {
     ValidationIssue {
         severity: Severity::Error,
-        code: "terminology",
+        code: "terminology".to_string(),
         fhir_path: fhir_path.to_string(),
         instance_path: None,
         expression: Some(valueset_url.to_string()),
@@ -64,7 +64,7 @@ pub fn terminology_issue(
 pub fn value_issue(fhir_path: &str, valueset_url: &str, diagnostics: String) -> ValidationIssue {
     ValidationIssue {
         severity: Severity::Error,
-        code: "value",
+        code: "value".to_string(),
         fhir_path: fhir_path.to_string(),
         instance_path: None,
         expression: Some(valueset_url.to_string()),

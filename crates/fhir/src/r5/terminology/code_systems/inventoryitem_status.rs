@@ -55,7 +55,9 @@ impl InventoryItemStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("The item is active and can be referenced."),
-            Self::Inactive => Some("The item is presently inactive - there may be references to it but the item is not expected to be used."),
+            Self::Inactive => Some(
+                "The item is presently inactive - there may be references to it but the item is not expected to be used.",
+            ),
             Self::EnteredInError => Some("The item record was entered in error."),
             Self::Unknown => Some("The item status has not been determined."),
         }
@@ -118,5 +120,4 @@ impl InventoryItemStatus {
             })
             .unwrap_or(false)
     }
-
 }

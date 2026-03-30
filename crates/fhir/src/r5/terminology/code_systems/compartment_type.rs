@@ -64,10 +64,16 @@ impl CompartmentType {
         match self {
             Self::Patient => Some("The compartment definition is for the patient compartment."),
             Self::Encounter => Some("The compartment definition is for the encounter compartment."),
-            Self::RelatedPerson => Some("The compartment definition is for the related-person compartment."),
-            Self::Practitioner => Some("The compartment definition is for the practitioner compartment."),
+            Self::RelatedPerson => {
+                Some("The compartment definition is for the related-person compartment.")
+            }
+            Self::Practitioner => {
+                Some("The compartment definition is for the practitioner compartment.")
+            }
             Self::Device => Some("The compartment definition is for the device compartment."),
-            Self::EpisodeOfCare => Some("The compartment definition is for the episodeofcare compartment."),
+            Self::EpisodeOfCare => {
+                Some("The compartment definition is for the episodeofcare compartment.")
+            }
         }
     }
 
@@ -132,5 +138,4 @@ impl CompartmentType {
             })
             .unwrap_or(false)
     }
-
 }

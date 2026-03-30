@@ -398,5 +398,4 @@ impl AssertionResponseTypes {
             })
             .unwrap_or(false)
     }
-
 }

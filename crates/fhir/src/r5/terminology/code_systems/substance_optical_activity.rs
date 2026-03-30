@@ -104,5 +104,4 @@ impl SubstanceOpticalActivity {
             })
             .unwrap_or(false)
     }
-
 }
