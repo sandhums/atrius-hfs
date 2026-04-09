@@ -111,4 +111,5 @@ impl MeasureStratifierExample {
             })
             .unwrap_or(false)
     }
+
 }

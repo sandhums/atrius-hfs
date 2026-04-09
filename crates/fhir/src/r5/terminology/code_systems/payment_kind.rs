@@ -54,15 +54,9 @@ impl PaymentKindCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Deposit => Some(
-                "The payment or adjustment is to an indicated account not to a specific charge.",
-            ),
-            Self::PeriodicPayment => Some(
-                "The payment is one of a set of previously agreed payments, for example in fullfilment of a payment plan.",
-            ),
-            Self::Online => Some(
-                "Payment, full or partial, of an invoice or statement provided to the payment issuer.",
-            ),
+            Self::Deposit => Some("The payment or adjustment is to an indicated account not to a specific charge."),
+            Self::PeriodicPayment => Some("The payment is one of a set of previously agreed payments, for example in fullfilment of a payment plan."),
+            Self::Online => Some("Payment, full or partial, of an invoice or statement provided to the payment issuer."),
             Self::Kiosk => Some("Payment made at an authorized Kiosk."),
         }
     }
@@ -124,4 +118,5 @@ impl PaymentKindCodes {
             })
             .unwrap_or(false)
     }
+
 }

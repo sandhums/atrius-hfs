@@ -86,11 +86,14 @@ pub mod core;
 pub mod evaluators;
 pub mod terminology;
 pub mod issue_to_op_outcome;
+pub mod profile;
+pub mod validation_context;
 
 pub use core::*;
 pub use evaluators::*;
 use terminology::service::{TerminologyService, TerminologyServiceSync};
 pub use terminology::*;
+pub use validation_context::*;
 
 #[cfg(feature = "R4")]
 pub mod r4;
@@ -103,4 +106,5 @@ pub mod r5;
 
 #[cfg(feature = "R6")]
 pub mod r6;
+
 

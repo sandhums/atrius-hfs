@@ -59,12 +59,8 @@ impl AccountStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("This account is active and may be used."),
-            Self::Inactive => Some(
-                "This account is inactive and should not be used to track financial information.",
-            ),
-            Self::EnteredInError => {
-                Some("This instance should not have been part of this patient\'s medical record.")
-            }
+            Self::Inactive => Some("This account is inactive and should not be used to track financial information."),
+            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
             Self::OnHold => Some("This account is on hold."),
             Self::Unknown => Some("The account status is unknown."),
         }
@@ -129,4 +125,5 @@ impl AccountStatus {
             })
             .unwrap_or(false)
     }
+
 }

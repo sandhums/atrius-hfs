@@ -58,21 +58,11 @@ impl CodeSystemContentMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NotPresent => Some(
-                "None of the concepts defined by the code system are included in the code system resource.",
-            ),
-            Self::Example => Some(
-                "A subset of the valid externally defined concepts are included in the code system resource. There is no specific purpose or documented intent other than for illustrative purposes.",
-            ),
-            Self::Fragment => Some(
-                "A subset of the code system concepts are included in the code system resource. This is a curated subset released for a specific purpose under the governance of the code system steward, and that the intent, bounds and consequences of the fragmentation are clearly defined in the fragment or the code system documentation. Fragments are also known as partitions.",
-            ),
-            Self::Complete => Some(
-                "All the concepts defined by the code system are included in the code system resource.",
-            ),
-            Self::Supplement => Some(
-                "The resource doesn\'t define any new concepts; it just provides additional designations and properties to another code system.",
-            ),
+            Self::NotPresent => Some("None of the concepts defined by the code system are included in the code system resource."),
+            Self::Example => Some("A subset of the valid externally defined concepts are included in the code system resource. There is no specific purpose or documented intent other than for illustrative purposes."),
+            Self::Fragment => Some("A subset of the code system concepts are included in the code system resource. This is a curated subset released for a specific purpose under the governance of the code system steward, and that the intent, bounds and consequences of the fragmentation are clearly defined in the fragment or the code system documentation. Fragments are also known as partitions."),
+            Self::Complete => Some("All the concepts defined by the code system are included in the code system resource."),
+            Self::Supplement => Some("The resource doesn\'t define any new concepts; it just provides additional designations and properties to another code system."),
         }
     }
 
@@ -135,4 +125,5 @@ impl CodeSystemContentMode {
             })
             .unwrap_or(false)
     }
+
 }

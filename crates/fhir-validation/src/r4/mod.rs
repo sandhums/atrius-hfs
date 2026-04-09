@@ -2,6 +2,10 @@ use async_trait::async_trait;
 
 pub mod binding;
 pub mod generated;
+pub mod validate_resource;
+
+pub use binding::*;
+pub use validate_resource::*;
 
 #[cfg(feature = "R4")]
 pub trait R4Validatable {

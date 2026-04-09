@@ -118,4 +118,5 @@ impl MeasureReportStratifierValueExample {
             })
             .unwrap_or(false)
     }
+
 }

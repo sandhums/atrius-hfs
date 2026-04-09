@@ -46,9 +46,7 @@ impl SpecimenContainedPreference {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Preferred => Some(
-                "This type of contained specimen is preferred to collect this kind of specimen.",
-            ),
+            Self::Preferred => Some("This type of contained specimen is preferred to collect this kind of specimen."),
             Self::Alternate => Some("This type of conditioned specimen is an alternate."),
         }
     }
@@ -106,4 +104,5 @@ impl SpecimenContainedPreference {
             })
             .unwrap_or(false)
     }
+
 }

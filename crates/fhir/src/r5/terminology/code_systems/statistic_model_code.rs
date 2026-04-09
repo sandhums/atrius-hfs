@@ -313,15 +313,11 @@ impl StatisticModelCode {
             Self::PolynomialRegression => Some("Polynomial Regression"),
             Self::CoxProportionalHazards => Some("Cox Proportional Hazards"),
             Self::BinomialDistributionRegression => Some("Binomial Distribution for Regression"),
-            Self::MultinomialDistributionRegression => {
-                Some("Multinomial Distribution for Regression")
-            }
+            Self::MultinomialDistributionRegression => Some("Multinomial Distribution for Regression"),
             Self::PoissonRegression => Some("Poisson Regression"),
             Self::NegativeBinomialRegression => Some("Negative Binomial Regression"),
             Self::ZeroCellConstant => Some("Zero-cell adjustment with constant"),
-            Self::ZeroCellContinuityCorrection => {
-                Some("Zero-cell adjustment with continuity correction")
-            }
+            Self::ZeroCellContinuityCorrection => Some("Zero-cell adjustment with continuity correction"),
             Self::Adjusted => Some("Adjusted analysis"),
             Self::InteractionTerm => Some("Interaction term"),
             Self::ManteHaenszelMethod => Some("Mantel-Haenszel method"),
@@ -358,203 +354,85 @@ impl StatisticModelCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::OneTailedTest => {
-                Some("Used for one-tailed test (1 threshold), no additional elements needed")
-            }
-            Self::TwoTailedTest => {
-                Some("Used for two-tailed test (2 threshold), no additional elements needed")
-            }
+            Self::OneTailedTest => Some("Used for one-tailed test (1 threshold), no additional elements needed"),
+            Self::TwoTailedTest => Some("Used for two-tailed test (2 threshold), no additional elements needed"),
             Self::ZTest => Some("Used for z-test, no additional elements needed"),
-            Self::OneSampleTTest => Some(
-                "Used for 1-sample t-test, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::TwoSampleTTest => Some(
-                "Used for 2-sample t-test, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::PairedTTest => Some(
-                "Used for paired t-test, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::ChiSquareTest => Some(
-                "Used for Chi-square test, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::ChiSquareTestTrend => Some(
-                "Used for Chi-square test for trend, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::PearsonCorrelation => {
-                Some("Used for Pearson correlation, no additional elements needed")
-            }
-            Self::Anova => Some(
-                "Used for ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::AnovaOneWay => Some(
-                "Used for one-way ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::AnovaTwoWay => Some(
-                "Used for 2-way ANOVA without replication method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::AnovaTwoWayReplication => Some(
-                "Used for 2-way ANOVA with replication method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::Manova => Some(
-                "Used for multivariate ANOVA (MANOVA) method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::AnovaThreeWay => Some(
-                "Used for 3-way ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom",
-            ),
+            Self::OneSampleTTest => Some("Used for 1-sample t-test, may be paired with \"value\" to express degrees of freedom"),
+            Self::TwoSampleTTest => Some("Used for 2-sample t-test, may be paired with \"value\" to express degrees of freedom"),
+            Self::PairedTTest => Some("Used for paired t-test, may be paired with \"value\" to express degrees of freedom"),
+            Self::ChiSquareTest => Some("Used for Chi-square test, may be paired with \"value\" to express degrees of freedom"),
+            Self::ChiSquareTestTrend => Some("Used for Chi-square test for trend, may be paired with \"value\" to express degrees of freedom"),
+            Self::PearsonCorrelation => Some("Used for Pearson correlation, no additional elements needed"),
+            Self::Anova => Some("Used for ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom"),
+            Self::AnovaOneWay => Some("Used for one-way ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom"),
+            Self::AnovaTwoWay => Some("Used for 2-way ANOVA without replication method of analysis, may be paired with \"value\" to express degrees of freedom"),
+            Self::AnovaTwoWayReplication => Some("Used for 2-way ANOVA with replication method of analysis, may be paired with \"value\" to express degrees of freedom"),
+            Self::Manova => Some("Used for multivariate ANOVA (MANOVA) method of analysis, may be paired with \"value\" to express degrees of freedom"),
+            Self::AnovaThreeWay => Some("Used for 3-way ANOVA method of analysis, may be paired with \"value\" to express degrees of freedom"),
             Self::SignTest => Some("Used for sign test, no additional elements needed"),
-            Self::WilcoxonSignedRankTest => {
-                Some("Used for Wilcoxon signed-rank test, no additional elements needed")
-            }
-            Self::WilcoxonRankSumTest => {
-                Some("Used for Wilcoxon rank-sum test, no additional elements needed")
-            }
-            Self::MannWhitneyUTest => {
-                Some("Used for Mann-Whitney U test, no additional elements needed")
-            }
-            Self::FishersExactTest => Some(
-                "Used for Fisher\'s exact test, may be paired with \"value\" to express degrees of freedom",
-            ),
+            Self::WilcoxonSignedRankTest => Some("Used for Wilcoxon signed-rank test, no additional elements needed"),
+            Self::WilcoxonRankSumTest => Some("Used for Wilcoxon rank-sum test, no additional elements needed"),
+            Self::MannWhitneyUTest => Some("Used for Mann-Whitney U test, no additional elements needed"),
+            Self::FishersExactTest => Some("Used for Fisher\'s exact test, may be paired with \"value\" to express degrees of freedom"),
             Self::McnemarsTest => Some("Used for McNemar\'s test, no additional elements needed"),
-            Self::KruskalWallisTest => Some(
-                "Used for Kruskal Wallis test, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::SpearmanCorrelation => {
-                Some("Used for Spearman correlation, no additional elements needed")
-            }
-            Self::KendallCorrelation => {
-                Some("Used for Kendall correlation, no additional elements needed")
-            }
+            Self::KruskalWallisTest => Some("Used for Kruskal Wallis test, may be paired with \"value\" to express degrees of freedom"),
+            Self::SpearmanCorrelation => Some("Used for Spearman correlation, no additional elements needed"),
+            Self::KendallCorrelation => Some("Used for Kendall correlation, no additional elements needed"),
             Self::FriedmanTest => Some("Used for Friedman test, no additional elements needed"),
-            Self::GoodmanKruskasGamma => {
-                Some("Used for Goodman Kruska\u{2019}s Gamma, no additional elements needed")
-            }
-            Self::Glm => {
-                Some("Used for GLM (Generalized Linear Model), no additional elements needed")
-            }
+            Self::GoodmanKruskasGamma => Some("Used for Goodman Kruska\u{2019}s Gamma, no additional elements needed"),
+            Self::Glm => Some("Used for GLM (Generalized Linear Model), no additional elements needed"),
             Self::GlmProbit => Some("Used for GLM with probit link, no additional elements needed"),
             Self::GlmLogit => Some("Used for GLM with logit link, no additional elements needed"),
-            Self::GlmIdentity => {
-                Some("Used for GLM with identity link, no additional elements needed")
-            }
+            Self::GlmIdentity => Some("Used for GLM with identity link, no additional elements needed"),
             Self::GlmLog => Some("Used for GLM with log link, no additional elements needed"),
-            Self::GlmGeneralizedLogit => {
-                Some("Used for GLM with generalized logit link, no additional elements needed")
-            }
-            Self::Glmm => Some(
-                "Used for Generalized linear mixed model (GLMM), no additional elements needed",
-            ),
-            Self::GlmmProbit => {
-                Some("Used for GLMM with probit link, no additional elements needed")
-            }
+            Self::GlmGeneralizedLogit => Some("Used for GLM with generalized logit link, no additional elements needed"),
+            Self::Glmm => Some("Used for Generalized linear mixed model (GLMM), no additional elements needed"),
+            Self::GlmmProbit => Some("Used for GLMM with probit link, no additional elements needed"),
             Self::GlmmLogit => Some("Used for GLMM with logit link, no additional elements needed"),
-            Self::GlmmIdentity => {
-                Some("Used for GLMM with identity link, no additional elements needed")
-            }
+            Self::GlmmIdentity => Some("Used for GLMM with identity link, no additional elements needed"),
             Self::GlmmLog => Some("Used for GLMM with log link, no additional elements needed"),
-            Self::GlmmGeneralizedLogit => {
-                Some("Used for GLMM with generalized logit link, no additional elements needed")
-            }
-            Self::LinearRegression => {
-                Some("Used for linear regression method of analysis, no additional elements needed")
-            }
-            Self::LogisticRegression => Some(
-                "Used for logistic regression method of analysis, no additional elements needed",
-            ),
-            Self::PolynomialRegression => Some(
-                "Used for Polynomial regression method of analysis, no additional elements needed",
-            ),
-            Self::CoxProportionalHazards => Some(
-                "Used for Cox proportional hazards method of analysis, no additional elements needed",
-            ),
-            Self::BinomialDistributionRegression => {
-                Some("Used for Binomial Distribution for Regression, no additional elements needed")
-            }
-            Self::MultinomialDistributionRegression => Some(
-                "Used for Multinomial Distribution for Regression, no additional elements needed",
-            ),
-            Self::PoissonRegression => {
-                Some("Used for Poisson Regression, no additional elements needed")
-            }
-            Self::NegativeBinomialRegression => {
-                Some("Used for Negative Binomial Regression, no additional elements needed")
-            }
-            Self::ZeroCellConstant => Some(
-                "Zero-cell adjustment done by adding a constant to all cells of affected studies, paired with \"value\" to define the constant",
-            ),
-            Self::ZeroCellContinuityCorrection => Some(
-                "Zero-cell adjustment done by treatment arm continuity correction, no additional elements needed",
-            ),
+            Self::GlmmGeneralizedLogit => Some("Used for GLMM with generalized logit link, no additional elements needed"),
+            Self::LinearRegression => Some("Used for linear regression method of analysis, no additional elements needed"),
+            Self::LogisticRegression => Some("Used for logistic regression method of analysis, no additional elements needed"),
+            Self::PolynomialRegression => Some("Used for Polynomial regression method of analysis, no additional elements needed"),
+            Self::CoxProportionalHazards => Some("Used for Cox proportional hazards method of analysis, no additional elements needed"),
+            Self::BinomialDistributionRegression => Some("Used for Binomial Distribution for Regression, no additional elements needed"),
+            Self::MultinomialDistributionRegression => Some("Used for Multinomial Distribution for Regression, no additional elements needed"),
+            Self::PoissonRegression => Some("Used for Poisson Regression, no additional elements needed"),
+            Self::NegativeBinomialRegression => Some("Used for Negative Binomial Regression, no additional elements needed"),
+            Self::ZeroCellConstant => Some("Zero-cell adjustment done by adding a constant to all cells of affected studies, paired with \"value\" to define the constant"),
+            Self::ZeroCellContinuityCorrection => Some("Zero-cell adjustment done by treatment arm continuity correction, no additional elements needed"),
             Self::Adjusted => Some("Used for adjusted analysis, paired with variable element(s)"),
-            Self::InteractionTerm => Some(
-                "Used for interaction term, paired with \"value\" and two or more variable elements",
-            ),
-            Self::ManteHaenszelMethod => {
-                Some("Used for Mantel-Haenszel method, no additional elements needed")
-            }
+            Self::InteractionTerm => Some("Used for interaction term, paired with \"value\" and two or more variable elements"),
+            Self::ManteHaenszelMethod => Some("Used for Mantel-Haenszel method, no additional elements needed"),
             Self::MetaAnalysis => Some("Used for meta-analysis, no additional elements needed"),
-            Self::InverseVariance => Some(
-                "Used for inverse variance method of meta-analysis, no additional elements needed",
-            ),
-            Self::PetoMethod => {
-                Some("Used for Peto method of meta-analysis, no additional elements needed")
-            }
-            Self::HartungKnapp => Some(
-                "Hartung-Knapp/Hartung-Knapp-Sidik-Jonkman adjustment used in meta-analysis, no additional elements needed",
-            ),
-            Self::ModifiedHartungKnapp => Some(
-                "Modified Hartung-Knapp/Hartung-Knapp-Sidik-Jonkman adjustment used in meta-analysis, no additional elements needed",
-            ),
-            Self::EffectsFixed => {
-                Some("From a fixed-effects analysis, no additional elements needed")
-            }
-            Self::EffectsRandom => {
-                Some("From a random-effects analysis, no additional elements needed")
-            }
-            Self::ChiSquareTestHomogeneity => Some(
-                "Used for Chi-square test for homogeneity, may be paired with \"value\" to express degrees of freedom",
-            ),
-            Self::DersimonianLairdMethod => Some(
-                "Used for Dersimonian-Laird method of tau estimation, no additional elements needed",
-            ),
-            Self::PauleMandelMethod => Some(
-                "Used for Paule-Mandel method of tau estimation, no additional elements needed",
-            ),
-            Self::RestrictedLikelihood => Some(
-                "Used for Restricted Maximum Likelihood method of tau estimation, no additional elements needed",
-            ),
-            Self::MaximumLikelihood => Some(
-                "Used for Maximum Likelihood method of tau estimation, no additional elements needed",
-            ),
-            Self::EmpiricalBayes => Some(
-                "Used for Empirical Bayes method of tau estimation, no additional elements needed",
-            ),
-            Self::HunterSchmidt => Some(
-                "Used for Hunter-Schmidt method of tau estimation, no additional elements needed",
-            ),
-            Self::SidikJonkman => Some(
-                "Used for Sidik-Jonkman method of tau estimation, no additional elements needed",
-            ),
-            Self::HedgesMethod => {
-                Some("Used for Hedges method of tau estimation, no additional elements needed")
-            }
+            Self::InverseVariance => Some("Used for inverse variance method of meta-analysis, no additional elements needed"),
+            Self::PetoMethod => Some("Used for Peto method of meta-analysis, no additional elements needed"),
+            Self::HartungKnapp => Some("Hartung-Knapp/Hartung-Knapp-Sidik-Jonkman adjustment used in meta-analysis, no additional elements needed"),
+            Self::ModifiedHartungKnapp => Some("Modified Hartung-Knapp/Hartung-Knapp-Sidik-Jonkman adjustment used in meta-analysis, no additional elements needed"),
+            Self::EffectsFixed => Some("From a fixed-effects analysis, no additional elements needed"),
+            Self::EffectsRandom => Some("From a random-effects analysis, no additional elements needed"),
+            Self::ChiSquareTestHomogeneity => Some("Used for Chi-square test for homogeneity, may be paired with \"value\" to express degrees of freedom"),
+            Self::DersimonianLairdMethod => Some("Used for Dersimonian-Laird method of tau estimation, no additional elements needed"),
+            Self::PauleMandelMethod => Some("Used for Paule-Mandel method of tau estimation, no additional elements needed"),
+            Self::RestrictedLikelihood => Some("Used for Restricted Maximum Likelihood method of tau estimation, no additional elements needed"),
+            Self::MaximumLikelihood => Some("Used for Maximum Likelihood method of tau estimation, no additional elements needed"),
+            Self::EmpiricalBayes => Some("Used for Empirical Bayes method of tau estimation, no additional elements needed"),
+            Self::HunterSchmidt => Some("Used for Hunter-Schmidt method of tau estimation, no additional elements needed"),
+            Self::SidikJonkman => Some("Used for Sidik-Jonkman method of tau estimation, no additional elements needed"),
+            Self::HedgesMethod => Some("Used for Hedges method of tau estimation, no additional elements needed"),
             Self::TauDersimonianLaird => Some("Dersimonian-Laird method for tau squared"),
             Self::TauPauleMandel => Some("Paule-Mandel method for tau squared"),
-            Self::TauRestrictedMaximumLikelihood => {
-                Some("Restricted Maximum Likelihood method for tau squared")
-            }
+            Self::TauRestrictedMaximumLikelihood => Some("Restricted Maximum Likelihood method for tau squared"),
             Self::TauMaximumLikelihood => Some("Maximum Likelihood method for tau squared"),
             Self::TauEmpiricalBayes => Some("Empirical Bayes method for tau squared"),
             Self::TauHunterSchmidt => Some("Hunter-Schmidt method for tau squared"),
             Self::TauSidikJonkman => Some("Sidik-Jonkman method for tau squared"),
             Self::TauHedges => Some("Hedges method for tau squared"),
             Self::PoolMantelHaenzsel => Some("Mantel-Haenszel method for pooling in meta-analysis"),
-            Self::PoolInverseVariance => {
-                Some("Inverse variance method for pooling in meta-analysis")
-            }
+            Self::PoolInverseVariance => Some("Inverse variance method for pooling in meta-analysis"),
             Self::PoolPeto => Some("Peto method for pooling in meta-analysis"),
-            Self::PoolGeneralizedLinearMixedModel => {
-                Some("Generalized linear mixed model (GLMM) method for pooling in meta-analysis")
-            }
+            Self::PoolGeneralizedLinearMixedModel => Some("Generalized linear mixed model (GLMM) method for pooling in meta-analysis"),
         }
     }
 
@@ -765,4 +643,5 @@ impl StatisticModelCode {
             })
             .unwrap_or(false)
     }
+
 }

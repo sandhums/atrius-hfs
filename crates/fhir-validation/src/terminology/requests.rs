@@ -5,9 +5,14 @@
 //! It centralizes request construction, structural validation, and FHIR
 //! `Parameters` serialization so that validator logic remains decoupled from
 //! backend/client-specific transport details.
+//!
+//! Embedded FHIR resources (`valueSet`, `coding`, `codeableConcept`, `tx-resource`)
+//! use [`serde_json::Value`] so one struct works across FHIR versions. Use
+//! [`super::builder_r4`] / [`super::builder_r5`] to construct these from typed
+//! generated models when available.
 use helios_fhir::PrecisionDateTime;
-use helios_fhir::r5::{CodeableConcept, Coding, ValueSet};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ValidateVsRequest {
@@ -26,7 +31,7 @@ pub struct ValidateVsRequest {
     /// The value set is provided directly as part of the request. Servers may choose not to accept value sets in this fashion.
     /// This parameter is used when the client wants the server to expand a value set that is not stored on the server
     #[serde(rename = "valueSet")]
-    pub valueset: Option<ValueSet>,
+    pub valueset: Option<Value>,
 
     /// The identifier that is used to identify a specific version of the value set to be used when validating the code.
     /// This is an arbitrary value managed by the value set author and is not expected to be globally unique.
@@ -50,13 +55,12 @@ pub struct ValidateVsRequest {
     /// recommended display name using the display parameter in the outcome. Whether displays are case sensitive is code system dependent
     pub display: Option<String>,
 
-    /// A coding to validate
-    pub coding: Option<Coding>,
+    /// A coding to validate (JSON `Coding` object, any FHIR version).
+    pub coding: Option<Value>,
 
-    /// A full codeableConcept to validate. The server returns true if one of the coding values is in the value set,
-    /// and may also validate that the codings are not in conflict with each other if more than one is present
+    /// A full CodeableConcept to validate (JSON object, any FHIR version).
     #[serde(rename = "codeableConcept")]
-    pub codeable_concept: Option<CodeableConcept>,
+    pub codeable_concept: Option<Value>,
 
     /// The date for which the validation should be checked. Normally, this is the current conditions (which is the default values)
     /// but under some circumstances, systems need to validate that a correct code was used at some point in the past.
@@ -141,14 +145,9 @@ pub struct ValidateVsRequest {
     /// Resources provided in this fashion are used preferentially to those known to the system, though servers may return an error if
     /// these resources are already known to the server (by URL and version) but differ from that information on the server.
     #[serde(rename = "tx-resource")]
-    pub tx_resource: Option<Vec<TerminologyResource>>,
+    pub tx_resource: Option<Vec<Value>>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum TerminologyResource {
-    CodeSystem(helios_fhir::r5::CodeSystem),
-    ValueSet(helios_fhir::r5::ValueSet),
-}
+
 impl ValidateVsRequest {
     pub fn validate(&self) -> Result<(), String> {
         let n = self.code.is_some() as u8

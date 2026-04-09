@@ -52,9 +52,7 @@ impl NutritionProductStatus {
         match self {
             Self::Active => Some("The product can be used."),
             Self::Inactive => Some("The product is not expected or allowed to be used."),
-            Self::EnteredInError => Some(
-                "This electronic record should never have existed, though it is possible that real-world decisions were based on it.  (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".).",
-            ),
+            Self::EnteredInError => Some("This electronic record should never have existed, though it is possible that real-world decisions were based on it.  (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".)."),
         }
     }
 
@@ -113,4 +111,5 @@ impl NutritionProductStatus {
             })
             .unwrap_or(false)
     }
+
 }

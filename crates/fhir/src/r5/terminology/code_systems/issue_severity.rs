@@ -58,16 +58,10 @@ impl IssueSeverity {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Fatal => Some(
-                "The issue caused the action to fail and no further checking could be performed.",
-            ),
+            Self::Fatal => Some("The issue caused the action to fail and no further checking could be performed."),
             Self::Error => Some("The issue is sufficiently important to cause the action to fail."),
-            Self::Warning => Some(
-                "The issue is not important enough to cause the action to fail but may cause it to be performed suboptimally or in a way that is not as desired.",
-            ),
-            Self::Information => {
-                Some("The issue has no relation to the degree of success of the action.")
-            }
+            Self::Warning => Some("The issue is not important enough to cause the action to fail but may cause it to be performed suboptimally or in a way that is not as desired."),
+            Self::Information => Some("The issue has no relation to the degree of success of the action."),
             Self::Success => Some("The operation completed successfully."),
         }
     }
@@ -131,4 +125,5 @@ impl IssueSeverity {
             })
             .unwrap_or(false)
     }
+
 }

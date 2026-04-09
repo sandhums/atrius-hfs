@@ -66,16 +66,10 @@ impl PropertyType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Code => Some(
-                "The property value is a code that identifies a concept defined in the code system.",
-            ),
-            Self::Coding => Some(
-                "The property  value is a code defined in an external code system. This may be used for translations, but is not the intent.",
-            ),
+            Self::Code => Some("The property value is a code that identifies a concept defined in the code system."),
+            Self::Coding => Some("The property  value is a code defined in an external code system. This may be used for translations, but is not the intent."),
             Self::String => Some("The property value is a string."),
-            Self::Integer => Some(
-                "The property value is an integer (often used to assign ranking values to concepts for supporting score assessments).",
-            ),
+            Self::Integer => Some("The property value is an integer (often used to assign ranking values to concepts for supporting score assessments)."),
             Self::Boolean => Some("The property value is a boolean true | false."),
             Self::DateTime => Some("The property is a date or a date + time."),
             Self::Decimal => Some("The property value is a decimal number."),
@@ -145,4 +139,5 @@ impl PropertyType {
             })
             .unwrap_or(false)
     }
+
 }

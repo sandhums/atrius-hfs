@@ -58,12 +58,8 @@ impl PropertyRepresentation {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::XmlAttr => {
-                Some("In XML, this property is represented as an attribute not an element.")
-            }
-            Self::XmlText => {
-                Some("This element is represented using the XML text attribute (primitives only).")
-            }
+            Self::XmlAttr => Some("In XML, this property is represented as an attribute not an element."),
+            Self::XmlText => Some("This element is represented using the XML text attribute (primitives only)."),
             Self::TypeAttr => Some("The type of this element is indicated using xsi:type."),
             Self::CdaText => Some("Use CDA narrative instead of XHTML."),
             Self::Xhtml => Some("The property is represented using XHTML."),
@@ -129,4 +125,5 @@ impl PropertyRepresentation {
             })
             .unwrap_or(false)
     }
+
 }

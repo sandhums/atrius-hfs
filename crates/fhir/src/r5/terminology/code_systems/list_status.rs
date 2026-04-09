@@ -50,15 +50,9 @@ impl ListStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Current => {
-                Some("The list is considered to be an active part of the patient\'s record.")
-            }
-            Self::Retired => {
-                Some("The list is \"old\" and should no longer be considered accurate or relevant.")
-            }
-            Self::EnteredInError => {
-                Some("The list was never accurate.  It is retained for medico-legal purposes only.")
-            }
+            Self::Current => Some("The list is considered to be an active part of the patient\'s record."),
+            Self::Retired => Some("The list is \"old\" and should no longer be considered accurate or relevant."),
+            Self::EnteredInError => Some("The list was never accurate.  It is retained for medico-legal purposes only."),
         }
     }
 
@@ -117,4 +111,5 @@ impl ListStatus {
             })
             .unwrap_or(false)
     }
+
 }

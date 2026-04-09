@@ -57,9 +57,7 @@ impl SubstanceWeightMethod {
 
     pub fn display(self) -> Option<&'static str> {
         match self {
-            Self::SDSPAGE => {
-                Some("SDS-PAGE (sodium dodecyl sulfate-polyacrylamide gel electrophoresis)")
-            }
+            Self::SDSPAGE => Some("SDS-PAGE (sodium dodecyl sulfate-polyacrylamide gel electrophoresis)"),
             Self::Calculated => Some("calculated"),
             Self::LighScattering => Some("light scattering"),
             Self::Viscosity => Some("viscosity"),
@@ -148,4 +146,5 @@ impl SubstanceWeightMethod {
             })
             .unwrap_or(false)
     }
+
 }

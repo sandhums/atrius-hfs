@@ -76,20 +76,12 @@ impl EvidenceCertaintyType {
         match self {
             Self::Overall => Some("Overall certainty of evidence (quality of evidence)."),
             Self::RiskOfBias => Some("methodologic concerns reducing internal validity."),
-            Self::Inconsistency => {
-                Some("concerns that findings are not similar enough to support certainty.")
-            }
+            Self::Inconsistency => Some("concerns that findings are not similar enough to support certainty."),
             Self::Indirectness => Some("concerns reducing external validity."),
             Self::Imprecision => Some("fuzzy or wide variability."),
-            Self::PublicationBias => Some(
-                "likelihood that what is published misrepresents what is available to publish.",
-            ),
-            Self::DoseResponseGradient => {
-                Some("higher certainty due to dose response relationship.")
-            }
-            Self::PlausibleConfounding => {
-                Some("higher certainty due to risk of bias in opposite direction.")
-            }
+            Self::PublicationBias => Some("likelihood that what is published misrepresents what is available to publish."),
+            Self::DoseResponseGradient => Some("higher certainty due to dose response relationship."),
+            Self::PlausibleConfounding => Some("higher certainty due to risk of bias in opposite direction."),
             Self::LargeEffect => Some("higher certainty due to large effect size."),
         }
     }
@@ -161,4 +153,5 @@ impl EvidenceCertaintyType {
             })
             .unwrap_or(false)
     }
+
 }

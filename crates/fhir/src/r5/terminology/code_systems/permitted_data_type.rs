@@ -83,9 +83,7 @@ impl ObservationDataType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Quantity => Some("A measured amount."),
-            Self::CodeableConcept => {
-                Some("A coded concept from a reference terminology and/or text.")
-            }
+            Self::CodeableConcept => Some("A coded concept from a reference terminology and/or text."),
             Self::String => Some("A sequence of Unicode characters."),
             Self::Boolean => Some("true or false."),
             Self::Integer => Some("A signed integer."),
@@ -93,9 +91,7 @@ impl ObservationDataType {
             Self::Ratio => Some("A ratio of two Quantity values - a numerator and a denominator."),
             Self::SampledData => Some("A series of measurements taken by a device."),
             Self::Time => Some("A time during the day, in the format hh:mm:ss."),
-            Self::DateTime => Some(
-                "A date, date-time or partial date (e.g. just year or year + month) as used in human communication.",
-            ),
+            Self::DateTime => Some("A date, date-time or partial date (e.g. just year or year + month) as used in human communication."),
             Self::Period => Some("A time range defined by start and end date/time."),
         }
     }
@@ -171,4 +167,5 @@ impl ObservationDataType {
             })
             .unwrap_or(false)
     }
+
 }

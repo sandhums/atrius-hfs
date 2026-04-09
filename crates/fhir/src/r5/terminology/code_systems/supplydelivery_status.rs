@@ -57,9 +57,7 @@ impl SupplyDeliveryStatus {
             Self::InProgress => Some("Supply has been requested, but not delivered."),
             Self::Completed => Some("Supply has been delivered (\"completed\")."),
             Self::Abandoned => Some("Delivery was not completed."),
-            Self::EnteredInError => Some(
-                "This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"abandoned\" rather than \"entered-in-error\".).",
-            ),
+            Self::EnteredInError => Some("This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"abandoned\" rather than \"entered-in-error\".)."),
         }
     }
 
@@ -120,4 +118,5 @@ impl SupplyDeliveryStatus {
             })
             .unwrap_or(false)
     }
+
 }

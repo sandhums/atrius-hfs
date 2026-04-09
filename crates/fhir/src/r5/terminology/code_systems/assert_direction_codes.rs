@@ -46,9 +46,7 @@ impl AssertionDirectionType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Response => {
-                Some("The assertion is evaluated on the response. This is the default value.")
-            }
+            Self::Response => Some("The assertion is evaluated on the response. This is the default value."),
             Self::Request => Some("The assertion is evaluated on the request."),
         }
     }
@@ -106,4 +104,5 @@ impl AssertionDirectionType {
             })
             .unwrap_or(false)
     }
+
 }

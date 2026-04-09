@@ -104,4 +104,5 @@ impl DocumentMode {
             })
             .unwrap_or(false)
     }
+
 }

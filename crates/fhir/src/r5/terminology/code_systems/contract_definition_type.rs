@@ -97,4 +97,5 @@ impl ContractDefinitionType {
             })
             .unwrap_or(false)
     }
+
 }

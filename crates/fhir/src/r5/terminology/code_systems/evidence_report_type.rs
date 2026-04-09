@@ -54,15 +54,9 @@ impl EvidenceReportType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Classification => {
-                Some("The report is primarily a listing of classifiers about the report subject.")
-            }
-            Self::SearchResults => Some(
-                "The report is a composition of results generated in response to a search query.",
-            ),
-            Self::ResourcesCompiled => Some(
-                "The report is a composition containing one or more FHIR resources in the content.",
-            ),
+            Self::Classification => Some("The report is primarily a listing of classifiers about the report subject."),
+            Self::SearchResults => Some("The report is a composition of results generated in response to a search query."),
+            Self::ResourcesCompiled => Some("The report is a composition containing one or more FHIR resources in the content."),
             Self::TextStructured => Some("The report is a structured representation of text."),
         }
     }
@@ -124,4 +118,5 @@ impl EvidenceReportType {
             })
             .unwrap_or(false)
     }
+
 }

@@ -71,19 +71,13 @@ impl FocusCharacteristicCode {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Citation => Some("Used to reference a specific article."),
-            Self::ClinicalOutcomesObserved => Some(
-                "Used to denote a focus on clinical outcomes, ie evidence variable in role of outcome (measured variable) as observed is considered a \"clinical outcome\" (patient-important outcome such as mortality, symptoms, function or quality of life).",
-            ),
+            Self::ClinicalOutcomesObserved => Some("Used to denote a focus on clinical outcomes, ie evidence variable in role of outcome (measured variable) as observed is considered a \"clinical outcome\" (patient-important outcome such as mortality, symptoms, function or quality of life)."),
             Self::Population => Some("The population of interest."),
             Self::Exposure => Some("The exposure of interest, such as an intervention."),
             Self::Comparator => Some("The comparator (intervention or control state) of interest."),
             Self::Outcome => Some("the outcome of interest."),
-            Self::MedicationExposures => Some(
-                "Any medication exposures. A subset of exposures or interventions that are medications.",
-            ),
-            Self::StudyType => {
-                Some("Type of research study, such as randomized trial or case-control study.")
-            }
+            Self::MedicationExposures => Some("Any medication exposures. A subset of exposures or interventions that are medications."),
+            Self::StudyType => Some("Type of research study, such as randomized trial or case-control study."),
         }
     }
 
@@ -152,4 +146,5 @@ impl FocusCharacteristicCode {
             })
             .unwrap_or(false)
     }
+
 }

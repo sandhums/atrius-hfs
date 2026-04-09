@@ -67,12 +67,8 @@ impl ContributorRole {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Publisher => Some("Entity that makes the content available for public use"),
-            Self::Author => Some(
-                "An entity primarily responsible for making the resource, often called author or creator",
-            ),
-            Self::Reviewer => Some(
-                "Entity that examines the content, formally or informally, and suggests revisions or comments",
-            ),
+            Self::Author => Some("An entity primarily responsible for making the resource, often called author or creator"),
+            Self::Reviewer => Some("Entity that examines the content, formally or informally, and suggests revisions or comments"),
             Self::Endorser => Some("Entity that supports, approves, or advocates for the content"),
             Self::Editor => Some("Entity that revises or has authority to control the content"),
             Self::Informant => Some("Entity that supplies information"),
@@ -143,4 +139,5 @@ impl ContributorRole {
             })
             .unwrap_or(false)
     }
+
 }

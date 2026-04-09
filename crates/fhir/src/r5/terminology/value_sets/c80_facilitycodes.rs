@@ -5,7 +5,7 @@
 ///
 /// This is the code representing the type of organizational setting where the clinical encounter,    service, interaction, or treatment occurred. The value set used for Healthcare Facility    Type has been defined by HITSP to be the value set reproduced from HITSP C80 Table 2-147.
 use super::super::super::{CodeableConcept, Coding};
-use super::super::TerminologyValidationError;
+use crate::TerminologyValidationError;
 
 pub struct FacilityTypeCodeValueSet;
 
@@ -17,94 +17,15 @@ impl FacilityTypeCodeValueSet {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
-    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &["http://snomed.info/sct"];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
+        "http://snomed.info/sct",
+    ];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(
-                code,
-                "82242000"
-                    | "225732001"
-                    | "79993009"
-                    | "32074000"
-                    | "4322002"
-                    | "224687002"
-                    | "62480006"
-                    | "80522000"
-                    | "36125001"
-                    | "48311003"
-                    | "284546000"
-                    | "42665001"
-                    | "45618002"
-                    | "418518002"
-                    | "73770003"
-                    | "69362002"
-                    | "52668009"
-                    | "360957003"
-                    | "10206005"
-                    | "37550003"
-                    | "73644007"
-                    | "31628002"
-                    | "58482006"
-                    | "90484001"
-                    | "1814000"
-                    | "22549003"
-                    | "56293002"
-                    | "360966004"
-                    | "2849009"
-                    | "14866005"
-                    | "38238005"
-                    | "56189001"
-                    | "89972002"
-                    | "78088001"
-                    | "78001009"
-                    | "23392004"
-                    | "36293008"
-                    | "3729002"
-                    | "5584006"
-                    | "37546005"
-                    | "57159002"
-                    | "331006"
-                    | "50569004"
-                    | "79491001"
-                    | "33022008"
-                    | "19602009"
-                    | "39350007"
-                    | "83891005"
-                    | "394759007"
-                    | "405607001"
-                    | "309900005"
-                    | "275576008"
-                    | "10531005"
-                    | "91154008"
-                    | "41844007"
-                    | "45899008"
-                    | "51563005"
-                    | "1773006"
-                    | "72311000"
-                    | "6827000"
-                    | "309898008"
-                    | "39913001"
-                    | "77931003"
-                    | "25681007"
-                    | "20078004"
-                    | "46224007"
-                    | "81234003"
-                    | "35971002"
-                    | "11424001"
-                    | "409519008"
-                    | "901005"
-                    | "2081004"
-                    | "59374000"
-                    | "413456002"
-                    | "413817003"
-                    | "310205006"
-                    | "419955002"
-                    | "272501009"
-                    | "394777002"
-            ));
+            return Some(matches!(code, "82242000" | "225732001" | "79993009" | "32074000" | "4322002" | "224687002" | "62480006" | "80522000" | "36125001" | "48311003" | "284546000" | "42665001" | "45618002" | "418518002" | "73770003" | "69362002" | "52668009" | "360957003" | "10206005" | "37550003" | "73644007" | "31628002" | "58482006" | "90484001" | "1814000" | "22549003" | "56293002" | "360966004" | "2849009" | "14866005" | "38238005" | "56189001" | "89972002" | "78088001" | "78001009" | "23392004" | "36293008" | "3729002" | "5584006" | "37546005" | "57159002" | "331006" | "50569004" | "79491001" | "33022008" | "19602009" | "39350007" | "83891005" | "394759007" | "405607001" | "309900005" | "275576008" | "10531005" | "91154008" | "41844007" | "45899008" | "51563005" | "1773006" | "72311000" | "6827000" | "309898008" | "39913001" | "77931003" | "25681007" | "20078004" | "46224007" | "81234003" | "35971002" | "11424001" | "409519008" | "901005" | "2081004" | "59374000" | "413456002" | "413817003" | "310205006" | "419955002" | "272501009" | "394777002"));
         }
         None
     }
@@ -114,88 +35,7 @@ impl FacilityTypeCodeValueSet {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(
-                code,
-                "82242000"
-                    | "225732001"
-                    | "79993009"
-                    | "32074000"
-                    | "4322002"
-                    | "224687002"
-                    | "62480006"
-                    | "80522000"
-                    | "36125001"
-                    | "48311003"
-                    | "284546000"
-                    | "42665001"
-                    | "45618002"
-                    | "418518002"
-                    | "73770003"
-                    | "69362002"
-                    | "52668009"
-                    | "360957003"
-                    | "10206005"
-                    | "37550003"
-                    | "73644007"
-                    | "31628002"
-                    | "58482006"
-                    | "90484001"
-                    | "1814000"
-                    | "22549003"
-                    | "56293002"
-                    | "360966004"
-                    | "2849009"
-                    | "14866005"
-                    | "38238005"
-                    | "56189001"
-                    | "89972002"
-                    | "78088001"
-                    | "78001009"
-                    | "23392004"
-                    | "36293008"
-                    | "3729002"
-                    | "5584006"
-                    | "37546005"
-                    | "57159002"
-                    | "331006"
-                    | "50569004"
-                    | "79491001"
-                    | "33022008"
-                    | "19602009"
-                    | "39350007"
-                    | "83891005"
-                    | "394759007"
-                    | "405607001"
-                    | "309900005"
-                    | "275576008"
-                    | "10531005"
-                    | "91154008"
-                    | "41844007"
-                    | "45899008"
-                    | "51563005"
-                    | "1773006"
-                    | "72311000"
-                    | "6827000"
-                    | "309898008"
-                    | "39913001"
-                    | "77931003"
-                    | "25681007"
-                    | "20078004"
-                    | "46224007"
-                    | "81234003"
-                    | "35971002"
-                    | "11424001"
-                    | "409519008"
-                    | "901005"
-                    | "2081004"
-                    | "59374000"
-                    | "413456002"
-                    | "413817003"
-                    | "310205006"
-                    | "419955002"
-                    | "272501009"
-                    | "394777002"
-            ));
+            return Some(matches!(code, "82242000" | "225732001" | "79993009" | "32074000" | "4322002" | "224687002" | "62480006" | "80522000" | "36125001" | "48311003" | "284546000" | "42665001" | "45618002" | "418518002" | "73770003" | "69362002" | "52668009" | "360957003" | "10206005" | "37550003" | "73644007" | "31628002" | "58482006" | "90484001" | "1814000" | "22549003" | "56293002" | "360966004" | "2849009" | "14866005" | "38238005" | "56189001" | "89972002" | "78088001" | "78001009" | "23392004" | "36293008" | "3729002" | "5584006" | "37546005" | "57159002" | "331006" | "50569004" | "79491001" | "33022008" | "19602009" | "39350007" | "83891005" | "394759007" | "405607001" | "309900005" | "275576008" | "10531005" | "91154008" | "41844007" | "45899008" | "51563005" | "1773006" | "72311000" | "6827000" | "309898008" | "39913001" | "77931003" | "25681007" | "20078004" | "46224007" | "81234003" | "35971002" | "11424001" | "409519008" | "901005" | "2081004" | "59374000" | "413456002" | "413817003" | "310205006" | "419955002" | "272501009" | "394777002"));
         }
         None
     }
@@ -248,9 +88,7 @@ impl FacilityTypeCodeValueSet {
                 "331006" => Some("Hospital outpatient rheumatology clinic"),
                 "50569004" => Some("Hospital outpatient urology clinic"),
                 "79491001" => Some("Hospital radiology facility"),
-                "33022008" => {
-                    Some("Hospital-based outpatient clinic or department--OTHER-NOT LISTED")
-                }
+                "33022008" => Some("Hospital-based outpatient clinic or department--OTHER-NOT LISTED"),
                 "19602009" => Some("Fee-for-service private physicians\' group office"),
                 "39350007" => Some("Private physicians\' group office"),
                 "83891005" => Some("Solo practice private office"),
@@ -305,9 +143,7 @@ impl FacilityTypeCodeValueSet {
     /// and none matched, or if there are no codings.
     pub fn contains_codeable_concept(cc: &CodeableConcept) -> Option<bool> {
         let codings = cc.coding.as_ref()?;
-        if codings.is_empty() {
-            return None;
-        }
+        if codings.is_empty() { return None; }
 
         let mut any_none = false;
         for c in codings {
@@ -325,35 +161,25 @@ impl FacilityTypeCodeValueSet {
     pub fn validate(system: &str, code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains(system, code) {
             Some(true) => Ok(()),
-            Some(false) => match Self::code_known_in_system(system, code) {
-                Some(false) => Err(TerminologyValidationError::UnknownCode {
-                    system: system.to_string(),
-                    code: code.to_string(),
-                }),
-                _ => Err(TerminologyValidationError::NotInValueSet {
-                    valueset_url: Self::URL.to_string(),
-                    system: Some(system.to_string()),
-                    code: code.to_string(),
-                }),
-            },
-            None => Err(TerminologyValidationError::RemoteValidationRequired(
-                "Remote terminology validation required".to_string(),
-            )),
+            Some(false) => {
+                match Self::code_known_in_system(system, code) {
+                    Some(false) => Err(TerminologyValidationError::UnknownCode { system: system.to_string(), code: code.to_string() }),
+                    _ => Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some(system.to_string()), code: code.to_string() }),
+                }
+            }
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
+
 
     /// Validate a primitive `code` against this ValueSet using best-effort local logic.
     pub fn validate_code(code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains_implicit_code(code) {
             Some(true) => Ok(()),
-            Some(false) => Err(TerminologyValidationError::NotInValueSet {
-                valueset_url: Self::URL.to_string(),
-                system: Some("http://snomed.info/sct".to_string()),
-                code: code.to_string(),
-            }),
-            None => Err(TerminologyValidationError::RemoteValidationRequired(
-                "Remote terminology validation required".to_string(),
-            )),
+            Some(false) => {
+                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://snomed.info/sct".to_string()), code: code.to_string() })
+            }
+            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
         }
     }
 
@@ -365,36 +191,12 @@ impl FacilityTypeCodeValueSet {
 
     /// Validate a Coding against this ValueSet using best-effort local logic.
     pub fn validate_coding(coding: &Coding) -> Result<(), TerminologyValidationError> {
-        let code = coding
-            .code
-            .as_ref()
-            .and_then(|e| e.value.as_deref())
-            .filter(|v| !v.is_empty())
-            .ok_or_else(|| {
-                TerminologyValidationError::InvalidInput("Coding.code is required".to_string())
-            })?;
-        let system = coding
-            .system
-            .as_ref()
-            .and_then(|e| e.value.as_deref())
-            .filter(|v| !v.is_empty())
-            .ok_or_else(|| {
-                TerminologyValidationError::MissingSystem("Coding.system is required".to_string())
-            })?;
-        if let Some(provided) = coding
-            .display
-            .as_ref()
-            .and_then(|e| e.value.as_deref())
-            .filter(|v| !v.is_empty())
-        {
+        let code = coding.code.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::InvalidInput("Coding.code is required".to_string()))?;
+        let system = coding.system.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::MissingSystem("Coding.system is required".to_string()))?;
+        if let Some(provided) = coding.display.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()) {
             if let Some(expected) = Self::expected_display(system, code) {
                 if provided != expected {
-                    return Err(TerminologyValidationError::WrongDisplay {
-                        system: system.to_string(),
-                        code: code.to_string(),
-                        expected: expected.to_string(),
-                        provided: provided.to_string(),
-                    });
+                    return Err(TerminologyValidationError::WrongDisplay { system: system.to_string(), code: code.to_string(), expected: expected.to_string(), provided: provided.to_string() });
                 }
             }
         }
@@ -402,18 +204,10 @@ impl FacilityTypeCodeValueSet {
     }
 
     /// Validate a CodeableConcept against this ValueSet using best-effort local logic.
-    pub fn validate_codeable_concept(
-        cc: &CodeableConcept,
-    ) -> Result<(), TerminologyValidationError> {
-        let codings = cc.coding.as_ref().ok_or_else(|| {
-            TerminologyValidationError::InvalidInput(
-                "CodeableConcept.coding is required".to_string(),
-            )
-        })?;
+    pub fn validate_codeable_concept(cc: &CodeableConcept) -> Result<(), TerminologyValidationError> {
+        let codings = cc.coding.as_ref().ok_or_else(|| TerminologyValidationError::InvalidInput("CodeableConcept.coding is required".to_string()))?;
         if codings.is_empty() {
-            return Err(TerminologyValidationError::InvalidInput(
-                "CodeableConcept.coding must not be empty".to_string(),
-            ));
+            return Err(TerminologyValidationError::InvalidInput("CodeableConcept.coding must not be empty".to_string()));
         }
         let mut last_error: Option<TerminologyValidationError> = None;
         let mut saw_remote = false;
@@ -425,17 +219,11 @@ impl FacilityTypeCodeValueSet {
             }
         }
         if saw_remote {
-            Err(TerminologyValidationError::RemoteValidationRequired(
-                "Remote terminology validation required".to_string(),
-            ))
+            Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string()))
         } else if let Some(err) = last_error {
             Err(err)
         } else {
-            Err(TerminologyValidationError::NotInValueSet {
-                valueset_url: Self::URL.to_string(),
-                system: None,
-                code: "".to_string(),
-            })
+            Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: "".to_string() })
         }
     }
-}
+  }

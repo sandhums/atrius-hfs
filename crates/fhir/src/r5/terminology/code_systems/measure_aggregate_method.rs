@@ -62,24 +62,12 @@ impl MeasureAggregateMethod {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Sum => Some(
-                "The measure score is determined by adding together the observations derived from the measure population.",
-            ),
-            Self::Average => Some(
-                "The measure score is determined by taking the average of the observations derived from the measure population.",
-            ),
-            Self::Median => Some(
-                "The measure score is determined by taking the median of the observations derived from the measure population.",
-            ),
-            Self::Minimum => Some(
-                "The measure score is determined by taking the minimum of the observations derived from the measure population.",
-            ),
-            Self::Maximum => Some(
-                "The measure score is determined by taking the maximum of the observations derived from the measure population.",
-            ),
-            Self::Count => Some(
-                "The measure score is determined as the number of observations derived from the measure population.",
-            ),
+            Self::Sum => Some("The measure score is determined by adding together the observations derived from the measure population."),
+            Self::Average => Some("The measure score is determined by taking the average of the observations derived from the measure population."),
+            Self::Median => Some("The measure score is determined by taking the median of the observations derived from the measure population."),
+            Self::Minimum => Some("The measure score is determined by taking the minimum of the observations derived from the measure population."),
+            Self::Maximum => Some("The measure score is determined by taking the maximum of the observations derived from the measure population."),
+            Self::Count => Some("The measure score is determined as the number of observations derived from the measure population."),
         }
     }
 
@@ -144,4 +132,5 @@ impl MeasureAggregateMethod {
             })
             .unwrap_or(false)
     }
+
 }

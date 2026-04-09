@@ -1,9 +1,15 @@
 use std::fs;
 use std::path::PathBuf;
-
-use fhir_validation::R4FhirPathEvaluator;
-use fhir_validation::terminology::service::{TerminologyService, TerminologyServiceSync};
-use fhir_validation::{R5FhirPathEvaluator, Severity, ValidationIssue, Validator};
+#[cfg(feature = "R4")]
+use fhir_validation::{R4FhirPathEvaluator};
+use fhir_validation::terminology::service::{ TerminologyServiceSync};
+#[cfg(feature = "R5")]
+use fhir_validation::{R5FhirPathEvaluator};
+use fhir_validation::{ValidationError, Severity, ValidationIssue};
+#[cfg(feature = "R5")]
+use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
+use fhir_validation::profile::types::ExtractedProfile;
+use fhir_validation::types::TerminologyMembershipOutcome;
 use helios_fhir::{FhirResource, FhirVersion};
 
 pub fn fixture_path(rel: &str) -> PathBuf {
@@ -35,6 +41,8 @@ pub fn load_fixture(version: FhirVersion, rel: &str) -> String {
 
     fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read fixture {rel}: {e}"))
 }
+
+#[allow(dead_code)]
 pub fn load_resource(version: FhirVersion, rel: &str) -> FhirResource {
     let json = load_fixture(version, rel);
 
@@ -65,75 +73,83 @@ pub fn load_resource(version: FhirVersion, rel: &str) -> FhirResource {
     }
 }
 #[allow(dead_code)]
+pub fn load_profile(version: FhirVersion, rel: &str) -> ExtractedProfile {
+    let json = load_fixture(version, rel);
+
+    match version {
+        #[cfg(feature = "R4")]
+        FhirVersion::R4 => {
+            todo!("R4 profile extraction fixtures are not implemented yet")
+        }
+
+        #[cfg(feature = "R4B")]
+        FhirVersion::R4B => {
+            todo!("R4B profile extraction fixtures are not implemented yet")
+        }
+
+        #[cfg(feature = "R5")]
+        FhirVersion::R5 => {
+            let sd: helios_fhir::r5::StructureDefinition = serde_json::from_str(&json).unwrap();
+            extract_r5_structure_definition_profile(&sd).unwrap()
+        }
+
+        #[cfg(feature = "R6")]
+        FhirVersion::R6 => {
+            todo!("R6 profile extraction fixtures are not implemented yet")
+        }
+    }
+}
+#[cfg(feature = "R5")]
+#[allow(dead_code)]
 pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
     let json = load_fixture(FhirVersion::R5, rel);
     serde_json::from_str(&json).unwrap()
 }
-#[allow(dead_code)]
-pub fn validate_resource(
-    resource: &FhirResource,
-    terminology: Option<&dyn TerminologyServiceSync>,
-) -> Vec<ValidationIssue> {
-    match resource {
-        #[cfg(feature = "R4")]
-        FhirResource::R4(r) => {
-            let evaluator = R4FhirPathEvaluator::new((**r).clone());
-            validator().validate_r4_resource(r.as_ref(), terminology, &evaluator)
-        }
+pub struct MockTerminologyService {
+    pub result: Result<TerminologyMembershipOutcome, ValidationError>,
+}
 
-        #[cfg(feature = "R4B")]
-        FhirResource::R4B(r) => {
-            todo!("R4B validator")
-        }
+impl TerminologyServiceSync for MockTerminologyService {
+    fn member_of(
+        &self,
+        _valueset_url: &str,
+        _system: Option<&str>,
+        _code: &str,
+        _display: Option<&str>,
+    ) -> Result<TerminologyMembershipOutcome, ValidationError> {
+        match &self.result {
+            Ok(v) => Ok(v.clone()),
+            Err(ValidationError::Terminology(msg)) => {
+                Err(ValidationError::Terminology(msg.clone()))
+            }
+            Err(ValidationError::Other(msg)) => Err(ValidationError::Other(msg.clone())),
+            Err(ValidationError::FhirPath(_)) => Err(ValidationError::Other(
+                "unexpected fhirpath error in mock".to_string(),
+            )),
+            Err(ValidationError::TerminologyRemote(_)) => Err(ValidationError::Other(
+                "unexpected error in mock".to_string(),
+            )),
+            Err(ValidationError::InvalidStructureDefinition(_)) => Err(ValidationError::Other(
+                "invalid structure definition".to_string()))
 
-        #[cfg(feature = "R5")]
-        FhirResource::R5(r) => {
-            let evaluator = R5FhirPathEvaluator::new((**r).clone());
-            validator().validate_r5_resource(r.as_ref(), terminology, &evaluator)
-        }
-
-        #[cfg(feature = "R6")]
-        FhirResource::R6(r) => {
-            todo!("R6 validator")
         }
     }
 }
-#[allow(dead_code)]
-pub async fn validate_resource_async(
-    resource: &FhirResource,
-    terminology: Option<&dyn TerminologyService>,
-) -> Vec<ValidationIssue> {
-    match resource {
-        #[cfg(feature = "R4")]
-        FhirResource::R4(r) => {
-            let evaluator = R4FhirPathEvaluator::new((**r).clone());
-            validator()
-                .validate_r4_resource_async(r.as_ref(), terminology, &evaluator)
-                .await
-        }
-
-        #[cfg(feature = "R4B")]
-        FhirResource::R4B(r) => {
-            todo!("R4B validator")
-        }
-
-        #[cfg(feature = "R5")]
-        FhirResource::R5(r) => {
-            let evaluator = R5FhirPathEvaluator::new((**r).clone());
-            validator()
-                .validate_r5_resource_async(r.as_ref(), terminology, &evaluator)
-                .await
-        }
-
-        #[cfg(feature = "R6")]
-        FhirResource::R6(r) => {
-            todo!("R6 validator")
-        }
-    }
+/// Build an R4 FHIRPath evaluator for [`Validator::validate_resource`] / [`Validator::validate_resource_async`].
+#[cfg(feature = "R4")]
+pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
+    let FhirResource::R4(r) = resource else {
+        panic!("expected R5 FhirResource");
+    };
+    R4FhirPathEvaluator::new((**r).clone())
 }
-
-pub fn validator() -> Validator {
-    Validator::default()
+/// Build an R5 FHIRPath evaluator for [`Validator::validate_resource`] / [`Validator::validate_resource_async`].
+#[cfg(feature = "R5")]
+pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
+    let FhirResource::R5(r) = resource else {
+        panic!("expected R5 FhirResource");
+    };
+    R5FhirPathEvaluator::new((**r).clone())
 }
 
 #[allow(dead_code)]
@@ -299,6 +315,7 @@ pub fn eval_r4_patient_expr(
         .eval_expression(expr)
         .map_err(|e| format!("{e:?}"))
 }
+#[cfg(feature = "R5")]
 #[allow(dead_code)]
 pub fn eval_r5_patient_expr(
     patient: &helios_fhir::r5::Patient,

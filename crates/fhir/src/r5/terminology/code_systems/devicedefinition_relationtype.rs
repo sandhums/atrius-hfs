@@ -52,9 +52,7 @@ impl DeviceDefinitionRelationType {
         match self {
             Self::Gateway => Some("Gateway."),
             Self::Replaces => Some("The current device replaces the linked device."),
-            Self::Previous => Some(
-                "The current device is a previous device and has been replaced by the linked device.",
-            ),
+            Self::Previous => Some("The current device is a previous device and has been replaced by the linked device."),
         }
     }
 
@@ -113,4 +111,5 @@ impl DeviceDefinitionRelationType {
             })
             .unwrap_or(false)
     }
+
 }

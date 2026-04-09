@@ -67,24 +67,12 @@ impl MedicationAdministrationStatusCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::InProgress => Some("The administration has started but has not yet completed."),
-            Self::NotDone => Some(
-                "The administration was terminated prior to any impact on the subject (though preparatory actions may have been taken)",
-            ),
-            Self::OnHold => Some(
-                "Actions implied by the administration have been temporarily halted, but are expected to continue later. May also be called \'suspended\'.",
-            ),
-            Self::Completed => {
-                Some("All actions that are implied by the administration have occurred.")
-            }
-            Self::EnteredInError => {
-                Some("The administration was entered in error and therefore nullified.")
-            }
-            Self::Stopped => Some(
-                "Actions implied by the administration have been permanently halted, before all of them occurred.",
-            ),
-            Self::Unknown => Some(
-                "The authoring system does not know which of the status values currently applies for this request. Note: This concept is not to be used for \'other\' - one of the listed statuses is presumed to apply, it\'s just not known which one.",
-            ),
+            Self::NotDone => Some("The administration was terminated prior to any impact on the subject (though preparatory actions may have been taken)"),
+            Self::OnHold => Some("Actions implied by the administration have been temporarily halted, but are expected to continue later. May also be called \'suspended\'."),
+            Self::Completed => Some("All actions that are implied by the administration have occurred."),
+            Self::EnteredInError => Some("The administration was entered in error and therefore nullified."),
+            Self::Stopped => Some("Actions implied by the administration have been permanently halted, before all of them occurred."),
+            Self::Unknown => Some("The authoring system does not know which of the status values currently applies for this request. Note: This concept is not to be used for \'other\' - one of the listed statuses is presumed to apply, it\'s just not known which one."),
         }
     }
 
@@ -151,4 +139,5 @@ impl MedicationAdministrationStatusCodes {
             })
             .unwrap_or(false)
     }
+
 }

@@ -50,15 +50,9 @@ impl SearchProcessingModeType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Normal => Some(
-                "The search parameter is derived directly from the selected nodes based on the type definitions.",
-            ),
-            Self::Phonetic => Some(
-                "The search parameter is derived by a phonetic transform from the selected nodes.",
-            ),
-            Self::Other => Some(
-                "The interpretation of the xpath statement is unknown (and can\'t be automated).",
-            ),
+            Self::Normal => Some("The search parameter is derived directly from the selected nodes based on the type definitions."),
+            Self::Phonetic => Some("The search parameter is derived by a phonetic transform from the selected nodes."),
+            Self::Other => Some("The interpretation of the xpath statement is unknown (and can\'t be automated)."),
         }
     }
 
@@ -117,4 +111,5 @@ impl SearchProcessingModeType {
             })
             .unwrap_or(false)
     }
+
 }

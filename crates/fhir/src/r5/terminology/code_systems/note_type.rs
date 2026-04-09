@@ -111,4 +111,5 @@ impl NoteType {
             })
             .unwrap_or(false)
     }
+
 }

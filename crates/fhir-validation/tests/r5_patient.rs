@@ -1,16 +1,17 @@
+#![cfg(feature = "R5")]
 mod common {
     pub mod fixtures;
 }
-use crate::common::fixtures::{
-    assert_has_invariant, assert_issue_count, load_resource, validate_resource,
-};
+use crate::common::fixtures::{assert_has_invariant, assert_issue_count, load_resource, r5_evaluator_for};
 use helios_fhir::FhirVersion;
 
 #[test]
 fn r5_patient_example_validates() {
     let r = load_resource(FhirVersion::R5, "valid/patient/patient-example.json");
 
-    let _issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r5_evaluator_for(&r);
+    let _issues = validator.validate_resource(&r, None, &evaluator);
 
     // assert!(issues.is_empty());
     // assert_no_errors(&issues);
@@ -22,7 +23,9 @@ fn r5_patient_local_reference_but_no_contained() {
         "invalid/patient/patient-local_reference_but_no_contained.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r5_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant(
         &issues,
@@ -37,7 +40,9 @@ fn r5_dom3_no_id_in_contained() {
         "invalid/patient/patient_no_id_in_contained.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r5_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant(
         &issues,
@@ -56,7 +61,9 @@ fn r5_patient_malformed_reference() {
         FhirVersion::R5,
         "invalid/patient/patient_malformed_local_reference.json",
     );
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r5_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
     assert_issue_count(&issues, 3);
     assert_has_invariant(
         &issues,

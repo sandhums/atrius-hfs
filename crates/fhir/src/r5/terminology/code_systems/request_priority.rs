@@ -55,15 +55,9 @@ impl RequestPriority {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Routine => Some("The request has normal priority."),
-            Self::Urgent => {
-                Some("The request should be actioned promptly - higher priority than routine.")
-            }
-            Self::Asap => Some(
-                "The request should be actioned as soon as possible - higher priority than urgent.",
-            ),
-            Self::Stat => Some(
-                "The request should be actioned immediately - highest possible priority.  E.g. an emergency.",
-            ),
+            Self::Urgent => Some("The request should be actioned promptly - higher priority than routine."),
+            Self::Asap => Some("The request should be actioned as soon as possible - higher priority than urgent."),
+            Self::Stat => Some("The request should be actioned immediately - highest possible priority.  E.g. an emergency."),
         }
     }
 
@@ -124,4 +118,5 @@ impl RequestPriority {
             })
             .unwrap_or(false)
     }
+
 }

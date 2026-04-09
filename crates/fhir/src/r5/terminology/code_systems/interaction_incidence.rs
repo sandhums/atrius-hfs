@@ -104,4 +104,5 @@ impl InteractionIncidence {
             })
             .unwrap_or(false)
     }
+
 }

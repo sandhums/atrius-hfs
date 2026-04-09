@@ -58,21 +58,11 @@ impl ProvenanceEntityRole {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Revision => Some(
-                "An entity that is used by the activity to produce a new version of that entity.",
-            ),
-            Self::Quotation => Some(
-                "An entity that is copied in full or part by an agent that is not the author of the entity.",
-            ),
-            Self::Source => {
-                Some("An entity that is used as input to the activity that produced the target.")
-            }
-            Self::Instantiates => Some(
-                "The record resulting from this event adheres to the protocol, guideline, order set or other definition represented by this entity.",
-            ),
-            Self::Removal => Some(
-                "An entity that is removed from accessibility, usually through the DELETE operator.",
-            ),
+            Self::Revision => Some("An entity that is used by the activity to produce a new version of that entity."),
+            Self::Quotation => Some("An entity that is copied in full or part by an agent that is not the author of the entity."),
+            Self::Source => Some("An entity that is used as input to the activity that produced the target."),
+            Self::Instantiates => Some("The record resulting from this event adheres to the protocol, guideline, order set or other definition represented by this entity."),
+            Self::Removal => Some("An entity that is removed from accessibility, usually through the DELETE operator."),
         }
     }
 
@@ -135,4 +125,5 @@ impl ProvenanceEntityRole {
             })
             .unwrap_or(false)
     }
+
 }

@@ -104,4 +104,5 @@ impl StrandType {
             })
             .unwrap_or(false)
     }
+
 }

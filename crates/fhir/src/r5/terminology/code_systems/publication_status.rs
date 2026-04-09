@@ -54,16 +54,10 @@ impl PublicationStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Draft => Some(
-                "This resource is still under development and is not yet considered to be ready for normal use.",
-            ),
+            Self::Draft => Some("This resource is still under development and is not yet considered to be ready for normal use."),
             Self::Active => Some("This resource is ready for normal use."),
-            Self::Retired => {
-                Some("This resource has been withdrawn or superseded and should no longer be used.")
-            }
-            Self::Unknown => Some(
-                "The authoring system does not know which of the status values currently applies for this resource.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, it\'s just not known which one.",
-            ),
+            Self::Retired => Some("This resource has been withdrawn or superseded and should no longer be used."),
+            Self::Unknown => Some("The authoring system does not know which of the status values currently applies for this resource.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, it\'s just not known which one."),
         }
     }
 
@@ -124,4 +118,5 @@ impl PublicationStatus {
             })
             .unwrap_or(false)
     }
+
 }

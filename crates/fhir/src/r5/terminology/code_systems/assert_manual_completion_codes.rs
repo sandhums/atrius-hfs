@@ -54,18 +54,10 @@ impl AssertionManualCompletionType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Fail => Some(
-                "Mark the currently waiting test failed and proceed with the next assert if the stopTestOnFail is false or the next test in the TestScript if the stopTestOnFail is true.",
-            ),
-            Self::Pass => Some(
-                "Mark the currently waiting test passed (if the test is not failed already) and proceed with the next action in the TestScript.",
-            ),
-            Self::Skip => Some(
-                "Mark this assert as skipped and proceed with the next action in the TestScript.",
-            ),
-            Self::Stop => Some(
-                "Stop execution of this TestScript. The overall status of this TestScript is evaluated based on the status of the completed tests.",
-            ),
+            Self::Fail => Some("Mark the currently waiting test failed and proceed with the next assert if the stopTestOnFail is false or the next test in the TestScript if the stopTestOnFail is true."),
+            Self::Pass => Some("Mark the currently waiting test passed (if the test is not failed already) and proceed with the next action in the TestScript."),
+            Self::Skip => Some("Mark this assert as skipped and proceed with the next action in the TestScript."),
+            Self::Stop => Some("Stop execution of this TestScript. The overall status of this TestScript is evaluated based on the status of the completed tests."),
         }
     }
 
@@ -126,4 +118,5 @@ impl AssertionManualCompletionType {
             })
             .unwrap_or(false)
     }
+
 }

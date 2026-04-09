@@ -111,4 +111,5 @@ impl AllergyIntoleranceSeverity {
             })
             .unwrap_or(false)
     }
+
 }

@@ -50,15 +50,9 @@ impl ResourceVersionPolicy {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NoVersion => {
-                Some("VersionId meta-property is not supported (server) or used (client).")
-            }
-            Self::Versioned => {
-                Some("VersionId meta-property is supported (server) or used (client).")
-            }
-            Self::VersionedUpdate => Some(
-                "Supports version-aware updates (server) or will be specified (If-match header) for updates (client).",
-            ),
+            Self::NoVersion => Some("VersionId meta-property is not supported (server) or used (client)."),
+            Self::Versioned => Some("VersionId meta-property is supported (server) or used (client)."),
+            Self::VersionedUpdate => Some("Supports version-aware updates (server) or will be specified (If-match header) for updates (client)."),
         }
     }
 
@@ -117,4 +111,5 @@ impl ResourceVersionPolicy {
             })
             .unwrap_or(false)
     }
+
 }

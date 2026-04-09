@@ -46,12 +46,8 @@ impl InventoryCountType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Snapshot => Some(
-                "The inventory report is a current absolute snapshot, i.e. it represents the quantities at hand.",
-            ),
-            Self::Difference => Some(
-                "The inventory report is about the difference between a previous count and a current count, i.e. it represents the items that have been added/subtracted from inventory.",
-            ),
+            Self::Snapshot => Some("The inventory report is a current absolute snapshot, i.e. it represents the quantities at hand."),
+            Self::Difference => Some("The inventory report is about the difference between a previous count and a current count, i.e. it represents the items that have been added/subtracted from inventory."),
         }
     }
 
@@ -108,4 +104,5 @@ impl InventoryCountType {
             })
             .unwrap_or(false)
     }
+
 }

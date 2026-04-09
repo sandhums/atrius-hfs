@@ -11,9 +11,13 @@
 //! helpers to validate primitive `code`, `Coding`, and `CodeableConcept` values
 //! while preserving precise instance locations.
 
-use crate::{ValidationIssue, Validator};
+use crate::binding::engine::LocalBindingOutcome;
+use crate::{ValidationError, ValidationIssue, Validator};
 use fhir_validation_types::{BindingStrength, Severity};
 use serde_json::Value;
+use helios_fhir::TerminologyValidationError;
+use crate::service::{TerminologyService, TerminologyServiceSync};
+use crate::types::{TerminologyMembershipOutcome};
 
 /// Convert a binding miss into a `ValidationIssue` using validator policy for
 /// the supplied binding strength.
@@ -69,6 +73,76 @@ pub fn value_issue(fhir_path: &str, valueset_url: &str, diagnostics: String) -> 
         instance_path: None,
         expression: Some(valueset_url.to_string()),
         diagnostics,
+    }
+}
+
+/// Convert a terminal local terminology validation error into concrete issues.
+///
+/// This helper assumes the caller has already separated control-flow outcomes
+/// such as `Valid` and `NeedsRemote { .. }` from terminal local errors.
+pub fn local_error_to_issues(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    err: TerminologyValidationError,
+) -> Vec<ValidationIssue> {
+    match err {
+        TerminologyValidationError::NotInValueSet {
+            valueset_url: _,
+            system,
+            code,
+        } => {
+            let diagnostics = match system {
+                Some(system) => format!(
+                    "Code '{}' from system '{}' not found in ValueSet '{}'",
+                    code, system, valueset_url
+                ),
+                None => format!("Code '{}' not found in ValueSet '{}'", code, valueset_url),
+            };
+
+            issue_for_binding_miss(validator, fhir_path, valueset_url, strength, diagnostics)
+                .into_iter()
+                .collect()
+        }
+
+        TerminologyValidationError::MissingSystem(msg) => {
+            vec![value_issue(fhir_path, valueset_url, msg)]
+        }
+
+        TerminologyValidationError::UnknownCode { system, code } => {
+            vec![value_issue(
+                fhir_path,
+                valueset_url,
+                format!("Unknown code '{}' in system '{}'", code, system),
+            )]
+        }
+
+        TerminologyValidationError::WrongDisplay {
+            system,
+            code,
+            expected,
+            provided,
+        } => {
+            vec![value_issue(
+                fhir_path,
+                valueset_url,
+                format!(
+                    "Wrong display '{}' for code '{}' in system '{}'; expected '{}'",
+                    provided, code, system, expected
+                ),
+            )]
+        }
+
+        TerminologyValidationError::InvalidInput(msg) => {
+            vec![value_issue(fhir_path, valueset_url, msg)]
+        }
+
+        TerminologyValidationError::RemoteValidationRequired(_) => {
+            unreachable!(
+                "Terminal local error conversion should not receive RemoteValidationRequired; use NeedsRemote instead"
+            )
+        }
     }
 }
 
@@ -176,4 +250,211 @@ pub(crate) fn relative_binding_path(binding_path: &str) -> &str {
         .rsplit_once('.')
         .map(|(_, tail)| tail)
         .unwrap_or(binding_path)
+}
+pub(crate) fn prettify_remote_terminology_error(valueset_url: &str, err: &crate::ValidationError) -> String {
+    match err {
+        crate::ValidationError::TerminologyRemote(remote) => {
+
+            if !remote.diagnostics.is_empty() {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}': {}",
+                    valueset_url,
+                    remote.diagnostics.join("; ")
+                );
+            }
+            if let Some(body) = &remote.raw_body {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}': {}",
+                    valueset_url, body
+                );
+            }
+
+            if let Some(status) = remote.status {
+                return format!(
+                    "Remote terminology validation failed for ValueSet '{}' with status {}",
+                    valueset_url, status
+                );
+            }
+
+            format!(
+                "Remote terminology validation failed for ValueSet '{}'",
+                valueset_url
+            )
+        }
+        _ => format!("Remote terminology validation failed: {}", err),
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RemoteMembershipRequest {
+    pub valueset_url: String,
+    pub system: Option<String>,
+    pub code: String,
+    pub display: Option<String>,
+}
+
+pub enum LocalBindingDisposition {
+    Done(Vec<ValidationIssue>),
+    NeedsRemote(RemoteMembershipRequest),
+    Valid,
+}
+
+pub fn remote_request_from_outcome(
+    outcome: &LocalBindingOutcome,
+) -> Option<RemoteMembershipRequest> {
+    match outcome {
+        LocalBindingOutcome::NeedsRemote {
+            valueset_url,
+            system,
+            code,
+            display,
+        } => Some(RemoteMembershipRequest {
+            valueset_url: valueset_url.clone(),
+            system: system.clone(),
+            code: code.clone(),
+            display: display.clone(),
+        }),
+        _ => None,
+    }
+}
+pub fn classify_local_outcome(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    outcome: LocalBindingOutcome,
+) -> LocalBindingDisposition {
+    match outcome {
+        LocalBindingOutcome::Valid => LocalBindingDisposition::Valid,
+        LocalBindingOutcome::NeedsRemote {
+            valueset_url,
+            system,
+            code,
+            display,
+        } => LocalBindingDisposition::NeedsRemote(RemoteMembershipRequest {
+            valueset_url,
+            system,
+            code,
+            display,
+        }),
+        LocalBindingOutcome::Error(err) => LocalBindingDisposition::Done(
+            local_error_to_issues(validator, fhir_path, valueset_url, strength, err),
+        ),
+    }
+}
+
+pub fn remote_result_to_issues(
+    validator: &Validator,
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    req: &RemoteMembershipRequest,
+    outcome: Result<TerminologyMembershipOutcome, ValidationError>,
+) -> Vec<ValidationIssue> {
+    let mut issues = Vec::new();
+
+    match outcome {
+        Ok(outcome) if outcome.is_member => issues,
+        Ok(outcome) => {
+            let diagnostics = outcome.message.unwrap_or_else(|| {
+                if let Some(system) = &req.system {
+                    format!(
+                        "The provided coding {}#{} was not found in ValueSet {}",
+                        system, req.code, valueset_url
+                    )
+                } else {
+                    format!(
+                        "The provided code '{}' was not found in ValueSet {}",
+                        req.code, valueset_url
+                    )
+                }
+            });
+
+            if let Some(issue) = crate::binding::common::issue_for_binding_miss(
+                validator,
+                fhir_path,
+                valueset_url,
+                strength,
+                diagnostics,
+            ) {
+                issues.push(issue);
+            }
+            issues
+        }
+        Err(e) => {
+            issues.push(crate::binding::common::terminology_issue(
+                fhir_path,
+                valueset_url,
+                prettify_remote_terminology_error(valueset_url, &e),
+            ));
+            issues
+        }
+    }
+}
+pub fn execute_remote_sync(
+    validator: &Validator,
+    fhir_path: &str,
+    strength: BindingStrength,
+    terminology: Option<&dyn TerminologyServiceSync>,
+    req: &RemoteMembershipRequest,
+) -> Vec<ValidationIssue> {
+    let Some(terminology) = terminology else {
+        return vec![crate::binding::common::terminology_issue(
+            fhir_path,
+            &req.valueset_url,
+            "Remote terminology validation required but no TerminologyService was provided"
+                .to_string(),
+        )];
+    };
+
+    let outcome = terminology.member_of(
+        &req.valueset_url,
+        req.system.as_deref(),
+        &req.code,
+        req.display.as_deref(),
+    );
+
+    remote_result_to_issues(
+        validator,
+        fhir_path,
+        &req.valueset_url,
+        strength,
+        req,
+        outcome,
+    )
+}
+
+pub async fn execute_remote_async(
+    validator: &Validator,
+    fhir_path: &str,
+    strength: BindingStrength,
+    terminology: Option<&dyn TerminologyService>,
+    req: &RemoteMembershipRequest,
+) -> Vec<ValidationIssue> {
+    let Some(terminology) = terminology else {
+        return vec![crate::binding::common::terminology_issue(
+            fhir_path,
+            &req.valueset_url,
+            "Remote terminology validation required but no TerminologyService was provided"
+                .to_string(),
+        )];
+    };
+
+    let outcome = terminology
+        .member_of(
+            &req.valueset_url,
+            req.system.as_deref(),
+            &req.code,
+            req.display.as_deref(),
+        )
+        .await;
+
+    remote_result_to_issues(
+        validator,
+        fhir_path,
+        &req.valueset_url,
+        strength,
+        req,
+        outcome,
+    )
 }

@@ -60,15 +60,9 @@ impl TaskStatusReason {
         match self {
             Self::Missing => Some("An item nessary for task completion is missing."),
             Self::Misidentified => Some("Something related to the task was misidentified."),
-            Self::EquipmentIssue => {
-                Some("A piece of equipment necessary for completion of the task is malfunctioning.")
-            }
-            Self::EnvironmentalIssue => {
-                Some("Something in the environment is preventing task completion.")
-            }
-            Self::PersonnelIssue => {
-                Some("Key personnel necessary for task completion are not present.")
-            }
+            Self::EquipmentIssue => Some("A piece of equipment necessary for completion of the task is malfunctioning."),
+            Self::EnvironmentalIssue => Some("Something in the environment is preventing task completion."),
+            Self::PersonnelIssue => Some("Key personnel necessary for task completion are not present."),
         }
     }
 
@@ -131,4 +125,5 @@ impl TaskStatusReason {
             })
             .unwrap_or(false)
     }
+
 }

@@ -81,7 +81,9 @@
 //! foundation for FHIR invariant evaluation in Atrius.
 use crate::ValidationError;
 use helios_fhir::FhirResource;
+#[cfg(feature = "R4")]
 use helios_fhir::r4::Resource;
+#[cfg(feature = "R5")]
 use helios_fhir::r5::Resource as R5Resource;
 use helios_fhirpath::evaluator::convert_resource_to_result;
 use helios_fhirpath::{EvaluationContext, evaluate_expression};
@@ -384,10 +386,11 @@ pub struct InvariantExprRef<'a> {
 ///
 /// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
 /// R4 resources into `FhirResource` before evaluation.
+#[cfg(feature = "R4")]
 pub struct R4FhirPathEvaluator {
     inner: GenericFhirPathEvaluator,
 }
-
+#[cfg(feature = "R4")]
 impl R4FhirPathEvaluator {
     /// Create an R4 evaluator rooted at the given resource.
     pub fn new(resource: Resource) -> Self {
@@ -412,7 +415,7 @@ impl R4FhirPathEvaluator {
         }
     }
 }
-
+#[cfg(feature = "R4")]
 impl FhirPathEvaluator for R4FhirPathEvaluator {
     fn eval_invariant(
         &self,
@@ -448,10 +451,11 @@ impl FhirPathEvaluator for R4FhirPathEvaluator {
 ///
 /// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
 /// R5 resources into `FhirResource` before evaluation.
+#[cfg(feature = "R5")]
 pub struct R5FhirPathEvaluator {
     inner: GenericFhirPathEvaluator,
 }
-
+#[cfg(feature = "R5")]
 impl R5FhirPathEvaluator {
     /// Create an R5 evaluator rooted at the given resource.
     pub fn new(resource: R5Resource) -> Self {
@@ -476,7 +480,7 @@ impl R5FhirPathEvaluator {
         }
     }
 }
-
+#[cfg(feature = "R5")]
 impl FhirPathEvaluator for R5FhirPathEvaluator {
     fn eval_invariant(
         &self,

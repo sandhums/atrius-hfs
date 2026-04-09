@@ -55,15 +55,9 @@ impl ConsentDataMeaning {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Instance => Some("The consent applies directly to the instance of the resource."),
-            Self::Related => Some(
-                "The consent applies directly to the instance of the resource and instances it refers to.",
-            ),
-            Self::Dependents => Some(
-                "The consent applies directly to the instance of the resource and instances that refer to it.",
-            ),
-            Self::Authoredby => {
-                Some("The consent applies to instances of resources that are authored by.")
-            }
+            Self::Related => Some("The consent applies directly to the instance of the resource and instances it refers to."),
+            Self::Dependents => Some("The consent applies directly to the instance of the resource and instances that refer to it."),
+            Self::Authoredby => Some("The consent applies to instances of resources that are authored by."),
         }
     }
 
@@ -124,4 +118,5 @@ impl ConsentDataMeaning {
             })
             .unwrap_or(false)
     }
+
 }

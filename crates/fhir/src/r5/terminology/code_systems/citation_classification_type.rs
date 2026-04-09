@@ -50,15 +50,9 @@ impl CitationClassificationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::CitationSource => {
-                Some("Citation repository where this citation was created or copied from")
-            }
-            Self::MedlineOwner => {
-                Some("The party responsible for creating and validating the MEDLINE citation")
-            }
-            Self::FevirPlatformUse => Some(
-                "Used for Citation sharing on the Fast Evidence Interoperability Resources (FEvIR) Platform",
-            ),
+            Self::CitationSource => Some("Citation repository where this citation was created or copied from"),
+            Self::MedlineOwner => Some("The party responsible for creating and validating the MEDLINE citation"),
+            Self::FevirPlatformUse => Some("Used for Citation sharing on the Fast Evidence Interoperability Resources (FEvIR) Platform"),
         }
     }
 
@@ -117,4 +111,5 @@ impl CitationClassificationType {
             })
             .unwrap_or(false)
     }
+
 }

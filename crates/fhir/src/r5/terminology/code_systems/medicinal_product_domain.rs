@@ -52,9 +52,7 @@ impl MedicinalProductDomain {
         match self {
             Self::Human => Some("Product intended for use with humans"),
             Self::Veterinary => Some("Product intended for use with animals"),
-            Self::HumanAndVeterinary => {
-                Some("Product intended for use with both humans and animals")
-            }
+            Self::HumanAndVeterinary => Some("Product intended for use with both humans and animals"),
         }
     }
 
@@ -113,4 +111,5 @@ impl MedicinalProductDomain {
             })
             .unwrap_or(false)
     }
+
 }

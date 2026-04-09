@@ -42,9 +42,7 @@ impl TransportIntent {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Unknown => Some(
-                "The intent is not known.  When dealing with Transport, it\'s not always known (or relevant) how the transport was initiated - i.e. whether it was proposed, planned, ordered or just done spontaneously.",
-            ),
+            Self::Unknown => Some("The intent is not known.  When dealing with Transport, it\'s not always known (or relevant) how the transport was initiated - i.e. whether it was proposed, planned, ordered or just done spontaneously."),
         }
     }
 
@@ -99,4 +97,5 @@ impl TransportIntent {
             })
             .unwrap_or(false)
     }
+
 }

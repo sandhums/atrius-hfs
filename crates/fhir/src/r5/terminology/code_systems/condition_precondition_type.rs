@@ -46,12 +46,8 @@ impl ConditionPreconditionType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Sensitive => Some(
-                "The observation is very sensitive for the condition, but may also indicate other conditions.",
-            ),
-            Self::Specific => Some(
-                "The observation is very specific for this condition, but not particularly sensitive.",
-            ),
+            Self::Sensitive => Some("The observation is very sensitive for the condition, but may also indicate other conditions."),
+            Self::Specific => Some("The observation is very specific for this condition, but not particularly sensitive."),
         }
     }
 
@@ -108,4 +104,5 @@ impl ConditionPreconditionType {
             })
             .unwrap_or(false)
     }
+
 }

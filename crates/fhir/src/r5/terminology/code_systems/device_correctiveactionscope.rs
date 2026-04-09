@@ -50,15 +50,9 @@ impl DeviceCorrectiveActionScope {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Model => {
-                Some("The corrective action was intended for all units of the same model.")
-            }
-            Self::LotNumbers => Some(
-                "The corrective action was intended for a specific batch of units identified by a lot number.",
-            ),
-            Self::SerialNumbers => Some(
-                "The corrective action was intended for an individual unit (or a set of units) individually identified by serial number.",
-            ),
+            Self::Model => Some("The corrective action was intended for all units of the same model."),
+            Self::LotNumbers => Some("The corrective action was intended for a specific batch of units identified by a lot number."),
+            Self::SerialNumbers => Some("The corrective action was intended for an individual unit (or a set of units) individually identified by serial number."),
         }
     }
 
@@ -117,4 +111,5 @@ impl DeviceCorrectiveActionScope {
             })
             .unwrap_or(false)
     }
+
 }

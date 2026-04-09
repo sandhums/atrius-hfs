@@ -50,9 +50,7 @@ impl ActionConditionKind {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Applicability => {
-                Some("The condition describes whether or not a given action is applicable.")
-            }
+            Self::Applicability => Some("The condition describes whether or not a given action is applicable."),
             Self::Start => Some("The condition is a starting condition for the action."),
             Self::Stop => Some("The condition is a stop, or exit condition for the action."),
         }
@@ -113,4 +111,5 @@ impl ActionConditionKind {
             })
             .unwrap_or(false)
     }
+
 }

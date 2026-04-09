@@ -104,4 +104,5 @@ impl SubstanceNameDomain {
             })
             .unwrap_or(false)
     }
+
 }

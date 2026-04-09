@@ -50,15 +50,9 @@ impl FHIRDeviceStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some(
-                "The device record is current and is appropriate for reference in new instances.",
-            ),
-            Self::Inactive => Some(
-                "The device record is not current and is not appropriate for reference in new instances.",
-            ),
-            Self::EnteredInError => Some(
-                "The device record is not current and is not appropriate for reference in new instances.",
-            ),
+            Self::Active => Some("The device record is current and is appropriate for reference in new instances."),
+            Self::Inactive => Some("The device record is not current and is not appropriate for reference in new instances."),
+            Self::EnteredInError => Some("The device record is not current and is not appropriate for reference in new instances."),
         }
     }
 
@@ -117,4 +111,5 @@ impl FHIRDeviceStatus {
             })
             .unwrap_or(false)
     }
+
 }

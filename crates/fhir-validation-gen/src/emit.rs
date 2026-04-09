@@ -88,7 +88,7 @@ pub fn emit_validatable_impl_for_type(
     } else {
         let apply_bindings_method = apply_bindings_method_name(version);
         output.push_str(&format!(
-            "        issues.extend(validator.{apply_bindings_method}(self, {}, terminology));\n",
+            "        issues.extend(validator.{apply_bindings_method}(self, {}.as_slice(), terminology));\n",
             bindings_const_name(ty),
             apply_bindings_method = apply_bindings_method,
         ));
@@ -116,7 +116,7 @@ pub fn emit_validatable_impl_for_type(
         output.push_str("        let _ = (validator, evaluator);\n");
     } else {
         output.push_str(&format!(
-            "        issues.extend(validator.apply_invariants(self, {}, evaluator, {:?}));\n",
+            "        issues.extend(validator.apply_invariants(self, {}.as_slice(), evaluator, {:?}));\n",
             invariants_const_name(ty),
             ty.fhir_path
         ));
@@ -156,7 +156,7 @@ pub fn emit_validatable_impl_for_type(
     } else {
         let apply_bindings_method_async = apply_bindings_method_name_async(version);
         output.push_str(&format!(
-            "        issues.extend(validator.{apply_bindings_method_async}(self, {}, terminology).await);\n",
+            "        issues.extend(validator.{apply_bindings_method_async}(self, {}.as_slice(), terminology).await);\n",
             bindings_const_name(ty),
             apply_bindings_method_async = apply_bindings_method_async,
         ));
@@ -458,49 +458,49 @@ fn emit_invariants_const(
 ) {
     let const_name = invariants_const_name(ty);
     output.push_str(&format!(
-        "const {const_name}: &'static [fhir_validation_types::InvariantDef] = &[\n",
+        "static {const_name}: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![\n",
         const_name = const_name,
     ));
 
     for invariant in invariants {
         output.push_str("    fhir_validation_types::InvariantDef {\n");
-        output.push_str(&format!("        key: {:?},\n", invariant.key));
+        output.push_str(&format!("        key: {:?}.to_string(),\n", invariant.key));
         output.push_str(&format!(
             "        severity: {},\n",
             invariant.severity.as_rust_tokens()
         ));
-        output.push_str(&format!("        path: {:?},\n", invariant.path));
+        output.push_str(&format!("        path: {:?}.to_string(),\n", invariant.path));
         output.push_str(&format!(
-            "        expression: {:?},\n",
+            "        expression: {:?}.to_string(),\n",
             invariant.expression
         ));
-        output.push_str(&format!("        human: {:?},\n", invariant.human));
+        output.push_str(&format!("        human: {:?}.to_string(),\n", invariant.human));
         output.push_str("    },\n");
     }
 
-    output.push_str("];\n");
+    output.push_str("]);\n");
 }
 
 /// Emit the generated binding metadata constant for one type.
 fn emit_bindings_const(ty: &TypeValidationModel, bindings: &[BindingModel], output: &mut String) {
     let const_name = bindings_const_name(ty);
     output.push_str(&format!(
-        "const {const_name}: &'static [fhir_validation_types::BindingDef] = &[\n",
+        "static {const_name}: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![\n",
         const_name = const_name,
     ));
 
     for binding in bindings {
         output.push_str("    fhir_validation_types::BindingDef {\n");
-        output.push_str(&format!("        path: {:?},\n", binding.path));
+        output.push_str(&format!("        path: {:?}.to_string(),\n", binding.path));
         output.push_str(&format!(
             "        strength: {},\n",
             binding.strength.as_rust_tokens()
         ));
-        output.push_str(&format!("        value_set: {:?},\n", binding.value_set));
+        output.push_str(&format!("        value_set: {:?}.to_string(),\n", binding.value_set));
 
         match &binding.binding_name {
             Some(name) => {
-                output.push_str(&format!("        binding_name: Some({:?}),\n", name));
+                output.push_str(&format!("        binding_name: Some({:?}.to_string()),\n", name));
             }
             None => output.push_str("        binding_name: None,\n"),
         }
@@ -512,7 +512,7 @@ fn emit_bindings_const(ty: &TypeValidationModel, bindings: &[BindingModel], outp
         output.push_str("    },\n");
     }
 
-    output.push_str("];\n");
+    output.push_str("]);\n");
 }
 
 /// Emit recursive validation code for child fields under one generated type.

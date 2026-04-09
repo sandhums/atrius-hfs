@@ -174,4 +174,5 @@ impl MedicinalProductPackageType {
             })
             .unwrap_or(false)
     }
+
 }

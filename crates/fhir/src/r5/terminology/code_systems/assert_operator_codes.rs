@@ -97,9 +97,7 @@ impl AssertionOperatorType {
             Self::Contains => Some("Compare value string contains a known value."),
             Self::NotContains => Some("Compare value string does not contain a known value."),
             Self::Eval => Some("Evaluate the FHIRPath expression as a boolean condition."),
-            Self::ManualEval => Some(
-                "Manually evaluate the condition described by this assert. The test engine SHALL pause and provide an input mechanism to set the outcome of this assert to \'pass\', \'fail\', \'skip\' or \'stop\'.",
-            ),
+            Self::ManualEval => Some("Manually evaluate the condition described by this assert. The test engine SHALL pause and provide an input mechanism to set the outcome of this assert to \'pass\', \'fail\', \'skip\' or \'stop\'."),
         }
     }
 
@@ -176,4 +174,5 @@ impl AssertionOperatorType {
             })
             .unwrap_or(false)
     }
+
 }

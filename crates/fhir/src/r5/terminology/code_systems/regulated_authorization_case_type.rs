@@ -244,4 +244,5 @@ impl RegulatedAuthorizationCaseType {
             })
             .unwrap_or(false)
     }
+
 }

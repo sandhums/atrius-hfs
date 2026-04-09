@@ -48,9 +48,7 @@ impl SubstanceGrade {
 
     pub fn display(self) -> Option<&'static str> {
         match self {
-            Self::USPNF => {
-                Some("USP/NF United States Pharmacopeia (USP) and the National Formulary (NF)")
-            }
+            Self::USPNF => Some("USP/NF United States Pharmacopeia (USP) and the National Formulary (NF)"),
             Self::PhEur => Some("European Pharmacopoeia"),
             Self::JP => Some("Japanese Pharmacopoeia"),
             Self::BP => Some("British Pharmacopoeia"),
@@ -127,4 +125,5 @@ impl SubstanceGrade {
             })
             .unwrap_or(false)
     }
+
 }

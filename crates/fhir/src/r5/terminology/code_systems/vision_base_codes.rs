@@ -118,4 +118,5 @@ impl VisionBase {
             })
             .unwrap_or(false)
     }
+
 }

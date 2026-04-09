@@ -125,4 +125,5 @@ impl DeviceAssociation_a7279e12 {
             })
             .unwrap_or(false)
     }
+
 }

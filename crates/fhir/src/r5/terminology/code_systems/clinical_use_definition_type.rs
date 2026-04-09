@@ -61,12 +61,8 @@ impl ClinicalUseDefinitionType {
             Self::Indication => Some("A reason for giving the medication."),
             Self::Contraindication => Some("A reason for not giving the medication."),
             Self::Interaction => Some("Interactions between the medication and other substances."),
-            Self::UndesirableEffect => {
-                Some("Side effects or adverse effects associated with the medication.")
-            }
-            Self::Warning => {
-                Some("A general warning or issue that is not specifically one of the other types.")
-            }
+            Self::UndesirableEffect => Some("Side effects or adverse effects associated with the medication."),
+            Self::Warning => Some("A general warning or issue that is not specifically one of the other types."),
         }
     }
 
@@ -129,4 +125,5 @@ impl ClinicalUseDefinitionType {
             })
             .unwrap_or(false)
     }
+
 }

@@ -171,81 +171,37 @@ impl IssueType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Invalid => Some("Content invalid against the specification or a profile."),
-            Self::Structure => Some(
-                "A structural issue in the content such as wrong namespace, unable to parse the content completely, invalid syntax, etc.",
-            ),
+            Self::Structure => Some("A structural issue in the content such as wrong namespace, unable to parse the content completely, invalid syntax, etc."),
             Self::Required => Some("A required element is missing."),
             Self::Value => Some("An element or header value is invalid."),
             Self::Invariant => Some("A content validation rule failed - e.g. a schematron rule."),
-            Self::Security => {
-                Some("An authentication/authorization/permissions issue of some kind.")
-            }
+            Self::Security => Some("An authentication/authorization/permissions issue of some kind."),
             Self::Login => Some("The client needs to initiate an authentication process."),
-            Self::Unknown => Some(
-                "The user or system was not able to be authenticated (either there is no process, or the proferred token is unacceptable).",
-            ),
+            Self::Unknown => Some("The user or system was not able to be authenticated (either there is no process, or the proferred token is unacceptable)."),
             Self::Expired => Some("User session expired; a login may be required."),
             Self::Forbidden => Some("The user does not have the rights to perform this action."),
-            Self::Suppressed => Some(
-                "Some information was not or might not have been returned due to business rules, consent or privacy rules, or access permission constraints.  This information may be accessible through alternate processes.",
-            ),
-            Self::Processing => Some(
-                "Processing issues. These are expected to be final e.g. there is no point resubmitting the same content unchanged.",
-            ),
-            Self::NotSupported => {
-                Some("The interaction, operation, resource or profile is not supported.")
-            }
+            Self::Suppressed => Some("Some information was not or might not have been returned due to business rules, consent or privacy rules, or access permission constraints.  This information may be accessible through alternate processes."),
+            Self::Processing => Some("Processing issues. These are expected to be final e.g. there is no point resubmitting the same content unchanged."),
+            Self::NotSupported => Some("The interaction, operation, resource or profile is not supported."),
             Self::Duplicate => Some("An attempt was made to create a duplicate record."),
-            Self::MultipleMatches => Some(
-                "Multiple matching records were found when the operation required only one match.",
-            ),
-            Self::NotFound => Some(
-                "The reference provided was not found. In a pure RESTful environment, this would be an HTTP 404 error, but this code may be used where the content is not found further into the application architecture.",
-            ),
-            Self::Deleted => {
-                Some("The reference pointed to content (usually a resource) that has been deleted.")
-            }
-            Self::TooLong => Some(
-                "Provided content is too long (typically, this is a denial of service protection type of error).",
-            ),
-            Self::CodeInvalid => Some(
-                "The code or system could not be understood, or it was not valid in the context of a particular ValueSet.code.",
-            ),
-            Self::Extension => Some(
-                "An extension was found that was not acceptable, could not be resolved, or a modifierExtension was not recognized.",
-            ),
-            Self::TooCostly => Some(
-                "The operation was stopped to protect server resources; e.g. a request for a value set expansion on all of SNOMED CT.",
-            ),
-            Self::BusinessRule => Some(
-                "The content/operation failed to pass some business rule and so could not proceed.",
-            ),
-            Self::Conflict => Some(
-                "Content could not be accepted because of an edit conflict (i.e. version aware updates). (In a pure RESTful environment, this would be an HTTP 409 error, but this code may be used where the conflict is discovered further into the application architecture.).",
-            ),
-            Self::LimitedFilter => Some(
-                "Some search filters might not have applied on all results.  Data may have been included that does not meet all of the filters listed in the `self` `Bundle.link`.",
-            ),
-            Self::Transient => Some(
-                "Transient processing issues. The system receiving the message may be able to resubmit the same content once an underlying issue is resolved.",
-            ),
-            Self::LockError => {
-                Some("A resource/record locking failure (usually in an underlying database).")
-            }
-            Self::NoStore => Some(
-                "The persistent store is unavailable; e.g. the database is down for maintenance or similar action, and the interaction or operation cannot be processed.",
-            ),
+            Self::MultipleMatches => Some("Multiple matching records were found when the operation required only one match."),
+            Self::NotFound => Some("The reference provided was not found. In a pure RESTful environment, this would be an HTTP 404 error, but this code may be used where the content is not found further into the application architecture."),
+            Self::Deleted => Some("The reference pointed to content (usually a resource) that has been deleted."),
+            Self::TooLong => Some("Provided content is too long (typically, this is a denial of service protection type of error)."),
+            Self::CodeInvalid => Some("The code or system could not be understood, or it was not valid in the context of a particular ValueSet.code."),
+            Self::Extension => Some("An extension was found that was not acceptable, could not be resolved, or a modifierExtension was not recognized."),
+            Self::TooCostly => Some("The operation was stopped to protect server resources; e.g. a request for a value set expansion on all of SNOMED CT."),
+            Self::BusinessRule => Some("The content/operation failed to pass some business rule and so could not proceed."),
+            Self::Conflict => Some("Content could not be accepted because of an edit conflict (i.e. version aware updates). (In a pure RESTful environment, this would be an HTTP 409 error, but this code may be used where the conflict is discovered further into the application architecture.)."),
+            Self::LimitedFilter => Some("Some search filters might not have applied on all results.  Data may have been included that does not meet all of the filters listed in the `self` `Bundle.link`."),
+            Self::Transient => Some("Transient processing issues. The system receiving the message may be able to resubmit the same content once an underlying issue is resolved."),
+            Self::LockError => Some("A resource/record locking failure (usually in an underlying database)."),
+            Self::NoStore => Some("The persistent store is unavailable; e.g. the database is down for maintenance or similar action, and the interaction or operation cannot be processed."),
             Self::Exception => Some("An unexpected internal error has occurred."),
             Self::Timeout => Some("An internal timeout has occurred."),
-            Self::Incomplete => Some(
-                "Not all data sources typically accessed could be reached or responded in time, so the returned information might not be complete (applies to search interactions and some operations).",
-            ),
-            Self::Throttled => {
-                Some("The system is not prepared to handle this request due to load management.")
-            }
-            Self::Informational => Some(
-                "A message unrelated to the processing success of the completed operation (examples of the latter include things like reminders of password expiry, system maintenance times, etc.).",
-            ),
+            Self::Incomplete => Some("Not all data sources typically accessed could be reached or responded in time, so the returned information might not be complete (applies to search interactions and some operations)."),
+            Self::Throttled => Some("The system is not prepared to handle this request due to load management."),
+            Self::Informational => Some("A message unrelated to the processing success of the completed operation (examples of the latter include things like reminders of password expiry, system maintenance times, etc.)."),
             Self::Success => Some("The operation completed successfully."),
         }
     }
@@ -365,4 +321,5 @@ impl IssueType {
             })
             .unwrap_or(false)
     }
+
 }

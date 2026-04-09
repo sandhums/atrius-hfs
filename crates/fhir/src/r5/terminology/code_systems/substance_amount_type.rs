@@ -118,4 +118,5 @@ impl SubstanceAmountType {
             })
             .unwrap_or(false)
     }
+
 }

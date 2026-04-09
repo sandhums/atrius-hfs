@@ -50,15 +50,9 @@ impl MedicationKnowledgeStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some(
-                "The medication referred to by this MedicationKnowledge is in active use within the drug database or inventory system.",
-            ),
-            Self::EnteredInError => Some(
-                "The medication referred to by this MedicationKnowledge was entered in error within the drug database or inventory system.",
-            ),
-            Self::Inactive => Some(
-                "The medication referred to by this MedicationKnowledge is not in active use within the drug database or inventory system.",
-            ),
+            Self::Active => Some("The medication referred to by this MedicationKnowledge is in active use within the drug database or inventory system."),
+            Self::EnteredInError => Some("The medication referred to by this MedicationKnowledge was entered in error within the drug database or inventory system."),
+            Self::Inactive => Some("The medication referred to by this MedicationKnowledge is not in active use within the drug database or inventory system."),
         }
     }
 
@@ -117,4 +111,5 @@ impl MedicationKnowledgeStatusCodes {
             })
             .unwrap_or(false)
     }
+
 }

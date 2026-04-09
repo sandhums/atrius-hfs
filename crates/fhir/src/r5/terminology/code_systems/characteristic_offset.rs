@@ -104,4 +104,5 @@ impl CharacteristicOffset {
             })
             .unwrap_or(false)
     }
+
 }

@@ -111,4 +111,5 @@ impl AddressType {
             })
             .unwrap_or(false)
     }
+
 }

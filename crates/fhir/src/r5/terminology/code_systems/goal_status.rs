@@ -78,9 +78,7 @@ impl GoalLifecycleStatus {
             Self::Planned => Some("A goal is planned for this patient."),
             Self::Accepted => Some("A proposed goal was accepted or acknowledged."),
             Self::Active => Some("The goal is being sought actively."),
-            Self::OnHold => Some(
-                "The goal remains a long term objective but is no longer being actively pursued for a temporary period of time.",
-            ),
+            Self::OnHold => Some("The goal remains a long term objective but is no longer being actively pursued for a temporary period of time."),
             Self::Completed => Some("The goal is no longer being sought."),
             Self::Cancelled => Some("The goal has been abandoned."),
             Self::EnteredInError => Some("The goal was entered in error and voided."),
@@ -155,4 +153,5 @@ impl GoalLifecycleStatus {
             })
             .unwrap_or(false)
     }
+
 }

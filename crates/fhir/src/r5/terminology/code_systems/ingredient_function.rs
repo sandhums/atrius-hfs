@@ -104,4 +104,5 @@ impl IngredientFunction {
             })
             .unwrap_or(false)
     }
+
 }

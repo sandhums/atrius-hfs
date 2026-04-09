@@ -51,12 +51,8 @@ impl ConditionalDeleteStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::NotSupported => Some("No support for conditional deletes."),
-            Self::Single => {
-                Some("Conditional deletes are supported, but only single resources at a time.")
-            }
-            Self::Multiple => Some(
-                "Conditional deletes are supported, and multiple resources can be deleted in a single interaction.",
-            ),
+            Self::Single => Some("Conditional deletes are supported, but only single resources at a time."),
+            Self::Multiple => Some("Conditional deletes are supported, and multiple resources can be deleted in a single interaction."),
         }
     }
 
@@ -115,4 +111,5 @@ impl ConditionalDeleteStatus {
             })
             .unwrap_or(false)
     }
+
 }

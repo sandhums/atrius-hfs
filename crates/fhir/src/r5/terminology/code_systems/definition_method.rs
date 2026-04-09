@@ -70,24 +70,14 @@ impl DefinitionMethod {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SystematicAssessment => Some(
-                "Any method of routinely determining whether or not specific outcomes (e.g. adverse events) have occurred, for example through a standard questionnaire, regular investigator assessment, regular laboratory testing, or other method",
-            ),
-            Self::NonSystematicAssessment => Some(
-                "Any non-systematic method for determining whether or not adverse events have occurred, such as self-reporting by participants or occasional assessment/testing",
-            ),
+            Self::SystematicAssessment => Some("Any method of routinely determining whether or not specific outcomes (e.g. adverse events) have occurred, for example through a standard questionnaire, regular investigator assessment, regular laboratory testing, or other method"),
+            Self::NonSystematicAssessment => Some("Any non-systematic method for determining whether or not adverse events have occurred, such as self-reporting by participants or occasional assessment/testing"),
             Self::Mean => Some("Aggregated using mean of observed values."),
             Self::Median => Some("Aggregated using median of observed values."),
             Self::MeanOfMean => Some("Aggregated using mean of means (e.g. study mean values)."),
-            Self::MeanOfMedian => {
-                Some("Aggregated using mean of medians (e.g. study median values).")
-            }
-            Self::MedianOfMean => {
-                Some("Aggregated using median of means (e.g. study mean values).")
-            }
-            Self::MedianOfMedian => {
-                Some("Aggregated using median of medians (e.g. study median values).")
-            }
+            Self::MeanOfMedian => Some("Aggregated using mean of medians (e.g. study median values)."),
+            Self::MedianOfMean => Some("Aggregated using median of means (e.g. study mean values)."),
+            Self::MedianOfMedian => Some("Aggregated using median of medians (e.g. study median values)."),
         }
     }
 
@@ -156,4 +146,5 @@ impl DefinitionMethod {
             })
             .unwrap_or(false)
     }
+
 }

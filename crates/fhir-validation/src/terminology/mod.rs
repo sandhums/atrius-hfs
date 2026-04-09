@@ -1,4 +1,8 @@
 pub mod backend;
+#[cfg(feature = "R4")]
+pub mod builder_r4;
+#[cfg(feature = "R5")]
+pub mod builder_r5;
 pub mod helios;
 pub mod helpers;
 pub mod requests;

@@ -118,4 +118,5 @@ impl MeasureSupplementalDataExample {
             })
             .unwrap_or(false)
     }
+
 }

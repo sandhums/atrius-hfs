@@ -97,4 +97,5 @@ impl ContractAssetContext {
             })
             .unwrap_or(false)
     }
+
 }

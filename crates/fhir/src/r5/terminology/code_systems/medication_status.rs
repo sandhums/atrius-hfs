@@ -50,15 +50,9 @@ impl MedicationStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some(
-                "The medication record is current and is appropriate for reference in new instances.",
-            ),
-            Self::Inactive => Some(
-                "The medication record is not current and is not is appropriate for reference in new instances.",
-            ),
-            Self::EnteredInError => Some(
-                "The medication record was created erroneously and is not appropriated for reference in new instances.",
-            ),
+            Self::Active => Some("The medication record is current and is appropriate for reference in new instances."),
+            Self::Inactive => Some("The medication record is not current and is not is appropriate for reference in new instances."),
+            Self::EnteredInError => Some("The medication record was created erroneously and is not appropriated for reference in new instances."),
         }
     }
 
@@ -117,4 +111,5 @@ impl MedicationStatusCodes {
             })
             .unwrap_or(false)
     }
+
 }

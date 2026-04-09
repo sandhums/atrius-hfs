@@ -104,4 +104,5 @@ impl MedicinalProductType {
             })
             .unwrap_or(false)
     }
+
 }

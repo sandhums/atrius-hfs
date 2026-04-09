@@ -111,4 +111,5 @@ impl DeviceRegulatoryIdentifierType {
             })
             .unwrap_or(false)
     }
+
 }

@@ -1,8 +1,9 @@
+#![cfg(feature = "R4")]
 mod common {
     pub mod fixtures;
 }
 
-use crate::common::fixtures::{load_resource, validate_resource};
+use crate::common::fixtures::{load_resource, r4_evaluator_for};
 use common::fixtures::{assert_has_invariant, assert_issue_count, assert_no_errors};
 use helios_fhir::FhirVersion;
 use helios_fhirpath::evaluator::apply_additive;
@@ -11,7 +12,9 @@ use helios_fhirpath_support::EvaluationResult;
 #[test]
 fn patient_example_validates_without_issues() {
     let r = load_resource(FhirVersion::R4, "valid/patient/patient-example.json");
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_no_errors(&issues);
 }
@@ -22,7 +25,9 @@ fn patient_local_reference_without_matching_contained_resource_emits_invariant()
         FhirVersion::R4,
         "invalid/patient/patient-bad-contained-reference.json",
     );
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_issue_count(&issues, 2);
     assert_has_invariant(
@@ -37,7 +42,9 @@ fn patient_local_reference_with_matching_contained_resource() {
         FhirVersion::R4,
         "valid/patient/patient-local-contained-reference-valid.json",
     );
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_no_errors(&issues);
 }
@@ -48,7 +55,9 @@ fn patient_non_local_reference_passes() {
         FhirVersion::R4,
         "valid/patient/patient_non_local_reference.json",
     );
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_no_errors(&issues);
 }
@@ -59,7 +68,9 @@ fn patient_malformed_reference() {
         FhirVersion::R4,
         "invalid/patient/patient_malformed_reference.json",
     );
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
     assert_issue_count(&issues, 1);
     assert_has_invariant(
         &issues,

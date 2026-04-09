@@ -50,15 +50,9 @@ impl CapabilityStatementKind {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Instance => Some(
-                "The CapabilityStatement instance represents the present capabilities of a specific system instance.  This is the kind returned by /metadata for a FHIR server end-point.",
-            ),
-            Self::Capability => Some(
-                "The CapabilityStatement instance represents the capabilities of a system or piece of software, independent of a particular installation.",
-            ),
-            Self::Requirements => Some(
-                "The CapabilityStatement instance represents a set of requirements for other systems to meet; e.g. as part of an implementation guide or \'request for proposal\'.",
-            ),
+            Self::Instance => Some("The CapabilityStatement instance represents the present capabilities of a specific system instance.  This is the kind returned by /metadata for a FHIR server end-point."),
+            Self::Capability => Some("The CapabilityStatement instance represents the capabilities of a system or piece of software, independent of a particular installation."),
+            Self::Requirements => Some("The CapabilityStatement instance represents a set of requirements for other systems to meet; e.g. as part of an implementation guide or \'request for proposal\'."),
         }
     }
 
@@ -117,4 +111,5 @@ impl CapabilityStatementKind {
             })
             .unwrap_or(false)
     }
+
 }

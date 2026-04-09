@@ -27,6 +27,7 @@ use fhir_validation_types::Severity;
 #[cfg(feature = "R5")]
 use helios_fhir::r5::OperationOutcome as R5OperationOutcome;
 use serde_json::{json, Value};
+#[cfg(feature = "R5")]
 use helios_fhir::r5::Resource;
 
 fn severity_to_fhir(value: Severity) -> &'static str {

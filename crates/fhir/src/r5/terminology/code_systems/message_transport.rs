@@ -50,15 +50,9 @@ impl MessageTransport {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Http => Some(
-                "The application sends or receives messages using HTTP POST (may be over http: or https:).",
-            ),
-            Self::Ftp => {
-                Some("The application sends or receives messages using File Transfer Protocol.")
-            }
-            Self::Mllp => Some(
-                "The application sends or receives messages using HL7\'s Minimal Lower Level Protocol.",
-            ),
+            Self::Http => Some("The application sends or receives messages using HTTP POST (may be over http: or https:)."),
+            Self::Ftp => Some("The application sends or receives messages using File Transfer Protocol."),
+            Self::Mllp => Some("The application sends or receives messages using HL7\'s Minimal Lower Level Protocol."),
         }
     }
 
@@ -117,4 +111,5 @@ impl MessageTransport {
             })
             .unwrap_or(false)
     }
+
 }

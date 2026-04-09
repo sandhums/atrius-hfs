@@ -27,12 +27,12 @@ pub enum BindingTargetKind {
     Unsupported,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingDef {
-    pub path: &'static str,
+    pub path: String,
     pub strength: crate::BindingStrength,
-    pub value_set: &'static str,
-    pub binding_name: Option<&'static str>,
+    pub value_set: String,
+    pub binding_name: Option<String,>,
     pub target_kind: BindingTargetKind,
 }
 /// One generated FHIR invariant attached to a resource or element.
@@ -41,20 +41,20 @@ pub struct BindingDef {
 /// - `ele-1`
 /// - `ext-1`
 /// - `pat-1`
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InvariantDef {
     /// Invariant key, e.g. `pat-1`
-    pub key: &'static str,
+    pub key: String,
 
     /// Severity declared by the specification/profile.
     pub severity: Severity,
 
     /// Declared logical path, e.g. `Patient.contact`
-    pub path: &'static str,
+    pub path: String,
 
     /// FHIRPath expression to evaluate.
-    pub expression: &'static str,
+    pub expression: String,
 
     /// Human-readable message.
-    pub human: &'static str,
+    pub human: String,
 }

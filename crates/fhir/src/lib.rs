@@ -41,6 +41,7 @@
 //! let precise = PreciseDecimal::from(Decimal::new(12340, 3)); // 12.340
 //! ```
 
+
 use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
 use helios_fhirpath_support::{
     EvaluationResult, IntoEvaluationResult, PrimitiveMeta, TypeInfoResult,
@@ -1434,9 +1435,12 @@ pub mod r5;
 pub mod r6;
 
 pub mod parameters;
+pub mod error;
 
 // Re-export commonly used types from parameters module
 pub use parameters::{ParameterValueAccessor, VersionIndependentParameters};
+
+pub use error::TerminologyValidationError;
 
 // Internal helpers used by the derive macro; not part of the public API
 #[doc(hidden)]

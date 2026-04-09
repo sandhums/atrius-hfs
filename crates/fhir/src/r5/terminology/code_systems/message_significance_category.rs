@@ -50,15 +50,9 @@ impl MessageSignificanceCategory {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Consequence => Some(
-                "The message represents/requests a change that should not be processed more than once; e.g., making a booking for an appointment.",
-            ),
-            Self::Currency => Some(
-                "The message represents a response to query for current information. Retrospective processing is wrong and/or wasteful.",
-            ),
-            Self::Notification => Some(
-                "The content is not necessarily intended to be current, and it can be reprocessed, though there may be version issues created by processing old notifications.",
-            ),
+            Self::Consequence => Some("The message represents/requests a change that should not be processed more than once; e.g., making a booking for an appointment."),
+            Self::Currency => Some("The message represents a response to query for current information. Retrospective processing is wrong and/or wasteful."),
+            Self::Notification => Some("The content is not necessarily intended to be current, and it can be reprocessed, though there may be version issues created by processing old notifications."),
         }
     }
 
@@ -117,4 +111,5 @@ impl MessageSignificanceCategory {
             })
             .unwrap_or(false)
     }
+
 }

@@ -125,4 +125,5 @@ impl GenomicStudyChangeType {
             })
             .unwrap_or(false)
     }
+
 }

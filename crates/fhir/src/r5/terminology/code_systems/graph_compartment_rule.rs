@@ -54,16 +54,10 @@ impl GraphCompartmentRule {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Identical => {
-                Some("The compartment must be identical (the same literal reference).")
-            }
-            Self::Matching => Some(
-                "The compartment must be the same - the record must be about the same patient, but the reference may be different.",
-            ),
+            Self::Identical => Some("The compartment must be identical (the same literal reference)."),
+            Self::Matching => Some("The compartment must be the same - the record must be about the same patient, but the reference may be different."),
             Self::Different => Some("The compartment must be different."),
-            Self::Custom => {
-                Some("The compartment rule is defined in the accompanying FHIRPath expression.")
-            }
+            Self::Custom => Some("The compartment rule is defined in the accompanying FHIRPath expression."),
         }
     }
 
@@ -124,4 +118,5 @@ impl GraphCompartmentRule {
             })
             .unwrap_or(false)
     }
+
 }

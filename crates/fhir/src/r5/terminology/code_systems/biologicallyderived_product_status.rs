@@ -104,4 +104,5 @@ impl BiologicallyDerivedProductStatus {
             })
             .unwrap_or(false)
     }
+
 }

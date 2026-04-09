@@ -1,6 +1,6 @@
-use fhir_validation::terminology::requests::{TerminologyResource, ValidateVsRequest};
+use fhir_validation::terminology::requests::ValidateVsRequest;
 use helios_fhir::PrecisionDateTime;
-use helios_fhir::r5::{CodeSystem, ValueSet};
+use serde_json::json;
 
 fn parameters(req: &ValidateVsRequest) -> Vec<serde_json::Value> {
     req.to_parameters_json()
@@ -79,7 +79,10 @@ fn validate_rejects_multiple_code_inputs() {
     let req = ValidateVsRequest {
         valueset_url: "http://example.org/ValueSet/test".into(),
         code: Some("male".into()),
-        coding: Some(Default::default()),
+        coding: Some(json!({
+            "system": "http://example.org/CodeSystem/test",
+            "code": "x"
+        })),
         system: Some("http://example.org/CodeSystem/test".into()),
         ..Default::default()
     };
@@ -148,8 +151,8 @@ fn to_parameters_json_emits_manifest_and_tx_resource() {
         context: Some("http://example.org/context".into()),
         manifest: Some("http://example.org/Library/manifest".into()),
         tx_resource: Some(vec![
-            TerminologyResource::ValueSet(ValueSet::default()),
-            TerminologyResource::CodeSystem(CodeSystem::default()),
+            json!({ "resourceType": "ValueSet" }),
+            json!({ "resourceType": "CodeSystem" }),
         ]),
         ..Default::default()
     };

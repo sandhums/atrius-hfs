@@ -54,18 +54,10 @@ impl EvidenceVariableHandling {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Continuous => Some(
-                "A continuous variable is one for which, within the limits the variable ranges, any value is possible (from STATO http://purl.obolibrary.org/obo/STATO_0000251).",
-            ),
-            Self::Dichotomous => Some(
-                "A dichotomous variable is a categorical variable which is defined to have only 2 categories or possible values (from STATO http://purl.obolibrary.org/obo/STATO_0000090).",
-            ),
-            Self::Ordinal => Some(
-                "An ordinal variable is a categorical variable where the discrete possible values are ordered or correspond to an implicit ranking (from STATO http://purl.obolibrary.org/obo/STATO_0000228).",
-            ),
-            Self::Polychotomous => Some(
-                "A polychotomous variable is a categorical variable which is defined to have minimally 2 categories or possible values. (from STATO  http://purl.obolibrary.org/obo/STATO_0000087).  Suggestion to limit code use to situations when neither dichotomous nor ordinal variables apply.",
-            ),
+            Self::Continuous => Some("A continuous variable is one for which, within the limits the variable ranges, any value is possible (from STATO http://purl.obolibrary.org/obo/STATO_0000251)."),
+            Self::Dichotomous => Some("A dichotomous variable is a categorical variable which is defined to have only 2 categories or possible values (from STATO http://purl.obolibrary.org/obo/STATO_0000090)."),
+            Self::Ordinal => Some("An ordinal variable is a categorical variable where the discrete possible values are ordered or correspond to an implicit ranking (from STATO http://purl.obolibrary.org/obo/STATO_0000228)."),
+            Self::Polychotomous => Some("A polychotomous variable is a categorical variable which is defined to have minimally 2 categories or possible values. (from STATO  http://purl.obolibrary.org/obo/STATO_0000087).  Suggestion to limit code use to situations when neither dichotomous nor ordinal variables apply."),
         }
     }
 
@@ -126,4 +118,5 @@ impl EvidenceVariableHandling {
             })
             .unwrap_or(false)
     }
+
 }

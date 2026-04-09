@@ -370,4 +370,5 @@ impl GenomicStudyDataFormat {
             })
             .unwrap_or(false)
     }
+
 }

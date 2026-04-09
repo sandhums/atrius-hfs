@@ -50,15 +50,9 @@ impl TestScriptScopeConformanceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Required => Some(
-                "All tests are expected to pass. Warning statuses are permitted. This is the default value.",
-            ),
-            Self::Optional => {
-                Some("All tests are expected to pass but non-pass statuses may be allowed.")
-            }
-            Self::Strict => {
-                Some("All tests are expected to pass. Warnings are treated as a failure.")
-            }
+            Self::Required => Some("All tests are expected to pass. Warning statuses are permitted. This is the default value."),
+            Self::Optional => Some("All tests are expected to pass but non-pass statuses may be allowed."),
+            Self::Strict => Some("All tests are expected to pass. Warnings are treated as a failure."),
         }
     }
 
@@ -117,4 +111,5 @@ impl TestScriptScopeConformanceType {
             })
             .unwrap_or(false)
     }
+
 }

@@ -62,22 +62,12 @@ impl DiscriminatorType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Value => Some(
-                "The slices have different values in the nominated element, as determined by the applicable fixed value, pattern, or required ValueSet binding.",
-            ),
-            Self::Exists => Some(
-                "The slices are differentiated by the presence or absence of the nominated element. There SHALL be no more than two slices. The slices are differentiated by the fact that one must have a max of 0 and the other must have a min of 1 (or more).  The order in which the slices are declared doesn\'t matter.",
-            ),
-            Self::Pattern => Some(
-                "The slices have different values in the nominated element, as determined by the applicable fixed value, pattern, or required ValueSet binding. This has the same meaning as \'value\' and is deprecated.",
-            ),
+            Self::Value => Some("The slices have different values in the nominated element, as determined by the applicable fixed value, pattern, or required ValueSet binding."),
+            Self::Exists => Some("The slices are differentiated by the presence or absence of the nominated element. There SHALL be no more than two slices. The slices are differentiated by the fact that one must have a max of 0 and the other must have a min of 1 (or more).  The order in which the slices are declared doesn\'t matter."),
+            Self::Pattern => Some("The slices have different values in the nominated element, as determined by the applicable fixed value, pattern, or required ValueSet binding. This has the same meaning as \'value\' and is deprecated."),
             Self::Type_ => Some("The slices are differentiated by type of the nominated element."),
-            Self::Profile => Some(
-                "The slices are differentiated by conformance of the nominated element to a specified profile. Note that if the path specifies .resolve() then the profile is the target profile on the reference. In this case, validation by the possible profiles is required to differentiate the slices.",
-            ),
-            Self::Position => Some(
-                "The slices are differentiated by their index. This is only possible if all but the last slice have min=max cardinality, and the (optional) last slice contains other undifferentiated elements.",
-            ),
+            Self::Profile => Some("The slices are differentiated by conformance of the nominated element to a specified profile. Note that if the path specifies .resolve() then the profile is the target profile on the reference. In this case, validation by the possible profiles is required to differentiate the slices."),
+            Self::Position => Some("The slices are differentiated by their index. This is only possible if all but the last slice have min=max cardinality, and the (optional) last slice contains other undifferentiated elements."),
         }
     }
 
@@ -142,4 +132,5 @@ impl DiscriminatorType {
             })
             .unwrap_or(false)
     }
+
 }

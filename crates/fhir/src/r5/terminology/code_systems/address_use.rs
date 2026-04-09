@@ -59,15 +59,9 @@ impl AddressUse {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Home => Some("A communication address at a home."),
-            Self::Work => Some(
-                "An office address. First choice for business related contacts during business hours.",
-            ),
-            Self::Temp => {
-                Some("A temporary address. The period can provide more detailed information.")
-            }
-            Self::Old => Some(
-                "This address is no longer in use (or was never correct but retained for records).",
-            ),
+            Self::Work => Some("An office address. First choice for business related contacts during business hours."),
+            Self::Temp => Some("A temporary address. The period can provide more detailed information."),
+            Self::Old => Some("This address is no longer in use (or was never correct but retained for records)."),
             Self::Billing => Some("An address to be used to send bills, invoices, receipts etc."),
         }
     }
@@ -131,4 +125,5 @@ impl AddressUse {
             })
             .unwrap_or(false)
     }
+
 }

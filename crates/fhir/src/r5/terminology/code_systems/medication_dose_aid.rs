@@ -50,12 +50,8 @@ impl MedicationDoseAid {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Blisterpack => Some(
-                "A type of packaging in which a medication is sealed in plastic, often with a cardboard backing.",
-            ),
-            Self::Dosette => {
-                Some("A box or tray that organizes mediations into separate compartments")
-            }
+            Self::Blisterpack => Some("A type of packaging in which a medication is sealed in plastic, often with a cardboard backing."),
+            Self::Dosette => Some("A box or tray that organizes mediations into separate compartments"),
             Self::Sachets => Some("A small packet that contains medication for individual use."),
         }
     }
@@ -115,4 +111,5 @@ impl MedicationDoseAid {
             })
             .unwrap_or(false)
     }
+
 }

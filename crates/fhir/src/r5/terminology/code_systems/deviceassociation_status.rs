@@ -59,15 +59,9 @@ impl DeviceAssociation {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Implanted => Some("The device is implanted in the patient."),
-            Self::Explanted => Some(
-                "The device is no longer implanted in the patient. Note that this is not the value to be used for devices that have never been implanted. In those cases, no value or a specific value can be used.",
-            ),
-            Self::EnteredInError => {
-                Some("The association was entered in error and therefore nullified.")
-            }
-            Self::Attached => {
-                Some("The device is attached to the patient but not implanted in the patient.")
-            }
+            Self::Explanted => Some("The device is no longer implanted in the patient. Note that this is not the value to be used for devices that have never been implanted. In those cases, no value or a specific value can be used."),
+            Self::EnteredInError => Some("The association was entered in error and therefore nullified."),
+            Self::Attached => Some("The device is attached to the patient but not implanted in the patient."),
             Self::Unknown => Some("The association status of the device has not been determined."),
         }
     }
@@ -131,4 +125,5 @@ impl DeviceAssociation {
             })
             .unwrap_or(false)
     }
+
 }

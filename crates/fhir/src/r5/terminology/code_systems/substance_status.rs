@@ -111,4 +111,5 @@ impl FHIRSubstanceStatus {
             })
             .unwrap_or(false)
     }
+
 }

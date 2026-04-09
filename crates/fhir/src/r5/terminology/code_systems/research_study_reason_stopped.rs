@@ -54,16 +54,10 @@ impl ResearchStudyReasonStopped {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AccrualGoalMet => {
-                Some("The study prematurely ended because the accrual goal was met.")
-            }
+            Self::AccrualGoalMet => Some("The study prematurely ended because the accrual goal was met."),
             Self::ClosedDueToToxicity => Some("The study prematurely ended due to toxicity."),
-            Self::ClosedDueToLackOfStudyProgress => {
-                Some("The study prematurely ended due to lack of study progress.")
-            }
-            Self::TemporarilyClosedPerStudyDesign => {
-                Some("The study prematurely ended temporarily per study design.")
-            }
+            Self::ClosedDueToLackOfStudyProgress => Some("The study prematurely ended due to lack of study progress."),
+            Self::TemporarilyClosedPerStudyDesign => Some("The study prematurely ended temporarily per study design."),
         }
     }
 
@@ -124,4 +118,5 @@ impl ResearchStudyReasonStopped {
             })
             .unwrap_or(false)
     }
+
 }

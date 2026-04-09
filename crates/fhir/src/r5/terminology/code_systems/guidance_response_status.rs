@@ -63,12 +63,8 @@ impl GuidanceResponseStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Success => Some("The request was processed successfully."),
-            Self::DataRequested => Some(
-                "The request was processed successfully, but more data may result in a more complete evaluation.",
-            ),
-            Self::DataRequired => Some(
-                "The request was processed, but more data is required to complete the evaluation.",
-            ),
+            Self::DataRequested => Some("The request was processed successfully, but more data may result in a more complete evaluation."),
+            Self::DataRequired => Some("The request was processed, but more data is required to complete the evaluation."),
             Self::InProgress => Some("The request is currently being processed."),
             Self::Failure => Some("The request was not processed successfully."),
             Self::EnteredInError => Some("The response was entered in error."),
@@ -136,4 +132,5 @@ impl GuidanceResponseStatus {
             })
             .unwrap_or(false)
     }
+
 }

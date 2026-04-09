@@ -104,4 +104,5 @@ impl StructureMapInputMode {
             })
             .unwrap_or(false)
     }
+
 }

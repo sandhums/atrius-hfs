@@ -139,4 +139,5 @@ impl EvidenceVariableEvent {
             })
             .unwrap_or(false)
     }
+
 }

@@ -118,4 +118,5 @@ impl ResearchStudyFocusType {
             })
             .unwrap_or(false)
     }
+
 }

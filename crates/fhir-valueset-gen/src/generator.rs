@@ -104,54 +104,54 @@ fn render_terminology_mod_rs() -> String {
 
     // Error type for generated terminology helpers (ValueSet/CodeSystem helpers).
     // This MUST NOT depend on fhirpath crates to avoid circular dependencies.
-    s.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
-    s.push_str("pub enum TerminologyValidationError {\n");
-    s.push_str("    /// Missing required terminology context or value.\n");
-    s.push_str("    InvalidInput(String),\n");
-    s.push_str("    /// A primitive code was supplied without a system and local inference was not possible.\n");
-    s.push_str("    MissingSystem(String),\n");
-    s.push_str(
-        "    /// A code was supplied for a known CodeSystem, but the code itself is unknown.\n",
-    );
-    s.push_str("    UnknownCode { system: String, code: String },\n");
-    s.push_str("    /// The code is known, but not a member of the bound ValueSet.\n");
-    s.push_str(
-        "    NotInValueSet { valueset_url: String, system: Option<String>, code: String },\n",
-    );
-    s.push_str("    /// The provided display does not match the canonical display for the code.\n");
-    s.push_str(
-        "    WrongDisplay { system: String, code: String, expected: String, provided: String },\n",
-    );
-    s.push_str("    /// Local rules insufficient; remote terminology validation is required.\n");
-    s.push_str("    RemoteValidationRequired(String),\n");
-    s.push_str("}\n\n");
-
-    s.push_str("impl std::fmt::Display for TerminologyValidationError {\n");
-    s.push_str("    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n");
-    s.push_str("        match self {\n");
-    s.push_str("            Self::InvalidInput(msg) => write!(f, \"{}\", msg),\n");
-    s.push_str("            Self::MissingSystem(msg) => write!(f, \"{}\", msg),\n");
-    s.push_str("            Self::UnknownCode { system, code } => {\n");
-    s.push_str(
-        "                write!(f, \"Unknown code '{}' in CodeSystem '{}'\", code, system)\n",
-    );
-    s.push_str("            }\n");
-    s.push_str("            Self::NotInValueSet { valueset_url, system, code } => {\n");
-    s.push_str("                if let Some(system) = system {\n");
-    s.push_str("                    write!(f, \"Code '{}#{}' is not in ValueSet '{}'\", system, code, valueset_url)\n");
-    s.push_str("                } else {\n");
-    s.push_str("                    write!(f, \"Code '{}' is not in ValueSet '{}'\", code, valueset_url)\n");
-    s.push_str("                }\n");
-    s.push_str("            }\n");
-    s.push_str("            Self::WrongDisplay { system, code, expected, provided } => {\n");
-    s.push_str("                write!(f, \"Wrong display '{}' for {}#{}. Expected '{}'\", provided, system, code, expected)\n");
-    s.push_str("            }\n");
-    s.push_str("            Self::RemoteValidationRequired(msg) => write!(f, \"{}\", msg),\n");
-    s.push_str("        }\n");
-    s.push_str("    }\n");
-    s.push_str("}\n\n");
-
-    s.push_str("impl std::error::Error for TerminologyValidationError {}\n\n");
+    // s.push_str("#[derive(Debug, Clone, PartialEq, Eq)]\n");
+    // s.push_str("pub enum TerminologyValidationError {\n");
+    // s.push_str("    /// Missing required terminology context or value.\n");
+    // s.push_str("    InvalidInput(String),\n");
+    // s.push_str("    /// A primitive code was supplied without a system and local inference was not possible.\n");
+    // s.push_str("    MissingSystem(String),\n");
+    // s.push_str(
+    //     "    /// A code was supplied for a known CodeSystem, but the code itself is unknown.\n",
+    // );
+    // s.push_str("    UnknownCode { system: String, code: String },\n");
+    // s.push_str("    /// The code is known, but not a member of the bound ValueSet.\n");
+    // s.push_str(
+    //     "    NotInValueSet { valueset_url: String, system: Option<String>, code: String },\n",
+    // );
+    // s.push_str("    /// The provided display does not match the canonical display for the code.\n");
+    // s.push_str(
+    //     "    WrongDisplay { system: String, code: String, expected: String, provided: String },\n",
+    // );
+    // s.push_str("    /// Local rules insufficient; remote terminology validation is required.\n");
+    // s.push_str("    RemoteValidationRequired(String),\n");
+    // s.push_str("}\n\n");
+    //
+    // s.push_str("impl std::fmt::Display for TerminologyValidationError {\n");
+    // s.push_str("    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n");
+    // s.push_str("        match self {\n");
+    // s.push_str("            Self::InvalidInput(msg) => write!(f, \"{}\", msg),\n");
+    // s.push_str("            Self::MissingSystem(msg) => write!(f, \"{}\", msg),\n");
+    // s.push_str("            Self::UnknownCode { system, code } => {\n");
+    // s.push_str(
+    //     "                write!(f, \"Unknown code '{}' in CodeSystem '{}'\", code, system)\n",
+    // );
+    // s.push_str("            }\n");
+    // s.push_str("            Self::NotInValueSet { valueset_url, system, code } => {\n");
+    // s.push_str("                if let Some(system) = system {\n");
+    // s.push_str("                    write!(f, \"Code '{}#{}' is not in ValueSet '{}'\", system, code, valueset_url)\n");
+    // s.push_str("                } else {\n");
+    // s.push_str("                    write!(f, \"Code '{}' is not in ValueSet '{}'\", code, valueset_url)\n");
+    // s.push_str("                }\n");
+    // s.push_str("            }\n");
+    // s.push_str("            Self::WrongDisplay { system, code, expected, provided } => {\n");
+    // s.push_str("                write!(f, \"Wrong display '{}' for {}#{}. Expected '{}'\", provided, system, code, expected)\n");
+    // s.push_str("            }\n");
+    // s.push_str("            Self::RemoteValidationRequired(msg) => write!(f, \"{}\", msg),\n");
+    // s.push_str("        }\n");
+    // s.push_str("    }\n");
+    // s.push_str("}\n\n");
+    //
+    // s.push_str("impl std::error::Error for TerminologyValidationError {}\n\n");
 
     s
 }
@@ -580,7 +580,7 @@ fn render_valueset_file(
         }
     }
     s.push_str("use super::super::super::{CodeableConcept, Coding};\n");
-    s.push_str("use super::super::TerminologyValidationError;\n\n");
+    s.push_str("use crate::TerminologyValidationError;\n\n");
 
     s.push_str(&format!("pub struct {};\n\n", vs_idx.type_name));
     s.push_str(&format!("impl {} {{\n", vs_idx.type_name));
@@ -1029,7 +1029,7 @@ fn render_index_rs(index: &indexer::TerminologyIndex) -> String {
     s.push_str("// @generated by fhir-valueset-gen\n");
     s.push_str("// DO NOT EDIT MANUALLY\n\n");
 
-    s.push_str("use super::TerminologyValidationError;\n");
+    s.push_str("use crate::TerminologyValidationError;\n");
     s.push_str("use super::super::{CodeableConcept, Coding, Quantity};\n\n");
 
     s.push_str("/// Lookup helpers for generated terminology artifacts.\n");

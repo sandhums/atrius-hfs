@@ -1,8 +1,9 @@
+#![cfg(feature = "R4")]
 mod common {
     pub mod fixtures;
 }
 
-use crate::common::fixtures::{assert_has_invariant_expression, load_resource, validate_resource};
+use crate::common::fixtures::{assert_has_invariant_expression, load_resource, r4_evaluator_for};
 use common::fixtures::{assert_has_invariant, assert_no_errors};
 use helios_fhir::FhirVersion;
 
@@ -12,8 +13,9 @@ fn dom3_local_reference_passes_when_contained_matches() {
         FhirVersion::R4,
         "valid/patient/patient-local-contained-reference-valid.json",
     );
-
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_no_errors(&issues);
     // assert_no_errors_or_warnings(&issues);
@@ -26,8 +28,9 @@ fn dom3_local_reference_fails_when_missing_contained() {
         FhirVersion::R4,
         "invalid/patient/patient-bad-contained-reference.json",
     );
-
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant(
         &issues,
@@ -41,19 +44,10 @@ fn dom3_no_id_in_contained() {
         FhirVersion::R4,
         "invalid/patient/patient_no_id_in_contained.json",
     );
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let _issues = validator.validate_resource(&r, None, &evaluator);
 
-    let issues = validate_resource(&r, None);
-    println!("{:#?}", issues);
-    // assert_has_invariant(
-    //     &issues,
-    //     "Patient.managingOrganization",
-    //     "contained resource",
-    // );
-    // assert_has_invariant(
-    //     &issues,
-    //     "Patient.contained",
-    //     "The organization SHALL at least have a name or an identifier, and possibly more than one",
-    // );
 }
 #[test]
 fn dom2_contained_cannot_have_contained() {
@@ -62,7 +56,9 @@ fn dom2_contained_cannot_have_contained() {
         "invalid/patient/patient-nested-contained.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant_expression(&issues, "Patient", "contained.contained.empty()");
 }
@@ -74,7 +70,9 @@ fn dom4_contained_cannot_have_meta_version_id() {
         "invalid/patient/patient_contained_no_meta_versionId.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant_expression(
         &issues,
@@ -89,7 +87,9 @@ fn dom4_contained_cannot_have_meta_last_updated() {
         "invalid/patient/patient_contained_no_meta_lastUpdated.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant_expression(
         &issues,
@@ -104,7 +104,9 @@ fn dom5_contained_cannot_have_meta_security() {
         "invalid/patient/patient_contained_no_meta_security.json",
     );
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant_expression(&issues, "Patient", "contained.meta.security.empty()");
 }
@@ -112,7 +114,9 @@ fn dom5_contained_cannot_have_meta_security() {
 fn dom6_patient_no_narrative() {
     let r = load_resource(FhirVersion::R4, "invalid/patient/patient_no_narrative.json");
 
-    let issues = validate_resource(&r, None);
+    let validator = fhir_validation::Validator::default();
+    let evaluator = r4_evaluator_for(&r);
+    let issues = validator.validate_resource(&r, None, &evaluator);
 
     assert_has_invariant_expression(&issues, "Patient", "text.`div`.exists()");
 }

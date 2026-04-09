@@ -1,7 +1,4 @@
-use crate::common::fixtures::{
-    assert_has_binding_issue, assert_has_error, load_resource, validate_resource,
-};
-use helios_fhir::FhirVersion;
+#![cfg(feature = "R4")]
 
 mod common {
     pub mod fixtures;
@@ -9,39 +6,11 @@ mod common {
 #[cfg(test)]
 mod tests {
     use fhir_validation::r4::binding::validate_primitive_code_binding;
-    use fhir_validation::terminology::service::TerminologyServiceSync;
     use fhir_validation::terminology::types::TerminologyMembershipOutcome;
-    use fhir_validation::{ValidationConfig, ValidationError, Validator};
+    use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
-    use helios_fhir::r4::terminology::TerminologyValidationError;
-
-    struct MockTerminologyService {
-        result: Result<TerminologyMembershipOutcome, ValidationError>,
-    }
-
-    impl TerminologyServiceSync for MockTerminologyService {
-        fn member_of(
-            &self,
-            _valueset_url: &str,
-            _system: Option<&str>,
-            _code: &str,
-            _display: Option<&str>,
-        ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-            match &self.result {
-                Ok(v) => Ok(v.clone()),
-                Err(ValidationError::Terminology(msg)) => {
-                    Err(ValidationError::Terminology(msg.clone()))
-                }
-                Err(ValidationError::Other(msg)) => Err(ValidationError::Other(msg.clone())),
-                Err(ValidationError::FhirPath(_)) => Err(ValidationError::Other(
-                    "unexpected fhirpath error in mock".to_string(),
-                )),
-                Err(ValidationError::TerminologyRemote(_)) => Err(ValidationError::Other(
-                    "unexpected error in mock".to_string(),
-                )),
-            }
-        }
-    }
+    use helios_fhir::{ FhirVersion, TerminologyValidationError};
+    use crate::common::fixtures::{assert_has_binding_issue, assert_has_error, load_resource, r4_evaluator_for, MockTerminologyService};
 
     fn validator() -> Validator {
         Validator::new(ValidationConfig::default())
@@ -54,6 +23,7 @@ mod tests {
             "Patient.gender",
             "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Required,
+            None,
             None,
             |_| Ok(()),
             None,
@@ -70,33 +40,13 @@ mod tests {
             "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Required,
             Some("male"),
-            |_| Ok(()),
             None,
+           |_|Ok(()),
+            None
         );
 
         assert!(issues.is_empty());
     }
-
-    // #[test]
-    // fn local_not_in_valueset_produces_error_for_required_binding() {
-    //     let issues = validate_primitive_code_binding(
-    //         &validator(),
-    //         "Patient.gender",
-    //         "http://hl7.org/fhir/ValueSet/administrative-gender",
-    //         BindingStrength::Required,
-    //         Some("invalid"),
-    //         |_| {
-    //             Err(TerminologyValidationError::NotInValueSet(
-    //                 "Code not in ValueSet".to_string(),
-    //             ))
-    //         },
-    //         None,
-    //     );
-    //
-    //     assert_eq!(issues.len(), 1);
-    //     assert_eq!(issues[0].severity, Severity::Error);
-    //     assert_eq!(issues[0].code, "value");
-    // }
 
     #[test]
     fn remote_false_produces_warning_for_extensible_binding() {
@@ -118,6 +68,7 @@ mod tests {
             "http://hl7.org/fhir/ValueSet/languages",
             BindingStrength::Extensible,
             Some("xx"),
+            Some("remote required"),
             |_| {
                 Err(TerminologyValidationError::RemoteValidationRequired(
                     "remote required".to_string(),
@@ -139,31 +90,35 @@ mod tests {
             "http://hl7.org/fhir/ValueSet/languages",
             BindingStrength::Required,
             Some("en"),
+            Some("remote required"),
             |_| {
                 Err(TerminologyValidationError::RemoteValidationRequired(
                     "remote required".to_string(),
                 ))
             },
-            None,
+            None
         );
 
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Error);
         assert_eq!(issues[0].code, "terminology");
     }
+    #[test]
+    fn r4_patient_invalid_gender() {
+        let resource = load_resource(
+            FhirVersion::R4,
+            "invalid/patient/patient-invalid-gender.json",
+        );
+        let validator = Validator::default();
+        let evaluator =  r4_evaluator_for(&resource);
+        let issues = validator.validate_resource(&resource, None, &evaluator);
+        // println!("{:#?}", issues);
+        assert_has_binding_issue(
+            &issues,
+            "Patient.gender",
+            "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1",
+        );
+        assert_has_error(&issues);
+    }
 }
-#[test]
-fn r4_patient_invalid_gender() {
-    let resource = load_resource(
-        FhirVersion::R4,
-        "invalid/patient/patient-invalid-gender.json",
-    );
-    let issues = validate_resource(&resource, None);
-    println!("{:#?}", issues);
-    assert_has_binding_issue(
-        &issues,
-        "Patient.gender",
-        "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1",
-    );
-    assert_has_error(&issues);
-}
+

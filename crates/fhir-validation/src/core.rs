@@ -25,8 +25,17 @@ pub use fhir_validation_types::{
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::terminology::types::TerminologyRemoteError;
 use crate::{FhirPathEvaluator, InvariantExprRef};
+
 use helios_fhirpath::handlers::json_value_to_evaluation_result;
 use std::fmt;
+use tracing::debug;
+use crate::profile::profile_registry::ProfileRegistry;
+
+#[cfg(feature = "R4")]
+use crate::r4::{validate_r4_resource, validate_r4_resource_async, validate_r4_resource_async_with_profiles, validate_r4_resource_with_profiles};
+#[cfg(feature = "R5")]
+use crate::r5::{validate_r5_resource, validate_r5_resource_async, validate_r5_resource_async_with_profiles, validate_r5_resource_with_profiles};
+
 
 /// A single validation issue that can later be mapped to
 /// `OperationOutcome.issue`.
@@ -131,6 +140,36 @@ pub struct ValidationConfig {
 
     /// Emit warnings for example bindings
     pub warn_on_example_bindings: bool,
+
+    /// Debug trace
+    pub debug_trace: bool,
+
+    /// Maximum recursion depth for nested `type.profile` validation.
+    pub max_profile_recursion_depth: usize,
+
+    /// When a profile recursion cycle is detected, emit a warning issue.
+    /// When false, cycles are silently skipped.
+    pub warn_on_profile_cycle: bool,
+
+    /// When the maximum recursion depth is reached, emit a warning issue.
+    /// When false, depth overflow is silently skipped.
+    pub warn_on_profile_recursion_depth_reached: bool,
+
+    /// Allow `type.profile` validation to fall back to matching by `resourceType`
+    /// when `meta.profile` is absent.
+    pub allow_type_profile_resource_type_fallback: bool,
+
+    /// Emit a warning when `type.profile` succeeds only by `resourceType` fallback.
+    pub warn_on_type_profile_fallback: bool,
+
+    /// When `type.profile` succeeds by `resourceType` fallback, recursively validate
+    /// against the matched profile(s).
+    pub recurse_on_type_profile_fallback: bool,
+
+    pub warn_on_unknown_profile: bool,
+    pub error_on_unknown_profile: bool,
+
+    pub type_profile_match_mode: TypeProfileMatchMode,
 }
 
 impl Default for ValidationConfig {
@@ -139,8 +178,23 @@ impl Default for ValidationConfig {
             strict_extensible_bindings: true,
             warn_on_preferred_bindings: true,
             warn_on_example_bindings: true,
+            debug_trace: true,
+            max_profile_recursion_depth: 3,
+            warn_on_profile_cycle: true,
+            warn_on_profile_recursion_depth_reached: true,
+            allow_type_profile_resource_type_fallback: true,
+            warn_on_type_profile_fallback: true,
+            recurse_on_type_profile_fallback: true,
+            warn_on_unknown_profile: false,
+            error_on_unknown_profile: true,
+            type_profile_match_mode: TypeProfileMatchMode::Any,
         }
     }
+}
+#[derive(Debug, Clone, Copy)]
+pub enum TypeProfileMatchMode {
+    Any,   // OR (current behavior)
+    All,   // AND (strict)
 }
 /// Errors raised while evaluating invariants or terminology-backed validation.
 #[derive(Debug, Clone)]
@@ -148,6 +202,7 @@ pub enum ValidationError {
     FhirPath(helios_fhirpath_support::EvaluationError),
     Terminology(String),
     TerminologyRemote(TerminologyRemoteError),
+    InvalidStructureDefinition(String),
     Other(String),
 }
 
@@ -156,6 +211,7 @@ impl fmt::Display for ValidationError {
         match self {
             Self::FhirPath(e) => write!(f, "{}", e),
             Self::Terminology(e) => write!(f, "{}", e),
+            Self::InvalidStructureDefinition(e) => write!(f, "{}", e),
             ValidationError::TerminologyRemote(err) => {
                 if !err.diagnostics.is_empty() {
                     write!(f, "{}", err.diagnostics.join("; "))
@@ -185,7 +241,7 @@ impl From<helios_fhirpath_support::EvaluationError> for ValidationError {
 }
 
 /// Shared validator entry point used by generated and handwritten validation code.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Validator {
     pub config: ValidationConfig,
 }
@@ -236,7 +292,7 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                self.validate_r4_resource(res.as_ref(), terminology, evaluator)
+                validate_r4_resource(&self, res.as_ref(), terminology, evaluator)
             }
 
             #[cfg(feature = "R4B")]
@@ -246,7 +302,7 @@ impl Validator {
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                self.validate_r5_resource(res, terminology, evaluator)
+                validate_r5_resource(&self, res, terminology, evaluator)
             }
 
             #[cfg(feature = "R6")]
@@ -264,7 +320,7 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                self.validate_r4_resource_async(res.as_ref(), terminology, evaluator)
+                validate_r4_resource_async(&self, res.as_ref(), terminology, evaluator)
                     .await
             }
 
@@ -275,7 +331,7 @@ impl Validator {
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                self.validate_r5_resource_async(res, terminology, evaluator)
+                validate_r5_resource_async(&self, res, terminology, evaluator)
                     .await
             }
 
@@ -285,56 +341,121 @@ impl Validator {
             }
         }
     }
-    /// Validate an R4 resource by applying generated bindings first, then invariants.
-    #[cfg(feature = "R4")]
-    pub fn validate_r4_resource(
+
+    pub fn validate_resource_with_profiles(
         &self,
-        resource: &helios_fhir::r4::Resource,
+        resource: &helios_fhir::FhirResource,
         terminology: Option<&dyn TerminologyServiceSync>,
         evaluator: &dyn FhirPathEvaluator,
+        profile_registry: &ProfileRegistry,
     ) -> Vec<ValidationIssue> {
-        let mut issues = self.validate_r4_resource_bindings(resource, terminology);
-        issues.extend(self.validate_r4_resource_invariants(resource, evaluator));
-        issues
-    }
-    #[cfg(feature = "R4")]
-    pub async fn validate_r4_resource_async(
-        &self,
-        resource: &helios_fhir::r4::Resource,
-        terminology: Option<&dyn TerminologyService>,
-        evaluator: &dyn FhirPathEvaluator,
-    ) -> Vec<ValidationIssue> {
-        let mut issues = self
-            .validate_r4_resource_bindings_async(resource, terminology)
-            .await;
-        issues.extend(self.validate_r4_resource_invariants(resource, evaluator));
-        issues
-    }
-    /// Validate an R5 resource by applying generated bindings first, then invariants.
-    #[cfg(feature = "R5")]
-    pub fn validate_r5_resource(
-        &self,
-        resource: &helios_fhir::r5::Resource,
-        terminology: Option<&dyn TerminologyServiceSync>,
-        evaluator: &dyn FhirPathEvaluator,
-    ) -> Vec<ValidationIssue> {
-        let mut issues = self.validate_r5_resource_bindings(resource, terminology);
-        issues.extend(self.validate_r5_resource_invariants(resource, evaluator));
-        issues
+        match resource {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirResource::R4(res) => {
+                validate_r4_resource_with_profiles(&self, res.as_ref(), terminology, evaluator, profile_registry)
+            }
+
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirResource::R4B(res) => {
+                self.validate_r4b_resource(res, terminology, evaluator)
+            }
+
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirResource::R5(res) => {
+                validate_r5_resource_with_profiles(&self, res, terminology, evaluator, profile_registry)
+            }
+
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirResource::R6(res) => {
+                self.validate_r6_resource(res, terminology, evaluator)
+            }
+        }
     }
 
-    #[cfg(feature = "R5")]
-    pub async fn validate_r5_resource_async(
+    pub async fn validate_resource_with_profiles_async(
         &self,
-        resource: &helios_fhir::r5::Resource,
+        resource: &helios_fhir::FhirResource,
         terminology: Option<&dyn TerminologyService>,
         evaluator: &dyn FhirPathEvaluator,
+        profile_registry: &ProfileRegistry,
     ) -> Vec<ValidationIssue> {
-        let mut issues = self
-            .validate_r5_resource_bindings_async(resource, terminology)
-            .await;
-        issues.extend(self.validate_r5_resource_invariants(resource, evaluator));
-        issues
+        match resource {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirResource::R4(res) => {
+                validate_r4_resource_async_with_profiles(&self, res.as_ref(), terminology, evaluator, profile_registry).await
+            }
+
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirResource::R4B(res) => {
+                self.validate_r4b_resource(res, terminology, evaluator)
+            }
+
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirResource::R5(res) => {
+                validate_r5_resource_async_with_profiles(&self, res, terminology, evaluator, profile_registry).await
+            }
+
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirResource::R6(res) => {
+                self.validate_r6_resource(res, terminology, evaluator)
+            }
+        }
+    }
+
+    #[cfg(any(feature = "R4", feature = "R5"))]
+    pub fn apply_bindings_for_version_sync<T: serde::Serialize>(
+        &self,
+        fhir_version: helios_fhir::FhirVersion,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyServiceSync>,
+    ) -> Vec<ValidationIssue> {
+        match fhir_version {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirVersion::R4 => {
+                self.apply_r4_bindings(focus, bindings, terminology)
+            }
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirVersion::R5 => {
+                self.apply_r5_bindings(focus, bindings, terminology)
+            }
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirVersion::R4B => {
+                todo!()
+            }
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirVersion::R6 => {
+                todo!()
+            }
+        }
+    }
+    #[cfg(any(feature = "R4", feature = "R5"))]
+    pub async fn apply_bindings_for_version_async<T: serde::Serialize>(
+        &self,
+        fhir_version: helios_fhir::FhirVersion,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyService>,
+    ) -> Vec<ValidationIssue> {
+        match fhir_version {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirVersion::R4 => {
+                self.apply_r4_bindings_async(focus, bindings, terminology).await
+            }
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirVersion::R5 => {
+                self.apply_r5_bindings_async(focus, bindings, terminology).await
+            }
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirVersion::R4B => {
+                    todo!()
+                }
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirVersion::R6 => {
+                todo!()
+            }
+
+        }
     }
     /// Apply R4 binding definitions to the current focus value.
     ///
@@ -448,8 +569,8 @@ impl Validator {
         let invariant_refs: Vec<InvariantExprRef<'_>> = invariants
             .iter()
             .map(|inv| InvariantExprRef {
-                declared_path: inv.path,
-                expression: inv.expression,
+                declared_path: inv.path.as_str(),
+                expression: inv.expression.as_str(),
             })
             .collect();
 
@@ -496,7 +617,17 @@ impl Validator {
             })
             .collect()
     }
+    pub fn debug_trace_enabled(&self) -> bool {
+        self.config.debug_trace
+    }
+    pub fn trace(&self, message: impl AsRef<str>) {
+        if self.config.debug_trace {
+            debug!("debug: {}", message.as_ref());
+        }
+    }
 }
+
+
 /// Rebase a single instance path from a local validation root to the caller's
 /// actual root path.
 fn rebase_instance_path(current: &str, actual_root_path: &str) -> String {
