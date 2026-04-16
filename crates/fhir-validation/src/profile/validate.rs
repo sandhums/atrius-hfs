@@ -1,18 +1,20 @@
-use std::collections::{BTreeSet};
-use std::pin::Pin;
-use crate::profile::cardinality::{relative_profile_path, validate_max_cardinality, validate_min_cardinality};
+use crate::profile::cardinality::{
+    relative_profile_path, validate_max_cardinality, validate_min_cardinality,
+};
+use crate::profile::helpers::{
+    get_values_at_relative_path, get_values_with_paths_at_relative_path,
+};
+use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::slicing::validate_slicing;
 use crate::profile::types::{ExtractedProfile, ExtractedValueConstraint};
-use crate::{
-    TypeProfileMatchMode,
-    ValidationIssue,
-};
+use crate::validation_context::AsyncValidationContext;
+pub use crate::validation_context::{ValidationContext, ValidationState};
+use crate::validation_issue_detail::ValidationIssueDetailCode;
+use crate::{TypeProfileMatchMode, ValidationIssue};
 use serde::Serialize;
 use serde_json::Value;
-use crate::profile::helpers::{get_values_at_relative_path, get_values_with_paths_at_relative_path};
-use crate::profile::profile_registry::ProfileRegistry;
-pub use crate::validation_context::{ValidationContext, ValidationState};
-use crate::validation_context::{AsyncValidationContext};
+use std::collections::BTreeSet;
+use std::pin::Pin;
 
 /// Validate a resource instance against a single extracted profile.
 ///
@@ -26,14 +28,7 @@ pub fn validate_profile<T: Serialize>(
     resource_type: &str,
     profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
-
-    validate_profile_with_depth(
-        ctx,
-        state,
-        resource,
-        resource_type,
-        profile,
-    )
+    validate_profile_with_depth(ctx, state, resource, resource_type, profile)
 }
 
 pub async fn validate_profile_async<T: Serialize>(
@@ -43,14 +38,7 @@ pub async fn validate_profile_async<T: Serialize>(
     resource_type: &str,
     profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
-
-    validate_profile_with_depth_async(
-        ctx,
-        state,
-        resource,
-        resource_type,
-        profile,
-    ).await
+    validate_profile_with_depth_async(ctx, state, resource, resource_type, profile).await
 }
 
 /// Internal profile validation pipeline with recursion-depth and cycle tracking.
@@ -77,134 +65,145 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
     profile: &'a ExtractedProfile,
 ) -> Pin<Box<dyn Future<Output = Vec<ValidationIssue>> + 'a>> {
     Box::pin(async move {
-    if state.recursion_depth >= ctx.validator.config.max_profile_recursion_depth {
-        if ctx.validator.config.warn_on_profile_recursion_depth_reached {
-            return vec![ValidationIssue {
-                severity: crate::Severity::Warning,
-                code: "business-rule".to_string(),
-                diagnostics: format!(
-                    "Skipping recursive profile validation for '{}' because the maximum recursion depth {} was reached.",
-                    profile.url,
-                    ctx.validator.config.max_profile_recursion_depth
-                ),
-                expression: Some(profile.url.clone()),
-                fhir_path: resource_type.to_string(),
-                instance_path: Some(resource_type.to_string()),
-            }];
+        if state.recursion_depth >= ctx.validator.config.max_profile_recursion_depth {
+            if ctx.validator.config.warn_on_profile_recursion_depth_reached {
+                return vec![ValidationIssue {
+                    severity: crate::Severity::Warning,
+                    code: "business-rule".to_string(),
+                    summary: Some(
+                        "Recursive profile validation stopped: maximum depth reached".to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::RecursionDepthReached),
+                    diagnostics: format!(
+                        "Skipping recursive profile validation for '{}' because the maximum recursion depth {} was reached.",
+                        profile.url, ctx.validator.config.max_profile_recursion_depth
+                    ),
+                    expression: Some(profile.url.clone()),
+                    fhir_path: resource_type.to_string(),
+                    instance_path: Some(resource_type.to_string()),
+                }];
+            }
+            return Vec::new();
         }
-        return Vec::new();
-    }
 
-    if !state.active_profiles.insert(profile.url.clone()) {
-        if ctx.validator.config.warn_on_profile_cycle {
-            return vec![ValidationIssue {
-                severity: crate::Severity::Warning,
-                code: "business-rule".to_string(),
-                diagnostics: format!(
-                    "Skipping recursive profile validation for '{}' because a validation cycle was detected.",
-                    profile.url
-                ),
-                expression: Some(profile.url.clone()),
-                fhir_path: resource_type.to_string(),
-                instance_path: Some(resource_type.to_string()),
-            }];
+        if !state.active_profiles.insert(profile.url.clone()) {
+            if ctx.validator.config.warn_on_profile_cycle {
+                return vec![ValidationIssue {
+                    severity: crate::Severity::Warning,
+                    code: "business-rule".to_string(),
+                    summary: Some(
+                        "Recursive profile validation skipped: profile cycle detected".to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::ProfileCycleDetected),
+                    diagnostics: format!(
+                        "Skipping recursive profile validation for '{}' because a validation cycle was detected.",
+                        profile.url
+                    ),
+                    expression: Some(profile.url.clone()),
+                    fhir_path: resource_type.to_string(),
+                    instance_path: Some(resource_type.to_string()),
+                }];
+            }
+            return Vec::new();
         }
-        return Vec::new();
-    }
 
-    let mut issues = Vec::new();
+        let mut issues = Vec::new();
 
-    issues.extend(ctx.validator.apply_invariants(
-        resource,
-        profile.invariants.as_slice(),
-        ctx.evaluator,
-        resource_type,
-    ));
-
-    for rule in &profile.element_rules {
-        if !rule.constraints.is_empty() {
-            // validator.trace(format!(
-            //     "Applying {} invariant(s) on {}",
-            //     rule.constraints.len(),
-            //     rule.path
-            // ));
-            issues.extend(ctx.validator.apply_invariants(
-                resource,
-                rule.constraints.as_slice(),
-                ctx.evaluator,
-                rule.path.as_str(),
-            ));
-        }
-    }
-
-
-    issues.extend(validate_min_cardinality(
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ));
-
-
-    issues.extend(validate_max_cardinality(
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ));
-
-    issues.extend(validate_slicing(
-        resource,
-        resource_type,
-        profile,
-    ));
-
-    issues.extend(validate_value_constraints(
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ));
-
-
-    issues.extend(validate_type_constraints(
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ));
-
-    issues.extend(validate_target_profile_constraints(
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ));
-
-    issues.extend(validate_type_profile_constraints_async(
-        ctx,
-        state,
-        resource,
-        resource_type,
-        profile.element_rules.as_slice(),
-    ).await);
-
-    let bindings: Vec<_> = profile
-        .element_rules
-        .iter()
-        .filter_map(|rule| rule.binding.clone())
-        .collect();
-
-    if !bindings.is_empty() {
-        issues.extend(ctx.validator.apply_bindings_for_version_async(
-            ctx.fhir_version,
+        issues.extend(ctx.validator.apply_invariants(
             resource,
-            bindings.as_slice(),
-            ctx.terminology,
-        ).await);
-    }
+            profile.invariants.as_slice(),
+            ctx.evaluator,
+            resource_type,
+        ));
 
-    state.active_profiles.remove(&profile.url);
-    issues
+        for rule in &profile.element_rules {
+            if !rule.constraints.is_empty() {
+                // validator.trace(format!(
+                //     "Applying {} invariant(s) on {}",
+                //     rule.constraints.len(),
+                //     rule.path
+                // ));
+                issues.extend(ctx.validator.apply_invariants(
+                    resource,
+                    rule.constraints.as_slice(),
+                    ctx.evaluator,
+                    rule.path.as_str(),
+                ));
+            }
+        }
+
+        issues.extend(validate_min_cardinality(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(validate_max_cardinality(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(validate_slicing(resource, resource_type, profile));
+
+        issues.extend(validate_value_constraints(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(validate_type_constraints(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(validate_target_profile_constraints(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(
+            validate_type_profile_constraints_async(
+                ctx,
+                state,
+                resource,
+                resource_type,
+                profile.element_rules.as_slice(),
+            )
+            .await,
+        );
+
+        let bindings: Vec<_> = profile
+            .element_rules
+            .iter()
+            .filter_map(|rule| rule.binding.clone())
+            .collect();
+
+        if !bindings.is_empty() {
+            issues.extend(
+                ctx.validator
+                    .apply_bindings_for_version_async(
+                        ctx.fhir_version,
+                        resource,
+                        bindings.as_slice(),
+                        ctx.terminology,
+                    )
+                    .await,
+            );
+        }
+
+        state.active_profiles.remove(&profile.url);
+        issues
     })
 }
 
-pub(crate) fn validate_profile_with_depth< T: Serialize>(
+pub(crate) fn validate_profile_with_depth<T: Serialize>(
     ctx: &ValidationContext<'_>,
     state: &mut ValidationState,
     resource: &T,
@@ -216,10 +215,15 @@ pub(crate) fn validate_profile_with_depth< T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some(
+                    "Recursive profile validation stopped: maximum depth reached".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::RecursionDepthReached),
                 diagnostics: format!(
                     "Skipping recursive profile validation for '{}' because the maximum recursion depth {} was reached.",
-                    profile.url,
-                    ctx.validator.config.max_profile_recursion_depth
+                    profile.url, ctx.validator.config.max_profile_recursion_depth
                 ),
                 expression: Some(profile.url.clone()),
                 fhir_path: resource_type.to_string(),
@@ -234,6 +238,12 @@ pub(crate) fn validate_profile_with_depth< T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some(
+                    "Recursive profile validation skipped: profile cycle detected".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ProfileCycleDetected),
                 diagnostics: format!(
                     "Skipping recursive profile validation for '{}' because a validation cycle was detected.",
                     profile.url
@@ -271,13 +281,11 @@ pub(crate) fn validate_profile_with_depth< T: Serialize>(
         }
     }
 
-
     issues.extend(validate_min_cardinality(
         resource,
         resource_type,
         profile.element_rules.as_slice(),
     ));
-
 
     issues.extend(validate_max_cardinality(
         resource,
@@ -285,18 +293,13 @@ pub(crate) fn validate_profile_with_depth< T: Serialize>(
         profile.element_rules.as_slice(),
     ));
 
-    issues.extend(validate_slicing(
-        resource,
-        resource_type,
-        profile,
-    ));
+    issues.extend(validate_slicing(resource, resource_type, profile));
 
     issues.extend(validate_value_constraints(
         resource,
         resource_type,
         profile.element_rules.as_slice(),
     ));
-
 
     issues.extend(validate_type_constraints(
         resource,
@@ -347,7 +350,13 @@ fn prefix_nested_issue_paths(
     let parent_prefix = format!("{}.", parent_path);
 
     for issue in &mut issues {
-        issue.fhir_path = prefix_single_issue_path(&issue.fhir_path, parent_path, &parent_prefix, nested_resource_type, &nested_prefix);
+        issue.fhir_path = prefix_single_issue_path(
+            &issue.fhir_path,
+            parent_path,
+            &parent_prefix,
+            nested_resource_type,
+            &nested_prefix,
+        );
 
         if let Some(instance_path) = issue.instance_path.as_mut() {
             let updated = prefix_single_issue_path(
@@ -399,6 +408,12 @@ fn validate_type_constraints<T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for type constraint validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                 diagnostics: format!(
                     "Failed to serialize resource while validating type constraints: {}",
                     err
@@ -413,7 +428,6 @@ fn validate_type_constraints<T: Serialize>(
     let mut issues = Vec::new();
 
     for rule in rules {
-
         if rule.type_constraints.is_empty() {
             continue;
         }
@@ -435,6 +449,12 @@ fn validate_type_constraints<T: Serialize>(
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "structure".to_string(),
+                summary: Some(
+                    "Polymorphic [x] element has multiple type representations at once".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                 diagnostics: format!(
                     "Element '{}' has multiple [x] representations present in the same object: {}.",
                     rule.path,
@@ -476,6 +496,10 @@ fn validate_type_constraints<T: Serialize>(
         issues.push(ValidationIssue {
             severity: crate::Severity::Error,
             code: "structure".to_string(),
+            summary: Some("Choice element type is not allowed by the profile".to_string()),
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
             diagnostics: format!(
                 "Element '{}' uses disallowed type(s) '{}'. Allowed types: {}.",
                 rule.path,
@@ -605,6 +629,12 @@ fn validate_target_profile_constraints<T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for reference target validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating targetProfile constraints: {}",
                     err
@@ -654,6 +684,12 @@ fn validate_target_profile_constraints<T: Serialize>(
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "structure".to_string(),
+                summary: Some(
+                    "Reference target resource type is not allowed by targetProfile".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                 diagnostics: format!(
                     "Element '{}' references resource type '{}', which is not allowed by the profile. Allowed target types: {}.",
                     rule.path,
@@ -787,7 +823,7 @@ pub fn target_profile_resource_type(url: &str) -> Option<String> {
 ///
 /// When matching profiles are known in the registry, recursive validation of the
 /// nested resource against the matched profile(s) may also be performed.
-fn validate_type_profile_constraints< T: Serialize>(
+fn validate_type_profile_constraints<T: Serialize>(
     ctx: &ValidationContext<'_>,
     state: &mut ValidationState,
     resource: &T,
@@ -800,6 +836,12 @@ fn validate_type_profile_constraints< T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for type.profile validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating type.profile constraints: {}",
                     err
@@ -828,7 +870,8 @@ fn validate_type_profile_constraints< T: Serialize>(
             continue;
         };
 
-        let actual_values = get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
+        let actual_values =
+            get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
         if actual_values.is_empty() {
             continue;
         }
@@ -854,6 +897,13 @@ fn validate_type_profile_constraints< T: Serialize>(
                     issues.push(ValidationIssue {
                         severity: crate::Severity::Error,
                         code: "not-found".to_string(),
+                        summary: Some(
+                            "Required StructureDefinition profile URL is not in the profile registry"
+                                .to_string(),
+                        ),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                        detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
                         diagnostics: format!(
                             "Element '{}' requires unknown profile(s): {}.",
                             rule.path,
@@ -870,6 +920,13 @@ fn validate_type_profile_constraints< T: Serialize>(
                     issues.push(ValidationIssue {
                         severity: crate::Severity::Warning,
                         code: "not-found".to_string(),
+                        summary: Some(
+                            "Referenced profile URL is not available in the profile registry"
+                                .to_string(),
+                        ),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                        detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
                         diagnostics: format!(
                             "Element '{}' references unknown profile(s): {}.",
                             rule.path,
@@ -887,7 +944,11 @@ fn validate_type_profile_constraints< T: Serialize>(
                 let matching_required_profiles: Vec<&str> = known_required_profiles
                     .iter()
                     .copied()
-                    .filter(|required| declared_profiles.iter().any(|declared| declared == required))
+                    .filter(|required| {
+                        declared_profiles
+                            .iter()
+                            .any(|declared| declared == required)
+                    })
                     .collect();
 
                 let declared_match_ok = match ctx.validator.config.type_profile_match_mode {
@@ -895,7 +956,9 @@ fn validate_type_profile_constraints< T: Serialize>(
                     TypeProfileMatchMode::All => {
                         !known_required_profiles.is_empty()
                             && known_required_profiles.iter().all(|required| {
-                                declared_profiles.iter().any(|declared| declared == required)
+                                declared_profiles
+                                    .iter()
+                                    .any(|declared| declared == required)
                             })
                     }
                 };
@@ -904,6 +967,13 @@ fn validate_type_profile_constraints< T: Serialize>(
                     issues.push(ValidationIssue {
                         severity: crate::Severity::Error,
                         code: "structure".to_string(),
+                        summary: Some(
+                            "Nested resource meta.profile does not satisfy type.profile requirement"
+                                .to_string(),
+                        ),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                        detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
                         diagnostics: format!(
                             "Element '{}' does not declare the required profile match. Required profiles: {}. Declared profiles: {}. Match mode: {:?}.",
                             rule.path,
@@ -919,10 +989,11 @@ fn validate_type_profile_constraints< T: Serialize>(
                 }
 
                 if let Some(registry) = ctx.runtime_profile_registry {
-                    let profiles_to_recurse: Vec<&str> = match ctx.validator.config.type_profile_match_mode {
-                        TypeProfileMatchMode::Any => matching_required_profiles,
-                        TypeProfileMatchMode::All => known_required_profiles.clone(),
-                    };
+                    let profiles_to_recurse: Vec<&str> =
+                        match ctx.validator.config.type_profile_match_mode {
+                            TypeProfileMatchMode::Any => matching_required_profiles,
+                            TypeProfileMatchMode::All => known_required_profiles.clone(),
+                        };
 
                     for profile_url in profiles_to_recurse {
                         if let Some(nested_profile) = registry.get(profile_url) {
@@ -952,10 +1023,21 @@ fn validate_type_profile_constraints< T: Serialize>(
             if let Some(registry) = ctx.runtime_profile_registry {
                 let actual_resource_type = resource_type_name_from_value(actual);
                 if let Some(actual_resource_type) = actual_resource_type {
-                    if !ctx.validator.config.allow_type_profile_resource_type_fallback {
+                    if !ctx
+                        .validator
+                        .config
+                        .allow_type_profile_resource_type_fallback
+                    {
                         issues.push(ValidationIssue {
                             severity: crate::Severity::Error,
                             code: "structure".to_string(),
+                            summary: Some(
+                                "meta.profile is missing and resourceType fallback is disabled for type.profile"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                            detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
                             diagnostics: format!(
                                 "Element '{}' does not explicitly declare any of the required profiles, and resourceType fallback is disabled. Expected profiles: {}.",
                                 rule.path,
@@ -1002,6 +1084,13 @@ fn validate_type_profile_constraints< T: Serialize>(
                             issues.push(ValidationIssue {
                                 severity: crate::Severity::Error,
                                 code: "structure".to_string(),
+                                summary: Some(
+                                    "Nested resource type does not match type.profile expectation"
+                                        .to_string(),
+                                ),
+                                expression_kind: None,
+                                source_invariant_key: None,
+                                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                                 diagnostics: format!(
                                     "Element '{}' has resource type '{}', which does not match the required profiled type(s): {}. Match mode: {:?}.",
                                     rule.path,
@@ -1021,6 +1110,13 @@ fn validate_type_profile_constraints< T: Serialize>(
                         issues.push(ValidationIssue {
                             severity: crate::Severity::Warning,
                             code: "business-rule".to_string(),
+                            summary: Some(
+                                "type.profile validation used resourceType fallback (meta.profile missing)"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                            detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
                             diagnostics: format!(
                                 "Element '{}' does not explicitly declare any of the required profiles. Falling back to resourceType match '{}'. Expected profiles: {}. Match mode: {:?}.",
                                 rule.path,
@@ -1035,10 +1131,11 @@ fn validate_type_profile_constraints< T: Serialize>(
                     }
 
                     if ctx.validator.config.recurse_on_type_profile_fallback {
-                        let profiles_to_recurse: Vec<&str> = match ctx.validator.config.type_profile_match_mode {
-                            TypeProfileMatchMode::Any => matching_profiles,
-                            TypeProfileMatchMode::All => known_required_profiles.clone(),
-                        };
+                        let profiles_to_recurse: Vec<&str> =
+                            match ctx.validator.config.type_profile_match_mode {
+                                TypeProfileMatchMode::Any => matching_profiles,
+                                TypeProfileMatchMode::All => known_required_profiles.clone(),
+                            };
 
                         for profile_url in profiles_to_recurse {
                             if let Some(nested_profile) = registry.get(profile_url) {
@@ -1077,116 +1174,150 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
     rules: &'a [crate::profile::types::ExtractedElementRule],
 ) -> Pin<Box<dyn Future<Output = Vec<ValidationIssue>> + 'a>> {
     Box::pin(async move {
-    let root = match serde_json::to_value(resource) {
-        Ok(value) => value,
-        Err(err) => {
-            return vec![ValidationIssue {
-                severity: crate::Severity::Error,
-                code: "processing".to_string(),
-                diagnostics: format!(
-                    "Failed to serialize resource while validating type.profile constraints: {}",
-                    err
-                ),
-                expression: None,
-                fhir_path: "".to_string(),
-                instance_path: None,
-            }];
-        }
-    };
-
-    let mut issues = Vec::new();
-
-    for rule in rules {
-        let required_profiles: Vec<&str> = rule
-            .type_constraints
-            .iter()
-            .flat_map(|constraint| constraint.profiles.iter().map(String::as_str))
-            .collect();
-
-        if required_profiles.is_empty() {
-            continue;
-        }
-
-        let Some(relative_path) = relative_profile_path(resource_type, &rule.path) else {
-            continue;
+        let root = match serde_json::to_value(resource) {
+            Ok(value) => value,
+            Err(err) => {
+                return vec![ValidationIssue {
+                    severity: crate::Severity::Error,
+                    code: "processing".to_string(),
+                    summary: Some(
+                        "Resource could not be serialized for type.profile validation".to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::ValidationException),
+                    diagnostics: format!(
+                        "Failed to serialize resource while validating type.profile constraints: {}",
+                        err
+                    ),
+                    expression: None,
+                    fhir_path: "".to_string(),
+                    instance_path: None,
+                }];
+            }
         };
 
-        let actual_values = get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
-        if actual_values.is_empty() {
-            continue;
-        }
+        let mut issues = Vec::new();
 
-        for (actual, actual_path) in actual_values {
-            let mut unknown_required_profiles: Vec<&str> = Vec::new();
-            let mut known_required_profiles: Vec<&str> = Vec::new();
+        for rule in rules {
+            let required_profiles: Vec<&str> = rule
+                .type_constraints
+                .iter()
+                .flat_map(|constraint| constraint.profiles.iter().map(String::as_str))
+                .collect();
 
-            if let Some(registry) = ctx.runtime_profile_registry {
-                for profile_url in &required_profiles {
-                    if registry.get(profile_url).is_some() {
-                        known_required_profiles.push(*profile_url);
-                    } else {
-                        unknown_required_profiles.push(*profile_url);
+            if required_profiles.is_empty() {
+                continue;
+            }
+
+            let Some(relative_path) = relative_profile_path(resource_type, &rule.path) else {
+                continue;
+            };
+
+            let actual_values =
+                get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
+            if actual_values.is_empty() {
+                continue;
+            }
+
+            for (actual, actual_path) in actual_values {
+                let mut unknown_required_profiles: Vec<&str> = Vec::new();
+                let mut known_required_profiles: Vec<&str> = Vec::new();
+
+                if let Some(registry) = ctx.runtime_profile_registry {
+                    for profile_url in &required_profiles {
+                        if registry.get(profile_url).is_some() {
+                            known_required_profiles.push(*profile_url);
+                        } else {
+                            unknown_required_profiles.push(*profile_url);
+                        }
+                    }
+                } else {
+                    unknown_required_profiles.extend(required_profiles.iter().copied());
+                }
+
+                if !unknown_required_profiles.is_empty() {
+                    if ctx.validator.config.error_on_unknown_profile {
+                        issues.push(ValidationIssue {
+                            severity: crate::Severity::Error,
+                            code: "not-found".to_string(),
+                            summary: Some(
+                                "Required StructureDefinition profile URL is not in the profile registry"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                            detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
+                            diagnostics: format!(
+                                "Element '{}' requires unknown profile(s): {}.",
+                                rule.path,
+                                unknown_required_profiles.join(", ")
+                            ),
+                            expression: None,
+                            fhir_path: actual_path.clone(),
+                            instance_path: Some(actual_path.clone()),
+                        });
+                        continue;
+                    }
+
+                    if ctx.validator.config.warn_on_unknown_profile {
+                        issues.push(ValidationIssue {
+                            severity: crate::Severity::Warning,
+                            code: "not-found".to_string(),
+                            summary: Some(
+                                "Referenced profile URL is not available in the profile registry"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                            detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
+                            diagnostics: format!(
+                                "Element '{}' references unknown profile(s): {}.",
+                                rule.path,
+                                unknown_required_profiles.join(", ")
+                            ),
+                            expression: None,
+                            fhir_path: actual_path.clone(),
+                            instance_path: Some(actual_path.clone()),
+                        });
                     }
                 }
-            } else {
-                unknown_required_profiles.extend(required_profiles.iter().copied());
-            }
 
-            if !unknown_required_profiles.is_empty() {
-                if ctx.validator.config.error_on_unknown_profile {
-                    issues.push(ValidationIssue {
-                        severity: crate::Severity::Error,
-                        code: "not-found".to_string(),
-                        diagnostics: format!(
-                            "Element '{}' requires unknown profile(s): {}.",
-                            rule.path,
-                            unknown_required_profiles.join(", ")
-                        ),
-                        expression: None,
-                        fhir_path: actual_path.clone(),
-                        instance_path: Some(actual_path.clone()),
-                    });
-                    continue;
-                }
-
-                if ctx.validator.config.warn_on_unknown_profile {
-                    issues.push(ValidationIssue {
-                        severity: crate::Severity::Warning,
-                        code: "not-found".to_string(),
-                        diagnostics: format!(
-                            "Element '{}' references unknown profile(s): {}.",
-                            rule.path,
-                            unknown_required_profiles.join(", ")
-                        ),
-                        expression: None,
-                        fhir_path: actual_path.clone(),
-                        instance_path: Some(actual_path.clone()),
-                    });
-                }
-            }
-
-            let declared_profiles = declared_profiles_on_value(actual);
-            if !declared_profiles.is_empty() {
-                let matching_required_profiles: Vec<&str> = known_required_profiles
-                    .iter()
-                    .copied()
-                    .filter(|required| declared_profiles.iter().any(|declared| declared == required))
-                    .collect();
-
-                let declared_match_ok = match ctx.validator.config.type_profile_match_mode {
-                    TypeProfileMatchMode::Any => !matching_required_profiles.is_empty(),
-                    TypeProfileMatchMode::All => {
-                        !known_required_profiles.is_empty()
-                            && known_required_profiles.iter().all(|required| {
-                            declared_profiles.iter().any(|declared| declared == required)
+                let declared_profiles = declared_profiles_on_value(actual);
+                if !declared_profiles.is_empty() {
+                    let matching_required_profiles: Vec<&str> = known_required_profiles
+                        .iter()
+                        .copied()
+                        .filter(|required| {
+                            declared_profiles
+                                .iter()
+                                .any(|declared| declared == required)
                         })
-                    }
-                };
+                        .collect();
 
-                if !declared_match_ok {
-                    issues.push(ValidationIssue {
+                    let declared_match_ok = match ctx.validator.config.type_profile_match_mode {
+                        TypeProfileMatchMode::Any => !matching_required_profiles.is_empty(),
+                        TypeProfileMatchMode::All => {
+                            !known_required_profiles.is_empty()
+                                && known_required_profiles.iter().all(|required| {
+                                    declared_profiles
+                                        .iter()
+                                        .any(|declared| declared == required)
+                                })
+                        }
+                    };
+
+                    if !declared_match_ok {
+                        issues.push(ValidationIssue {
                         severity: crate::Severity::Error,
                         code: "structure".to_string(),
+                        summary: Some(
+                            "Nested resource meta.profile does not satisfy type.profile requirement"
+                                .to_string(),
+                        ),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                            detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
                         diagnostics: format!(
                             "Element '{}' does not declare the required profile match. Required profiles: {}. Declared profiles: {}. Match mode: {:?}.",
                             rule.path,
@@ -1198,130 +1329,15 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                         fhir_path: actual_path.clone(),
                         instance_path: Some(actual_path.clone()),
                     });
-                    continue;
-                }
+                        continue;
+                    }
 
-                if let Some(registry) = ctx.runtime_profile_registry {
-                    let profiles_to_recurse: Vec<&str> = match ctx.validator.config.type_profile_match_mode {
-                        TypeProfileMatchMode::Any => matching_required_profiles,
-                        TypeProfileMatchMode::All => known_required_profiles.clone(),
-                    };
-
-                    for profile_url in profiles_to_recurse {
-                        if let Some(nested_profile) = registry.get(profile_url) {
-                            let nested_resource_type = nested_profile.resource_type.as_str();
-                            let mut child_state = ValidationState {
-                                recursion_depth: state.recursion_depth + 1,
-                                active_profiles: state.active_profiles.clone(),
+                    if let Some(registry) = ctx.runtime_profile_registry {
+                        let profiles_to_recurse: Vec<&str> =
+                            match ctx.validator.config.type_profile_match_mode {
+                                TypeProfileMatchMode::Any => matching_required_profiles,
+                                TypeProfileMatchMode::All => known_required_profiles.clone(),
                             };
-                            let nested_issues = validate_profile_with_depth_async(
-                                &ctx,
-                                &mut child_state,
-                                actual,
-                                nested_resource_type,
-                                nested_profile,
-                            ).await;
-                            issues.extend(prefix_nested_issue_paths(
-                                nested_issues,
-                                &actual_path,
-                                nested_resource_type,
-                            ));
-                        }
-                    }
-                }
-                continue;
-            }
-
-            if let Some(registry) = ctx.runtime_profile_registry {
-                let actual_resource_type = resource_type_name_from_value(actual);
-                if let Some(actual_resource_type) = actual_resource_type {
-                    if !ctx.validator.config.allow_type_profile_resource_type_fallback {
-                        issues.push(ValidationIssue {
-                            severity: crate::Severity::Error,
-                            code: "structure".to_string(),
-                            diagnostics: format!(
-                                "Element '{}' does not explicitly declare any of the required profiles, and resourceType fallback is disabled. Expected profiles: {}.",
-                                rule.path,
-                                known_required_profiles.join(", ")
-                            ),
-                            expression: None,
-                            fhir_path: actual_path.clone(),
-                            instance_path: Some(actual_path.clone()),
-                        });
-                        continue;
-                    }
-
-                    let matching_profiles: Vec<&str> = known_required_profiles
-                        .iter()
-                        .copied()
-                        .filter(|url| {
-                            profile_resource_type(url, Some(registry))
-                                .as_deref()
-                                .map(|allowed| allowed == actual_resource_type)
-                                .unwrap_or(false)
-                        })
-                        .collect();
-
-                    let fallback_match_ok = match ctx.validator.config.type_profile_match_mode {
-                        TypeProfileMatchMode::Any => !matching_profiles.is_empty(),
-                        TypeProfileMatchMode::All => {
-                            !known_required_profiles.is_empty()
-                                && known_required_profiles.iter().all(|url| {
-                                profile_resource_type(url, Some(registry))
-                                    .as_deref()
-                                    .map(|allowed| allowed == actual_resource_type)
-                                    .unwrap_or(false)
-                            })
-                        }
-                    };
-
-                    if !fallback_match_ok {
-                        let allowed_resource_types: Vec<String> = known_required_profiles
-                            .iter()
-                            .filter_map(|url| profile_resource_type(url, Some(registry)))
-                            .collect();
-
-                        if !allowed_resource_types.is_empty() {
-                            issues.push(ValidationIssue {
-                                severity: crate::Severity::Error,
-                                code: "structure".to_string(),
-                                diagnostics: format!(
-                                    "Element '{}' has resource type '{}', which does not match the required profiled type(s): {}. Match mode: {:?}.",
-                                    rule.path,
-                                    actual_resource_type,
-                                    allowed_resource_types.join(", "),
-                                    ctx.validator.config.type_profile_match_mode
-                                ),
-                                expression: None,
-                                fhir_path: actual_path.clone(),
-                                instance_path: Some(actual_path.clone()),
-                            });
-                        }
-                        continue;
-                    }
-
-                    if ctx.validator.config.warn_on_type_profile_fallback {
-                        issues.push(ValidationIssue {
-                            severity: crate::Severity::Warning,
-                            code: "business-rule".to_string(),
-                            diagnostics: format!(
-                                "Element '{}' does not explicitly declare any of the required profiles. Falling back to resourceType match '{}'. Expected profiles: {}. Match mode: {:?}.",
-                                rule.path,
-                                actual_resource_type,
-                                known_required_profiles.join(", "),
-                                ctx.validator.config.type_profile_match_mode
-                            ),
-                            expression: None,
-                            fhir_path: actual_path.clone(),
-                            instance_path: Some(actual_path.clone()),
-                        });
-                    }
-
-                    if ctx.validator.config.recurse_on_type_profile_fallback {
-                        let profiles_to_recurse: Vec<&str> = match ctx.validator.config.type_profile_match_mode {
-                            TypeProfileMatchMode::Any => matching_profiles,
-                            TypeProfileMatchMode::All => known_required_profiles.clone(),
-                        };
 
                         for profile_url in profiles_to_recurse {
                             if let Some(nested_profile) = registry.get(profile_url) {
@@ -1336,7 +1352,8 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                                     actual,
                                     nested_resource_type,
                                     nested_profile,
-                                ).await;
+                                )
+                                .await;
                                 issues.extend(prefix_nested_issue_paths(
                                     nested_issues,
                                     &actual_path,
@@ -1345,12 +1362,156 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                             }
                         }
                     }
+                    continue;
+                }
+
+                if let Some(registry) = ctx.runtime_profile_registry {
+                    let actual_resource_type = resource_type_name_from_value(actual);
+                    if let Some(actual_resource_type) = actual_resource_type {
+                        if !ctx
+                            .validator
+                            .config
+                            .allow_type_profile_resource_type_fallback
+                        {
+                            issues.push(ValidationIssue {
+                            severity: crate::Severity::Error,
+                            code: "structure".to_string(),
+                            summary: Some(
+                                "meta.profile is missing and resourceType fallback is disabled for type.profile"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                                detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
+                            diagnostics: format!(
+                                "Element '{}' does not explicitly declare any of the required profiles, and resourceType fallback is disabled. Expected profiles: {}.",
+                                rule.path,
+                                known_required_profiles.join(", ")
+                            ),
+                            expression: None,
+                            fhir_path: actual_path.clone(),
+                            instance_path: Some(actual_path.clone()),
+                        });
+                            continue;
+                        }
+
+                        let matching_profiles: Vec<&str> = known_required_profiles
+                            .iter()
+                            .copied()
+                            .filter(|url| {
+                                profile_resource_type(url, Some(registry))
+                                    .as_deref()
+                                    .map(|allowed| allowed == actual_resource_type)
+                                    .unwrap_or(false)
+                            })
+                            .collect();
+
+                        let fallback_match_ok = match ctx.validator.config.type_profile_match_mode {
+                            TypeProfileMatchMode::Any => !matching_profiles.is_empty(),
+                            TypeProfileMatchMode::All => {
+                                !known_required_profiles.is_empty()
+                                    && known_required_profiles.iter().all(|url| {
+                                        profile_resource_type(url, Some(registry))
+                                            .as_deref()
+                                            .map(|allowed| allowed == actual_resource_type)
+                                            .unwrap_or(false)
+                                    })
+                            }
+                        };
+
+                        if !fallback_match_ok {
+                            let allowed_resource_types: Vec<String> = known_required_profiles
+                                .iter()
+                                .filter_map(|url| profile_resource_type(url, Some(registry)))
+                                .collect();
+
+                            if !allowed_resource_types.is_empty() {
+                                issues.push(ValidationIssue {
+                                severity: crate::Severity::Error,
+                                code: "structure".to_string(),
+                                summary: Some(
+                                    "Nested resource type does not match type.profile expectation"
+                                        .to_string(),
+                                ),
+                                expression_kind: None,
+                                source_invariant_key: None,
+                                    detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
+                                diagnostics: format!(
+                                    "Element '{}' has resource type '{}', which does not match the required profiled type(s): {}. Match mode: {:?}.",
+                                    rule.path,
+                                    actual_resource_type,
+                                    allowed_resource_types.join(", "),
+                                    ctx.validator.config.type_profile_match_mode
+                                ),
+                                expression: None,
+                                fhir_path: actual_path.clone(),
+                                instance_path: Some(actual_path.clone()),
+                            });
+                            }
+                            continue;
+                        }
+
+                        if ctx.validator.config.warn_on_type_profile_fallback {
+                            issues.push(ValidationIssue {
+                            severity: crate::Severity::Warning,
+                            code: "business-rule".to_string(),
+                            summary: Some(
+                                "type.profile validation used resourceType fallback (meta.profile missing)"
+                                    .to_string(),
+                            ),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                                detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
+                            diagnostics: format!(
+                                "Element '{}' does not explicitly declare any of the required profiles. Falling back to resourceType match '{}'. Expected profiles: {}. Match mode: {:?}.",
+                                rule.path,
+                                actual_resource_type,
+                                known_required_profiles.join(", "),
+                                ctx.validator.config.type_profile_match_mode
+                            ),
+                            expression: None,
+                            fhir_path: actual_path.clone(),
+                            instance_path: Some(actual_path.clone()),
+                        });
+                        }
+
+                        if ctx.validator.config.recurse_on_type_profile_fallback {
+                            let profiles_to_recurse: Vec<&str> =
+                                match ctx.validator.config.type_profile_match_mode {
+                                    TypeProfileMatchMode::Any => matching_profiles,
+                                    TypeProfileMatchMode::All => known_required_profiles.clone(),
+                                };
+
+                            for profile_url in profiles_to_recurse {
+                                if let Some(nested_profile) = registry.get(profile_url) {
+                                    let nested_resource_type =
+                                        nested_profile.resource_type.as_str();
+                                    let mut child_state = ValidationState {
+                                        recursion_depth: state.recursion_depth + 1,
+                                        active_profiles: state.active_profiles.clone(),
+                                    };
+                                    let nested_issues = validate_profile_with_depth_async(
+                                        &ctx,
+                                        &mut child_state,
+                                        actual,
+                                        nested_resource_type,
+                                        nested_profile,
+                                    )
+                                    .await;
+                                    issues.extend(prefix_nested_issue_paths(
+                                        nested_issues,
+                                        &actual_path,
+                                        nested_resource_type,
+                                    ));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
 
-    issues
+        issues
     })
 }
 
@@ -1406,7 +1567,7 @@ fn profile_resource_type(url: &str, profile_registry: Option<&ProfileRegistry>) 
 /// Validate a resource instance against every profile declared in `meta.profile`.
 ///
 /// Missing declared profiles are reported as `not-found` issues.
-pub async fn validate_declared_profiles_async< T: Serialize>(
+pub async fn validate_declared_profiles_async<T: Serialize>(
     ctx: &AsyncValidationContext<'_>,
     state: &mut ValidationState,
     resource: &T,
@@ -1421,18 +1582,21 @@ pub async fn validate_declared_profiles_async< T: Serialize>(
             .and_then(|registry| registry.get(&profile_url))
         {
             Some(profile) => {
-                issues.extend(validate_profile_async(
-                    &ctx,
-                    state,
-                    resource,
-                    resource_type,
-                    profile,
-                ).await);
+                issues.extend(
+                    validate_profile_async(&ctx, state, resource, resource_type, profile).await,
+                );
             }
             None => {
                 issues.push(ValidationIssue {
                     severity: crate::Severity::Error,
                     code: "not-found".to_string(),
+                    summary: Some(
+                        "Declared meta.profile URL is not available in the profile registry"
+                            .to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
                     diagnostics: format!(
                         "Declared profile '{}' was not found in the profile registry.",
                         profile_url
@@ -1447,7 +1611,7 @@ pub async fn validate_declared_profiles_async< T: Serialize>(
 
     issues
 }
-pub fn validate_declared_profiles< T: Serialize>(
+pub fn validate_declared_profiles<T: Serialize>(
     ctx: &ValidationContext<'_>,
     state: &mut ValidationState,
     resource: &T,
@@ -1474,6 +1638,13 @@ pub fn validate_declared_profiles< T: Serialize>(
                 issues.push(ValidationIssue {
                     severity: crate::Severity::Error,
                     code: "not-found".to_string(),
+                    summary: Some(
+                        "Declared meta.profile URL is not available in the profile registry"
+                            .to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::ReferenceNotFound),
                     diagnostics: format!(
                         "Declared profile '{}' was not found in the profile registry.",
                         profile_url
@@ -1531,6 +1702,12 @@ fn validate_value_constraints<T: Serialize>(
             return vec![ValidationIssue {
                 severity: crate::Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for fixed/pattern validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating fixed/pattern constraints: {}",
                     err
@@ -1555,26 +1732,39 @@ fn validate_value_constraints<T: Serialize>(
 
         let actual = get_relative_path(&root, relative_path);
         let matched = match value_constraint {
-            ExtractedValueConstraint::Fixed(expected) => {
-                actual.map(|value| values_equal(value, expected)).unwrap_or(false)
-            }
-            ExtractedValueConstraint::Pattern(expected) => {
-                actual.map(|value| value_matches_pattern(value, expected)).unwrap_or(false)
-            }
+            ExtractedValueConstraint::Fixed(expected) => actual
+                .map(|value| values_equal(value, expected))
+                .unwrap_or(false),
+            ExtractedValueConstraint::Pattern(expected) => actual
+                .map(|value| value_matches_pattern(value, expected))
+                .unwrap_or(false),
         };
 
         if matched {
             continue;
         }
-
-        let (kind, expected) = match value_constraint {
-            ExtractedValueConstraint::Fixed(expected) => ("fixed", expected),
-            ExtractedValueConstraint::Pattern(expected) => ("pattern", expected),
+        let (kind, expected, detail_code, summary) = match value_constraint {
+            ExtractedValueConstraint::Fixed(expected) => (
+                "fixed",
+                expected,
+                Some(ValidationIssueDetailCode::FixedConstraintMismatch),
+                Some("Element value does not match fixed constraint".to_string()),
+            ),
+            ExtractedValueConstraint::Pattern(expected) => (
+                "pattern",
+                expected,
+                Some(ValidationIssueDetailCode::PatternConstraintMismatch),
+                Some("Element value does not match pattern constraint".to_string()),
+            ),
         };
 
         issues.push(ValidationIssue {
             severity: crate::Severity::Error,
             code: "value".to_string(),
+            summary,
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code,
             diagnostics: format!(
                 "Element '{}' does not satisfy {} constraint. Expected pattern/value: {}",
                 rule.path, kind, expected
@@ -1618,12 +1808,14 @@ fn values_equal(actual: &Value, expected: &Value) -> bool {
 /// that each pattern element matches at least one actual array element.
 fn value_matches_pattern(actual: &Value, pattern: &Value) -> bool {
     match (actual, pattern) {
-        (Value::Object(actual_map), Value::Object(pattern_map)) => pattern_map.iter().all(|(key, pattern_value)| {
-            actual_map
-                .get(key)
-                .map(|actual_value| value_matches_pattern(actual_value, pattern_value))
-                .unwrap_or(false)
-        }),
+        (Value::Object(actual_map), Value::Object(pattern_map)) => {
+            pattern_map.iter().all(|(key, pattern_value)| {
+                actual_map
+                    .get(key)
+                    .map(|actual_value| value_matches_pattern(actual_value, pattern_value))
+                    .unwrap_or(false)
+            })
+        }
         (Value::Array(actual_items), Value::Array(pattern_items)) => {
             if pattern_items.is_empty() {
                 return true;
@@ -1638,5 +1830,3 @@ fn value_matches_pattern(actual: &Value, pattern: &Value) -> bool {
         _ => actual == pattern,
     }
 }
-
-

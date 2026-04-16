@@ -1,6 +1,4 @@
-
 use helios_fhir::TerminologyValidationError;
-
 
 pub trait BindingVersionAdapter {
     type Coding;
@@ -138,12 +136,10 @@ where
                 code,
             })
         }
-        None => LocalBindingOutcome::Error(TerminologyValidationError::InvalidInput(
-            format!(
-                "CodeableConcept does not contain any usable codings: {}",
-                A::summarize_codeable_concept_codings(cc)
-            ),
-        )),
+        None => LocalBindingOutcome::Error(TerminologyValidationError::InvalidInput(format!(
+            "CodeableConcept does not contain any usable codings: {}",
+            A::summarize_codeable_concept_codings(cc)
+        ))),
     }
 }
 
@@ -282,4 +278,3 @@ where
 
     evaluate_local_codeable_concept_binding::<A, F>(valueset_url, concept, check_local)
 }
-

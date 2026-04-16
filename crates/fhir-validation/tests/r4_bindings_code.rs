@@ -5,12 +5,15 @@ mod common {
 }
 #[cfg(test)]
 mod tests {
+    use crate::common::fixtures::{
+        MockTerminologyService, assert_has_binding_issue, assert_has_error, load_resource,
+        r4_evaluator_for,
+    };
     use fhir_validation::r4::binding::validate_primitive_code_binding;
     use fhir_validation::terminology::types::TerminologyMembershipOutcome;
     use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
-    use helios_fhir::{ FhirVersion, TerminologyValidationError};
-    use crate::common::fixtures::{assert_has_binding_issue, assert_has_error, load_resource, r4_evaluator_for, MockTerminologyService};
+    use helios_fhir::{FhirVersion, TerminologyValidationError};
 
     fn validator() -> Validator {
         Validator::new(ValidationConfig::default())
@@ -41,8 +44,8 @@ mod tests {
             BindingStrength::Required,
             Some("male"),
             None,
-           |_|Ok(()),
-            None
+            |_| Ok(()),
+            None,
         );
 
         assert!(issues.is_empty());
@@ -96,7 +99,7 @@ mod tests {
                     "remote required".to_string(),
                 ))
             },
-            None
+            None,
         );
 
         assert_eq!(issues.len(), 1);
@@ -110,7 +113,7 @@ mod tests {
             "invalid/patient/patient-invalid-gender.json",
         );
         let validator = Validator::default();
-        let evaluator =  r4_evaluator_for(&resource);
+        let evaluator = r4_evaluator_for(&resource);
         let issues = validator.validate_resource(&resource, None, &evaluator);
         // println!("{:#?}", issues);
         assert_has_binding_issue(
@@ -121,4 +124,3 @@ mod tests {
         assert_has_error(&issues);
     }
 }
-

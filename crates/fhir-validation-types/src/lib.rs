@@ -32,7 +32,7 @@ pub struct BindingDef {
     pub path: String,
     pub strength: crate::BindingStrength,
     pub value_set: String,
-    pub binding_name: Option<String,>,
+    pub binding_name: Option<String>,
     pub target_kind: BindingTargetKind,
 }
 /// One generated FHIR invariant attached to a resource or element.

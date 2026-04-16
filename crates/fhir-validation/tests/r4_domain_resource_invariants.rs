@@ -47,7 +47,6 @@ fn dom3_no_id_in_contained() {
     let validator = fhir_validation::Validator::default();
     let evaluator = r4_evaluator_for(&r);
     let _issues = validator.validate_resource(&r, None, &evaluator);
-
 }
 #[test]
 fn dom2_contained_cannot_have_contained() {

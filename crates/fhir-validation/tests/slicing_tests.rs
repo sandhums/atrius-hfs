@@ -1,11 +1,11 @@
 #![cfg(feature = "R5")]
 
+use fhir_validation::ValidationConfig;
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::slicing::{validate_slicing, validate_slicing_with_context};
 use fhir_validation::profile::types::{
     ExtractedDiscriminatorType, ExtractedProfile, ExtractedSlicingRules,
 };
-use fhir_validation::ValidationConfig;
 use helios_fhir::FhirVersion;
 use helios_fhir::r5::StructureDefinition;
 
@@ -40,7 +40,8 @@ impl fhir_validation::evaluators::FhirPathEvaluator for StubFhirPathEvaluator {
     fn eval_path(
         &self,
         _path: &str,
-    ) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, fhir_validation::ValidationError> {
+    ) -> Result<Vec<helios_fhirpath_support::EvaluationResult>, fhir_validation::ValidationError>
+    {
         Ok(vec![])
     }
 }
@@ -247,7 +248,11 @@ fn closed_slicing_rejects_unmatched_array_item() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[1]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[1]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
@@ -355,7 +360,11 @@ fn slice_min_cardinality_fails_when_required_slice_is_missing() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component:diastolic"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component:diastolic")
+    );
     assert!(issues.iter().any(|i| i.code == "required"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
@@ -493,7 +502,10 @@ fn slice_matching_succeeds_for_two_known_components() {
     let issues = validate_slicing(&observation, "Observation", &extracted);
     // println!("SLICING ISSUES = {:#?}", issues);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 #[test]
 fn slice_max_cardinality_fails_when_slice_repeats_too_many_times() {
@@ -581,11 +593,15 @@ fn slice_max_cardinality_fails_when_slice_repeats_too_many_times() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component:systolic"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component:systolic")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
-            "Slice 'Observation.component:systolic' allows at most 1 occurrence(s), but found 2."
+            "Slice 'Observation.component:systolic' allows at most 1 occurrence(s), but found 2.",
         )
     }));
 }
@@ -683,14 +699,22 @@ fn multi_discriminator_requires_all_discriminators_to_match() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[0]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[0]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
             "does not match any declared slice on 'Observation.component', and slicing rules are closed"
         )
     }));
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component:systolic" && i.code == "required"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component:systolic" && i.code == "required")
+    );
 }
 
 #[test]
@@ -787,7 +811,11 @@ fn slice_conflict_detection_fails_when_one_item_matches_multiple_slices() {
     let observation: serde_json::Value = serde_json::from_str(observation_json)
         .expect("Observation JSON should deserialize into raw JSON Value");
     let issues = validate_slicing(&observation, "Observation", &extracted);
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[0]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[0]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
@@ -889,7 +917,10 @@ fn type_discriminator_matches_nested_resource_type_for_parameter_slices() {
 
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -962,7 +993,10 @@ fn position_discriminator_matches_items_in_declared_slice_positions() {
 
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1032,11 +1066,15 @@ fn position_discriminator_rejects_missing_required_position_slice() {
 
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter:second"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Parameters.parameter:second")
+    );
     assert!(issues.iter().any(|i| i.code == "required"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
-            "Slice 'Parameters.parameter:second' requires at least 1 occurrence(s), but found 0."
+            "Slice 'Parameters.parameter:second' requires at least 1 occurrence(s), but found 0.",
         )
     }));
 }
@@ -1107,7 +1145,10 @@ fn type_discriminator_matches_reference_shaped_value() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1176,7 +1217,10 @@ fn type_discriminator_matches_codeable_reference_shaped_value() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 #[test]
 fn type_discriminator_matches_choice_value_x_concrete_json_keys() {
@@ -1266,7 +1310,10 @@ fn type_discriminator_matches_choice_value_x_concrete_json_keys() {
 
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1354,7 +1401,10 @@ fn exists_discriminator_matches_present_and_absent_optional_child() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1425,7 +1475,11 @@ fn exists_discriminator_rejects_item_when_no_slice_matches_presence_state() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[0]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[0]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
@@ -1503,18 +1557,23 @@ fn type_discriminator_choice_value_x_reports_unmatched_wrong_choice_type() {
 
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Parameters.parameter[0]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
             "does not match any declared slice on 'Parameters.parameter', and slicing rules are closed"
         )
     }));
-    assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter:int" && i.code == "required"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Parameters.parameter:int" && i.code == "required")
+    );
 }
-
-
-
 
 #[test]
 fn open_at_end_allows_unmatched_items_only_at_the_end() {
@@ -1602,7 +1661,10 @@ fn open_at_end_allows_unmatched_items_only_at_the_end() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1691,11 +1753,15 @@ fn open_at_end_rejects_declared_slice_after_unmatched_tail_item() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[1]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[1]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
         i.diagnostics.contains(
-            "but openAtEnd requires all unmatched content to appear only after the declared slices"
+            "but openAtEnd requires all unmatched content to appear only after the declared slices",
         )
     }));
 }
@@ -1791,7 +1857,10 @@ fn ordered_slicing_accepts_declared_slices_in_definition_order() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -1886,12 +1955,15 @@ fn ordered_slicing_rejects_declared_slices_out_of_definition_order() {
 
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
-    assert!(issues.iter().any(|i| i.fhir_path == "Observation.component[1]"));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.fhir_path == "Observation.component[1]")
+    );
     assert!(issues.iter().any(|i| i.code == "structure"));
     assert!(issues.iter().any(|i| {
-        i.diagnostics.contains(
-            "but ordered slicing requires slices to appear in declaration order"
-        )
+        i.diagnostics
+            .contains("but ordered slicing requires slices to appear in declaration order")
     }));
 }
 
@@ -1971,11 +2043,11 @@ fn open_at_end_without_ordered_emits_warning() {
     let issues = validate_slicing(&observation, "Observation", &extracted);
 
     assert!(issues.iter().any(|i| i.code == "business-rule"));
-    assert!(issues.iter().any(|i| {
-        i.diagnostics.contains(
-            "uses openAtEnd but is not ordered"
-        )
-    }));
+    assert!(
+        issues
+            .iter()
+            .any(|i| { i.diagnostics.contains("uses openAtEnd but is not ordered") })
+    );
 }
 #[test]
 fn profile_discriminator_matches_declared_meta_profile_on_nested_resource() {
@@ -2050,7 +2122,10 @@ fn profile_discriminator_matches_declared_meta_profile_on_nested_resource() {
     let parameters: serde_json::Value = serde_json::from_str(parameters_json).unwrap();
     let issues = validate_slicing(&parameters, "Parameters", &extracted);
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]
@@ -2153,7 +2228,10 @@ fn profile_discriminator_falls_back_to_validation_when_no_meta_profile_present()
         &extracted,
     );
 
-    assert!(issues.is_empty(), "Expected no slicing issues, got: {issues:#?}");
+    assert!(
+        issues.is_empty(),
+        "Expected no slicing issues, got: {issues:#?}"
+    );
 }
 
 #[test]

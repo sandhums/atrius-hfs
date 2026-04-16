@@ -1,17 +1,12 @@
-use serde_json::Value;
-use fhir_validation_types::{BindingTargetKind, Severity};
-use helios_fhir::Element;
 use crate::profile::types::{
-    ExtractedDiscriminatorType,
-    ExtractedElementRule,
-    ExtractedProfile,
-    ExtractedSliceDiscriminator,
-    ExtractedSlicing,
-    ExtractedSlicingRules,
-    ExtractedTypeConstraint,
+    ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile,
+    ExtractedSliceDiscriminator, ExtractedSlicing, ExtractedSlicingRules, ExtractedTypeConstraint,
     ExtractedValueConstraint,
 };
 use crate::{BindingDef, BindingStrength, InvariantDef, ValidationError};
+use fhir_validation_types::{BindingTargetKind, Severity};
+use helios_fhir::Element;
+use serde_json::Value;
 
 #[cfg(feature = "R5")]
 use helios_fhir::r5::{ElementDefinition, Extension, StructureDefinition};
@@ -47,10 +42,7 @@ pub fn extract_r5_structure_definition_profile(
     })?;
 
     for element in elements {
-        let path = required_string(
-            element.path.value.as_deref(),
-            "ElementDefinition.path",
-        )?;
+        let path = required_string(element.path.value.as_deref(), "ElementDefinition.path")?;
         let id = primitive_opt(element.id.as_ref())
             .map(str::to_owned)
             .unwrap_or_else(|| path.clone());
@@ -62,15 +54,8 @@ pub fn extract_r5_structure_definition_profile(
             continue;
         }
 
-        let min = element
-            .min
-            .as_ref()
-            .and_then(|m| m.value)
-            .map(|v| v as u32);
-        let max = element
-            .max
-            .as_ref()
-            .and_then(|m| m.value.clone());
+        let min = element.min.as_ref().and_then(|m| m.value).map(|v| v as u32);
+        let max = element.max.as_ref().and_then(|m| m.value.clone());
         let binding = extract_binding(&path, element)?;
         let value_constraint = extract_value_constraint(element)?;
         let type_constraints = extract_type_constraints(element)?;
@@ -104,7 +89,10 @@ pub fn extract_r5_structure_definition_profile(
     Ok(ExtractedProfile {
         url,
         version: primitive_opt(sd.version.as_ref()).map(str::to_owned),
-        name: Some(required_string(sd.name.value.as_deref(), "StructureDefinition.name")?),
+        name: Some(required_string(
+            sd.name.value.as_deref(),
+            "StructureDefinition.name",
+        )?),
         title: primitive_opt(sd.title.as_ref()).map(str::to_owned),
         resource_type,
         base_definition: primitive_opt(sd.base_definition.as_ref()).map(str::to_owned),
@@ -137,7 +125,6 @@ fn validate_profile_header(sd: &StructureDefinition) -> Result<(), ValidationErr
         )));
     }
 
-
     Ok(())
 }
 
@@ -154,10 +141,7 @@ fn extract_constraints(
 
     if let Some(constraints) = &element.constraint {
         for c in constraints {
-            let key = required_string(
-                c.key.value.as_deref(),
-                "ElementDefinition.constraint.key",
-            )?;
+            let key = required_string(c.key.value.as_deref(), "ElementDefinition.constraint.key")?;
             let human = c
                 .human
                 .value
@@ -169,9 +153,7 @@ fn extract_constraints(
                 "ElementDefinition.constraint.expression",
             )?;
 
-            let severity = map_constraint_severity(
-                c.severity.value.as_deref().unwrap_or("error"),
-            )?;
+            let severity = map_constraint_severity(c.severity.value.as_deref().unwrap_or("error"))?;
 
             out.push(InvariantDef {
                 key,
@@ -220,7 +202,6 @@ fn extract_binding(
     }))
 }
 
-
 /// Extract a fixed or pattern value constraint from an `ElementDefinition`.
 ///
 /// FHIR encodes `fixed[x]` and `pattern[x]` as choice-wrapper objects. This
@@ -247,12 +228,12 @@ fn extract_value_constraint(
             "ElementDefinition cannot contain both fixed[x] and pattern[x] for profile extraction"
                 .to_string(),
         )),
-        (Some(value), None) => Ok(Some(ExtractedValueConstraint::Fixed(
-            prune_json_nulls(value),
-        ))),
-        (None, Some(value)) => Ok(Some(ExtractedValueConstraint::Pattern(
-            prune_json_nulls(value),
-        ))),
+        (Some(value), None) => Ok(Some(ExtractedValueConstraint::Fixed(prune_json_nulls(
+            value,
+        )))),
+        (None, Some(value)) => Ok(Some(ExtractedValueConstraint::Pattern(prune_json_nulls(
+            value,
+        )))),
         (None, None) => Ok(None),
     }
 }
@@ -272,10 +253,7 @@ fn extract_type_constraints(
     };
 
     for ty in types {
-        let code = required_code(
-            ty.code.value.as_deref(),
-            "ElementDefinition.type.code",
-        )?;
+        let code = required_code(ty.code.value.as_deref(), "ElementDefinition.type.code")?;
 
         let profiles = ty
             .profile
@@ -325,9 +303,7 @@ fn prune_json_nulls(value: Value) -> Value {
             }
             Value::Object(out)
         }
-        Value::Array(items) => {
-            Value::Array(items.into_iter().map(prune_json_nulls).collect())
-        }
+        Value::Array(items) => Value::Array(items.into_iter().map(prune_json_nulls).collect()),
         other => other,
     }
 }
@@ -356,7 +332,6 @@ fn map_constraint_severity(code: &str) -> Result<Severity, ValidationError> {
         ))),
     }
 }
-
 
 /// Convenience alias for primitive string/code-like FHIR elements used by the
 /// extractor helpers.
@@ -454,9 +429,7 @@ fn extract_slice_discriminator(
 
 /// Map a FHIR slicing discriminator type code into the normalized extracted enum.
 #[cfg(feature = "R5")]
-fn map_discriminator_type(
-    code: &str,
-) -> Result<ExtractedDiscriminatorType, ValidationError> {
+fn map_discriminator_type(code: &str) -> Result<ExtractedDiscriminatorType, ValidationError> {
     match code {
         "value" => Ok(ExtractedDiscriminatorType::Value),
         "exists" => Ok(ExtractedDiscriminatorType::Exists),

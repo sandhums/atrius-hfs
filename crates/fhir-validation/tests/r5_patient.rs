@@ -2,7 +2,9 @@
 mod common {
     pub mod fixtures;
 }
-use crate::common::fixtures::{assert_has_invariant, assert_issue_count, load_resource, r5_evaluator_for};
+use crate::common::fixtures::{
+    assert_has_invariant, assert_issue_count, load_resource, r5_evaluator_for,
+};
 use helios_fhir::FhirVersion;
 
 #[test]

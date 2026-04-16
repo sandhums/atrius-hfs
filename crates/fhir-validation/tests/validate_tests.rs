@@ -4,15 +4,17 @@ mod common {
 }
 mod tests {
 
-    use serde_json::{json};
-    use fhir_validation::{R5FhirPathEvaluator, TypeProfileMatchMode, Validator};
+    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
     use fhir_validation::profile::profile_registry::ProfileRegistry;
-    use fhir_validation::profile::types::{ExtractedElementRule, ExtractedProfile, ExtractedTypeConstraint};
-    use fhir_validation::profile::validate::{validate_profile};
+    use fhir_validation::profile::types::{
+        ExtractedElementRule, ExtractedProfile, ExtractedTypeConstraint,
+    };
+    use fhir_validation::profile::validate::validate_profile;
     use fhir_validation::validation_context::{ValidationContext, ValidationState};
+    use fhir_validation::{R5FhirPathEvaluator, TypeProfileMatchMode, Validator};
     use helios_fhir::FhirVersion;
     use helios_fhir::r5::{Parameters, Patient, Resource};
-    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
+    use serde_json::json;
 
     fn validator() -> Validator {
         Validator::default()
@@ -49,7 +51,6 @@ mod tests {
     }
     #[test]
     fn profile_validation_reports_missing_required_fields_and_invariant() {
-        
         let resource = load_resource(FhirVersion::R5, "profile/declared-meta.json");
 
         let profile = load_profile(FhirVersion::R5, "profile/atrius-profile.json");
@@ -58,38 +59,32 @@ mod tests {
 
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            None,
-            &evaluator,
-            &registry,
-        );
+        let issues =
+            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
 
         assert_eq!(issues.len(), 5);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.gender"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.birthDate"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
-        assert!(issues.iter().any(|i| i.expression.as_deref() == Some("active = true implies name.exists()")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.expression.as_deref() == Some("active = true implies name.exists()"))
+        );
     }
 
     #[test]
     fn profile_validation_reports_only_invariant_when_required_fields_are_present() {
-
         let resource = load_resource(FhirVersion::R5, "profile/only-invariants.json");
-
 
         let profile = load_profile(FhirVersion::R5, "profile/atrius-profile.json");
         let mut registry = ProfileRegistry::new();
         registry.insert(profile);
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            None,
-            &evaluator,
-            &registry,
-        );
+        let issues =
+            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
         // println!("issues: {:?}", issues);
         assert_eq!(issues.len(), 4);
         assert_eq!(issues[0].fhir_path, "Patient");
@@ -125,9 +120,7 @@ mod tests {
 
         let patient: Patient = serde_json::from_str(patient_json)
             .expect("Patient JSON should deserialize into R5 Patient");
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Patient(Box::new(patient.clone())),
-        );
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -178,9 +171,7 @@ mod tests {
 
         let patient: Patient = serde_json::from_str(patient_json)
             .expect("Patient JSON should deserialize into R5 Patient");
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Patient(Box::new(patient.clone())),
-        );
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -191,7 +182,11 @@ mod tests {
             None,
         );
 
-        assert!(!issues.iter().any(|i| i.fhir_path == "Patient.active" && i.code == "value"));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| i.fhir_path == "Patient.active" && i.code == "value")
+        );
     }
 
     #[test]
@@ -206,10 +201,10 @@ mod tests {
             constraints: Vec::new(),
             value_constraint: Some(
                 fhir_validation::profile::types::ExtractedValueConstraint::Pattern(json!([
-                {
-                    "system": "http://atrius.health/mrn"
-                }
-            ])),
+                    {
+                        "system": "http://atrius.health/mrn"
+                    }
+                ])),
             ),
             type_constraints: vec![],
             slicing: None,
@@ -230,9 +225,7 @@ mod tests {
 
         let patient: Patient = serde_json::from_str(patient_json)
             .expect("Patient JSON should deserialize into R5 Patient");
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Patient(Box::new(patient.clone())),
-        );
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -243,7 +236,11 @@ mod tests {
             None,
         );
 
-        assert!(!issues.iter().any(|i| i.fhir_path == "Patient.identifier" && i.code == "value"));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| i.fhir_path == "Patient.identifier" && i.code == "value")
+        );
     }
 
     #[test]
@@ -258,10 +255,10 @@ mod tests {
             constraints: Vec::new(),
             value_constraint: Some(
                 fhir_validation::profile::types::ExtractedValueConstraint::Pattern(json!([
-                {
-                    "system": "http://atrius.health/mrn"
-                }
-            ])),
+                    {
+                        "system": "http://atrius.health/mrn"
+                    }
+                ])),
             ),
             type_constraints: vec![],
             slicing: None,
@@ -282,9 +279,7 @@ mod tests {
 
         let patient: Patient = serde_json::from_str(patient_json)
             .expect("Patient JSON should deserialize into R5 Patient");
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Patient(Box::new(patient.clone())),
-        );
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -294,7 +289,7 @@ mod tests {
             &evaluator,
             None,
         );
-         // println!("{:?}", issues);
+        // println!("{:?}", issues);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
         assert!(issues.iter().any(|i| i.code == "value"));
         assert!(issues.iter().any(|i| {
@@ -332,8 +327,7 @@ mod tests {
         let patient: Patient = serde_json::from_str(patient_json)
             .expect("Patient JSON should deserialize into R5 Patient");
 
-        let evaluator =
-            R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -344,9 +338,11 @@ mod tests {
             None,
         );
 
-        assert!(!issues.iter().any(|i| {
-            i.fhir_path == "Patient.deceased[x]" && i.code == "structure"
-        }));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| { i.fhir_path == "Patient.deceased[x]" && i.code == "structure" })
+        );
     }
 
     #[test]
@@ -376,8 +372,7 @@ mod tests {
 
         let evaluator_patient: Patient = serde_json::from_str(r#"{ "resourceType": "Patient" }"#)
             .expect("Minimal Patient JSON should deserialize into R5 Patient");
-        let evaluator =
-            R5FhirPathEvaluator::new(Resource::Patient(Box::new(evaluator_patient)));
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(evaluator_patient)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -425,8 +420,7 @@ mod tests {
 
         let evaluator_patient: Patient = serde_json::from_str(r#"{ "resourceType": "Patient" }"#)
             .expect("Minimal Patient JSON should deserialize into R5 Patient");
-        let evaluator =
-            R5FhirPathEvaluator::new(Resource::Patient(Box::new(evaluator_patient)));
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(evaluator_patient)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -493,9 +487,8 @@ mod tests {
         )
         .expect("Minimal Observation JSON should deserialize into R5 Observation");
 
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Observation(Box::new(evaluator_observation)),
-        );
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Observation(Box::new(evaluator_observation)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -506,7 +499,11 @@ mod tests {
             None,
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Observation.component.value[x]"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Observation.component.value[x]")
+        );
         assert!(issues.iter().any(|i| i.code == "structure"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(
@@ -557,9 +554,8 @@ mod tests {
         let observation: helios_fhir::r5::Observation = serde_json::from_str(observation_json)
             .expect("Observation JSON should deserialize into R5 Observation");
 
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Observation(Box::new(observation.clone())),
-        );
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Observation(Box::new(observation.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -570,9 +566,11 @@ mod tests {
             None,
         );
 
-        assert!(!issues.iter().any(|i| {
-            i.fhir_path == "Observation.subject" && i.code == "structure"
-        }));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| { i.fhir_path == "Observation.subject" && i.code == "structure" })
+        );
     }
 
     #[test]
@@ -617,9 +615,8 @@ mod tests {
         let observation: helios_fhir::r5::Observation = serde_json::from_str(observation_json)
             .expect("Observation JSON should deserialize into R5 Observation");
 
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Observation(Box::new(observation.clone())),
-        );
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Observation(Box::new(observation.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -670,22 +667,22 @@ mod tests {
         };
 
         let care_plan = json!({
-        "resourceType": "CarePlan",
-        "status": "active",
-        "intent": "plan",
-        "activity": [
-            {
-                "reference": {
-                    "reference": "ServiceRequest/123"
+            "resourceType": "CarePlan",
+            "status": "active",
+            "intent": "plan",
+            "activity": [
+                {
+                    "reference": {
+                        "reference": "ServiceRequest/123"
+                    }
+                },
+                {
+                    "reference": {
+                        "reference": "Observation/456"
+                    }
                 }
-            },
-            {
-                "reference": {
-                    "reference": "Observation/456"
-                }
-            }
-        ]
-    });
+            ]
+        });
 
         let evaluator_care_plan: helios_fhir::r5::CarePlan = serde_json::from_str(
             r#"{
@@ -694,7 +691,7 @@ mod tests {
           "intent": "plan"
         }"#,
         )
-            .expect("Minimal CarePlan JSON should deserialize into R5 CarePlan");
+        .expect("Minimal CarePlan JSON should deserialize into R5 CarePlan");
 
         let evaluator = R5FhirPathEvaluator::new(Resource::CarePlan(Box::new(evaluator_care_plan)));
 
@@ -707,7 +704,11 @@ mod tests {
             None,
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "CarePlan.activity.reference"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "CarePlan.activity.reference")
+        );
         assert!(issues.iter().any(|i| i.code == "structure"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(
@@ -717,7 +718,8 @@ mod tests {
     }
 
     #[test]
-    fn target_profile_constraint_allows_matching_contained_local_reference_when_resource_is_inline() {
+    fn target_profile_constraint_allows_matching_contained_local_reference_when_resource_is_inline()
+    {
         let profile = ExtractedProfile {
             url: "http://example.org/StructureDefinition/observation-subject-patient".to_string(),
             version: None,
@@ -763,9 +765,8 @@ mod tests {
         let observation: helios_fhir::r5::Observation = serde_json::from_str(observation_json)
             .expect("Observation JSON should deserialize into R5 Observation");
 
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Observation(Box::new(observation.clone())),
-        );
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Observation(Box::new(observation.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -776,11 +777,16 @@ mod tests {
             None,
         );
 
-        assert!(!issues.iter().any(|i| i.fhir_path == "Observation.subject" && i.code == "structure"));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| i.fhir_path == "Observation.subject" && i.code == "structure")
+        );
     }
 
     #[test]
-    fn target_profile_constraint_rejects_non_matching_contained_local_reference_when_resource_is_inline() {
+    fn target_profile_constraint_rejects_non_matching_contained_local_reference_when_resource_is_inline()
+     {
         let profile = ExtractedProfile {
             url: "http://example.org/StructureDefinition/observation-subject-patient".to_string(),
             version: None,
@@ -826,9 +832,8 @@ mod tests {
         let observation: helios_fhir::r5::Observation = serde_json::from_str(observation_json)
             .expect("Observation JSON should deserialize into R5 Observation");
 
-        let evaluator = R5FhirPathEvaluator::new(
-            Resource::Observation(Box::new(observation.clone())),
-        );
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Observation(Box::new(observation.clone())));
 
         let issues = run_validate_profile(
             &validator(),
@@ -848,10 +853,12 @@ mod tests {
         }));
     }
     #[test]
-    fn type_profile_constraint_falls_back_to_matching_resource_type_when_no_declared_profile_is_present() {
+    fn type_profile_constraint_falls_back_to_matching_resource_type_when_no_declared_profile_is_present()
+     {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -914,7 +921,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -926,14 +934,17 @@ mod tests {
         );
 
         assert!(!issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource" && i.code == "structure"));
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource" && i.code == "business-rule"));
+        assert!(issues.iter().any(
+            |i| i.fhir_path == "Parameters.parameter[0].resource" && i.code == "business-rule"
+        ));
     }
 
     #[test]
     fn type_profile_constraint_recursively_validates_nested_resource_against_required_profile() {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1012,7 +1023,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -1022,15 +1034,25 @@ mod tests {
             &evaluator,
             Some(&registry),
         );
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource.status"));
-        assert!(issues.iter().any(|i| i.instance_path.as_deref() == Some("Parameters.parameter[0].resource.status")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource.status")
+        );
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.instance_path.as_deref()
+                    == Some("Parameters.parameter[0].resource.status"))
+        );
         assert!(issues.iter().any(|i| i.code == "required"));
     }
 
     #[test]
     fn type_profile_constraint_prefixes_root_level_nested_cycle_issue_to_parent_path() {
         let profile = ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1127,7 +1149,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -1138,19 +1161,29 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource.hasMember"));
-        assert!(issues.iter().any(|i| i.instance_path.as_deref() == Some("Parameters.parameter[0].resource.hasMember")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource.hasMember")
+        );
+        assert!(
+            issues.iter().any(|i| i.instance_path.as_deref()
+                == Some("Parameters.parameter[0].resource.hasMember"))
+        );
         assert!(issues.iter().any(|i| i.code == "business-rule"));
-        assert!(issues.iter().any(|i| {
-            i.diagnostics.contains("validation cycle was detected")
-        }));
+        assert!(
+            issues
+                .iter()
+                .any(|i| { i.diagnostics.contains("validation cycle was detected") })
+        );
     }
 
     #[test]
     fn type_profile_constraint_prefixes_deeper_nested_issue_to_full_parent_path() {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1230,7 +1263,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -1241,8 +1275,15 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource.code.text"));
-        assert!(issues.iter().any(|i| i.instance_path.as_deref() == Some("Parameters.parameter[0].resource.code.text")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource.code.text")
+        );
+        assert!(
+            issues.iter().any(|i| i.instance_path.as_deref()
+                == Some("Parameters.parameter[0].resource.code.text"))
+        );
         assert!(issues.iter().any(|i| i.code == "required"));
     }
 
@@ -1250,7 +1291,8 @@ mod tests {
     fn type_profile_fallback_disabled_produces_error_instead_of_warning() {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1313,7 +1355,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.allow_type_profile_resource_type_fallback = false;
 
@@ -1326,7 +1369,11 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource")
+        );
         assert!(issues.iter().any(|i| i.code == "structure"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(
@@ -1339,7 +1386,8 @@ mod tests {
     fn type_profile_fallback_warning_can_be_disabled() {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1402,7 +1450,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.warn_on_type_profile_fallback = false;
 
@@ -1418,16 +1467,19 @@ mod tests {
         assert!(!issues.iter().any(|i| {
             i.fhir_path == "Parameters.parameter[0].resource" && i.code == "business-rule"
         }));
-        assert!(!issues.iter().any(|i| {
-            i.diagnostics.contains("Falling back to resourceType match")
-        }));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| { i.diagnostics.contains("Falling back to resourceType match") })
+        );
     }
 
     #[test]
     fn type_profile_fallback_recursion_can_be_disabled() {
         let mut registry = ProfileRegistry::new();
         registry.insert(ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1501,7 +1553,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.recurse_on_type_profile_fallback = false;
 
@@ -1514,14 +1567,19 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(!issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource.status"));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource.status")
+        );
         assert!(!issues.iter().any(|i| i.code == "required"));
     }
 
     #[test]
     fn profile_cycle_and_depth_warnings_can_be_silently_skipped() {
         let profile = ExtractedProfile {
-            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation".to_string(),
+            url: "http://atrius.health/fhir/StructureDefinition/atrius-related-observation"
+                .to_string(),
             version: None,
             name: Some("AtriusRelatedObservation".to_string()),
             title: None,
@@ -1618,7 +1676,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.warn_on_profile_cycle = false;
         validator.config.warn_on_profile_recursion_depth_reached = false;
@@ -1632,8 +1691,11 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(!issues.iter().any(|i| i.code == "business-rule" && i.diagnostics.contains("validation cycle was detected")));
-        assert!(!issues.iter().any(|i| i.code == "business-rule" && i.diagnostics.contains("maximum recursion depth")));
+        assert!(!issues.iter().any(|i| i.code == "business-rule"
+            && i.diagnostics.contains("validation cycle was detected")));
+        assert!(!issues.iter().any(
+            |i| i.code == "business-rule" && i.diagnostics.contains("maximum recursion depth")
+        ));
     }
 
     #[test]
@@ -1698,7 +1760,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -1709,7 +1772,11 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource")
+        );
         assert!(issues.iter().any(|i| i.code == "not-found"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(
@@ -1780,7 +1847,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.error_on_unknown_profile = false;
         validator.config.warn_on_unknown_profile = true;
@@ -1794,16 +1862,22 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource")
+        );
         assert!(issues.iter().any(|i| i.code == "not-found"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(
                 "Element 'Parameters.parameter.resource' references unknown profile(s): http://atrius.health/fhir/StructureDefinition/unknown-observation-profile."
             )
         }));
-        assert!(!issues.iter().any(|i| {
-            i.diagnostics.contains("requires unknown profile(s)")
-        }));
+        assert!(
+            !issues
+                .iter()
+                .any(|i| { i.diagnostics.contains("requires unknown profile(s)") })
+        );
     }
 
     #[test]
@@ -1888,7 +1962,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.type_profile_match_mode = TypeProfileMatchMode::Any;
 
@@ -1986,7 +2061,8 @@ mod tests {
         )
         .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
         let mut validator = validator();
         validator.config.type_profile_match_mode = TypeProfileMatchMode::All;
 
@@ -1999,14 +2075,20 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource")
+        );
         assert!(issues.iter().any(|i| i.code == "structure"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains("Element 'Parameters.parameter.resource' does not declare the required profile match.")
         }));
-        assert!(issues.iter().any(|i| {
-            i.diagnostics.contains("Match mode: All")
-        }));
+        assert!(
+            issues
+                .iter()
+                .any(|i| { i.diagnostics.contains("Match mode: All") })
+        );
     }
     #[test]
     fn type_profile_mixed_known_and_unknown_profiles_still_errors_on_unknown_by_default() {
@@ -2052,21 +2134,21 @@ mod tests {
         };
 
         let container = json!({
-        "resourceType": "Parameters",
-        "parameter": [
-            {
-                "name": "payload",
-                "resource": {
-                    "resourceType": "Observation",
-                    "meta": {
-                        "profile": [
-                            "http://atrius.health/fhir/StructureDefinition/profile-known"
-                        ]
+            "resourceType": "Parameters",
+            "parameter": [
+                {
+                    "name": "payload",
+                    "resource": {
+                        "resourceType": "Observation",
+                        "meta": {
+                            "profile": [
+                                "http://atrius.health/fhir/StructureDefinition/profile-known"
+                            ]
+                        }
                     }
                 }
-            }
-        ]
-    });
+            ]
+        });
 
         let evaluator_parameters: Parameters = serde_json::from_str(
             r#"{
@@ -2078,9 +2160,10 @@ mod tests {
           ]
         }"#,
         )
-            .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
+        .expect("Minimal Parameters JSON should deserialize into R5 Parameters");
 
-        let evaluator = R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
+        let evaluator =
+            R5FhirPathEvaluator::new(Resource::Parameters(Box::new(evaluator_parameters)));
 
         let issues = run_validate_profile(
             &validator(),
@@ -2091,7 +2174,11 @@ mod tests {
             Some(&registry),
         );
 
-        assert!(issues.iter().any(|i| i.fhir_path == "Parameters.parameter[0].resource"));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.fhir_path == "Parameters.parameter[0].resource")
+        );
         assert!(issues.iter().any(|i| i.code == "not-found"));
         assert!(issues.iter().any(|i| {
             i.diagnostics.contains(

@@ -2971,6 +2971,7 @@ name = "helios-hfs"
 version = "0.1.47"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "clap",
  "helios-audit",
@@ -2981,6 +2982,7 @@ dependencies = [
  "openssl",
  "parking_lot",
  "reqwest",
+ "serde_json",
  "tokio",
  "tracing",
 ]

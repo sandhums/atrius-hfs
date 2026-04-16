@@ -1,8 +1,11 @@
-use helios_fhir::FhirVersion;
-use crate::{AsyncValidationContext, FhirPathEvaluator, ValidationContext, ValidationIssue, ValidationState, Validator};
 use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::validate::{validate_declared_profiles, validate_declared_profiles_async};
 use crate::service::{TerminologyService, TerminologyServiceSync};
+use crate::{
+    AsyncValidationContext, FhirPathEvaluator, ValidationContext, ValidationIssue, ValidationState,
+    Validator,
+};
+use helios_fhir::FhirVersion;
 
 /// Validate an R5 resource by applying generated bindings first, then invariants.
 #[cfg(feature = "R5")]
@@ -50,7 +53,6 @@ pub fn validate_r5_resource_with_profiles(
     issues
 }
 
-
 #[cfg(feature = "R5")]
 pub async fn validate_r5_resource_async_with_profiles(
     validator: &Validator,
@@ -60,13 +62,16 @@ pub async fn validate_r5_resource_async_with_profiles(
     profile_registry: &ProfileRegistry,
 ) -> Vec<ValidationIssue> {
     let mut issues = validate_r5_resource_async(validator, resource, terminology, evaluator).await;
-    issues.extend(validate_r5_declared_profiles_async(
-        validator,
-        resource,
-        terminology,
-        evaluator,
-        profile_registry,
-    ).await);
+    issues.extend(
+        validate_r5_declared_profiles_async(
+            validator,
+            resource,
+            terminology,
+            evaluator,
+            profile_registry,
+        )
+        .await,
+    );
     issues
 }
 #[cfg(feature = "R5")]

@@ -1,5 +1,5 @@
 use crate::profile::types::ExtractedElementRule;
-use crate::{Severity, ValidationIssue};
+use crate::{Severity, ValidationIssue, ValidationIssueDetailCode};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -14,6 +14,12 @@ pub fn validate_min_cardinality<T: Serialize>(
             return vec![ValidationIssue {
                 severity: Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for cardinality validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating profile cardinality: {}",
                     err
@@ -39,6 +45,12 @@ pub fn validate_max_cardinality<T: Serialize>(
             return vec![ValidationIssue {
                 severity: Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for cardinality validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating profile cardinality: {}",
                     err
@@ -81,6 +93,10 @@ fn validate_min_cardinality_from_json(
         issues.push(ValidationIssue {
             severity: Severity::Error,
             code: "required".to_string(),
+            summary: Some("Required element is missing or below minimum cardinality".to_string()),
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code: Some(ValidationIssueDetailCode::RequiredElementMissing),
             diagnostics: format!(
                 "Required element '{}' is missing or does not meet minimum cardinality {}.",
                 rule.path, min
@@ -126,6 +142,10 @@ fn validate_max_cardinality_from_json(
         issues.push(ValidationIssue {
             severity: Severity::Error,
             code: "structure".to_string(),
+            summary: Some("Element exceeds maximum cardinality for this profile".to_string()),
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code: Some(ValidationIssueDetailCode::MaximumCardinalityExceeded),
             diagnostics: format!(
                 "Element '{}' exceeds maximum cardinality {}.",
                 rule.path, max
@@ -186,9 +206,10 @@ fn terminal_count(value: &Value) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{validate_max_cardinality, validate_min_cardinality};
+    use crate::ValidationIssueDetailCode;
     use crate::profile::types::ExtractedElementRule;
-    use serde_json::json;
     use fhir_validation_types::BindingDef;
+    use serde_json::json;
 
     fn rule(path: &str, min: Option<u32>, max: Option<&str>) -> ExtractedElementRule {
         ExtractedElementRule {
@@ -220,6 +241,14 @@ mod tests {
         assert!(issues[0]
             .diagnostics
             .contains("Required element 'Patient.identifier' is missing or does not meet minimum cardinality 1."));
+        assert_eq!(
+            issues[0].summary.as_deref(),
+            Some("Required element is missing or below minimum cardinality")
+        );
+        assert_eq!(
+            issues[0].detail_code,
+            Some(ValidationIssueDetailCode::RequiredElementMissing)
+        );
     }
 
     #[test]
@@ -296,9 +325,19 @@ mod tests {
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].fhir_path, "Patient.identifier");
         assert_eq!(issues[0].code, "structure");
-        assert!(issues[0]
-            .diagnostics
-            .contains("Element 'Patient.identifier' exceeds maximum cardinality 1."));
+        assert!(
+            issues[0]
+                .diagnostics
+                .contains("Element 'Patient.identifier' exceeds maximum cardinality 1.")
+        );
+        assert_eq!(
+            issues[0].summary.as_deref(),
+            Some("Element exceeds maximum cardinality for this profile")
+        );
+        assert_eq!(
+            issues[0].detail_code,
+            Some(ValidationIssueDetailCode::MaximumCardinalityExceeded)
+        );
     }
 
     #[test]

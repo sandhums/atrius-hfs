@@ -8,17 +8,16 @@ mod common {
 }
 
 use common::fixtures::{
-    assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient, load_resource,
-    r5_evaluator_for, MockTerminologyService
+    MockTerminologyService, assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient,
+    load_resource, r5_evaluator_for,
 };
+use fhir_validation::Validator;
 use fhir_validation::issue_to_op_outcome::validation_issues_to_operation_outcome;
-use fhir_validation::terminology::service::{RemoteTerminologyService};
+use fhir_validation::terminology::service::RemoteTerminologyService;
 use fhir_validation::terminology::types::TerminologyMembershipOutcome;
-use fhir_validation::{Validator};
-use helios_fhir::{FhirVersion};
+use helios_fhir::FhirVersion;
 use reqwest::Client;
 use std::time::Duration;
-
 
 #[ignore]
 #[tokio::test]

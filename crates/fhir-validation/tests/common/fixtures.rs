@@ -1,16 +1,16 @@
-use std::fs;
-use std::path::PathBuf;
 #[cfg(feature = "R4")]
-use fhir_validation::{R4FhirPathEvaluator};
-use fhir_validation::terminology::service::{ TerminologyServiceSync};
+use fhir_validation::R4FhirPathEvaluator;
 #[cfg(feature = "R5")]
-use fhir_validation::{R5FhirPathEvaluator};
-use fhir_validation::{ValidationError, Severity, ValidationIssue};
+use fhir_validation::R5FhirPathEvaluator;
 #[cfg(feature = "R5")]
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::types::ExtractedProfile;
+use fhir_validation::terminology::service::TerminologyServiceSync;
 use fhir_validation::types::TerminologyMembershipOutcome;
+use fhir_validation::{Severity, ValidationError, ValidationIssue};
 use helios_fhir::{FhirResource, FhirVersion};
+use std::fs;
+use std::path::PathBuf;
 
 pub fn fixture_path(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -130,8 +130,8 @@ impl TerminologyServiceSync for MockTerminologyService {
                 "unexpected error in mock".to_string(),
             )),
             Err(ValidationError::InvalidStructureDefinition(_)) => Err(ValidationError::Other(
-                "invalid structure definition".to_string()))
-
+                "invalid structure definition".to_string(),
+            )),
         }
     }
 }

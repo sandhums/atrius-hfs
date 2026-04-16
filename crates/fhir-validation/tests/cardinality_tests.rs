@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
 
-
-    use serde_json::json;
     use fhir_validation::profile::cardinality::validate_min_cardinality;
     use fhir_validation::profile::types::ExtractedElementRule;
     use fhir_validation_types::{BindingDef, Severity};
+    use serde_json::json;
 
     fn rule(path: &str, min: Option<u32>, max: Option<String>) -> ExtractedElementRule {
         ExtractedElementRule {

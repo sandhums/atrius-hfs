@@ -1,9 +1,9 @@
 #![cfg(feature = "R5")]
 use fhir_validation::{FhirPathEvaluator, InvariantExprRef, R5FhirPathEvaluator};
 use helios_fhir::r5::Resource as R5Resource;
+use helios_fhirpath::handlers::json_value_to_evaluation_result;
 use helios_fhirpath_support::EvaluationResult;
 use serde_json::json;
-use helios_fhirpath::handlers::json_value_to_evaluation_result;
 
 fn focus(value: serde_json::Value) -> EvaluationResult {
     json_value_to_evaluation_result(&value).expect("focus JSON should convert to EvaluationResult")
@@ -19,7 +19,7 @@ fn root_patient_resource() -> R5Resource {
             { "family": "Smith" }
         ]
     }))
-        .expect("valid R5 Patient resource")
+    .expect("valid R5 Patient resource")
 }
 #[test]
 fn bulk_single_matches_eval_invariant_on() {
@@ -33,11 +33,7 @@ fn bulk_single_matches_eval_invariant_on() {
 
     let evaluator = R5FhirPathEvaluator::new_with_focus(resource, focus.clone());
 
-    let single = evaluator.eval_invariant_on(
-        focus.clone(),
-        "Patient",
-        "active.exists()",
-    );
+    let single = evaluator.eval_invariant_on(focus.clone(), "Patient", "active.exists()");
 
     let bulk = evaluator.eval_invariants_on(
         focus,

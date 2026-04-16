@@ -22,14 +22,22 @@
 //! The async path is preferred for production validation where remote
 //! terminology servers may be required.
 
-use crate::binding::common::{classify_local_outcome, execute_remote_async, execute_remote_sync, get_json_values_with_instance_paths, prettify_remote_terminology_error, relative_binding_path, root_instance_path};
-use crate::binding::engine::{evaluate_local_codeable_concept_binding, evaluate_local_coding_binding, evaluate_local_primitive_code_binding, evaluate_local_primitive_value_binding, evaluate_local_quantity_binding, BindingVersionAdapter};
+use crate::binding::common::{
+    classify_local_outcome, execute_remote_async, execute_remote_sync,
+    get_json_values_with_instance_paths, prettify_remote_terminology_error, relative_binding_path,
+    root_instance_path,
+};
+use crate::binding::engine::{
+    BindingVersionAdapter, evaluate_local_codeable_concept_binding, evaluate_local_coding_binding,
+    evaluate_local_primitive_code_binding, evaluate_local_primitive_value_binding,
+    evaluate_local_quantity_binding,
+};
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
+use helios_fhir::TerminologyValidationError;
 use helios_fhir::r4::terminology::index as terminology_index;
 use helios_fhir::r4::{CodeableConcept, Coding, Quantity};
-use helios_fhir::TerminologyValidationError;
 use serde::Serialize;
 
 enum NeverCodeableReference {}
@@ -70,7 +78,9 @@ impl BindingVersionAdapter for R4BindingAdapter {
         }
     }
 
-    fn codeable_concept_codings(cc: &Self::CodeableConcept) -> Box<dyn Iterator<Item=&Self::Coding> + '_> {
+    fn codeable_concept_codings(
+        cc: &Self::CodeableConcept,
+    ) -> Box<dyn Iterator<Item = &Self::Coding> + '_> {
         match cc.coding.as_ref() {
             Some(codings) => Box::new(codings.iter()),
             None => Box::new(std::iter::empty()),
@@ -85,7 +95,9 @@ impl BindingVersionAdapter for R4BindingAdapter {
         quantity_code(quantity)
     }
 
-    fn codeable_reference_concept(value: &Self::CodeableReference) -> Option<&Self::CodeableConcept> {
+    fn codeable_reference_concept(
+        value: &Self::CodeableReference,
+    ) -> Option<&Self::CodeableConcept> {
         match *value {}
     }
 
@@ -195,13 +207,7 @@ where
         |_, _, _| local_check(&code.to_string()),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -235,13 +241,7 @@ where
         |_, _, _| local_check(&value.to_string()),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -278,13 +278,7 @@ where
         |_, _, _| local_check(&code.to_string()),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -293,7 +287,6 @@ where
             execute_remote_async(validator, fhir_path, strength, terminology, &req).await
         }
     }
-
 }
 pub async fn validate_primitive_value_binding_async<F>(
     validator: &Validator,
@@ -319,13 +312,7 @@ where
         |_, _, _| local_check(&value.to_string()),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -365,6 +352,10 @@ where
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
+            summary: Some("Quantity code is present without a code system".to_string()),
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code: Some(crate::ValidationIssueDetailCode::CodeWithoutSystem),
             diagnostics:
             "A quantity code with no system has no defined meaning, and it cannot be validated. A system should be provided"
                 .to_string(),
@@ -377,13 +368,7 @@ where
         |_, _, _| local_check(quantity),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -420,6 +405,10 @@ where
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
+            summary: Some("Quantity code is present without a code system".to_string()),
+            expression_kind: None,
+            source_invariant_key: None,
+            detail_code: Some(crate::ValidationIssueDetailCode::CodeWithoutSystem),
             diagnostics:
             "A quantity code with no system has no defined meaning, and it cannot be validated. A system should be provided"
                 .to_string(),
@@ -432,13 +421,7 @@ where
         |_, _, _| local_check(quantity),
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -499,18 +482,12 @@ where
         },
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
             let Some(terminology) = terminology else {
-                return vec![crate::binding::common::terminology_issue(
+                return vec![crate::binding::common::terminology_validation_issue(
                     fhir_path,
                     valueset_url,
                     "Remote terminology validation required but no TerminologyService was provided"
@@ -554,7 +531,7 @@ where
                         }));
                     }
                     Err(e) => {
-                        return vec![crate::binding::common::terminology_issue(
+                        return vec![crate::binding::common::terminology_validation_issue(
                             fhir_path,
                             valueset_url,
                             prettify_remote_terminology_error(valueset_url, &e),
@@ -571,6 +548,8 @@ where
                 return vec![crate::binding::common::value_issue(
                     fhir_path,
                     valueset_url,
+                    "CodeableConcept has no usable coding with a code value for terminology validation",
+                    crate::ValidationIssueDetailCode::InvalidBindableValue,
                     "CodeableConcept has no usable coding with a code value for terminology validation"
                         .to_string(),
                 )];
@@ -637,18 +616,12 @@ where
         },
     );
 
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
             let Some(terminology) = terminology else {
-                return vec![crate::binding::common::terminology_issue(
+                return vec![crate::binding::common::terminology_validation_issue(
                     fhir_path,
                     valueset_url,
                     "Remote terminology validation required but no TerminologyService was provided"
@@ -671,7 +644,10 @@ where
 
                 any_usable_coding = true;
 
-                match terminology.member_of(valueset_url, system, code, display).await {
+                match terminology
+                    .member_of(valueset_url, system, code, display)
+                    .await
+                {
                     Ok(outcome) if outcome.is_member => {
                         any_match = true;
                         break;
@@ -692,7 +668,7 @@ where
                         }));
                     }
                     Err(e) => {
-                        return vec![crate::binding::common::terminology_issue(
+                        return vec![crate::binding::common::terminology_validation_issue(
                             fhir_path,
                             valueset_url,
                             prettify_remote_terminology_error(valueset_url, &e),
@@ -709,6 +685,8 @@ where
                 return vec![crate::binding::common::value_issue(
                     fhir_path,
                     valueset_url,
+                    "CodeableConcept has no usable coding with a code value for terminology validation",
+                    crate::ValidationIssueDetailCode::InvalidBindableValue,
                     "CodeableConcept has no usable coding with a code value for terminology validation"
                         .to_string(),
                 )];
@@ -759,7 +737,9 @@ pub fn validate_coding_binding<F>(
 where
     F: Fn(&Coding) -> Result<(), TerminologyValidationError>,
 {
-    let Some(coding) = coding else { return vec![]; };
+    let Some(coding) = coding else {
+        return vec![];
+    };
 
     let local_outcome = evaluate_local_coding_binding::<R4BindingAdapter, _>(
         valueset_url,
@@ -772,13 +752,7 @@ where
             local_check(&local_coding)
         },
     );
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -800,7 +774,9 @@ pub async fn validate_coding_binding_async<F>(
 where
     F: Fn(&Coding) -> Result<(), TerminologyValidationError>,
 {
-    let Some(coding) = coding else { return vec![]; };
+    let Some(coding) = coding else {
+        return vec![];
+    };
 
     let local_outcome = evaluate_local_coding_binding::<R4BindingAdapter, _>(
         valueset_url,
@@ -813,13 +789,7 @@ where
             local_check(&local_coding)
         },
     );
-    match classify_local_outcome(
-        validator,
-        fhir_path,
-        valueset_url,
-        strength,
-        local_outcome,
-    ) {
+    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
@@ -873,11 +843,20 @@ where
     let focus_json = match serde_json::to_value(focus) {
         Ok(value) => value,
         Err(err) => {
-            issues.push(ValidationIssue::error(
-                "structure",
-                "binding",
-                format!("Failed to serialize focus for binding validation: {}", err),
-            ));
+            issues.push(ValidationIssue {
+                severity: fhir_validation_types::Severity::Error,
+                code: "structure".to_string(),
+                fhir_path: "binding".to_string(),
+                instance_path: None,
+                expression: None,
+                expression_kind: None,
+                source_invariant_key: None,
+                summary: Some(
+                    "Resource serialization failed during binding validation".to_string(),
+                ),
+                detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
+                diagnostics: format!("Failed to serialize focus for binding validation: {}", err),
+            });
             return issues;
         }
     };
@@ -909,7 +888,8 @@ where
                 for (field_value, instance_path) in &field_values {
                     let code_value = field_value.as_str();
 
-                    let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
+                    let implicit_system =
+                        terminology_index::implicit_system(binding.value_set.as_str());
                     let mut child_issues = validate_primitive_code_binding(
                         validator,
                         &binding.path,
@@ -940,7 +920,9 @@ where
                         binding.value_set.as_str(),
                         binding.strength,
                         coding.as_ref(),
-                        |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
+                        |coding| {
+                            terminology_index::validate_coding(binding.value_set.as_str(), coding)
+                        },
                         terminology,
                     );
                     let stamped_instance_path =
@@ -964,7 +946,12 @@ where
                         binding.value_set.as_str(),
                         binding.strength,
                         codeable_concept.as_ref(),
-                        |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                        |cc| {
+                            terminology_index::validate_codeable_concept(
+                                binding.value_set.as_str(),
+                                cc,
+                            )
+                        },
                         terminology,
                     );
                     let stamped_instance_path =
@@ -988,7 +975,10 @@ where
                         binding.strength,
                         quantity.as_ref(),
                         |quantity| {
-                            terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+                            terminology_index::validate_quantity(
+                                binding.value_set.as_str(),
+                                quantity,
+                            )
                         },
                         terminology,
                     );
@@ -1028,11 +1018,20 @@ where
     let focus_json = match serde_json::to_value(focus) {
         Ok(v) => v,
         Err(e) => {
-            issues.push(ValidationIssue::error(
-                "structure",
-                "",
-                format!("Failed to serialize focus for binding validation: {}", e),
-            ));
+            issues.push(ValidationIssue {
+                severity: fhir_validation_types::Severity::Error,
+                code: "structure".to_string(),
+                fhir_path: "binding".to_string(),
+                instance_path: None,
+                expression: None,
+                expression_kind: None,
+                source_invariant_key: None,
+                summary: Some(
+                    "Resource serialization failed during binding validation".to_string(),
+                ),
+                detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
+                diagnostics: format!("Failed to serialize focus for binding validation: {}", e),
+            });
             return issues;
         }
     };
@@ -1056,7 +1055,8 @@ where
                 for (field_value, instance_path) in &field_values {
                     let code_value = field_value.as_str();
 
-                    let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
+                    let implicit_system =
+                        terminology_index::implicit_system(binding.value_set.as_str());
                     let mut child_issues = validate_primitive_code_binding_async(
                         validator,
                         &binding.path,
@@ -1067,7 +1067,7 @@ where
                         |code| terminology_index::validate_code(binding.value_set.as_str(), code),
                         terminology,
                     )
-                        .await;
+                    .await;
 
                     let stamped_instance_path =
                         local_binding_instance_path(&binding.path, instance_path);
@@ -1089,10 +1089,12 @@ where
                         binding.value_set.as_str(),
                         binding.strength,
                         coding.as_ref(),
-                        |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
+                        |coding| {
+                            terminology_index::validate_coding(binding.value_set.as_str(), coding)
+                        },
                         terminology,
                     )
-                        .await;
+                    .await;
 
                     let stamped_instance_path =
                         local_binding_instance_path(&binding.path, instance_path);
@@ -1115,10 +1117,15 @@ where
                         binding.value_set.as_str(),
                         binding.strength,
                         codeable_concept.as_ref(),
-                        |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                        |cc| {
+                            terminology_index::validate_codeable_concept(
+                                binding.value_set.as_str(),
+                                cc,
+                            )
+                        },
                         terminology,
                     )
-                        .await;
+                    .await;
 
                     let stamped_instance_path =
                         local_binding_instance_path(&binding.path, instance_path);
@@ -1141,11 +1148,14 @@ where
                         binding.strength,
                         quantity.as_ref(),
                         |quantity| {
-                            terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+                            terminology_index::validate_quantity(
+                                binding.value_set.as_str(),
+                                quantity,
+                            )
                         },
                         terminology,
                     )
-                        .await;
+                    .await;
 
                     let stamped_instance_path =
                         local_binding_instance_path(&binding.path, instance_path);
@@ -1156,7 +1166,6 @@ where
                     issues.extend(child_issues);
                 }
             }
-
 
             _ => {}
         }

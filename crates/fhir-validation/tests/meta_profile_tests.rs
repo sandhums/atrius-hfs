@@ -4,10 +4,10 @@ mod common {
 #[cfg(all(test, feature = "R5"))]
 mod tests {
 
-    use fhir_validation::{Validator};
+    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
+    use fhir_validation::Validator;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use helios_fhir::FhirVersion;
-    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
 
     fn validator() -> Validator {
         Validator::default()
@@ -20,12 +20,8 @@ mod tests {
         let evaluator = r5_evaluator_for(&resource);
         let mut registry = ProfileRegistry::new();
         registry.insert(profile);
-        let issues = validator().validate_resource_with_profiles(
-                &resource,
-                None,
-                &evaluator,
-                &registry,
-        );
+        let issues =
+            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
         // println!("issues: {:#?}", issues);
         assert!(issues.len() >= 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
@@ -33,9 +29,11 @@ mod tests {
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.birthDate"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
         assert!(!issues.iter().any(|i| i.code == "not-found"));
-        assert!(issues
-            .iter()
-            .any(|i| i.expression.as_deref() == Some("active = true implies name.exists()")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.expression.as_deref() == Some("active = true implies name.exists()"))
+        );
     }
 
     #[test]
@@ -66,22 +64,19 @@ mod tests {
         let evaluator = r5_evaluator_for(&resource);
         let mut registry = ProfileRegistry::new();
         registry.insert(profile);
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            None,
-            &evaluator,
-            &registry,
-        );
+        let issues =
+            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
         // println!("issues: {:?}", issues);
         assert_eq!(issues.len(), 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
-        assert!(issues.iter().any(|i| {
-            i.expression.as_deref() == Some("active = true implies name.exists()")
-        }));
+        assert!(
+            issues.iter().any(|i| {
+                i.expression.as_deref() == Some("active = true implies name.exists()")
+            })
+        );
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
         assert!(issues.iter().any(|i| {
-            i.expression.as_deref()
-                == Some("identifier.exists() implies identifier.value.exists()")
+            i.expression.as_deref() == Some("identifier.exists() implies identifier.value.exists()")
         }));
     }
 
@@ -97,13 +92,9 @@ mod tests {
 
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            None,
-            &evaluator,
-            &registry,
-        );
-         // println!("{:?}", issues);
+        let issues =
+            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        // println!("{:?}", issues);
         assert!(issues.len() >= 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.gender"));
@@ -114,21 +105,20 @@ mod tests {
 
     #[test]
     fn missing_declared_meta_profile_produces_not_found_issue() {
-    //     let patient_json = r#"
-    // {
-    //   "resourceType": "Patient",
-    //   "meta": {
-    //     "profile": [
-    //       "http://atrius.health/fhir/StructureDefinition/missing-profile"
-    //     ]
-    //   }
-    // }
-    // "#;
-    //
-    //     let patient: Patient = serde_json::from_str(patient_json)
-    //         .expect("Patient JSON should deserialize into R5 Patient");
+        //     let patient_json = r#"
+        // {
+        //   "resourceType": "Patient",
+        //   "meta": {
+        //     "profile": [
+        //       "http://atrius.health/fhir/StructureDefinition/missing-profile"
+        //     ]
+        //   }
+        // }
+        // "#;
+        //
+        //     let patient: Patient = serde_json::from_str(patient_json)
+        //         .expect("Patient JSON should deserialize into R5 Patient");
         let resource = load_resource(FhirVersion::R5, "profile/missing-profile.json");
-
 
         let profile = load_profile(FhirVersion::R5, "profile/atrius-profile.json");
         let mut registry = ProfileRegistry::new();
@@ -136,15 +126,10 @@ mod tests {
 
         let evaluator = r5_evaluator_for(&resource);
 
-
         let validator = Validator::default();
 
-        let issues = validator.validate_resource_with_profiles(
-            &resource,
-            None,
-            &evaluator,
-            &registry,
-        );
+        let issues =
+            validator.validate_resource_with_profiles(&resource, None, &evaluator, &registry);
 
         assert!(issues.len() >= 1);
         assert!(issues.iter().any(|i| i.code == "not-found"));

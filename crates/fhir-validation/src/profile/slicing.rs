@@ -1,5 +1,3 @@
-
-
 //! Slicing validation for extracted profile rules.
 //!
 //! Current scope:
@@ -45,14 +43,13 @@ use crate::profile::types::{
     ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile, ExtractedSlicingRules,
     ExtractedTypeConstraint, ExtractedValueConstraint,
 };
+use crate::profile::validate::validate_profile_with_depth;
+use crate::validation_context::{ValidationContext, ValidationState};
+use crate::validation_issue_detail::ValidationIssueDetailCode;
 use crate::{Severity, ValidationIssue};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use crate::profile::validate::{
-    validate_profile_with_depth,
-};
-use crate::validation_context::{ValidationContext, ValidationState};
 
 /// Validate slicing rules for a serialized resource instance against an extracted
 /// profile.
@@ -73,13 +70,7 @@ pub fn validate_slicing<T: Serialize>(
     profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let mut state = ValidationState::default();
-    validate_slicing_with_context(
-        None,
-        &mut state,
-        resource,
-        resource_type,
-        profile,
-    )
+    validate_slicing_with_context(None, &mut state, resource, resource_type, profile)
 }
 
 pub fn validate_slicing_with_context<T: Serialize>(
@@ -95,6 +86,12 @@ pub fn validate_slicing_with_context<T: Serialize>(
             return vec![ValidationIssue {
                 severity: Severity::Error,
                 code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for slicing validation".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!(
                     "Failed to serialize resource while validating slicing: {}",
                     err
@@ -108,7 +105,11 @@ pub fn validate_slicing_with_context<T: Serialize>(
 
     let mut issues = Vec::new();
 
-    for base_rule in profile.element_rules.iter().filter(|rule| rule.slicing.is_some()) {
+    for base_rule in profile
+        .element_rules
+        .iter()
+        .filter(|rule| rule.slicing.is_some())
+    {
         let slicing = match &base_rule.slicing {
             Some(s) => s,
             None => continue,
@@ -118,6 +119,10 @@ pub fn validate_slicing_with_context<T: Serialize>(
             issues.push(ValidationIssue {
                 severity: Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some("Slicing rule has no discriminators".to_string()),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::SlicingNoDiscriminators),
                 diagnostics: format!(
                     "Slicing on '{}' has no discriminators; slicing validation was skipped.",
                     base_rule.path
@@ -149,6 +154,12 @@ pub fn validate_slicing_with_context<T: Serialize>(
             issues.push(ValidationIssue {
                 severity: Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some(
+                    "Slicing uses discriminator types not supported by this validator".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::SlicingUnsupportedDiscriminator),
                 diagnostics: format!(
                     "Slicing on '{}' uses unsupported discriminator type(s) in v1; only value/pattern/type/exists/position/profile discriminators are currently supported, so slicing validation was skipped.",
                     base_rule.path
@@ -160,17 +171,19 @@ pub fn validate_slicing_with_context<T: Serialize>(
             continue;
         }
 
-        if slicing
-            .discriminators
-            .iter()
-            .any(|d| {
-                d.discriminator_type == ExtractedDiscriminatorType::Profile
-                    && d.path.contains("resolve()")
-            })
-        {
+        if slicing.discriminators.iter().any(|d| {
+            d.discriminator_type == ExtractedDiscriminatorType::Profile
+                && d.path.contains("resolve()")
+        }) {
             issues.push(ValidationIssue {
                 severity: Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some(
+                    "Profile discriminator with resolve() is not implemented".to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::InteractionNotSupported),
                 diagnostics: format!(
                     "Slicing on '{}' uses a profile discriminator path containing '.resolve()', but profile discriminator resolution is not yet implemented.",
                     base_rule.path
@@ -186,6 +199,10 @@ pub fn validate_slicing_with_context<T: Serialize>(
             issues.push(ValidationIssue {
                 severity: Severity::Warning,
                 code: "business-rule".to_string(),
+                summary: Some("openAtEnd slicing requires ordered=true".to_string()),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::BusinessRuleViolation),
                 diagnostics: format!(
                     "Slicing on '{}' uses openAtEnd but is not ordered. Per FHIR semantics, openAtEnd requires ordered slicing.",
                     base_rule.path
@@ -216,7 +233,8 @@ pub fn validate_slicing_with_context<T: Serialize>(
             continue;
         };
 
-        let actual_values = get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
+        let actual_values =
+            get_values_with_paths_at_relative_path(&root, resource_type, relative_path);
         if actual_values.is_empty() {
             continue;
         }
@@ -247,6 +265,10 @@ pub fn validate_slicing_with_context<T: Serialize>(
                 issues.push(ValidationIssue {
                     severity: Severity::Error,
                     code: "structure".to_string(),
+                    summary: Some("Repeated element matches more than one slice".to_string()),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                     diagnostics: format!(
                         "Element '{}' matches multiple declared slices on '{}': {}.",
                         actual_path,
@@ -271,6 +293,13 @@ pub fn validate_slicing_with_context<T: Serialize>(
                             issues.push(ValidationIssue {
                                 severity: Severity::Error,
                                 code: "structure".to_string(),
+                                summary: Some(
+                                    "Slice instances are not in declared order (ordered slicing)"
+                                        .to_string(),
+                                ),
+                                expression_kind: None,
+                                source_invariant_key: None,
+                                detail_code: Some(ValidationIssueDetailCode::SliceOrderViolation),
                                 diagnostics: format!(
                                     "Element '{}' matches declared slice '{}' on '{}', but ordered slicing requires slices to appear in declaration order.",
                                     actual_path, slice_name, base_rule.path
@@ -288,6 +317,12 @@ pub fn validate_slicing_with_context<T: Serialize>(
                     issues.push(ValidationIssue {
                         severity: Severity::Error,
                         code: "structure".to_string(),
+                        summary: Some(
+                            "Named slice matched after tail content (openAtEnd violation)".to_string(),
+                        ),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                        detail_code: Some(ValidationIssueDetailCode::SliceOpenAtEndViolation),
                         diagnostics: format!(
                             "Element '{}' matches declared slice '{}' on '{}', but openAtEnd requires all unmatched content to appear only after the declared slices.",
                             actual_path, slice_name, base_rule.path
@@ -312,6 +347,10 @@ pub fn validate_slicing_with_context<T: Serialize>(
                     issues.push(ValidationIssue {
                         severity: Severity::Error,
                         code: "structure".to_string(),
+                        summary: Some("Element does not match any slice (closed slicing)".to_string()),
+                        expression_kind: None,
+                        source_invariant_key: None,
+                        detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                         diagnostics: format!(
                             "Element '{}' does not match any declared slice on '{}', and slicing rules are closed.",
                             actual_path, base_rule.path
@@ -336,6 +375,12 @@ pub fn validate_slicing_with_context<T: Serialize>(
                         issues.push(ValidationIssue {
                             severity: Severity::Error,
                             code: "required".to_string(),
+                            summary: Some("Slice does not meet minimum cardinality".to_string()),
+                            expression_kind: None,
+                            source_invariant_key: None,
+                            detail_code: Some(
+                                ValidationIssueDetailCode::SliceMinCardinalityMissing,
+                            ),
                             diagnostics: format!(
                                 "Slice '{}:{}' requires at least {} occurrence(s), but found {}.",
                                 base_rule.path, slice_name, min, count
@@ -353,6 +398,12 @@ pub fn validate_slicing_with_context<T: Serialize>(
                             issues.push(ValidationIssue {
                                 severity: Severity::Error,
                                 code: "structure".to_string(),
+                                summary: Some("Slice exceeds maximum cardinality".to_string()),
+                                expression_kind: None,
+                                source_invariant_key: None,
+                                detail_code: Some(
+                                    ValidationIssueDetailCode::SliceMaxCardinalityExceeded,
+                                ),
                                 diagnostics: format!(
                                     "Slice '{}:{}' allows at most {} occurrence(s), but found {}.",
                                     base_rule.path, slice_name, max_value, count
@@ -459,8 +510,7 @@ fn matches_profile_discriminator(
     ctx: Option<&ValidationContext<'_>>,
     state: &mut ValidationState,
 ) -> bool {
-    let expected_profile_urls =
-        slice_discriminator_profile_urls(profile, slice, discriminator);
+    let expected_profile_urls = slice_discriminator_profile_urls(profile, slice, discriminator);
     if expected_profile_urls.is_empty() {
         return false;
     }
@@ -531,7 +581,10 @@ fn slice_discriminator_profile_urls(
         if let Some(rule) = profile.element_rules.iter().find(|rule| {
             rule.path == discriminator_rule_path
                 && rule.slice_name.as_deref() == Some(slice_name)
-                && rule.type_constraints.iter().any(|constraint| !constraint.profiles.is_empty())
+                && rule
+                    .type_constraints
+                    .iter()
+                    .any(|constraint| !constraint.profiles.is_empty())
         }) {
             return type_constraint_profile_urls(&rule.type_constraints);
         }
@@ -539,7 +592,10 @@ fn slice_discriminator_profile_urls(
 
     if let Some(rule) = profile.element_rules.iter().find(|rule| {
         rule.id == discriminator_rule_id
-            && rule.type_constraints.iter().any(|constraint| !constraint.profiles.is_empty())
+            && rule
+                .type_constraints
+                .iter()
+                .any(|constraint| !constraint.profiles.is_empty())
     }) {
         return type_constraint_profile_urls(&rule.type_constraints);
     }
@@ -570,13 +626,8 @@ fn matches_profile_by_recursive_validation(
         return false;
     };
 
-    let issues = validate_nested_profile_candidate(
-        candidate,
-        resource_type,
-        expected_profile,
-        ctx,
-        state,
-    );
+    let issues =
+        validate_nested_profile_candidate(candidate, resource_type, expected_profile, ctx, state);
 
     !issues.iter().any(|issue| issue.severity == Severity::Error)
 }
@@ -686,7 +737,6 @@ fn matches_position_discriminator(
     item_index == expected_index
 }
 
-
 /// Evaluate an `exists` discriminator by comparing actual presence of the
 /// discriminator path with the expected presence inferred from the slice rules.
 fn matches_exists_discriminator(
@@ -737,7 +787,10 @@ fn slice_discriminator_exists_expectation(
         }
     }
 
-    if let Some(rule) = profile.element_rules.iter().find(|rule| rule.id == discriminator_rule_id)
+    if let Some(rule) = profile
+        .element_rules
+        .iter()
+        .find(|rule| rule.id == discriminator_rule_id)
     {
         if let Some(min) = rule.min {
             return Some(min > 0);
@@ -801,9 +854,11 @@ fn slice_discriminator_type_codes(
         }
     }
 
-    if let Some(rule) = profile.element_rules.iter().find(|rule| {
-        rule.id == discriminator_rule_id && !rule.type_constraints.is_empty()
-    }) {
+    if let Some(rule) = profile
+        .element_rules
+        .iter()
+        .find(|rule| rule.id == discriminator_rule_id && !rule.type_constraints.is_empty())
+    {
         return rule
             .type_constraints
             .iter()
@@ -818,7 +873,6 @@ fn slice_discriminator_type_codes(
         .collect()
 }
 
-
 /// Resolve the expected value constraint for a slice `value` discriminator.
 ///
 /// Value constraints may be declared either:
@@ -830,7 +884,6 @@ fn slice_discriminator_value_constraint<'a>(
     slice: &'a ExtractedElementRule,
     discriminator: &crate::profile::types::ExtractedSliceDiscriminator,
 ) -> Option<&'a ExtractedValueConstraint> {
-
     let discriminator_rule_path = format!("{}.{}", slice.path, discriminator.path);
     let discriminator_rule_id = format!("{}.{}", slice.id, discriminator.path);
 
@@ -844,9 +897,11 @@ fn slice_discriminator_value_constraint<'a>(
         }
     }
 
-    if let Some(rule) = profile.element_rules.iter().find(|rule| {
-        rule.id == discriminator_rule_id && rule.value_constraint.is_some()
-    }) {
+    if let Some(rule) = profile
+        .element_rules
+        .iter()
+        .find(|rule| rule.id == discriminator_rule_id && rule.value_constraint.is_some())
+    {
         return rule.value_constraint.as_ref();
     }
 
@@ -862,18 +917,19 @@ fn matches_value_constraint(actual: &Value, constraint: &ExtractedValueConstrain
 
 fn pattern_matches(pattern: &Value, actual: &Value) -> bool {
     match (pattern, actual) {
-        (Value::Object(pattern_map), Value::Object(actual_map)) => pattern_map.iter().all(|(key, pattern_value)| {
-            actual_map
-                .get(key)
-                .map(|actual_value| pattern_matches(pattern_value, actual_value))
-                .unwrap_or(false)
-        }),
+        (Value::Object(pattern_map), Value::Object(actual_map)) => {
+            pattern_map.iter().all(|(key, pattern_value)| {
+                actual_map
+                    .get(key)
+                    .map(|actual_value| pattern_matches(pattern_value, actual_value))
+                    .unwrap_or(false)
+            })
+        }
         (Value::Array(pattern_items), Value::Array(actual_items)) => {
             pattern_items.len() <= actual_items.len()
-                && pattern_items
-                    .iter()
-                    .zip(actual_items.iter())
-                    .all(|(pattern_value, actual_value)| pattern_matches(pattern_value, actual_value))
+                && pattern_items.iter().zip(actual_items.iter()).all(
+                    |(pattern_value, actual_value)| pattern_matches(pattern_value, actual_value),
+                )
         }
         _ => pattern == actual,
     }

@@ -4,7 +4,7 @@
 //! Requires the `R4` crate feature.
 
 use super::requests::ValidateVsRequest;
-use helios_fhir::r4::{CodeableConcept, CodeSystem, Coding, ValueSet};
+use helios_fhir::r4::{CodeSystem, CodeableConcept, Coding, ValueSet};
 use serde::Serialize;
 use serde_json::Value;
 

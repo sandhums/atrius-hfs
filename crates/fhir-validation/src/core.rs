@@ -24,18 +24,24 @@ pub use fhir_validation_types::{
 
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::terminology::types::TerminologyRemoteError;
+use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
 use crate::{FhirPathEvaluator, InvariantExprRef};
 
+use crate::profile::profile_registry::ProfileRegistry;
 use helios_fhirpath::handlers::json_value_to_evaluation_result;
 use std::fmt;
 use tracing::debug;
-use crate::profile::profile_registry::ProfileRegistry;
 
 #[cfg(feature = "R4")]
-use crate::r4::{validate_r4_resource, validate_r4_resource_async, validate_r4_resource_async_with_profiles, validate_r4_resource_with_profiles};
+use crate::r4::{
+    validate_r4_resource, validate_r4_resource_async, validate_r4_resource_async_with_profiles,
+    validate_r4_resource_with_profiles,
+};
 #[cfg(feature = "R5")]
-use crate::r5::{validate_r5_resource, validate_r5_resource_async, validate_r5_resource_async_with_profiles, validate_r5_resource_with_profiles};
-
+use crate::r5::{
+    validate_r5_resource, validate_r5_resource_async, validate_r5_resource_async_with_profiles,
+    validate_r5_resource_with_profiles,
+};
 
 /// A single validation issue that can later be mapped to
 /// `OperationOutcome.issue`.
@@ -43,7 +49,8 @@ use crate::r5::{validate_r5_resource, validate_r5_resource_async, validate_r5_re
 pub struct ValidationIssue {
     pub severity: Severity,
 
-    /// Category such as "value", "invariant", "structure", "terminology"
+    /// Internal validator category such as "value", "invariant", "structure", or "terminology".
+    /// This is later mapped conservatively to FHIR `OperationOutcome.issue.code`.
     pub code: String,
 
     /// Declared logical FHIR path from the StructureDefinition metadata,
@@ -57,33 +64,67 @@ pub struct ValidationIssue {
     /// paths have been updated yet.
     pub instance_path: Option<String>,
 
-    /// Optional expression (FHIRPath or ValueSet URL)
+    /// Optional expression (FHIRPath, ValueSet URL, etc.); see [`Self::expression_kind`].
     pub expression: Option<String>,
 
-    /// Human readable diagnostics
+    /// When set, overrides heuristic classification of [`Self::expression`] when projecting
+    /// to OperationOutcome source extensions (`canonical-uri`, `fhirpath`, …).
+    pub expression_kind: Option<ValidationSourceKind>,
+
+    /// Constraint / invariant key from metadata (e.g. [`InvariantDef::key`]), independent of
+    /// [`Self::expression`] (which often holds the FHIRPath).
+    pub source_invariant_key: Option<String>,
+
+    /// Short headline for `OperationOutcome.issue.details.text` (e.g. UI, `$validate`).
+    /// When absent, the issue-to-OperationOutcome mapper synthesizes text from
+    /// [`Self::detail_code`] or [`Self::code`].
+    pub summary: Option<String>,
+
+    /// Optional fine-grained validation detail code for `details.coding`.
+    /// When absent, [`ValidationIssueDetailCode::from_issue_category`] is used from [`Self::code`].
+    pub detail_code: Option<ValidationIssueDetailCode>,
+
+    /// Human-readable technical diagnostics for logs, debugging, and
+    /// `OperationOutcome.issue.diagnostics`.
     pub diagnostics: String,
 }
 
 impl ValidationIssue {
     /// Construct an error-level validation issue with a declared FHIR path.
-    pub fn error(code: impl Into<String>, path: impl Into<String>, diag: impl Into<String>) -> Self {
+    pub fn error(
+        code: impl Into<String>,
+        path: impl Into<String>,
+        diag: impl Into<String>,
+    ) -> Self {
         Self {
             severity: Severity::Error,
             code: code.into(),
             fhir_path: path.into(),
             instance_path: None,
             expression: None,
+            expression_kind: None,
+            source_invariant_key: None,
+            summary: None,
+            detail_code: None,
             diagnostics: diag.into(),
         }
     }
     /// Construct a warning-level validation issue with a declared FHIR path.
-    pub fn warning(code: impl Into<String>, path: impl Into<String>, diag: impl Into<String>) -> Self {
+    pub fn warning(
+        code: impl Into<String>,
+        path: impl Into<String>,
+        diag: impl Into<String>,
+    ) -> Self {
         Self {
             severity: Severity::Warning,
             code: code.into(),
             fhir_path: path.into(),
             instance_path: None,
             expression: None,
+            expression_kind: None,
+            source_invariant_key: None,
+            summary: None,
+            detail_code: None,
             diagnostics: diag.into(),
         }
     }
@@ -95,6 +136,10 @@ impl ValidationIssue {
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
+            expression_kind: Some(ValidationSourceKind::FhirPath),
+            source_invariant_key: Some(invariant.key.to_string()),
+            summary: Some("Value does not satisfy an invariant constraint".to_string()),
+            detail_code: None,
             diagnostics: if invariant.human.is_empty() {
                 format!("Constraint failed: {}", invariant.key)
             } else {
@@ -113,6 +158,10 @@ impl ValidationIssue {
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
+            expression_kind: Some(ValidationSourceKind::FhirPath),
+            source_invariant_key: Some(invariant.key.to_string()),
+            summary: Some("Invariant expression evaluation failed".to_string()),
+            detail_code: None,
             diagnostics: if invariant.human.is_empty() {
                 format!("Constraint evaluation error: {}: {err}", invariant.key)
             } else {
@@ -127,6 +176,19 @@ impl ValidationIssue {
     pub fn with_instance_path(mut self, instance_path: impl Into<String>) -> Self {
         self.instance_path = Some(instance_path.into());
         self
+    }
+
+    /// Attach a short summary for OperationOutcome `details.text`.
+    pub fn with_summary(mut self, summary: impl Into<String>) -> Self {
+        self.summary = Some(summary.into());
+        self
+    }
+
+    /// Detail code for OperationOutcome `details.coding`, using [`Self::detail_code`] or
+    /// [`ValidationIssueDetailCode::from_issue_category`] on [`Self::code`].
+    pub fn resolved_detail_code(&self) -> ValidationIssueDetailCode {
+        self.detail_code
+            .unwrap_or_else(|| ValidationIssueDetailCode::from_issue_category(&self.code))
     }
 }
 /// Configuration for validation behavior.
@@ -193,8 +255,8 @@ impl Default for ValidationConfig {
 }
 #[derive(Debug, Clone, Copy)]
 pub enum TypeProfileMatchMode {
-    Any,   // OR (current behavior)
-    All,   // AND (strict)
+    Any, // OR (current behavior)
+    All, // AND (strict)
 }
 /// Errors raised while evaluating invariants or terminology-backed validation.
 #[derive(Debug, Clone)]
@@ -320,8 +382,7 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                validate_r4_resource_async(&self, res.as_ref(), terminology, evaluator)
-                    .await
+                validate_r4_resource_async(&self, res.as_ref(), terminology, evaluator).await
             }
 
             #[cfg(feature = "R4B")]
@@ -331,8 +392,7 @@ impl Validator {
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                validate_r5_resource_async(&self, res, terminology, evaluator)
-                    .await
+                validate_r5_resource_async(&self, res, terminology, evaluator).await
             }
 
             #[cfg(feature = "R6")]
@@ -351,9 +411,13 @@ impl Validator {
     ) -> Vec<ValidationIssue> {
         match resource {
             #[cfg(feature = "R4")]
-            helios_fhir::FhirResource::R4(res) => {
-                validate_r4_resource_with_profiles(&self, res.as_ref(), terminology, evaluator, profile_registry)
-            }
+            helios_fhir::FhirResource::R4(res) => validate_r4_resource_with_profiles(
+                &self,
+                res.as_ref(),
+                terminology,
+                evaluator,
+                profile_registry,
+            ),
 
             #[cfg(feature = "R4B")]
             helios_fhir::FhirResource::R4B(res) => {
@@ -361,9 +425,13 @@ impl Validator {
             }
 
             #[cfg(feature = "R5")]
-            helios_fhir::FhirResource::R5(res) => {
-                validate_r5_resource_with_profiles(&self, res, terminology, evaluator, profile_registry)
-            }
+            helios_fhir::FhirResource::R5(res) => validate_r5_resource_with_profiles(
+                &self,
+                res,
+                terminology,
+                evaluator,
+                profile_registry,
+            ),
 
             #[cfg(feature = "R6")]
             helios_fhir::FhirResource::R6(res) => {
@@ -382,7 +450,14 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                validate_r4_resource_async_with_profiles(&self, res.as_ref(), terminology, evaluator, profile_registry).await
+                validate_r4_resource_async_with_profiles(
+                    &self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
             }
 
             #[cfg(feature = "R4B")]
@@ -392,7 +467,14 @@ impl Validator {
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                validate_r5_resource_async_with_profiles(&self, res, terminology, evaluator, profile_registry).await
+                validate_r5_resource_async_with_profiles(
+                    &self,
+                    res,
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
             }
 
             #[cfg(feature = "R6")]
@@ -412,13 +494,9 @@ impl Validator {
     ) -> Vec<ValidationIssue> {
         match fhir_version {
             #[cfg(feature = "R4")]
-            helios_fhir::FhirVersion::R4 => {
-                self.apply_r4_bindings(focus, bindings, terminology)
-            }
+            helios_fhir::FhirVersion::R4 => self.apply_r4_bindings(focus, bindings, terminology),
             #[cfg(feature = "R5")]
-            helios_fhir::FhirVersion::R5 => {
-                self.apply_r5_bindings(focus, bindings, terminology)
-            }
+            helios_fhir::FhirVersion::R5 => self.apply_r5_bindings(focus, bindings, terminology),
             #[cfg(feature = "R4B")]
             helios_fhir::FhirVersion::R4B => {
                 todo!()
@@ -440,21 +518,22 @@ impl Validator {
         match fhir_version {
             #[cfg(feature = "R4")]
             helios_fhir::FhirVersion::R4 => {
-                self.apply_r4_bindings_async(focus, bindings, terminology).await
+                self.apply_r4_bindings_async(focus, bindings, terminology)
+                    .await
             }
             #[cfg(feature = "R5")]
             helios_fhir::FhirVersion::R5 => {
-                self.apply_r5_bindings_async(focus, bindings, terminology).await
+                self.apply_r5_bindings_async(focus, bindings, terminology)
+                    .await
             }
             #[cfg(feature = "R4B")]
             helios_fhir::FhirVersion::R4B => {
-                    todo!()
-                }
+                todo!()
+            }
             #[cfg(feature = "R6")]
             helios_fhir::FhirVersion::R6 => {
                 todo!()
             }
-
         }
     }
     /// Apply R4 binding definitions to the current focus value.
@@ -626,7 +705,6 @@ impl Validator {
         }
     }
 }
-
 
 /// Rebase a single instance path from a local validation root to the caller's
 /// actual root path.

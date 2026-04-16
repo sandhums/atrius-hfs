@@ -4,6 +4,7 @@ mod common {
 }
 #[cfg(test)]
 mod tests {
+    use crate::common::fixtures::MockTerminologyService;
     use fhir_validation::r4::binding::validate_codeable_concept_binding;
     use fhir_validation::terminology::types::TerminologyMembershipOutcome;
     use fhir_validation::{ValidationConfig, Validator};
@@ -11,7 +12,6 @@ mod tests {
     use helios_fhir::Element;
     use helios_fhir::TerminologyValidationError;
     use helios_fhir::r4::{Code, CodeableConcept, Coding, Uri};
-    use crate::common::fixtures::MockTerminologyService;
 
     fn validator() -> Validator {
         Validator::new(ValidationConfig::default())

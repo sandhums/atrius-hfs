@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
-use helios_fhir::FhirVersion;
-use crate::service::{TerminologyService, TerminologyServiceSync};
-use crate::{FhirPathEvaluator, Validator};
 use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::types::ExtractedProfile;
+use crate::service::{TerminologyService, TerminologyServiceSync};
+use crate::{FhirPathEvaluator, Validator};
+use helios_fhir::FhirVersion;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
 pub struct ValidationContext<'a> {

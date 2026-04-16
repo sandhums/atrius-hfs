@@ -84,16 +84,22 @@
 pub mod binding;
 pub mod core;
 pub mod evaluators;
-pub mod terminology;
 pub mod issue_to_op_outcome;
 pub mod profile;
+pub mod terminology;
 pub mod validation_context;
+pub mod validation_issue_detail;
 
 pub use core::*;
 pub use evaluators::*;
+pub use issue_to_op_outcome::VALIDATION_SOURCE_INVARIANT_KEY_URL;
 use terminology::service::{TerminologyService, TerminologyServiceSync};
 pub use terminology::*;
 pub use validation_context::*;
+pub use validation_issue_detail::{
+    VALIDATION_ISSUE_DETAIL_SYSTEM, VALIDATION_ISSUE_DETAIL_VERSION, ValidationIssueDetailCode,
+    ValidationSourceKind, classify_validation_source,
+};
 
 #[cfg(feature = "R4")]
 pub mod r4;
@@ -106,5 +112,3 @@ pub mod r5;
 
 #[cfg(feature = "R6")]
 pub mod r6;
-
-

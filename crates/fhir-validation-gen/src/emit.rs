@@ -469,12 +469,18 @@ fn emit_invariants_const(
             "        severity: {},\n",
             invariant.severity.as_rust_tokens()
         ));
-        output.push_str(&format!("        path: {:?}.to_string(),\n", invariant.path));
+        output.push_str(&format!(
+            "        path: {:?}.to_string(),\n",
+            invariant.path
+        ));
         output.push_str(&format!(
             "        expression: {:?}.to_string(),\n",
             invariant.expression
         ));
-        output.push_str(&format!("        human: {:?}.to_string(),\n", invariant.human));
+        output.push_str(&format!(
+            "        human: {:?}.to_string(),\n",
+            invariant.human
+        ));
         output.push_str("    },\n");
     }
 
@@ -496,11 +502,17 @@ fn emit_bindings_const(ty: &TypeValidationModel, bindings: &[BindingModel], outp
             "        strength: {},\n",
             binding.strength.as_rust_tokens()
         ));
-        output.push_str(&format!("        value_set: {:?}.to_string(),\n", binding.value_set));
+        output.push_str(&format!(
+            "        value_set: {:?}.to_string(),\n",
+            binding.value_set
+        ));
 
         match &binding.binding_name {
             Some(name) => {
-                output.push_str(&format!("        binding_name: Some({:?}.to_string()),\n", name));
+                output.push_str(&format!(
+                    "        binding_name: Some({:?}.to_string()),\n",
+                    name
+                ));
             }
             None => output.push_str("        binding_name: None,\n"),
         }
