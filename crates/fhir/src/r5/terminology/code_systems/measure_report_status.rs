@@ -111,5 +111,4 @@ impl MeasureReportStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -17,7 +17,8 @@ pub enum MedicationIntendedPerformerRole {
 }
 
 impl MedicationIntendedPerformerRole {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/medication-intended-performer-role";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/medication-intended-performer-role";
     pub const VERSION: &'static str = "5.0.0";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -125,5 +126,4 @@ impl MedicationIntendedPerformerRole {
             })
             .unwrap_or(false)
     }
-
 }

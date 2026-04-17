@@ -54,10 +54,18 @@ impl CompositionAttestationMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Personal => Some("The person authenticated the content in their personal capacity."),
-            Self::Professional => Some("The person authenticated the content in their professional capacity."),
-            Self::Legal => Some("The person authenticated the content and accepted legal responsibility for its content."),
-            Self::Official => Some("The organization authenticated the content as consistent with their policies and procedures."),
+            Self::Personal => {
+                Some("The person authenticated the content in their personal capacity.")
+            }
+            Self::Professional => {
+                Some("The person authenticated the content in their professional capacity.")
+            }
+            Self::Legal => Some(
+                "The person authenticated the content and accepted legal responsibility for its content.",
+            ),
+            Self::Official => Some(
+                "The organization authenticated the content as consistent with their policies and procedures.",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl CompositionAttestationMode {
             })
             .unwrap_or(false)
     }
-
 }

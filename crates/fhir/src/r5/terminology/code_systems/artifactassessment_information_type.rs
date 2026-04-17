@@ -132,5 +132,4 @@ impl ArtifactAssessmentInformationType {
             })
             .unwrap_or(false)
     }
-
 }

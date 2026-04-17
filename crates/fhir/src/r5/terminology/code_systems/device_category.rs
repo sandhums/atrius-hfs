@@ -79,15 +79,29 @@ impl FHIRDeviceCategory {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("Device where the operation depends on a source of energy."),
-            Self::Communicating => Some("Device communicates electronically to peer information systems or possibly another device."),
-            Self::Dme => Some("Equipment and supplies that provides therapeutic benefits to a patient."),
+            Self::Communicating => Some(
+                "Device communicates electronically to peer information systems or possibly another device.",
+            ),
+            Self::Dme => {
+                Some("Equipment and supplies that provides therapeutic benefits to a patient.")
+            }
             Self::HomeUse => Some("Medical device intended for users in a non-medical setting."),
-            Self::Implantable => Some("A device that is placed into a surgically or naturally formed cavity of the human body."),
-            Self::InVitro => Some("Tests done on samples such as blood or tissue that have been taken from the human body."),
-            Self::PointOfCare => Some("a class of communicating devices that are used by medical providers for various purposes (e.g., monitoring, delivering or measuring)."),
+            Self::Implantable => Some(
+                "A device that is placed into a surgically or naturally formed cavity of the human body.",
+            ),
+            Self::InVitro => Some(
+                "Tests done on samples such as blood or tissue that have been taken from the human body.",
+            ),
+            Self::PointOfCare => Some(
+                "a class of communicating devices that are used by medical providers for various purposes (e.g., monitoring, delivering or measuring).",
+            ),
             Self::SingleUse => Some("A device use on one individual during a single procedure."),
-            Self::Reusable => Some("A device that healthcare providers can use to diagnose and treat one or more patients."),
-            Self::Software => Some("A device that may include a software component or consist exclusively of software e.g. data transformer or converter, clinical support algorithms, clinical apps"),
+            Self::Reusable => Some(
+                "A device that healthcare providers can use to diagnose and treat one or more patients.",
+            ),
+            Self::Software => Some(
+                "A device that may include a software component or consist exclusively of software e.g. data transformer or converter, clinical support algorithms, clinical apps",
+            ),
         }
     }
 
@@ -160,5 +174,4 @@ impl FHIRDeviceCategory {
             })
             .unwrap_or(false)
     }
-
 }

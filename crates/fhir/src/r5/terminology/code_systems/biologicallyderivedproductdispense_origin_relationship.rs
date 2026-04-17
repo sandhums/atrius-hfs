@@ -17,7 +17,8 @@ pub enum BiologicallyDerivedProductDispenseOriginRelationship {
 }
 
 impl BiologicallyDerivedProductDispenseOriginRelationship {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-origin-relationship";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-origin-relationship";
     pub const VERSION: &'static str = "5.0.0";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -60,7 +61,9 @@ impl BiologicallyDerivedProductDispenseOriginRelationship {
         match self {
             Self::Autologous => Some("The product was pre-donated by the recipient"),
             Self::Related => Some("The product is from a blood relation of the recipient"),
-            Self::Directed => Some("The donor has been specifically selected to provide product for the recipient"),
+            Self::Directed => Some(
+                "The donor has been specifically selected to provide product for the recipient",
+            ),
             Self::Allogeneic => Some("The donor and the recipient are unrelated"),
             Self::Xenogenic => Some("The product is from a different species to the recipient"),
         }
@@ -125,5 +128,4 @@ impl BiologicallyDerivedProductDispenseOriginRelationship {
             })
             .unwrap_or(false)
     }
-
 }

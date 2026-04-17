@@ -58,7 +58,9 @@ impl SubscriptionStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Requested => Some("The client has requested the subscription, and the server has not yet set it up."),
+            Self::Requested => Some(
+                "The client has requested the subscription, and the server has not yet set it up.",
+            ),
             Self::Active => Some("The subscription is active."),
             Self::Error => Some("The server has an error executing the notification."),
             Self::Off => Some("Too many errors have occurred or the subscription has expired."),
@@ -125,5 +127,4 @@ impl SubscriptionStatus {
             })
             .unwrap_or(false)
     }
-
 }

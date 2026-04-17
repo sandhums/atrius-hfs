@@ -46,8 +46,12 @@ impl CriteriaNotExistsBehavior {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::TestPasses => Some("The requested conditional statement will pass if a matching state does not exist (e.g., previous state during create)."),
-            Self::TestFails => Some("The requested conditional statement will fail if a matching state does not exist (e.g., previous state during create)."),
+            Self::TestPasses => Some(
+                "The requested conditional statement will pass if a matching state does not exist (e.g., previous state during create).",
+            ),
+            Self::TestFails => Some(
+                "The requested conditional statement will fail if a matching state does not exist (e.g., previous state during create).",
+            ),
         }
     }
 
@@ -104,5 +108,4 @@ impl CriteriaNotExistsBehavior {
             })
             .unwrap_or(false)
     }
-
 }

@@ -42,7 +42,9 @@ impl ConceptMapProperties {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::RelationshipRefinement => Some("Property of type coding that indicates a specific refined relationship such as categorized by or grouped"),
+            Self::RelationshipRefinement => Some(
+                "Property of type coding that indicates a specific refined relationship such as categorized by or grouped",
+            ),
         }
     }
 
@@ -97,5 +99,4 @@ impl ConceptMapProperties {
             })
             .unwrap_or(false)
     }
-
 }

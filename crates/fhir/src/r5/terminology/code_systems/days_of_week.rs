@@ -139,5 +139,4 @@ impl DaysOfWeek {
             })
             .unwrap_or(false)
     }
-
 }

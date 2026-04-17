@@ -132,5 +132,4 @@ impl ProductCrossReferenceType {
             })
             .unwrap_or(false)
     }
-
 }

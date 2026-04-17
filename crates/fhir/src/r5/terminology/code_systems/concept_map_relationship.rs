@@ -58,11 +58,19 @@ impl ConceptMapRelationship {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::RelatedTo => Some("The concepts are related to each other, but the exact relationship is not known."),
+            Self::RelatedTo => Some(
+                "The concepts are related to each other, but the exact relationship is not known.",
+            ),
             Self::Equivalent => Some("The definitions of the concepts mean the same thing."),
-            Self::SourceIsNarrowerThanTarget => Some("The source concept is narrower in meaning than the target concept."),
-            Self::SourceIsBroaderThanTarget => Some("The source concept is broader in meaning than the target concept."),
-            Self::NotRelatedTo => Some("This is an explicit assertion that the target concept is not related to the source concept."),
+            Self::SourceIsNarrowerThanTarget => {
+                Some("The source concept is narrower in meaning than the target concept.")
+            }
+            Self::SourceIsBroaderThanTarget => {
+                Some("The source concept is broader in meaning than the target concept.")
+            }
+            Self::NotRelatedTo => Some(
+                "This is an explicit assertion that the target concept is not related to the source concept.",
+            ),
         }
     }
 
@@ -125,5 +133,4 @@ impl ConceptMapRelationship {
             })
             .unwrap_or(false)
     }
-
 }

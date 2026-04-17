@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TerminologyValidationError {
     /// Missing required terminology context or value.

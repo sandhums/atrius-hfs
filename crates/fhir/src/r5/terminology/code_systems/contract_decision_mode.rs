@@ -97,5 +97,4 @@ impl ContractDecisionMode {
             })
             .unwrap_or(false)
     }
-
 }

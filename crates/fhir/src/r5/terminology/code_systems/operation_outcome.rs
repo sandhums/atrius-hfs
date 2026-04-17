@@ -186,14 +186,18 @@ impl OperationOutcomeCodes {
 
     pub fn display(self) -> Option<&'static str> {
         match self {
-            Self::DELETEMULTIPLEMATCHES => Some("Error: Multiple matches exist for the conditional delete"),
+            Self::DELETEMULTIPLEMATCHES => {
+                Some("Error: Multiple matches exist for the conditional delete")
+            }
             Self::MSGAUTHREQUIRED => Some("You must authenticate before you can use this service"),
             Self::MSGBADFORMAT => Some("Bad Syntax: \"%s\" must be a %s\'"),
             Self::MSGBADSYNTAX => Some("Bad Syntax in %s"),
             Self::MSGCANTPARSECONTENT => Some("Unable to parse feed (entry content type = \"%s\")"),
             Self::MSGCANTPARSEROOT => Some("Unable to parse feed (root element name = \"%s\")"),
             Self::MSGCREATED => Some("New resource created"),
-            Self::MSGDATEFORMAT => Some("The Date value %s is not in the correct format (Xml Date Format required)"),
+            Self::MSGDATEFORMAT => {
+                Some("The Date value %s is not in the correct format (Xml Date Format required)")
+            }
             Self::MSGDELETED => Some("This resource has been deleted"),
             Self::MSGDELETEDDONE => Some("Resource deleted"),
             Self::MSGDELETEDID => Some("The resource \"%s\" has been deleted"),
@@ -208,35 +212,53 @@ impl OperationOutcomeCodes {
             Self::MSGNOMATCH => Some("No Resource found matching the query \"%s\""),
             Self::MSGNOMODULE => Some("No module could be found to handle the request \"%s\""),
             Self::MSGNOSUMMARY => Some("No Summary for this resource"),
-            Self::MSGOPNOTALLOWED => Some("Operation %s not allowed for resource %s (due to local configuration)"),
+            Self::MSGOPNOTALLOWED => {
+                Some("Operation %s not allowed for resource %s (due to local configuration)")
+            }
             Self::MSGPARAMCHAINED => Some("Unknown chained parameter name \"%s\""),
             Self::MSGPARAMINVALID => Some("Parameter \"%s\" content is invalid"),
             Self::MSGPARAMMODIFIERINVALID => Some("Parameter \"%s\" modifier is invalid"),
             Self::MSGPARAMNOREPEAT => Some("Parameter \"%s\" is not allowed to repeat"),
             Self::MSGPARAMUNKNOWN => Some("Parameter \"%s\" not understood"),
             Self::MSGREMOTEFAIL => Some("Unable to resolve local reference to resource %s"),
-            Self::MSGRESOURCEEXAMPLEPROTECTED => Some("Resources with identity \"example\" cannot be deleted (for testing/training purposes)"),
+            Self::MSGRESOURCEEXAMPLEPROTECTED => Some(
+                "Resources with identity \"example\" cannot be deleted (for testing/training purposes)",
+            ),
             Self::MSGRESOURCEIDFAIL => Some("unable to allocate resource id"),
             Self::MSGRESOURCEIDMISMATCH => Some("Resource Id Mismatch"),
             Self::MSGRESOURCEIDMISSING => Some("Resource Id Missing"),
-            Self::MSGRESOURCENOTALLOWED => Some("Not allowed to submit a resource for this operation"),
+            Self::MSGRESOURCENOTALLOWED => {
+                Some("Not allowed to submit a resource for this operation")
+            }
             Self::MSGRESOURCEREQUIRED => Some("A resource is required"),
             Self::MSGRESOURCETYPEMISMATCH => Some("Resource Type Mismatch"),
             Self::MSGSORTUNKNOWN => Some("Unknown sort parameter name \"%s\""),
             Self::MSGTRANSACTIONDUPLICATEID => Some("Duplicate Identifier in transaction: %s"),
-            Self::MSGTRANSACTIONMISSINGID => Some("Missing Identifier in transaction - an entry.id must be provided"),
+            Self::MSGTRANSACTIONMISSINGID => {
+                Some("Missing Identifier in transaction - an entry.id must be provided")
+            }
             Self::MSGUNHANDLEDNODETYPE => Some("Unhandled xml node type \"%s\""),
             Self::MSGUNKNOWNCONTENT => Some("Unknown Content (%s) at %s"),
             Self::MSGUNKNOWNOPERATION => Some("unknown FHIR http operation"),
             Self::MSGUNKNOWNTYPE => Some("Resource Type \"%s\" not recognised"),
             Self::MSGUPDATED => Some("existing resource updated"),
             Self::MSGVERSIONAWARE => Some("Version aware updates are required for this resource"),
-            Self::MSGVERSIONAWARECONFLICT => Some("Update Conflict (server current version = \"%s\", client version referenced = \"%s\")"),
+            Self::MSGVERSIONAWARECONFLICT => Some(
+                "Update Conflict (server current version = \"%s\", client version referenced = \"%s\")",
+            ),
             Self::MSGVERSIONAWAREURL => Some("Version specific URL not recognised"),
-            Self::MSGWRONGNS => Some("This does not appear to be a FHIR element or resource (wrong namespace \"%s\")"),
-            Self::SEARCHMULTIPLE => Some("Error: Multiple matches exist for %s search parameters \"%s\""),
-            Self::SEARCHNONE => Some("Error: no processable search found for %s search parameters \"%s\""),
-            Self::UPDATEMULTIPLEMATCHES => Some("Error: Multiple matches exist for the conditional update"),
+            Self::MSGWRONGNS => Some(
+                "This does not appear to be a FHIR element or resource (wrong namespace \"%s\")",
+            ),
+            Self::SEARCHMULTIPLE => {
+                Some("Error: Multiple matches exist for %s search parameters \"%s\"")
+            }
+            Self::SEARCHNONE => {
+                Some("Error: no processable search found for %s search parameters \"%s\"")
+            }
+            Self::UPDATEMULTIPLEMATCHES => {
+                Some("Error: Multiple matches exist for the conditional update")
+            }
         }
     }
 
@@ -447,5 +469,4 @@ impl OperationOutcomeCodes {
             })
             .unwrap_or(false)
     }
-
 }

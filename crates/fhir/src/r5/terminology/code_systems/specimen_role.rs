@@ -74,13 +74,21 @@ impl SpecimenRole {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::B => Some("Used to test the validity of the measurement process, where the composition of the sample is unknown except to the person submitting it."),
+            Self::B => Some(
+                "Used to test the validity of the measurement process, where the composition of the sample is unknown except to the person submitting it.",
+            ),
             Self::C => Some("Used for initial setting of calibration of the instrument."),
-            Self::E => Some("Used with manufactured reference providing signals that simulate QC results."),
-            Self::F => Some("Specimen used for testing proficiency of the organization performing the testing (Filler)."),
+            Self::E => {
+                Some("Used with manufactured reference providing signals that simulate QC results.")
+            }
+            Self::F => Some(
+                "Specimen used for testing proficiency of the organization performing the testing (Filler).",
+            ),
             Self::O => Some("Specimen used for testing Operator Proficiency."),
             Self::P => Some("Used for any patient sample."),
-            Self::Q => Some("Used when specimen is the control specimen (either positive or negative)."),
+            Self::Q => {
+                Some("Used when specimen is the control specimen (either positive or negative).")
+            }
             Self::R => Some("Used when a patient sample is re-run as a control for a repeat test."),
             Self::V => Some("Used for periodic calibration checks."),
         }
@@ -153,5 +161,4 @@ impl SpecimenRole {
             })
             .unwrap_or(false)
     }
-
 }

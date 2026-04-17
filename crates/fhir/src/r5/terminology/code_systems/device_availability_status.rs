@@ -118,5 +118,4 @@ impl FHIRDeviceAvailabilityStatus {
             })
             .unwrap_or(false)
     }
-
 }

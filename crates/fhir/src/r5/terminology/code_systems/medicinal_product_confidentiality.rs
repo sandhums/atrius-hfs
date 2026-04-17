@@ -104,5 +104,4 @@ impl ProductConfidentiality {
             })
             .unwrap_or(false)
     }
-
 }

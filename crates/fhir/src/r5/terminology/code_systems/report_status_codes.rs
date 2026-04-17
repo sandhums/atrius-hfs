@@ -125,5 +125,4 @@ impl TestReportStatus {
             })
             .unwrap_or(false)
     }
-
 }

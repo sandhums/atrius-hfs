@@ -125,5 +125,4 @@ impl EncounterReasonUse {
             })
             .unwrap_or(false)
     }
-
 }

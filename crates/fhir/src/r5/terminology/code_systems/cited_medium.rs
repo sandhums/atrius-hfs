@@ -56,18 +56,30 @@ impl CitedMedium {
             Self::OfflineDigitalStorage => Some("Offline Digital Storage"),
             Self::InternetWithoutIssue => Some("Internet without issue"),
             Self::PrintWithoutIssue => Some("Print without issue"),
-            Self::OfflineDigitalStorageWithoutIssue => Some("Offline Digital Storage without issue"),
+            Self::OfflineDigitalStorageWithoutIssue => {
+                Some("Offline Digital Storage without issue")
+            }
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Internet => Some("Online publication in a periodic release. Used to match NLM JournalIssue CitedMedium code for online version."),
-            Self::Print => Some("Print publication in a periodic release. Used to match NLM JournalIssue CitedMedium code for print version."),
-            Self::OfflineDigitalStorage => Some("Publication in a physical device for electronic data storage, organized in issues for periodic release."),
-            Self::InternetWithoutIssue => Some("Online publication without any periodic release. Used for article specific publication date which could be the same as or different from journal issue publication date."),
+            Self::Internet => Some(
+                "Online publication in a periodic release. Used to match NLM JournalIssue CitedMedium code for online version.",
+            ),
+            Self::Print => Some(
+                "Print publication in a periodic release. Used to match NLM JournalIssue CitedMedium code for print version.",
+            ),
+            Self::OfflineDigitalStorage => Some(
+                "Publication in a physical device for electronic data storage, organized in issues for periodic release.",
+            ),
+            Self::InternetWithoutIssue => Some(
+                "Online publication without any periodic release. Used for article specific publication date which could be the same as or different from journal issue publication date.",
+            ),
             Self::PrintWithoutIssue => Some("Print publication without any periodic release."),
-            Self::OfflineDigitalStorageWithoutIssue => Some("Publication in a physical device for electronic data storage, without any periodic release."),
+            Self::OfflineDigitalStorageWithoutIssue => Some(
+                "Publication in a physical device for electronic data storage, without any periodic release.",
+            ),
         }
     }
 
@@ -132,5 +144,4 @@ impl CitedMedium {
             })
             .unwrap_or(false)
     }
-
 }

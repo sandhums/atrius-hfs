@@ -50,8 +50,12 @@ impl FHIRFormatType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Xml => Some("XML content-type corresponding to the application/fhir+xml mime-type."),
-            Self::Json => Some("JSON content-type corresponding to the application/fhir+json mime-type."),
+            Self::Xml => {
+                Some("XML content-type corresponding to the application/fhir+xml mime-type.")
+            }
+            Self::Json => {
+                Some("JSON content-type corresponding to the application/fhir+json mime-type.")
+            }
             Self::Ttl => Some("RDF content-type corresponding to the text/turtle mime-type."),
         }
     }
@@ -111,5 +115,4 @@ impl FHIRFormatType {
             })
             .unwrap_or(false)
     }
-
 }

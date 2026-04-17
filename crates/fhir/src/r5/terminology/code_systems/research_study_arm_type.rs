@@ -132,5 +132,4 @@ impl ResearchStudyArmType {
             })
             .unwrap_or(false)
     }
-
 }

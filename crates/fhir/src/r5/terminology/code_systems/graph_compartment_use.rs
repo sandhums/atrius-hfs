@@ -46,8 +46,12 @@ impl GraphCompartmentUse {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Where_ => Some("This compartment rule is a condition for whether the rule applies."),
-            Self::Requires => Some("This compartment rule is enforced on any relationships that meet the conditions."),
+            Self::Where_ => {
+                Some("This compartment rule is a condition for whether the rule applies.")
+            }
+            Self::Requires => Some(
+                "This compartment rule is enforced on any relationships that meet the conditions.",
+            ),
         }
     }
 
@@ -104,5 +108,4 @@ impl GraphCompartmentUse {
             })
             .unwrap_or(false)
     }
-
 }

@@ -36,13 +36,17 @@ impl SpecialMeasures {
 
     pub fn display(self) -> Option<&'static str> {
         match self {
-            Self::PostAuthorizationStudies => Some("Requirement to conduct post-authorization studies"),
+            Self::PostAuthorizationStudies => {
+                Some("Requirement to conduct post-authorization studies")
+            }
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::PostAuthorizationStudies => Some("Requirement to conduct post-authorization studies"),
+            Self::PostAuthorizationStudies => {
+                Some("Requirement to conduct post-authorization studies")
+            }
         }
     }
 
@@ -97,5 +101,4 @@ impl SpecialMeasures {
             })
             .unwrap_or(false)
     }
-
 }

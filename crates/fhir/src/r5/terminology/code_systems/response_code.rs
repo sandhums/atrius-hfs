@@ -51,8 +51,12 @@ impl ResponseType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Ok => Some("The message was accepted and processed without error."),
-            Self::TransientError => Some("Some internal unexpected error occurred - wait and try again. Note - this is usually used for things like database unavailable, which may be expected to resolve, though human intervention may be required."),
-            Self::FatalError => Some("The message was rejected because of a problem with the content. There is no point in re-sending without change. The response narrative SHALL describe the issue."),
+            Self::TransientError => Some(
+                "Some internal unexpected error occurred - wait and try again. Note - this is usually used for things like database unavailable, which may be expected to resolve, though human intervention may be required.",
+            ),
+            Self::FatalError => Some(
+                "The message was rejected because of a problem with the content. There is no point in re-sending without change. The response narrative SHALL describe the issue.",
+            ),
         }
     }
 
@@ -111,5 +115,4 @@ impl ResponseType {
             })
             .unwrap_or(false)
     }
-
 }

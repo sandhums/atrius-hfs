@@ -70,14 +70,26 @@ impl ResearchStudyPhase {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NA => Some("Trials without phases (for example, studies of devices or behavioral interventions)."),
-            Self::EarlyPhase1 => Some("Designation for optional exploratory trials conducted in accordance with the United States Food and Drug Administration\'s (FDA) 2006 Guidance on Exploratory Investigational New Drug (IND) Studies. Formerly called Phase 0."),
-            Self::Phase1 => Some("Includes initial studies to determine the metabolism and pharmacologic actions of drugs in humans, the side effects associated with increasing doses, and to gain early evidence of effectiveness; may include healthy participants and/or patients."),
+            Self::NA => Some(
+                "Trials without phases (for example, studies of devices or behavioral interventions).",
+            ),
+            Self::EarlyPhase1 => Some(
+                "Designation for optional exploratory trials conducted in accordance with the United States Food and Drug Administration\'s (FDA) 2006 Guidance on Exploratory Investigational New Drug (IND) Studies. Formerly called Phase 0.",
+            ),
+            Self::Phase1 => Some(
+                "Includes initial studies to determine the metabolism and pharmacologic actions of drugs in humans, the side effects associated with increasing doses, and to gain early evidence of effectiveness; may include healthy participants and/or patients.",
+            ),
             Self::Phase1Phase2 => Some("Trials that are a combination of phases 1 and 2."),
-            Self::Phase2 => Some("Includes controlled clinical studies conducted to evaluate the effectiveness of the drug for a particular indication or indications in participants with the disease or condition under study and to determine the common short-term side effects and risks."),
+            Self::Phase2 => Some(
+                "Includes controlled clinical studies conducted to evaluate the effectiveness of the drug for a particular indication or indications in participants with the disease or condition under study and to determine the common short-term side effects and risks.",
+            ),
             Self::Phase2Phase3 => Some("Trials that are a combination of phases 2 and 3."),
-            Self::Phase3 => Some("Includes trials conducted after preliminary evidence suggesting effectiveness of the drug has been obtained, and are intended to gather additional information to evaluate the overall benefit-risk relationship of the drug."),
-            Self::Phase4 => Some("Studies of FDA-approved drugs to delineate additional information including the drug\'s risks, benefits, and optimal use."),
+            Self::Phase3 => Some(
+                "Includes trials conducted after preliminary evidence suggesting effectiveness of the drug has been obtained, and are intended to gather additional information to evaluate the overall benefit-risk relationship of the drug.",
+            ),
+            Self::Phase4 => Some(
+                "Studies of FDA-approved drugs to delineate additional information including the drug\'s risks, benefits, and optimal use.",
+            ),
         }
     }
 
@@ -146,5 +158,4 @@ impl ResearchStudyPhase {
             })
             .unwrap_or(false)
     }
-
 }

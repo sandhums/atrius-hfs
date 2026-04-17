@@ -186,7 +186,9 @@ impl PackageMaterial {
             Self::_200000003221 => Some("PolyVinyl Acetate"),
             Self::_200000003222 => Some("PolyVinyl Chloride"),
             Self::_200000003223 => Some("Plasticised PolyVinyl Chloride"),
-            Self::_200000003224 => Some("Non-plasticised PolyVinyl Chloride / Unplasticised PolyVinyl Chloride"),
+            Self::_200000003224 => {
+                Some("Non-plasticised PolyVinyl Chloride / Unplasticised PolyVinyl Chloride")
+            }
             Self::_200000003225 => Some("PolyVinylidene Chloride"),
             Self::_200000003226 => Some("Rubber"),
             Self::_200000003227 => Some("Silicone oil"),
@@ -391,5 +393,4 @@ impl PackageMaterial {
             })
             .unwrap_or(false)
     }
-
 }

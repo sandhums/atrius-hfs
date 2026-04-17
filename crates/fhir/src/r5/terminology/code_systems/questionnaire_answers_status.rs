@@ -58,11 +58,21 @@ impl QuestionnaireResponseStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InProgress => Some("This QuestionnaireResponse has been partially filled out with answers but changes or additions are still expected to be made to it."),
-            Self::Completed => Some("This QuestionnaireResponse has been filled out with answers and the current content is regarded as definitive."),
-            Self::Amended => Some("This QuestionnaireResponse has been filled out with answers, then marked as complete, yet changes or additions have been made to it afterwards."),
-            Self::EnteredInError => Some("This QuestionnaireResponse was entered in error and voided."),
-            Self::Stopped => Some("This QuestionnaireResponse has been partially filled out with answers but has been abandoned. No subsequent changes can be made."),
+            Self::InProgress => Some(
+                "This QuestionnaireResponse has been partially filled out with answers but changes or additions are still expected to be made to it.",
+            ),
+            Self::Completed => Some(
+                "This QuestionnaireResponse has been filled out with answers and the current content is regarded as definitive.",
+            ),
+            Self::Amended => Some(
+                "This QuestionnaireResponse has been filled out with answers, then marked as complete, yet changes or additions have been made to it afterwards.",
+            ),
+            Self::EnteredInError => {
+                Some("This QuestionnaireResponse was entered in error and voided.")
+            }
+            Self::Stopped => Some(
+                "This QuestionnaireResponse has been partially filled out with answers but has been abandoned. No subsequent changes can be made.",
+            ),
         }
     }
 
@@ -125,5 +135,4 @@ impl QuestionnaireResponseStatus {
             })
             .unwrap_or(false)
     }
-
 }

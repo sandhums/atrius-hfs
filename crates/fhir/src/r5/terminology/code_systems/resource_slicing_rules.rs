@@ -50,9 +50,13 @@ impl SlicingRules {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Closed => Some("No additional content is allowed other than that described by the slices in this profile."),
+            Self::Closed => Some(
+                "No additional content is allowed other than that described by the slices in this profile.",
+            ),
             Self::Open => Some("Additional content is allowed anywhere in the list."),
-            Self::OpenAtEnd => Some("Additional content is allowed, but only at the end of the list. Note that using this requires that the slices be ordered, which makes it hard to share uses. This should only be done where absolutely required."),
+            Self::OpenAtEnd => Some(
+                "Additional content is allowed, but only at the end of the list. Note that using this requires that the slices be ordered, which makes it hard to share uses. This should only be done where absolutely required.",
+            ),
         }
     }
 
@@ -111,5 +115,4 @@ impl SlicingRules {
             })
             .unwrap_or(false)
     }
-
 }

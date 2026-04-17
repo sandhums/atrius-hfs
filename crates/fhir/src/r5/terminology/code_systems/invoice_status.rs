@@ -62,7 +62,9 @@ impl InvoiceStatus {
             Self::Issued => Some("the invoice has been finalized and sent to the recipient."),
             Self::Balanced => Some("the invoice has been balaced / completely paid."),
             Self::Cancelled => Some("the invoice was cancelled."),
-            Self::EnteredInError => Some("the invoice was determined as entered in error before it was issued."),
+            Self::EnteredInError => {
+                Some("the invoice was determined as entered in error before it was issued.")
+            }
         }
     }
 
@@ -125,5 +127,4 @@ impl InvoiceStatus {
             })
             .unwrap_or(false)
     }
-
 }

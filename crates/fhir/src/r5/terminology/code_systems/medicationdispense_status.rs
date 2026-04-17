@@ -74,15 +74,27 @@ impl MedicationDispenseStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Preparation => Some("The core event has not started yet, but some staging activities have begun (e.g. initial compounding or packaging of medication). Preparation stages may be tracked for billing purposes."),
+            Self::Preparation => Some(
+                "The core event has not started yet, but some staging activities have begun (e.g. initial compounding or packaging of medication). Preparation stages may be tracked for billing purposes.",
+            ),
             Self::InProgress => Some("The dispensed product is ready for pickup."),
-            Self::Cancelled => Some("The dispensed product was not and will never be picked up by the patient."),
-            Self::OnHold => Some("The dispense process is paused while waiting for an external event to reactivate the dispense.  For example, new stock has arrived or the prescriber has called."),
+            Self::Cancelled => {
+                Some("The dispensed product was not and will never be picked up by the patient.")
+            }
+            Self::OnHold => Some(
+                "The dispense process is paused while waiting for an external event to reactivate the dispense.  For example, new stock has arrived or the prescriber has called.",
+            ),
             Self::Completed => Some("The dispensed product has been picked up."),
-            Self::EnteredInError => Some("The dispense was entered in error and therefore nullified."),
-            Self::Stopped => Some("Actions implied by the dispense have been permanently halted, before all of them occurred."),
+            Self::EnteredInError => {
+                Some("The dispense was entered in error and therefore nullified.")
+            }
+            Self::Stopped => Some(
+                "Actions implied by the dispense have been permanently halted, before all of them occurred.",
+            ),
             Self::Declined => Some("The dispense was declined and not performed."),
-            Self::Unknown => Some("The authoring system does not know which of the status values applies for this medication dispense.  Note: this concept is not to be used for other - one of the listed statuses is presumed to apply, it\'s just now known which one."),
+            Self::Unknown => Some(
+                "The authoring system does not know which of the status values applies for this medication dispense.  Note: this concept is not to be used for other - one of the listed statuses is presumed to apply, it\'s just now known which one.",
+            ),
         }
     }
 
@@ -153,5 +165,4 @@ impl MedicationDispenseStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

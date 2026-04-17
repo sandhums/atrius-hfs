@@ -111,5 +111,4 @@ impl PackageType {
             })
             .unwrap_or(false)
     }
-
 }

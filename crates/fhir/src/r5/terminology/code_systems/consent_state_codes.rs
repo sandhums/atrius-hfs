@@ -62,11 +62,17 @@ impl ConsentState {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Draft => Some("The consent is in development or awaiting use but is not yet intended to be acted upon."),
+            Self::Draft => Some(
+                "The consent is in development or awaiting use but is not yet intended to be acted upon.",
+            ),
             Self::Active => Some("The consent is to be followed and enforced."),
             Self::Inactive => Some("The consent is terminated or replaced."),
-            Self::NotDone => Some("The consent development has been terminated prior to completion."),
-            Self::EnteredInError => Some("The consent was created wrongly (e.g. wrong patient) and should be ignored."),
+            Self::NotDone => {
+                Some("The consent development has been terminated prior to completion.")
+            }
+            Self::EnteredInError => {
+                Some("The consent was created wrongly (e.g. wrong patient) and should be ignored.")
+            }
             Self::Unknown => Some("The resource is in an indeterminate state."),
         }
     }
@@ -132,5 +138,4 @@ impl ConsentState {
             })
             .unwrap_or(false)
     }
-
 }

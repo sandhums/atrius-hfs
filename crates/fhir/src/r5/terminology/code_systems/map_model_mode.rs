@@ -54,10 +54,18 @@ impl StructureMapModelMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Source => Some("This structure describes an instance passed to the mapping engine that is used a source of data."),
-            Self::Queried => Some("This structure describes an instance that the mapping engine may ask for that is used a source of data."),
-            Self::Target => Some("This structure describes an instance passed to the mapping engine that is used a target of data."),
-            Self::Produced => Some("This structure describes an instance that the mapping engine may ask to create that is used a target of data."),
+            Self::Source => Some(
+                "This structure describes an instance passed to the mapping engine that is used a source of data.",
+            ),
+            Self::Queried => Some(
+                "This structure describes an instance that the mapping engine may ask for that is used a source of data.",
+            ),
+            Self::Target => Some(
+                "This structure describes an instance passed to the mapping engine that is used a target of data.",
+            ),
+            Self::Produced => Some(
+                "This structure describes an instance that the mapping engine may ask to create that is used a target of data.",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl StructureMapModelMode {
             })
             .unwrap_or(false)
     }
-
 }

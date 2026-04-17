@@ -50,9 +50,15 @@ impl ListMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Working => Some("This list is the master list, maintained in an ongoing fashion with regular updates as the real-world list it is tracking changes."),
-            Self::Snapshot => Some("This list was prepared as a snapshot. It should not be assumed to be current."),
-            Self::Changes => Some("A point-in-time list that shows what changes have been made or recommended.  E.g. a discharge medication list showing what was added and removed during an encounter."),
+            Self::Working => Some(
+                "This list is the master list, maintained in an ongoing fashion with regular updates as the real-world list it is tracking changes.",
+            ),
+            Self::Snapshot => Some(
+                "This list was prepared as a snapshot. It should not be assumed to be current.",
+            ),
+            Self::Changes => Some(
+                "A point-in-time list that shows what changes have been made or recommended.  E.g. a discharge medication list showing what was added and removed during an encounter.",
+            ),
         }
     }
 
@@ -111,5 +117,4 @@ impl ListMode {
             })
             .unwrap_or(false)
     }
-
 }

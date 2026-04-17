@@ -118,5 +118,4 @@ impl FinancialResourceStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -195,5 +195,4 @@ impl SubstanceNameAuthority {
             })
             .unwrap_or(false)
     }
-
 }

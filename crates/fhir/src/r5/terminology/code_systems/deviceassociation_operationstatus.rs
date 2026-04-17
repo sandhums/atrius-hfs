@@ -60,8 +60,12 @@ impl FHIRDeviceAssociationOperationStatus {
         match self {
             Self::On => Some("The device is working or switched on, i.e. active."),
             Self::Off => Some("The device is inactive, switched off, or deactivated."),
-            Self::Standby => Some("The device is in stand-by mode i.e. not actively working but not powered off."),
-            Self::Defective => Some("The device is defective or for maintenance and is not available or working."),
+            Self::Standby => Some(
+                "The device is in stand-by mode i.e. not actively working but not powered off.",
+            ),
+            Self::Defective => {
+                Some("The device is defective or for maintenance and is not available or working.")
+            }
             Self::Unknown => Some("The operational status of the device has not been determined."),
         }
     }
@@ -125,5 +129,4 @@ impl FHIRDeviceAssociationOperationStatus {
             })
             .unwrap_or(false)
     }
-
 }

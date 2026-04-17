@@ -118,5 +118,4 @@ impl InteractionType {
             })
             .unwrap_or(false)
     }
-
 }

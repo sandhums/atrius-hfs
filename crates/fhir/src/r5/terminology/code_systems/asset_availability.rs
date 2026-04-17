@@ -97,5 +97,4 @@ impl ContractAssetAvailability {
             })
             .unwrap_or(false)
     }
-
 }

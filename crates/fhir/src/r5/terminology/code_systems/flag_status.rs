@@ -50,9 +50,13 @@ impl FlagStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("A current flag that should be displayed to a user. A system may use the category to determine which user roles should view the flag."),
+            Self::Active => Some(
+                "A current flag that should be displayed to a user. A system may use the category to determine which user roles should view the flag.",
+            ),
             Self::Inactive => Some("The flag no longer needs to be displayed."),
-            Self::EnteredInError => Some("The flag was added in error and should no longer be displayed."),
+            Self::EnteredInError => {
+                Some("The flag was added in error and should no longer be displayed.")
+            }
         }
     }
 
@@ -111,5 +115,4 @@ impl FlagStatus {
             })
             .unwrap_or(false)
     }
-
 }

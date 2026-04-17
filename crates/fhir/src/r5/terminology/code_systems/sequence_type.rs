@@ -111,5 +111,4 @@ impl SequenceType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -46,7 +46,9 @@ impl AdverseEventActuality {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Actual => Some("The adverse event actually happened regardless of whether anyone was affected or harmed."),
+            Self::Actual => Some(
+                "The adverse event actually happened regardless of whether anyone was affected or harmed.",
+            ),
             Self::Potential => Some("A potential adverse event."),
         }
     }
@@ -104,5 +106,4 @@ impl AdverseEventActuality {
             })
             .unwrap_or(false)
     }
-
 }

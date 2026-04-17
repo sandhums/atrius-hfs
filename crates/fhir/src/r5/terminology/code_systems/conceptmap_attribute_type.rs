@@ -58,11 +58,15 @@ impl ConceptMapAttributeType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Code => Some("The attribute value is a code defined in the code system in context."),
+            Self::Code => {
+                Some("The attribute value is a code defined in the code system in context.")
+            }
             Self::Coding => Some("The attribute value is a code defined in a code system."),
             Self::String => Some("The attribute value is a string."),
             Self::Boolean => Some("The attribute value is a boolean true | false."),
-            Self::Quantity => Some("The attribute is a Quantity (may represent an integer or a decimal with no units)."),
+            Self::Quantity => Some(
+                "The attribute is a Quantity (may represent an integer or a decimal with no units).",
+            ),
         }
     }
 
@@ -125,5 +129,4 @@ impl ConceptMapAttributeType {
             })
             .unwrap_or(false)
     }
-
 }

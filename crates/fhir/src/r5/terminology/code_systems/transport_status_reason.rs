@@ -139,5 +139,4 @@ impl TransportStatus_6f51b4ee {
             })
             .unwrap_or(false)
     }
-
 }

@@ -118,15 +118,27 @@ impl ReportSectionType {
     pub fn display(self) -> Option<&'static str> {
         match self {
             Self::Evidence => Some("Evidence Results"),
-            Self::InterventionGroupAloneEvidence => Some("Evidence Results for the intervention exposure only"),
-            Self::InterventionVsControlEvidence => Some("Evidence Results for comparison of Intervention and Control"),
-            Self::ControlGroupAloneEvidence => Some("Evidence Results for the control exposure only"),
+            Self::InterventionGroupAloneEvidence => {
+                Some("Evidence Results for the intervention exposure only")
+            }
+            Self::InterventionVsControlEvidence => {
+                Some("Evidence Results for comparison of Intervention and Control")
+            }
+            Self::ControlGroupAloneEvidence => {
+                Some("Evidence Results for the control exposure only")
+            }
             Self::EvidenceVariable => Some("Evidence Variables used"),
             Self::EvidenceVariableObserved => Some("Evidence Variables actually observed"),
-            Self::EvidenceVariableIntended => Some("Evidence Variables intended for interpretation"),
-            Self::EvidenceVariablePopulation => Some("Evidence Variable in variable role Population"),
+            Self::EvidenceVariableIntended => {
+                Some("Evidence Variables intended for interpretation")
+            }
+            Self::EvidenceVariablePopulation => {
+                Some("Evidence Variable in variable role Population")
+            }
             Self::EvidenceVariableExposure => Some("Evidence Variable in variable role Exposure"),
-            Self::EvidenceVariableOutcome => Some("Evidence Variable in variable role Outcome (MeasuredVariable)"),
+            Self::EvidenceVariableOutcome => {
+                Some("Evidence Variable in variable role Outcome (MeasuredVariable)")
+            }
             Self::EfficacyOutcomes => Some("Efficacy-outcomes"),
             Self::HarmsOutcomes => Some("Harms outcomes"),
             Self::SampleSize => Some("Sample Size"),
@@ -151,23 +163,43 @@ impl ReportSectionType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Evidence => Some("Evidence Results."),
-            Self::InterventionGroupAloneEvidence => Some("Evidence Results for the intervention exposure only."),
-            Self::InterventionVsControlEvidence => Some("Evidence Results for comparison of Intervention and Control."),
-            Self::ControlGroupAloneEvidence => Some("Evidence Results for the control exposure only."),
+            Self::InterventionGroupAloneEvidence => {
+                Some("Evidence Results for the intervention exposure only.")
+            }
+            Self::InterventionVsControlEvidence => {
+                Some("Evidence Results for comparison of Intervention and Control.")
+            }
+            Self::ControlGroupAloneEvidence => {
+                Some("Evidence Results for the control exposure only.")
+            }
             Self::EvidenceVariable => Some("Evidence Variables used."),
-            Self::EvidenceVariableObserved => Some("Evidence Variables as observed in the research data."),
-            Self::EvidenceVariableIntended => Some("Evidence Variables intended for interpretation."),
-            Self::EvidenceVariablePopulation => Some("Evidence Variable in variable role Population."),
+            Self::EvidenceVariableObserved => {
+                Some("Evidence Variables as observed in the research data.")
+            }
+            Self::EvidenceVariableIntended => {
+                Some("Evidence Variables intended for interpretation.")
+            }
+            Self::EvidenceVariablePopulation => {
+                Some("Evidence Variable in variable role Population.")
+            }
             Self::EvidenceVariableExposure => Some("Evidence Variable in variable role Exposure."),
-            Self::EvidenceVariableOutcome => Some("Evidence Variable in variable role Outcome (MeasuredVariable)."),
-            Self::EfficacyOutcomes => Some("Outcomes related to efficacy or potential benefits of interventions."),
-            Self::HarmsOutcomes => Some("Outcomes related to adverse effects or potential harms of interventions."),
+            Self::EvidenceVariableOutcome => {
+                Some("Evidence Variable in variable role Outcome (MeasuredVariable).")
+            }
+            Self::EfficacyOutcomes => {
+                Some("Outcomes related to efficacy or potential benefits of interventions.")
+            }
+            Self::HarmsOutcomes => {
+                Some("Outcomes related to adverse effects or potential harms of interventions.")
+            }
             Self::SampleSize => Some("Sample Size."),
             Self::References => Some("References."),
             Self::Assertion => Some("Assertion."),
             Self::Reasons => Some("Reasons."),
             Self::CertaintyOfEvidence => Some("Certainty of Evidence."),
-            Self::EvidenceClassifier => Some("This section is used for classifiers of the evidence."),
+            Self::EvidenceClassifier => {
+                Some("This section is used for classifiers of the evidence.")
+            }
             Self::Warnings => Some("Warnings."),
             Self::TextSummary => Some("Denotes a section specifying text summary for a report."),
             Self::SummaryOfBodyOfEvidenceFindings => Some("Summary of Body of Evidence Findings."),
@@ -175,9 +207,15 @@ impl ReportSectionType {
             Self::Header => Some("Denotes the header to use for a Text Summary or above a Table."),
             Self::Tables => Some("Tables."),
             Self::Table => None,
-            Self::RowHeaders => Some("Denotes a section specifying row headers for a tabular report."),
-            Self::ColumnHeader => Some("Denotes the header to use for the column for a tabular report."),
-            Self::ColumnHeaders => Some("Denotes a section specifying column headers for a tabular report."),
+            Self::RowHeaders => {
+                Some("Denotes a section specifying row headers for a tabular report.")
+            }
+            Self::ColumnHeader => {
+                Some("Denotes the header to use for the column for a tabular report.")
+            }
+            Self::ColumnHeaders => {
+                Some("Denotes a section specifying column headers for a tabular report.")
+            }
         }
     }
 
@@ -286,5 +324,4 @@ impl ReportSectionType {
             })
             .unwrap_or(false)
     }
-
 }

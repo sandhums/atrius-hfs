@@ -86,18 +86,42 @@ impl GenomicStudyType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AltSplc => Some("Identification of multiple different processed mRNA transcripts from the same DNA template"),
-            Self::Chromatin => Some("Analysis of the spacial organization of chromatin within a cell"),
-            Self::Cnv => Some("Detection of a change in the number of copies of a defined region of genomic DNA sequence resulting in structural variation when compared to the reference sequence"),
-            Self::EpiAltHist => Some("Detection of biochemical modifications covalently bound to the N-terminal tail of a histone protein. These modifications may alter chromatin compaction and gene expression"),
-            Self::EpiAltDna => Some("Detection of the presence of an additional methyl group on a DNA nucleobase, which may alter gene transcription"),
-            Self::FamVarSegr => Some("Determining if a variant identified in an individual is present in other family members"),
-            Self::FuncVar => Some("Detection of sequence variants which may alter gene expression or gene product function when compared to the reference sequence"),
-            Self::GeneExpression => Some("Measurement and characterization of activity from all gene products"),
-            Self::PostTransMod => Some("Detection of biochemical modifications covalently bound to the amino acid monomers of a processed protein"),
-            Self::Snp => Some("Determination of which nucleotide is base present at a known variable location of the genomic sequence"),
-            Self::Str => Some("Quantification of the number of sequential microsatellite units in a repetitive sequence region"),
-            Self::StrucVar => Some("Detection of deletions, insertions, or rearrangements of DNA segments compared to the reference sequence"),
+            Self::AltSplc => Some(
+                "Identification of multiple different processed mRNA transcripts from the same DNA template",
+            ),
+            Self::Chromatin => {
+                Some("Analysis of the spacial organization of chromatin within a cell")
+            }
+            Self::Cnv => Some(
+                "Detection of a change in the number of copies of a defined region of genomic DNA sequence resulting in structural variation when compared to the reference sequence",
+            ),
+            Self::EpiAltHist => Some(
+                "Detection of biochemical modifications covalently bound to the N-terminal tail of a histone protein. These modifications may alter chromatin compaction and gene expression",
+            ),
+            Self::EpiAltDna => Some(
+                "Detection of the presence of an additional methyl group on a DNA nucleobase, which may alter gene transcription",
+            ),
+            Self::FamVarSegr => Some(
+                "Determining if a variant identified in an individual is present in other family members",
+            ),
+            Self::FuncVar => Some(
+                "Detection of sequence variants which may alter gene expression or gene product function when compared to the reference sequence",
+            ),
+            Self::GeneExpression => {
+                Some("Measurement and characterization of activity from all gene products")
+            }
+            Self::PostTransMod => Some(
+                "Detection of biochemical modifications covalently bound to the amino acid monomers of a processed protein",
+            ),
+            Self::Snp => Some(
+                "Determination of which nucleotide is base present at a known variable location of the genomic sequence",
+            ),
+            Self::Str => Some(
+                "Quantification of the number of sequential microsatellite units in a repetitive sequence region",
+            ),
+            Self::StrucVar => Some(
+                "Detection of deletions, insertions, or rearrangements of DNA segments compared to the reference sequence",
+            ),
         }
     }
 
@@ -174,5 +198,4 @@ impl GenomicStudyType {
             })
             .unwrap_or(false)
     }
-
 }

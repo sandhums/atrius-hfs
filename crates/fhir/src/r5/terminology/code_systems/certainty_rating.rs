@@ -110,8 +110,12 @@ impl EvidenceCertaintyRating {
             Self::SeriousConcern => Some("serious concern."),
             Self::VerySeriousConcern => Some("very serious concern."),
             Self::ExtremelySeriousConcern => Some("extremely serious concern."),
-            Self::Present => Some("possible reason for increasing quality rating was checked and found to be present."),
-            Self::Absent => Some("possible reason for increasing quality rating was checked and found to be absent."),
+            Self::Present => Some(
+                "possible reason for increasing quality rating was checked and found to be present.",
+            ),
+            Self::Absent => Some(
+                "possible reason for increasing quality rating was checked and found to be absent.",
+            ),
             Self::NoChange => Some("no change to quality rating."),
             Self::Downcode1 => Some("reduce quality rating by 1."),
             Self::Downcode2 => Some("reduce quality rating by 2."),
@@ -202,5 +206,4 @@ impl EvidenceCertaintyRating {
             })
             .unwrap_or(false)
     }
-
 }

@@ -94,20 +94,32 @@ impl ArtifactContributionType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Conceptualization => Some("Conceptualization (see https://jats4r.org/credit-taxonomy)."),
+            Self::Conceptualization => {
+                Some("Conceptualization (see https://jats4r.org/credit-taxonomy).")
+            }
             Self::DataCuration => Some("Data curation (see https://jats4r.org/credit-taxonomy)."),
-            Self::FormalAnalysis => Some("Formal analysis (see https://jats4r.org/credit-taxonomy)."),
-            Self::FundingAcquisition => Some("Funding acquisition (see https://jats4r.org/credit-taxonomy)."),
+            Self::FormalAnalysis => {
+                Some("Formal analysis (see https://jats4r.org/credit-taxonomy).")
+            }
+            Self::FundingAcquisition => {
+                Some("Funding acquisition (see https://jats4r.org/credit-taxonomy).")
+            }
             Self::Investigation => Some("Investigation (see https://jats4r.org/credit-taxonomy)."),
             Self::Methodology => Some("Methodology (see https://jats4r.org/credit-taxonomy)."),
-            Self::ProjectAdministration => Some("Project administration (see https://jats4r.org/credit-taxonomy)."),
+            Self::ProjectAdministration => {
+                Some("Project administration (see https://jats4r.org/credit-taxonomy).")
+            }
             Self::Resources => Some("Resources (see https://jats4r.org/credit-taxonomy)."),
             Self::Software => Some("Software (see https://jats4r.org/credit-taxonomy)."),
             Self::Supervision => Some("Supervision (see https://jats4r.org/credit-taxonomy)."),
             Self::Validation => Some("Validation (see https://jats4r.org/credit-taxonomy)."),
             Self::Visualization => Some("Visualization (see https://jats4r.org/credit-taxonomy)."),
-            Self::WritingOriginalDraft => Some("Writing - original draft (see https://jats4r.org/credit-taxonomy)."),
-            Self::WritingReviewEditing => Some("Writing - review & editing (see https://jats4r.org/credit-taxonomy)."),
+            Self::WritingOriginalDraft => {
+                Some("Writing - original draft (see https://jats4r.org/credit-taxonomy).")
+            }
+            Self::WritingReviewEditing => {
+                Some("Writing - review & editing (see https://jats4r.org/credit-taxonomy).")
+            }
         }
     }
 
@@ -188,5 +200,4 @@ impl ArtifactContributionType {
             })
             .unwrap_or(false)
     }
-
 }

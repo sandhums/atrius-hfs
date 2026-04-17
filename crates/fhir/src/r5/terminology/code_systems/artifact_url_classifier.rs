@@ -100,19 +100,35 @@ impl ArtifactUrlClassifier {
         match self {
             Self::Abstract => Some("The URL will reach a brief summary for the article."),
             Self::FullText => Some("The URL will reach the full-text of the article."),
-            Self::Supplement => Some("The URL will reach a supplement, appendix, or additional supporting information for the article."),
-            Self::Webpage => Some("The URL will reach a webpage related to the article, where the content is not easily classified as abstract, full-text or supplement."),
+            Self::Supplement => Some(
+                "The URL will reach a supplement, appendix, or additional supporting information for the article.",
+            ),
+            Self::Webpage => Some(
+                "The URL will reach a webpage related to the article, where the content is not easily classified as abstract, full-text or supplement.",
+            ),
             Self::FileDirectory => Some("The URL will reach a file directory."),
-            Self::CodeRepository => Some("File archive and web hosting facility for source code of software, documentation, web pages, and other works."),
-            Self::Restricted => Some("The URL content has restricted access (e.g. subcription required)."),
-            Self::CompressedFile => Some("Compressed archive file (e.g. a zip file) that contains multiple files"),
+            Self::CodeRepository => Some(
+                "File archive and web hosting facility for source code of software, documentation, web pages, and other works.",
+            ),
+            Self::Restricted => {
+                Some("The URL content has restricted access (e.g. subcription required).")
+            }
+            Self::CompressedFile => {
+                Some("Compressed archive file (e.g. a zip file) that contains multiple files")
+            }
             Self::DoiBased => Some("The URL is derived from the Digital Object Identifier (DOI)."),
             Self::Pdf => Some("The URL will reach content in PDF form."),
             Self::Json => Some("The URL will reach content in JSON format."),
             Self::Xml => Some("The URL will reach content in XML format."),
-            Self::VersionSpecific => Some("The URL will reach content that is a specific version of the article."),
-            Self::ComputableResource => Some("The URL will reach content that is machine-interpretable."),
-            Self::NotSpecified => Some("Used when URL classifier is not specified but expected in a system."),
+            Self::VersionSpecific => {
+                Some("The URL will reach content that is a specific version of the article.")
+            }
+            Self::ComputableResource => {
+                Some("The URL will reach content that is machine-interpretable.")
+            }
+            Self::NotSpecified => {
+                Some("Used when URL classifier is not specified but expected in a system.")
+            }
         }
     }
 
@@ -195,5 +211,4 @@ impl ArtifactUrlClassifier {
             })
             .unwrap_or(false)
     }
-
 }

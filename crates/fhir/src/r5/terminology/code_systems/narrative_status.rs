@@ -54,10 +54,18 @@ impl NarrativeStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Generated => Some("The contents of the narrative are entirely generated from the core elements in the content."),
-            Self::Extensions => Some("The contents of the narrative are entirely generated from the core elements in the content and some of the content is generated from extensions. The narrative SHALL reflect the impact of all modifier extensions."),
-            Self::Additional => Some("The contents of the narrative may contain additional information not found in the structured data. Note that there is no computable way to determine what the extra information is, other than by human inspection."),
-            Self::Empty => Some("The contents of the narrative are some equivalent of \"No human-readable text provided in this case\"."),
+            Self::Generated => Some(
+                "The contents of the narrative are entirely generated from the core elements in the content.",
+            ),
+            Self::Extensions => Some(
+                "The contents of the narrative are entirely generated from the core elements in the content and some of the content is generated from extensions. The narrative SHALL reflect the impact of all modifier extensions.",
+            ),
+            Self::Additional => Some(
+                "The contents of the narrative may contain additional information not found in the structured data. Note that there is no computable way to determine what the extra information is, other than by human inspection.",
+            ),
+            Self::Empty => Some(
+                "The contents of the narrative are some equivalent of \"No human-readable text provided in this case\".",
+            ),
         }
     }
 
@@ -118,5 +126,4 @@ impl NarrativeStatus {
             })
             .unwrap_or(false)
     }
-
 }

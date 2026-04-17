@@ -88,7 +88,9 @@ impl PediatricUse {
             Self::All => Some("All"),
             Self::Prepubertal => Some("Prepubertal children (2 years to onset of puberty)"),
             Self::AdultsAndElderly => Some("Adult and elderly population (> 18 years)"),
-            Self::PubertalAndPostpubertal => Some("Pubertal and postpubertal adolescents (onset of puberty to < 18 years)"),
+            Self::PubertalAndPostpubertal => {
+                Some("Pubertal and postpubertal adolescents (onset of puberty to < 18 years)")
+            }
         }
     }
 
@@ -107,7 +109,9 @@ impl PediatricUse {
             Self::All => Some("All"),
             Self::Prepubertal => Some("Prepubertal children (2 years to onset of puberty)"),
             Self::AdultsAndElderly => Some("Adult and elderly population (> 18 years)"),
-            Self::PubertalAndPostpubertal => Some("Pubertal and postpubertal adolescents (onset of puberty to < 18 years)"),
+            Self::PubertalAndPostpubertal => {
+                Some("Pubertal and postpubertal adolescents (onset of puberty to < 18 years)")
+            }
         }
     }
 
@@ -188,5 +192,4 @@ impl PediatricUse {
             })
             .unwrap_or(false)
     }
-
 }

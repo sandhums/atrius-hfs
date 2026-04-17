@@ -174,5 +174,4 @@ impl ResearchStudyPartyRole {
             })
             .unwrap_or(false)
     }
-
 }

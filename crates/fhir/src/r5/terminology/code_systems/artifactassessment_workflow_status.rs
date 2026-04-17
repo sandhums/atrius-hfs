@@ -78,15 +78,33 @@ impl ArtifactAssessmentWorkflowStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Submitted => Some("The comment has been submitted, but the responsible party has not yet been determined, or the responsible party has not yet determined the next steps to be taken."),
-            Self::Triaged => Some("The comment has been triaged, meaning the responsible party has been determined and next steps have been identified to address the comment."),
-            Self::WaitingForInput => Some("The comment is waiting for input from a specific party before next steps can be taken."),
-            Self::ResolvedNoChange => Some("The comment has been resolved and no changes resulted from the resolution"),
-            Self::ResolvedChangeRequired => Some("The comment has been resolved and changes are required to address the comment"),
-            Self::Deferred => Some("The comment is acceptable, but resolution of the comment and application of any associated changes have been deferred"),
-            Self::Duplicate => Some("The comment is a duplicate of another comment already received"),
-            Self::Applied => Some("The comment is resolved and any necessary changes have been applied"),
-            Self::Published => Some("The necessary changes to the artifact have been published in a new version of the artifact"),
+            Self::Submitted => Some(
+                "The comment has been submitted, but the responsible party has not yet been determined, or the responsible party has not yet determined the next steps to be taken.",
+            ),
+            Self::Triaged => Some(
+                "The comment has been triaged, meaning the responsible party has been determined and next steps have been identified to address the comment.",
+            ),
+            Self::WaitingForInput => Some(
+                "The comment is waiting for input from a specific party before next steps can be taken.",
+            ),
+            Self::ResolvedNoChange => {
+                Some("The comment has been resolved and no changes resulted from the resolution")
+            }
+            Self::ResolvedChangeRequired => Some(
+                "The comment has been resolved and changes are required to address the comment",
+            ),
+            Self::Deferred => Some(
+                "The comment is acceptable, but resolution of the comment and application of any associated changes have been deferred",
+            ),
+            Self::Duplicate => {
+                Some("The comment is a duplicate of another comment already received")
+            }
+            Self::Applied => {
+                Some("The comment is resolved and any necessary changes have been applied")
+            }
+            Self::Published => Some(
+                "The necessary changes to the artifact have been published in a new version of the artifact",
+            ),
             Self::EnteredInError => Some("The assessment was entered in error"),
         }
     }
@@ -160,5 +178,4 @@ impl ArtifactAssessmentWorkflowStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -82,17 +82,39 @@ impl CompositionStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Registered => Some("The existence of the composition is registered, but there is nothing yet available."),
-            Self::Partial => Some("This is a partial (e.g. initial, interim or preliminary) composition: data in the composition may be incomplete or unverified."),
-            Self::Preliminary => Some("Verified early results are available, but not all results are final."),
-            Self::Final => Some("This version of the composition is complete and verified by an appropriate person and no further work is planned. Any subsequent updates would be on a new version of the composition."),
-            Self::Amended => Some("The composition content or the referenced resources have been modified (edited or added to) subsequent to being released as \"final\" and the composition is complete and verified by an authorized person."),
-            Self::Corrected => Some("Subsequent to being final, the composition content has been modified to correct an error in the composition or referenced results."),
-            Self::Appended => Some("Subsequent to being final, the composition content has been modified by adding new content. The existing content is unchanged."),
-            Self::Cancelled => Some("The composition is unavailable because the measurement was not started or not completed (also sometimes called \"aborted\")."),
-            Self::EnteredInError => Some("The composition or document was originally created/issued in error, and this is an amendment that marks that the entire series should not be considered as valid."),
-            Self::Deprecated => Some("This composition has been withdrawn or superseded and should no longer be used."),
-            Self::Unknown => Some("The authoring/source system does not know which of the status values currently applies for this observation. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which."),
+            Self::Registered => Some(
+                "The existence of the composition is registered, but there is nothing yet available.",
+            ),
+            Self::Partial => Some(
+                "This is a partial (e.g. initial, interim or preliminary) composition: data in the composition may be incomplete or unverified.",
+            ),
+            Self::Preliminary => {
+                Some("Verified early results are available, but not all results are final.")
+            }
+            Self::Final => Some(
+                "This version of the composition is complete and verified by an appropriate person and no further work is planned. Any subsequent updates would be on a new version of the composition.",
+            ),
+            Self::Amended => Some(
+                "The composition content or the referenced resources have been modified (edited or added to) subsequent to being released as \"final\" and the composition is complete and verified by an authorized person.",
+            ),
+            Self::Corrected => Some(
+                "Subsequent to being final, the composition content has been modified to correct an error in the composition or referenced results.",
+            ),
+            Self::Appended => Some(
+                "Subsequent to being final, the composition content has been modified by adding new content. The existing content is unchanged.",
+            ),
+            Self::Cancelled => Some(
+                "The composition is unavailable because the measurement was not started or not completed (also sometimes called \"aborted\").",
+            ),
+            Self::EnteredInError => Some(
+                "The composition or document was originally created/issued in error, and this is an amendment that marks that the entire series should not be considered as valid.",
+            ),
+            Self::Deprecated => Some(
+                "This composition has been withdrawn or superseded and should no longer be used.",
+            ),
+            Self::Unknown => Some(
+                "The authoring/source system does not know which of the status values currently applies for this observation. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which.",
+            ),
         }
     }
 
@@ -167,5 +189,4 @@ impl CompositionStatus {
             })
             .unwrap_or(false)
     }
-
 }

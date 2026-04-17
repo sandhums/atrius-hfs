@@ -118,5 +118,4 @@ impl InventoryItemNameType {
             })
             .unwrap_or(false)
     }
-
 }

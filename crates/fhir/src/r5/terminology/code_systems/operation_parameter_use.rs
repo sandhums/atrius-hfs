@@ -104,5 +104,4 @@ impl OperationParameterUse {
             })
             .unwrap_or(false)
     }
-
 }

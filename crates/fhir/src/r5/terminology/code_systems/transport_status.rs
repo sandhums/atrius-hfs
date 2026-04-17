@@ -67,7 +67,9 @@ impl TransportStatus {
             Self::Abandoned => Some("Transport was started but not completed."),
             Self::Cancelled => Some("Transport was cancelled before started."),
             Self::Planned => Some("Planned transport that is not yet requested."),
-            Self::EnteredInError => Some("This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"abandoned\" rather than \"entered-in-error\".)."),
+            Self::EnteredInError => Some(
+                "This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"abandoned\" rather than \"entered-in-error\".).",
+            ),
         }
     }
 
@@ -132,5 +134,4 @@ impl TransportStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -59,10 +59,16 @@ impl BeneficiaryRelationshipCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::_1 => Some("The patient is the subscriber (policy holder)"),
-            Self::_2 => Some("The patient is the spouse or equivalent of the subscriber (policy holder)"),
+            Self::_2 => {
+                Some("The patient is the spouse or equivalent of the subscriber (policy holder)")
+            }
             Self::_3 => Some("The patient is the child of the subscriber (policy holder)"),
-            Self::_4 => Some("The patient is the common law spouse of the subscriber (policy holder)"),
-            Self::_5 => Some("The patient has some other relationship, such as parent, to the subscriber (policy holder)"),
+            Self::_4 => {
+                Some("The patient is the common law spouse of the subscriber (policy holder)")
+            }
+            Self::_5 => Some(
+                "The patient has some other relationship, such as parent, to the subscriber (policy holder)",
+            ),
         }
     }
 
@@ -125,5 +131,4 @@ impl BeneficiaryRelationshipCodes {
             })
             .unwrap_or(false)
     }
-
 }

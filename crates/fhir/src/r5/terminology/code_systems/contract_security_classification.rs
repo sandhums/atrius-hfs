@@ -97,5 +97,4 @@ impl ContractSecurityClassification {
             })
             .unwrap_or(false)
     }
-
 }
