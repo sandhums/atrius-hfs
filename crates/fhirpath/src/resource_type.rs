@@ -1854,12 +1854,10 @@ pub fn of_type_with_context(
                 } else {
                     Ok(EvaluationResult::Empty)
                 }
-            } else {
-                if is_of_type_with_context(collection, type_spec, context)? {
-                    Ok(collection.clone())
-                } else {
-                    Ok(EvaluationResult::Empty)
-                }
+            } else if is_of_type_with_context(collection, type_spec, context)? {
+                             Ok(collection.clone())
+                          } else {
+                               Ok(EvaluationResult::Empty)
             }
         }
     }

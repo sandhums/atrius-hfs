@@ -4,7 +4,7 @@ mod common {
 }
 mod tests {
 
-    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
+    use crate::common::fixtures::{load_profile, load_resource};
     use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use fhir_validation::profile::types::{
@@ -16,11 +16,16 @@ mod tests {
         R5FhirPathEvaluator, StructureDefinitionKind, TypeDerivationRule, TypeProfileMatchMode,
         Validator,
     };
-    use helios_fhir::FhirVersion;
+    use helios_fhir::{FhirResource, FhirVersion};
     use helios_fhir::r5::StructureDefinition;
     use helios_fhir::r5::{Bundle, Parameters, Patient, Resource};
     use serde_json::json;
-
+    pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
+        let FhirResource::R5(r) = resource else {
+            panic!("expected R5 FhirResource");
+        };
+        R5FhirPathEvaluator::new((**r).clone())
+    }
     fn validator() -> Validator {
         Validator::default()
     }

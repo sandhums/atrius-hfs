@@ -4,11 +4,17 @@ mod common {
 #[cfg(all(test, feature = "R5"))]
 mod tests {
 
-    use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
-    use fhir_validation::Validator;
+    use crate::common::fixtures::{load_profile, load_resource};
+    use fhir_validation::{R5FhirPathEvaluator, Validator};
     use fhir_validation::profile::profile_registry::ProfileRegistry;
-    use helios_fhir::FhirVersion;
+    use helios_fhir::{FhirResource, FhirVersion};
 
+    pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
+        let FhirResource::R5(r) = resource else {
+            panic!("expected R5 FhirResource");
+        };
+        R5FhirPathEvaluator::new((**r).clone())
+    }
     fn validator() -> Validator {
         Validator::default()
     }

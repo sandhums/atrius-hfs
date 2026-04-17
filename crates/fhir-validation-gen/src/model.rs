@@ -149,6 +149,7 @@ pub enum ParentKind {
 #[derive(Debug, Clone, Default)]
 pub struct FieldModel {
     /// Snapshot element id, e.g. `Patient.gender`.
+    #[allow(dead_code)]
     pub element_id: String,
 
     /// Snapshot element path, e.g. `Patient.gender`.
@@ -159,12 +160,14 @@ pub struct FieldModel {
     pub rust_field_name: String,
 
     /// Original FHIR field name, e.g. `gender`, `multipleBirth`.
+    #[allow(dead_code)]
     pub fhir_field_name: String,
 
     /// True when the element path is a choice like `value[x]`.
     pub is_choice: bool,
 
     /// Base name of a FHIR choice element, e.g. `value`, `multipleBirth`.
+    #[allow(dead_code)]
     pub choice_base_name: Option<String>,
 
     /// Generated Rust enum name for a FHIR choice element, e.g.
@@ -175,15 +178,19 @@ pub struct FieldModel {
     pub type_codes: Vec<String>,
 
     /// Declared target profiles, if any.
+    #[allow(dead_code)]
     pub target_profiles: Vec<String>,
 
     /// Declared profiles, if any.
+    #[allow(dead_code)]
     pub profiles: Vec<String>,
 
     /// Minimum cardinality.
+    #[allow(dead_code)]
     pub min: u32,
 
     /// Raw max cardinality, e.g. `1`, `*`.
+    #[allow(dead_code)]
     pub max: String,
 
     /// True when the element is repeating.
@@ -192,8 +199,6 @@ pub struct FieldModel {
     /// True when min > 0.
     pub is_required: bool,
 
-    /// True when the element is a direct child of the containing type path.
-    pub is_direct_child: bool,
 }
 
 /// Normalized invariant definition extracted from `StructureDefinition`.

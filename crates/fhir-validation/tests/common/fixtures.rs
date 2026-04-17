@@ -1,7 +1,4 @@
-#[cfg(feature = "R4")]
-use fhir_validation::R4FhirPathEvaluator;
-#[cfg(feature = "R5")]
-use fhir_validation::R5FhirPathEvaluator;
+
 #[cfg(feature = "R5")]
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::types::ExtractedProfile;
@@ -103,23 +100,6 @@ pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
     let json = load_fixture(FhirVersion::R5, rel);
     serde_json::from_str(&json).unwrap()
 }
-/// Build an R4 FHIRPath evaluator for [`Validator::validate_resource`] / [`Validator::validate_resource_async`].
-#[cfg(feature = "R4")]
-pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-    let FhirResource::R4(r) = resource else {
-        panic!("expected R5 FhirResource");
-    };
-    R4FhirPathEvaluator::new((**r).clone())
-}
-/// Build an R5 FHIRPath evaluator for [`Validator::validate_resource`] / [`Validator::validate_resource_async`].
-#[cfg(feature = "R5")]
-pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
-    let FhirResource::R5(r) = resource else {
-        panic!("expected R5 FhirResource");
-    };
-    R5FhirPathEvaluator::new((**r).clone())
-}
-
 #[allow(dead_code)]
 fn issue_matches_requested_severity(issue: &ValidationIssue, severity: Severity) -> bool {
     match severity {

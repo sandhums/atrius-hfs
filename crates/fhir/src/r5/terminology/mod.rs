@@ -2,6 +2,6 @@
 // DO NOT EDIT MANUALLY
 
 pub mod code_systems;
-pub mod index;
 pub mod value_sets;
+pub mod index;
 pub use index::*;

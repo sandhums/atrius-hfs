@@ -49,12 +49,12 @@ pub fn emit_validation_metadata_for_type(ty: &TypeValidationModel, output: &mut 
 
     if !ty.invariants.is_empty() {
         emit_invariants_const(ty, &ty.invariants, output);
-        output.push_str("\n");
+        output.push('\n');
     }
 
     if !ty.bindings.is_empty() {
         emit_bindings_const(ty, &ty.bindings, output);
-        output.push_str("\n");
+        output.push('\n');
     }
 }
 
@@ -720,7 +720,7 @@ fn emit_recursive_validation(
         return;
     }
 
-    output.push_str("\n");
+    output.push('\n');
 
     if matches!(pass, ValidationPass::Invariants) {
         for field in ty.fields.iter().filter(|field| field.is_array) {
@@ -728,7 +728,7 @@ fn emit_recursive_validation(
         }
 
         if !ty.fields.is_empty() {
-            output.push_str("\n");
+            output.push('\n');
         }
     }
 
@@ -737,7 +737,7 @@ fn emit_recursive_validation(
     }
 
     if !deferred_candidates.is_empty() {
-        output.push_str("\n");
+        output.push('\n');
         output.push_str("        // Deferred recursive validation candidates.\n");
         output.push_str("        // These need specialized handling (for example choice enums or contained resources).\n");
 
@@ -828,6 +828,7 @@ fn emit_empty_array_check(current_type_path: &str, field: &FieldModel, output: &
 /// an enum rather than a single concrete child type path. This function emits a
 /// match over the generated choice enum and forwards validation to the selected
 /// variant when validator metadata exists for that child type.
+#[allow(clippy::too_many_arguments)]
 fn emit_choice_field_recursive_validation(
     version: FhirVersion,
     current_type_path: &str,
@@ -853,8 +854,6 @@ fn emit_choice_field_recursive_validation(
         field_name = field_name,
     ));
     output.push_str("            match choice {\n");
-
-    let mut emitted_any_arm = false;
 
     let direct_choice_binding = current_bindings
         .iter()
@@ -936,7 +935,6 @@ fn emit_choice_field_recursive_validation(
                     ));
                     output.push_str("                }\n");
                 }
-                emitted_any_arm = true;
             }
             (ValidationPass::Bindings, _) => {
                 let handled_by_field_binding = direct_choice_binding
@@ -1043,7 +1041,6 @@ fn emit_choice_field_recursive_validation(
                     ));
                     output.push_str("                }\n");
                 }
-                emitted_any_arm = true;
             }
             (ValidationPass::BindingsAsync, _) => {
                 let handled_by_field_binding = direct_choice_binding
@@ -1100,7 +1097,6 @@ fn emit_choice_field_recursive_validation(
                     rebase_path,
                 ));
                 output.push_str("                }\n");
-                emitted_any_arm = true;
             }
             (ValidationPass::Invariants, _) => {
                 output.push_str(&format!(
@@ -1768,15 +1764,13 @@ fn upper_snake_case(name: &str) -> String {
                 }
                 out.push(ch);
                 prev_is_lower_or_digit = false;
-            } else {
-                if ch.is_ascii_lowercase() {
-                    out.push(ch.to_ascii_uppercase());
-                    prev_is_lower_or_digit = true;
-                } else {
-                    out.push(ch);
-                    prev_is_lower_or_digit = true;
-                }
-            }
+            } else if ch.is_ascii_lowercase() {
+                               out.push(ch.to_ascii_uppercase());
+                                prev_is_lower_or_digit = true;
+                           } else {
+                                out.push(ch);
+                                prev_is_lower_or_digit = true;
+                           }
         } else {
             if !out.ends_with('_') && !out.is_empty() {
                 out.push('_');
@@ -1789,7 +1783,6 @@ fn upper_snake_case(name: &str) -> String {
 }
 
 /// Return the argument type for contained dispatchers for each validation pass.
-
 #[allow(dead_code)]
 fn contained_dispatch_arg_type(pass: ValidationPass) -> &'static str {
     match pass {

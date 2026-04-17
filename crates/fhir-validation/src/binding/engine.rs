@@ -13,8 +13,6 @@ pub trait BindingVersionAdapter {
     fn coding_code(coding: &Self::Coding) -> Option<&str>;
     fn coding_display(coding: &Self::Coding) -> Option<&str>;
 
-    #[allow(dead_code)]
-    fn summarize_coding(coding: &Self::Coding) -> String;
     fn codeable_concept_codings(
         cc: &Self::CodeableConcept,
     ) -> Box<dyn Iterator<Item = &Self::Coding> + '_>;
@@ -22,6 +20,7 @@ pub trait BindingVersionAdapter {
     fn quantity_system(quantity: &Self::Quantity) -> Option<&str>;
     fn quantity_code(quantity: &Self::Quantity) -> Option<&str>;
 
+    #[allow(dead_code)]
     fn codeable_reference_concept(
         value: &Self::CodeableReference,
     ) -> Option<&Self::CodeableConcept>;
@@ -260,7 +259,7 @@ where
         Err(other) => LocalBindingOutcome::Error(other),
     }
 }
-
+#[allow(dead_code)]
 pub fn evaluate_local_codeable_reference_binding<A, F>(
     valueset_url: &str,
     value: &A::CodeableReference,

@@ -32,7 +32,7 @@ const DYNAMIC_CODE_SYSTEMS: &[&str] = &["http://hl7.org/fhir/message-events"];
 /// Return true when the supplied CodeSystem URL is known to be dynamically
 /// defined rather than locally enumerable.
 fn is_dynamic_codesystem(url: &str) -> bool {
-    DYNAMIC_CODE_SYSTEMS.iter().any(|u| *u == url)
+    DYNAMIC_CODE_SYSTEMS.contains(&url)
 }
 
 /// Stable generation metadata for one CodeSystem.
@@ -48,6 +48,7 @@ pub struct CodeSystemGenInfo {
     /// Public Rust type stem (e.g. `ObservationStatus`).
     pub type_name: String,
     /// True when this CodeSystem has a finite concept list we can index locally.
+    #[allow(dead_code)]
     pub has_concepts: bool,
 }
 
@@ -322,8 +323,7 @@ fn url_tail_to_snake(url: &str) -> String {
     // Take last non-empty path segment.
     let tail = url
         .split('/')
-        .filter(|s| !s.is_empty())
-        .last()
+        .rfind(|s| !s.is_empty())
         .unwrap_or("unnamed");
 
     let mut out = String::new();
@@ -377,12 +377,10 @@ fn sanitize_type_name(name: &str) -> String {
     for ch in name.chars() {
         if ch.is_ascii_alphanumeric() {
             cur.push(ch);
-        } else {
-            if !cur.is_empty() {
-                parts.push(cur.clone());
-                cur.clear();
-            }
-        }
+        } else if !cur.is_empty() {
+                      parts.push(cur.clone());
+                        cur.clear();
+                  }
     }
     if !cur.is_empty() {
         parts.push(cur);
@@ -392,7 +390,7 @@ fn sanitize_type_name(name: &str) -> String {
     for p in parts {
         let mut chars = p.chars();
         if let Some(f) = chars.next() {
-            out.push_str(&f.to_ascii_uppercase().to_string());
+            out.push(f.to_ascii_uppercase());
             out.push_str(chars.as_str());
         }
     }
@@ -497,8 +495,7 @@ fn is_example_valueset(vs: &ValueSet, url: &str) -> bool {
     // Some examples use url tail naming.
     let tail = url
         .split('/')
-        .filter(|s| !s.is_empty())
-        .last()
+        .rfind(|s| !s.is_empty())
         .unwrap_or("");
     if tail.starts_with("example") {
         return true;

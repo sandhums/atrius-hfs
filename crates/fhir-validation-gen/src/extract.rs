@@ -505,7 +505,6 @@ pub fn extract_direct_fields_from_elements(
             is_choice,
             choice_base_name,
             is_required: min > 0,
-            is_direct_child: is_direct,
             choice_enum_name,
         });
     }

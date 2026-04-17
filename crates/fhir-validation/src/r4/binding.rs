@@ -67,17 +67,6 @@ impl BindingVersionAdapter for R4BindingAdapter {
         coding_display(coding)
     }
 
-    fn summarize_coding(coding: &Self::Coding) -> String {
-        let system = coding_system(coding).filter(|v| !v.is_empty());
-        let code = coding_code(coding).filter(|v| !v.is_empty());
-        match (system, code) {
-            (Some(system), Some(code)) => format!("{}#{}", system, code),
-            (None, Some(code)) => code.to_string(),
-            (Some(system), None) => format!("{}#<missing-code>", system),
-            (None, None) => "<empty-coding>".to_string(),
-        }
-    }
-
     fn codeable_concept_codings(
         cc: &Self::CodeableConcept,
     ) -> Box<dyn Iterator<Item = &Self::Coding> + '_> {

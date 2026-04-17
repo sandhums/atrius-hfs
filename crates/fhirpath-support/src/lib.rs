@@ -621,7 +621,7 @@ impl Ord for EvaluationResult {
                     meta: b_meta,
                     type_info: b_type,
                 },
-            ) => match a_type.into_iter().cmp(b_type) {
+            ) => match a_type.iter().cmp(b_type) {
                 Ordering::Equal => a_meta.cmp(b_meta),
                 other => other,
             },
