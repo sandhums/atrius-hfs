@@ -20,6 +20,7 @@
 
 pub use fhir_validation_types::{
     BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
+    StructureDefinitionKind, TypeDerivationRule,
 };
 
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};

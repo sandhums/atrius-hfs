@@ -2448,6 +2448,7 @@ dependencies = [
  "helios-fhirpath",
  "helios-fhirpath-support",
  "reqwest",
+ "rust_decimal",
  "serde",
  "serde_json",
  "tokio",
@@ -2458,6 +2459,7 @@ dependencies = [
 name = "fhir-validation-gen"
 version = "0.1.47"
 dependencies = [
+ "fhir-validation-types",
  "helios-fhir",
  "helios-fhir-gen",
  "serde",

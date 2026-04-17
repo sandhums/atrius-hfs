@@ -4,12 +4,12 @@ mod common {
 }
 #[cfg(test)]
 mod tests {
-    use crate::common::fixtures::MockTerminologyService;
+    use fhir_validation::LocalTerminologyService;
     use fhir_validation::r4::binding::validate_codeable_concept_binding;
-    use fhir_validation::terminology::types::TerminologyMembershipOutcome;
     use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::Element;
+    use helios_fhir::FhirVersion;
     use helios_fhir::TerminologyValidationError;
     use helios_fhir::r4::{Code, CodeableConcept, Coding, Uri};
 
@@ -96,28 +96,18 @@ mod tests {
             id: None,
             extension: None,
             coding: Some(vec![
-                coding("http://example.org/system", "A", None),
-                coding("http://example.org/system", "M", None),
+                coding("http://example.org/system", "bad", None),
+                coding("http://hl7.org/fhir/administrative-gender", "male", None),
             ]),
             text: None,
         };
 
-        let term = MockTerminologyService {
-            result: Ok(TerminologyMembershipOutcome {
-                is_member: false,
-                message: None,
-                diagnostics: Vec::new(),
-                system: None,
-                code: None,
-                version: None,
-                display: None,
-            }),
-        };
+        let term = LocalTerminologyService::new(FhirVersion::R4);
 
-        let _issues = validate_codeable_concept_binding(
+        let issues = validate_codeable_concept_binding(
             &validator(),
-            "Patient.maritalStatus",
-            "http://hl7.org/fhir/ValueSet/marital-status",
+            "Patient.gender",
+            "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Extensible,
             Some(&cc),
             |_| {
@@ -127,24 +117,13 @@ mod tests {
             },
             Some(&term),
         );
-        // println!("{:?}", issues);
-        // assert!(issues.is_empty());
+        assert!(issues.is_empty());
     }
 
     #[test]
     fn remote_false_produces_warning_for_extensible_binding() {
         let cc = cc_with_one_coding("http://example.org/system", "X");
-        let term = MockTerminologyService {
-            result: Ok(TerminologyMembershipOutcome {
-                is_member: false,
-                message: None,
-                diagnostics: Vec::new(),
-                system: None,
-                code: None,
-                version: None,
-                display: None,
-            }),
-        };
+        let term = LocalTerminologyService::new(FhirVersion::R4);
 
         let issues = validate_codeable_concept_binding(
             &validator(),
@@ -182,7 +161,6 @@ mod tests {
             },
             None,
         );
-        println!("{:?}", issues);
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Error);
         assert_eq!(issues[0].code, "terminology");

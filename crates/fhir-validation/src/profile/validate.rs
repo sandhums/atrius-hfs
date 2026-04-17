@@ -1,19 +1,20 @@
 use crate::profile::cardinality::{
     relative_profile_path, validate_max_cardinality, validate_min_cardinality,
 };
+use crate::profile::element_bounds::validate_element_bounds;
 use crate::profile::helpers::{
     get_values_at_relative_path, get_values_with_paths_at_relative_path,
 };
 use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::slicing::validate_slicing;
-use crate::profile::types::{ExtractedProfile, ExtractedValueConstraint};
+use crate::profile::types::{ExtractedProfile, ExtractedTypeConstraint, ExtractedValueConstraint};
 use crate::validation_context::AsyncValidationContext;
 pub use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
 use crate::{TypeProfileMatchMode, ValidationIssue};
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::pin::Pin;
 
 /// Validate a resource instance against a single extracted profile.
@@ -50,8 +51,11 @@ pub async fn validate_profile_async<T: Serialize>(
 /// - maximum cardinality
 /// - slicing validation
 /// - fixed/pattern value constraints
+/// - `maxLength` and `minValue` / `maxValue` bounds (when extracted on the rule)
 /// - narrowed choice-type constraints
 /// - target profile constraints on references
+/// - `ElementDefinition.type.aggregation` and `type.versioning` on references and
+///   canonicals (when extracted)
 /// - `type.profile` constraints, including optional recursive profile validation
 /// - terminology bindings
 ///
@@ -156,6 +160,12 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
             profile.element_rules.as_slice(),
         ));
 
+        issues.extend(validate_element_bounds(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
         issues.extend(validate_type_constraints(
             resource,
             resource_type,
@@ -163,6 +173,12 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
         ));
 
         issues.extend(validate_target_profile_constraints(
+            resource,
+            resource_type,
+            profile.element_rules.as_slice(),
+        ));
+
+        issues.extend(validate_reference_aggregate_versioning_constraints(
             resource,
             resource_type,
             profile.element_rules.as_slice(),
@@ -301,6 +317,12 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
         profile.element_rules.as_slice(),
     ));
 
+    issues.extend(validate_element_bounds(
+        resource,
+        resource_type,
+        profile.element_rules.as_slice(),
+    ));
+
     issues.extend(validate_type_constraints(
         resource,
         resource_type,
@@ -308,6 +330,12 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
     ));
 
     issues.extend(validate_target_profile_constraints(
+        resource,
+        resource_type,
+        profile.element_rules.as_slice(),
+    ));
+
+    issues.extend(validate_reference_aggregate_versioning_constraints(
         resource,
         resource_type,
         profile.element_rules.as_slice(),
@@ -705,13 +733,332 @@ fn validate_target_profile_constraints<T: Serialize>(
     issues
 }
 
+/// Enforce `ElementDefinition.type.aggregation` and `type.versioning` when those
+/// fields are present on extracted type rows for `Reference`, `CodeableReference`,
+/// or `canonical`.
+///
+/// Multiple `type` entries are combined with **OR**: an instance satisfies the
+/// element if it matches **at least one** applicable constraint row.
+fn validate_reference_aggregate_versioning_constraints<T: Serialize>(
+    resource: &T,
+    resource_type: &str,
+    rules: &[crate::profile::types::ExtractedElementRule],
+) -> Vec<ValidationIssue> {
+    let root = match serde_json::to_value(resource) {
+        Ok(value) => value,
+        Err(err) => {
+            return vec![ValidationIssue {
+                severity: crate::Severity::Error,
+                code: "processing".to_string(),
+                summary: Some(
+                    "Resource could not be serialized for reference aggregation/versioning validation"
+                        .to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
+                diagnostics: format!(
+                    "Failed to serialize resource while validating reference aggregation/versioning: {}",
+                    err
+                ),
+                expression: None,
+                fhir_path: "".to_string(),
+                instance_path: None,
+            }];
+        }
+    };
+
+    let mut issues = Vec::new();
+
+    for rule in rules {
+        let ref_constraints: Vec<&ExtractedTypeConstraint> = rule
+            .type_constraints
+            .iter()
+            .filter(|c| {
+                type_constraint_has_aggregate_or_versioning(c)
+                    && type_constraint_supports_reference_semantics(c)
+            })
+            .collect();
+
+        if ref_constraints.is_empty() {
+            continue;
+        }
+
+        let Some(relative_path) = relative_profile_path(resource_type, &rule.path) else {
+            continue;
+        };
+
+        let actual_values = get_values_at_relative_path(&root, relative_path);
+        if actual_values.is_empty() {
+            continue;
+        }
+
+        let has_canonical_row = ref_constraints
+            .iter()
+            .any(|c| c.code.eq_ignore_ascii_case("canonical"));
+
+        for actual in actual_values {
+            let ref_url = reference_url_for_aggregation(actual);
+            let canonical_str = actual.as_str();
+
+            let should_validate =
+                ref_url.is_some() || (canonical_str.is_some() && has_canonical_row);
+
+            if !should_validate {
+                continue;
+            }
+
+            if ref_constraints
+                .iter()
+                .any(|c| instance_matches_aggregate_version_constraint(c, actual, &root))
+            {
+                continue;
+            }
+
+            issues.push(ValidationIssue {
+                severity: crate::Severity::Error,
+                code: "structure".to_string(),
+                summary: Some(
+                    "Reference or canonical value does not satisfy type aggregation/versioning rules"
+                        .to_string(),
+                ),
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
+                diagnostics: format!(
+                    "Element '{}' does not match any allowed ElementDefinition.type aggregation/versioning alternative. Profile declares {:?} on this path; instance reference: {:?}.",
+                    rule.path,
+                    ref_constraints
+                        .iter()
+                        .map(|c| {
+                            (
+                                c.code.as_str(),
+                                c.aggregation.as_slice(),
+                                c.versioning.as_deref(),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                    ref_url.or(canonical_str)
+                ),
+                expression: None,
+                fhir_path: rule.path.clone(),
+                instance_path: Some(rule.path.clone()),
+            });
+        }
+    }
+
+    issues
+}
+
+fn type_constraint_supports_reference_semantics(c: &ExtractedTypeConstraint) -> bool {
+    c.code.eq_ignore_ascii_case("Reference")
+        || c.code.eq_ignore_ascii_case("CodeableReference")
+        || c.code.eq_ignore_ascii_case("canonical")
+}
+
+fn type_constraint_has_aggregate_or_versioning(c: &ExtractedTypeConstraint) -> bool {
+    !c.aggregation.is_empty() || c.versioning.is_some()
+}
+
+fn instance_matches_aggregate_version_constraint(
+    c: &ExtractedTypeConstraint,
+    value: &Value,
+    root: &Value,
+) -> bool {
+    if c.code.eq_ignore_ascii_case("canonical") {
+        let Value::String(s) = value else {
+            return false;
+        };
+        // `aggregation` on `canonical` is uncommon; versioning uses `|` in the URI.
+        return versioning_matches_canonical(c.versioning.as_deref(), s);
+    }
+
+    if !c.code.eq_ignore_ascii_case("Reference")
+        && !c.code.eq_ignore_ascii_case("CodeableReference")
+    {
+        return false;
+    }
+
+    let Some(ref_url) = reference_url_for_aggregation(value) else {
+        return false;
+    };
+
+    aggregation_matches_reference(&c.aggregation, ref_url, root)
+        && versioning_matches_reference(c.versioning.as_deref(), ref_url)
+}
+
+fn aggregation_matches_reference(allowed: &[String], ref_url: &str, root: &Value) -> bool {
+    if allowed.is_empty() {
+        return true;
+    }
+    let modes = applicable_aggregation_modes(ref_url, root);
+    allowed.iter().any(|a| modes.iter().any(|m| m == a))
+}
+
+fn root_is_bundle(root: &Value) -> bool {
+    root.as_object()
+        .and_then(|m| m.get("resourceType"))
+        .and_then(Value::as_str)
+        == Some("Bundle")
+}
+
+/// Classify how a reference participates in aggregation (FHIR
+/// `resource-aggregation-mode`).
+///
+/// **`bundled`** is only assigned when the instance under validation is a
+/// [`Bundle`](https://hl7.org/fhir/bundle.html) **and** the reference resolves to
+/// an entry in that bundle (via `fullUrl` or `resourceType`/`id`). Opaque
+/// `urn:uuid` / `urn:oid` references are **not** treated as bundled outside of a
+/// bundle; they are classified as **`referenced`** so server-side logical
+/// references still match `aggregation: referenced` on non-Bundle resources.
+fn applicable_aggregation_modes(ref_url: &str, root: &Value) -> Vec<String> {
+    let mut set = HashSet::new();
+    if ref_url.starts_with('#') {
+        set.insert("contained".to_string());
+        return set.into_iter().collect();
+    }
+
+    let in_bundle = root_is_bundle(root);
+
+    if in_bundle && bundle_entry_matches_reference(root, ref_url) {
+        set.insert("bundled".to_string());
+    }
+
+    if is_referenced_style_reference(ref_url) {
+        set.insert("referenced".to_string());
+    }
+
+    if !in_bundle && (ref_url.starts_with("urn:uuid:") || ref_url.starts_with("urn:oid:")) {
+        set.insert("referenced".to_string());
+    }
+
+    if set.is_empty() {
+        if !ref_url.is_empty()
+            && !ref_url.starts_with('#')
+            && !(in_bundle && (ref_url.starts_with("urn:uuid:") || ref_url.starts_with("urn:oid:")))
+        {
+            set.insert("referenced".to_string());
+        }
+    }
+
+    set.into_iter().collect()
+}
+
+fn is_referenced_style_reference(ref_url: &str) -> bool {
+    !ref_url.starts_with('#')
+        && !ref_url.starts_with("urn:uuid:")
+        && !ref_url.starts_with("urn:oid:")
+}
+
+/// FHIR primitive / string-like JSON either as a JSON string or as `{"value": "..."}`
+/// (generated model serialization).
+fn json_stringish_value(value: &Value) -> Option<&str> {
+    match value {
+        Value::String(s) => Some(s.as_str()),
+        Value::Object(map) => map.get("value").and_then(|v| v.as_str()),
+        _ => None,
+    }
+}
+
+fn bundle_entry_matches_reference(root: &Value, ref_url: &str) -> bool {
+    let Value::Object(root_map) = root else {
+        return false;
+    };
+    if root_map.get("resourceType").and_then(Value::as_str) != Some("Bundle") {
+        return false;
+    }
+    let Some(entries) = root_map.get("entry").and_then(Value::as_array) else {
+        return false;
+    };
+    for e in entries {
+        if let Some(fu) = e.get("fullUrl").and_then(json_stringish_value) {
+            if fu == ref_url {
+                return true;
+            }
+        }
+        let Some(res) = e.get("resource") else {
+            continue;
+        };
+        let Value::Object(rm) = res else {
+            continue;
+        };
+        let rt = rm.get("resourceType").and_then(Value::as_str);
+        let id = rm.get("id").and_then(Value::as_str);
+        let Some(rt) = rt else {
+            continue;
+        };
+        let Some(id) = id else {
+            continue;
+        };
+        let composed = format!("{rt}/{id}");
+        if composed == ref_url || ref_url.ends_with(&composed) {
+            return true;
+        }
+    }
+    false
+}
+
+fn versioning_matches_reference(versioning: Option<&str>, ref_url: &str) -> bool {
+    let Some(v) = versioning else {
+        return true;
+    };
+    let version_specific = reference_url_is_version_specific(ref_url);
+    match v {
+        "either" => true,
+        "independent" => !version_specific,
+        "specific" => version_specific,
+        _ => true,
+    }
+}
+
+fn reference_url_is_version_specific(ref_url: &str) -> bool {
+    ref_url.contains("/_history/")
+}
+
+fn versioning_matches_canonical(versioning: Option<&str>, canonical: &str) -> bool {
+    let Some(v) = versioning else {
+        return true;
+    };
+    let version_specific = canonical_has_explicit_version(canonical);
+    match v {
+        "either" => true,
+        "independent" => !version_specific,
+        "specific" => version_specific,
+        _ => true,
+    }
+}
+
+/// `canonical` datatype version is expressed with `|` after the base URI.
+fn canonical_has_explicit_version(canonical: &str) -> bool {
+    canonical
+        .rsplit_once('|')
+        .is_some_and(|(base, ver)| !base.is_empty() && !ver.is_empty())
+}
+
+/// Extract `Reference.reference` for aggregation/versioning, including nested
+/// `CodeableReference.reference`.
+fn reference_url_for_aggregation(value: &Value) -> Option<&str> {
+    let Value::Object(map) = value else {
+        return None;
+    };
+    match map.get("reference")? {
+        Value::String(s) => Some(s.as_str()),
+        Value::Object(inner) => inner.get("reference").and_then(json_stringish_value),
+        _ => None,
+    }
+}
+
 /// Determine the referenced target resource type from a reference-like JSON value.
 fn actual_reference_target_type<'a>(value: &'a Value, root: &'a Value) -> Option<&'a str> {
     let Value::Object(map) = value else {
         return None;
     };
 
-    let reference = map.get("reference")?.as_str()?;
+    let reference = match map.get("reference")? {
+        Value::String(s) => s.as_str(),
+        Value::Object(inner) => inner.get("reference").and_then(json_stringish_value)?,
+        _ => return None,
+    };
     if let Some(contained_id) = reference.strip_prefix('#') {
         return contained_resource_type_by_id(root, contained_id);
     }
@@ -1828,5 +2175,250 @@ fn value_matches_pattern(actual: &Value, pattern: &Value) -> bool {
             })
         }
         _ => actual == pattern,
+    }
+}
+
+#[cfg(test)]
+mod reference_aggregate_versioning_tests {
+    use super::*;
+    use crate::profile::types::ExtractedElementRule;
+    use serde_json::json;
+
+    fn rule(path: &str, tc: ExtractedTypeConstraint) -> ExtractedElementRule {
+        ExtractedElementRule {
+            id: path.to_string(),
+            path: path.to_string(),
+            type_constraints: vec![tc],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn aggregation_referenced_only_rejects_contained_reference() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "id": "x",
+            "generalPractitioner": { "reference": "#pr1" },
+            "contained": [{ "resourceType": "Practitioner", "id": "pr1" }]
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[rule(
+                "Patient.generalPractitioner",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    aggregation: vec!["referenced".into()],
+                    ..Default::default()
+                },
+            )],
+        );
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn aggregation_referenced_only_accepts_literal_reference() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "generalPractitioner": { "reference": "Practitioner/1" }
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[rule(
+                "Patient.generalPractitioner",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    aggregation: vec!["referenced".into()],
+                    ..Default::default()
+                },
+            )],
+        );
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn versioning_independent_rejects_history_url() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "generalPractitioner": { "reference": "Practitioner/1/_history/2" }
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[rule(
+                "Patient.generalPractitioner",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    versioning: Some("independent".into()),
+                    ..Default::default()
+                },
+            )],
+        );
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn versioning_specific_requires_history_segment() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "generalPractitioner": { "reference": "Practitioner/1" }
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[rule(
+                "Patient.generalPractitioner",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    versioning: Some("specific".into()),
+                    ..Default::default()
+                },
+            )],
+        );
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn type_rows_combine_with_or() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "generalPractitioner": { "reference": "#pr1" },
+            "contained": [{ "resourceType": "Practitioner", "id": "pr1" }]
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[ExtractedElementRule {
+                id: "Patient.generalPractitioner".into(),
+                path: "Patient.generalPractitioner".into(),
+                type_constraints: vec![
+                    ExtractedTypeConstraint {
+                        code: "Reference".into(),
+                        aggregation: vec!["referenced".into()],
+                        ..Default::default()
+                    },
+                    ExtractedTypeConstraint {
+                        code: "Reference".into(),
+                        aggregation: vec!["contained".into()],
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }],
+        );
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn canonical_versioning_specific_requires_pipe_version() {
+        let resource = json!({
+            "resourceType": "StructureDefinition",
+            "url": "http://example.org/foo"
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "StructureDefinition",
+            &[rule(
+                "StructureDefinition.url",
+                ExtractedTypeConstraint {
+                    code: "canonical".into(),
+                    versioning: Some("specific".into()),
+                    ..Default::default()
+                },
+            )],
+        );
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn urn_on_non_bundle_counts_as_referenced_not_bundled() {
+        let resource = json!({
+            "resourceType": "Patient",
+            "generalPractitioner": { "reference": "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &resource,
+            "Patient",
+            &[rule(
+                "Patient.generalPractitioner",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    aggregation: vec!["referenced".into()],
+                    ..Default::default()
+                },
+            )],
+        );
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn bundled_only_requires_matching_bundle_entry() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+                {
+                    "resource": {
+                        "resourceType": "Observation",
+                        "status": "final",
+                        "code": { "text": "x" },
+                        "subject": { "reference": "Patient/999" }
+                    }
+                }
+            ]
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &bundle,
+            "Bundle",
+            &[rule(
+                "Bundle.entry.resource.subject",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    aggregation: vec!["bundled".into()],
+                    ..Default::default()
+                },
+            )],
+        );
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn bundled_aggregation_passes_when_reference_matches_bundle_full_url() {
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+                {
+                    "fullUrl": "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                    "resource": {
+                        "resourceType": "Patient",
+                        "id": "p1",
+                        "name": [{ "family": "Test" }]
+                    }
+                },
+                {
+                    "resource": {
+                        "resourceType": "Observation",
+                        "status": "final",
+                        "code": { "text": "x" },
+                        "subject": { "reference": "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }
+                    }
+                }
+            ]
+        });
+        let issues = validate_reference_aggregate_versioning_constraints(
+            &bundle,
+            "Bundle",
+            &[rule(
+                "Bundle.entry.resource.subject",
+                ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    aggregation: vec!["bundled".into()],
+                    ..Default::default()
+                },
+            )],
+        );
+        assert!(issues.is_empty());
     }
 }

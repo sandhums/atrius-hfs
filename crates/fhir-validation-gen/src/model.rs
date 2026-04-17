@@ -22,6 +22,8 @@
 
 use std::collections::BTreeMap;
 
+use fhir_validation_types::BindingTargetKind;
+
 /// Normalized validation metadata for one generated Rust type.
 ///
 /// A single FHIR `StructureDefinition` may produce:
@@ -318,6 +320,22 @@ impl BindingTargetKindModel {
                 "fhir_validation_types::BindingTargetKind::CodeableReference"
             }
             Self::Quantity => "fhir_validation_types::BindingTargetKind::Quantity",
+        }
+    }
+}
+
+impl From<BindingTargetKind> for BindingTargetKindModel {
+    fn from(k: BindingTargetKind) -> Self {
+        match k {
+            BindingTargetKind::Code => Self::Code,
+            BindingTargetKind::Coding => Self::Coding,
+            BindingTargetKind::CodeableConcept => Self::CodeableConcept,
+            BindingTargetKind::String => Self::String,
+            BindingTargetKind::Uri => Self::Uri,
+            BindingTargetKind::Choice => Self::Choice,
+            BindingTargetKind::CodeableReference => Self::CodeableReference,
+            BindingTargetKind::Quantity => Self::Quantity,
+            BindingTargetKind::Unsupported => Self::Unsupported,
         }
     }
 }

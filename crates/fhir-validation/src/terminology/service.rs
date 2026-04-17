@@ -4,6 +4,9 @@
 //! the validation engine, along with the remote service implementation that
 //! adapts simple membership queries into typed backend requests and converts
 //! backend `$validate-code` responses into validation-friendly outcomes.
+//!
+//! For sync validation without a remote server, see [`super::LocalTerminologyService`], which
+//! delegates to generated ValueSet helpers in `helios_fhir`.
 use crate::ValidationError;
 use crate::backend::TerminologyBackend;
 use crate::helpers::parse_validate_vs_result;

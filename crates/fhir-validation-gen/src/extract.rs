@@ -18,6 +18,9 @@
 //! This normalization step is intentionally separate from emission so code
 //! generation can operate on a stable, FHIR-aware intermediate model.
 
+use fhir_validation_types::{
+    binding_target_kind_from_element_type_codes, normalize_fhir_element_type_code,
+};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -540,38 +543,10 @@ pub fn parse_binding_strength(strength: Option<&str>) -> BindingStrengthModel {
 /// `BindingTargetKindModel::Choice` when any variant is bindable at runtime.
 /// The concrete runtime dispatch for choice fields is handled later during
 /// code emission based on the actual selected variant.
+///
+/// Delegates to [`fhir_validation_types::binding_target_kind_from_element_type_codes`].
 pub fn binding_target_kind(type_codes: &[String]) -> BindingTargetKindModel {
-    if type_codes.len() != 1 {
-        let has_bindable_choice_variant = type_codes.iter().any(|code| {
-            matches!(
-                code.as_str(),
-                "code"
-                    | "string"
-                    | "uri"
-                    | "Coding"
-                    | "CodeableConcept"
-                    | "CodeableReference"
-                    | "Quantity"
-            )
-        });
-
-        return if has_bindable_choice_variant {
-            BindingTargetKindModel::Choice
-        } else {
-            BindingTargetKindModel::Unsupported
-        };
-    }
-
-    match type_codes[0].as_str() {
-        "code" => BindingTargetKindModel::Code,
-        "string" => BindingTargetKindModel::String,
-        "uri" => BindingTargetKindModel::Uri,
-        "Coding" => BindingTargetKindModel::Coding,
-        "CodeableConcept" => BindingTargetKindModel::CodeableConcept,
-        "CodeableReference" => BindingTargetKindModel::CodeableReference,
-        "Quantity" => BindingTargetKindModel::Quantity,
-        _ => BindingTargetKindModel::Unsupported,
-    }
+    binding_target_kind_from_element_type_codes(type_codes).into()
 }
 
 /// Classify the inheritance/runtime family for a generated type.
@@ -778,7 +753,7 @@ fn element_type_codes(element: &Value) -> Vec<String> {
             types
                 .iter()
                 .filter_map(|t| json_str_field(t, "code"))
-                .map(normalize_type_code)
+                .map(normalize_fhir_element_type_code)
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default()
@@ -790,19 +765,6 @@ fn element_type_codes_typed(element: &ElementDefinition) -> Vec<String> {
     };
 
     element_type_codes(&element_json)
-}
-fn normalize_type_code(code: &str) -> String {
-    match code {
-        "http://hl7.org/fhirpath/System.Boolean" => "boolean".to_string(),
-        "http://hl7.org/fhirpath/System.String" => "string".to_string(),
-        "http://hl7.org/fhirpath/System.Integer" => "integer".to_string(),
-        "http://hl7.org/fhirpath/System.Long" => "integer64".to_string(),
-        "http://hl7.org/fhirpath/System.Decimal" => "decimal".to_string(),
-        "http://hl7.org/fhirpath/System.Date" => "date".to_string(),
-        "http://hl7.org/fhirpath/System.DateTime" => "dateTime".to_string(),
-        "http://hl7.org/fhirpath/System.Time" => "time".to_string(),
-        other => other.to_string(),
-    }
 }
 
 fn extract_target_profiles(element: &Value) -> Vec<String> {

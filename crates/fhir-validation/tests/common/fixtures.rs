@@ -5,9 +5,7 @@ use fhir_validation::R5FhirPathEvaluator;
 #[cfg(feature = "R5")]
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::types::ExtractedProfile;
-use fhir_validation::terminology::service::TerminologyServiceSync;
-use fhir_validation::types::TerminologyMembershipOutcome;
-use fhir_validation::{Severity, ValidationError, ValidationIssue};
+use fhir_validation::{Severity, ValidationIssue};
 use helios_fhir::{FhirResource, FhirVersion};
 use std::fs;
 use std::path::PathBuf;
@@ -104,36 +102,6 @@ pub fn load_profile(version: FhirVersion, rel: &str) -> ExtractedProfile {
 pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
     let json = load_fixture(FhirVersion::R5, rel);
     serde_json::from_str(&json).unwrap()
-}
-pub struct MockTerminologyService {
-    pub result: Result<TerminologyMembershipOutcome, ValidationError>,
-}
-
-impl TerminologyServiceSync for MockTerminologyService {
-    fn member_of(
-        &self,
-        _valueset_url: &str,
-        _system: Option<&str>,
-        _code: &str,
-        _display: Option<&str>,
-    ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-        match &self.result {
-            Ok(v) => Ok(v.clone()),
-            Err(ValidationError::Terminology(msg)) => {
-                Err(ValidationError::Terminology(msg.clone()))
-            }
-            Err(ValidationError::Other(msg)) => Err(ValidationError::Other(msg.clone())),
-            Err(ValidationError::FhirPath(_)) => Err(ValidationError::Other(
-                "unexpected fhirpath error in mock".to_string(),
-            )),
-            Err(ValidationError::TerminologyRemote(_)) => Err(ValidationError::Other(
-                "unexpected error in mock".to_string(),
-            )),
-            Err(ValidationError::InvalidStructureDefinition(_)) => Err(ValidationError::Other(
-                "invalid structure definition".to_string(),
-            )),
-        }
-    }
 }
 /// Build an R4 FHIRPath evaluator for [`Validator::validate_resource`] / [`Validator::validate_resource_async`].
 #[cfg(feature = "R4")]

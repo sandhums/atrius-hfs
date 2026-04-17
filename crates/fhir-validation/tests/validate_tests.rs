@@ -5,15 +5,20 @@ mod common {
 mod tests {
 
     use crate::common::fixtures::{load_profile, load_resource, r5_evaluator_for};
+    use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use fhir_validation::profile::types::{
         ExtractedElementRule, ExtractedProfile, ExtractedTypeConstraint,
     };
     use fhir_validation::profile::validate::validate_profile;
     use fhir_validation::validation_context::{ValidationContext, ValidationState};
-    use fhir_validation::{R5FhirPathEvaluator, TypeProfileMatchMode, Validator};
+    use fhir_validation::{
+        R5FhirPathEvaluator, StructureDefinitionKind, TypeDerivationRule, TypeProfileMatchMode,
+        Validator,
+    };
     use helios_fhir::FhirVersion;
-    use helios_fhir::r5::{Parameters, Patient, Resource};
+    use helios_fhir::r5::StructureDefinition;
+    use helios_fhir::r5::{Bundle, Parameters, Patient, Resource};
     use serde_json::json;
 
     fn validator() -> Validator {
@@ -109,6 +114,7 @@ mod tests {
             type_constraints: vec![],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = r#"
@@ -155,6 +161,7 @@ mod tests {
             type_constraints: vec![],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = r#"
@@ -209,6 +216,7 @@ mod tests {
             type_constraints: vec![],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = r#"
@@ -263,6 +271,7 @@ mod tests {
             type_constraints: vec![],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = r#"
@@ -312,9 +321,11 @@ mod tests {
                 code: "boolean".to_string(),
                 profiles: Vec::new(),
                 target_profiles: Vec::new(),
+                ..Default::default()
             }],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = r#"
@@ -360,9 +371,11 @@ mod tests {
                 code: "boolean".to_string(),
                 profiles: Vec::new(),
                 target_profiles: Vec::new(),
+                ..Default::default()
             }],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = json!({
@@ -407,9 +420,11 @@ mod tests {
                 code: "boolean".to_string(),
                 profiles: Vec::new(),
                 target_profiles: Vec::new(),
+                ..Default::default()
             }],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let patient_json = json!({
@@ -455,9 +470,11 @@ mod tests {
                 code: "Quantity".to_string(),
                 profiles: Vec::new(),
                 target_profiles: Vec::new(),
+                ..Default::default()
             }],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         });
 
         let observation_json = json!({
@@ -521,6 +538,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.subject".to_string(),
@@ -536,9 +555,11 @@ mod tests {
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                     ],
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -582,6 +603,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.subject".to_string(),
@@ -597,9 +620,11 @@ mod tests {
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                     ],
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -645,6 +670,8 @@ mod tests {
             title: None,
             resource_type: "CarePlan".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "CarePlan.activity.reference".to_string(),
@@ -660,9 +687,11 @@ mod tests {
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/ServiceRequest".to_string(),
                     ],
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -727,6 +756,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.subject".to_string(),
@@ -742,9 +773,11 @@ mod tests {
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                     ],
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -794,6 +827,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.subject".to_string(),
@@ -809,9 +844,11 @@ mod tests {
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/Patient".to_string(),
                     ],
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -864,6 +901,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -875,6 +914,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -891,9 +932,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -950,6 +993,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.status".to_string(),
@@ -962,6 +1007,7 @@ mod tests {
                 type_constraints: Vec::new(),
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         });
 
@@ -972,6 +1018,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -988,9 +1036,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1058,6 +1108,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.hasMember".to_string(),
@@ -1074,9 +1126,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1115,6 +1169,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1131,9 +1187,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1189,6 +1247,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.code.text".to_string(),
@@ -1201,6 +1261,7 @@ mod tests {
                 type_constraints: Vec::new(),
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         });
 
@@ -1211,6 +1272,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1227,9 +1290,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1298,6 +1363,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -1309,6 +1376,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1325,9 +1394,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1393,6 +1464,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -1404,6 +1477,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1420,9 +1495,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1485,6 +1562,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.status".to_string(),
@@ -1497,6 +1576,7 @@ mod tests {
                 type_constraints: Vec::new(),
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         });
 
@@ -1507,6 +1587,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1523,9 +1605,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1585,6 +1669,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Observation.hasMember".to_string(),
@@ -1601,9 +1687,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1617,6 +1705,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1633,9 +1723,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1707,6 +1799,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1723,9 +1817,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1794,6 +1890,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1810,9 +1908,11 @@ mod tests {
                             .to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1890,6 +1990,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -1900,6 +2002,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -1911,6 +2015,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -1927,9 +2033,11 @@ mod tests {
                         "http://atrius.health/fhir/StructureDefinition/profile-b".to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -1989,6 +2097,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -1999,6 +2109,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -2010,6 +2122,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -2026,9 +2140,11 @@ mod tests {
                         "http://atrius.health/fhir/StructureDefinition/profile-b".to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -2100,6 +2216,8 @@ mod tests {
             title: None,
             resource_type: "Observation".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: Vec::new(),
         });
@@ -2111,6 +2229,8 @@ mod tests {
             title: None,
             resource_type: "Parameters".to_string(),
             base_definition: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
             invariants: Vec::new(),
             element_rules: vec![ExtractedElementRule {
                 id: "Parameters.parameter.resource".to_string(),
@@ -2127,9 +2247,11 @@ mod tests {
                         "http://atrius.health/fhir/StructureDefinition/profile-unknown".to_string(),
                     ],
                     target_profiles: Vec::new(),
+                    ..Default::default()
                 }],
                 slicing: None,
                 slice_name: None,
+                ..Default::default()
             }],
         };
 
@@ -2185,5 +2307,208 @@ mod tests {
                 "Element 'Parameters.parameter.resource' requires unknown profile(s): http://atrius.health/fhir/StructureDefinition/profile-unknown."
             )
         }));
+    }
+
+    /// Same differential content as `extract_tests::TYPE_AGGREGATION_VERSIONING_SD`.
+    const PATIENT_LINK_AGGREGATION_SD: &str = r#"
+    {
+      "resourceType": "StructureDefinition",
+      "id": "patient-link-aggregation",
+      "url": "http://example.org/fhir/StructureDefinition/patient-link-aggregation",
+      "name": "PatientLinkAggregation",
+      "title": "Patient link aggregation",
+      "status": "draft",
+      "date": "2026-01-01",
+      "publisher": "Test",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Patient",
+      "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+      "derivation": "constraint",
+      "differential": {
+        "element": [
+          {
+            "id": "Patient.link.other",
+            "path": "Patient.link.other",
+            "type": [
+              {
+                "code": "Reference",
+                "aggregation": ["referenced"],
+                "versioning": "independent"
+              }
+            ]
+          }
+        ]
+      }
+    }
+    "#;
+
+    #[test]
+    fn extracted_profile_enforces_reference_versioning_from_structure_definition() {
+        let sd: StructureDefinition = serde_json::from_str(PATIENT_LINK_AGGREGATION_SD)
+            .expect("aggregation SD JSON should deserialize into R5 StructureDefinition");
+        let profile = extract_r5_structure_definition_profile(&sd)
+            .expect("extracted profile should include aggregation and versioning");
+
+        let patient_json = r#"
+        {
+          "resourceType": "Patient",
+          "link": [
+            {
+              "other": { "reference": "Patient/1/_history/2" }
+            }
+          ]
+        }
+        "#;
+
+        let patient: Patient = serde_json::from_str(patient_json)
+            .expect("Patient JSON with versioned reference should deserialize");
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient.clone())));
+
+        let issues = run_validate_profile(
+            &validator(),
+            &patient,
+            "Patient",
+            &profile,
+            &evaluator,
+            None,
+        );
+
+        assert!(
+            issues.iter().any(|i| {
+                i.fhir_path == "Patient.link.other"
+                    && i.code == "structure"
+                    && i.diagnostics.contains("aggregation/versioning")
+            }),
+            "expected aggregation/versioning structure issue, got {issues:?}"
+        );
+    }
+
+    #[test]
+    fn bundled_aggregation_requires_bundle_resource_and_matching_entry() {
+        const BUNDLE_SUBJECT_SD: &str = r#"
+    {
+      "resourceType": "StructureDefinition",
+      "id": "bundle-subject-bundled",
+      "url": "http://example.org/fhir/StructureDefinition/bundle-subject-bundled",
+      "name": "BundleSubjectBundled",
+      "title": "Bundle subject bundled",
+      "status": "draft",
+      "date": "2026-01-01",
+      "publisher": "Test",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Bundle",
+      "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Bundle",
+      "derivation": "constraint",
+      "differential": {
+        "element": [
+          {
+            "id": "Bundle.entry.resource.subject",
+            "path": "Bundle.entry.resource.subject",
+            "type": [{ "code": "Reference", "aggregation": ["bundled"] }]
+          }
+        ]
+      }
+    }
+    "#;
+
+        let sd: StructureDefinition = serde_json::from_str(BUNDLE_SUBJECT_SD)
+            .expect("bundle SD JSON should deserialize into R5 StructureDefinition");
+        let profile =
+            extract_r5_structure_definition_profile(&sd).expect("bundle profile should extract");
+
+        let bundle_pass_json = r#"
+        {
+          "resourceType": "Bundle",
+          "type": "collection",
+          "entry": [
+            {
+              "fullUrl": "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              "resource": {
+                "resourceType": "Patient",
+                "id": "p1",
+                "name": [{ "family": "Test" }]
+              }
+            },
+            {
+              "resource": {
+                "resourceType": "Observation",
+                "id": "o1",
+                "status": "final",
+                "code": { "text": "x" },
+                "subject": { "reference": "urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }
+              }
+            }
+          ]
+        }
+        "#;
+
+        let bundle_fail_json = r#"
+        {
+          "resourceType": "Bundle",
+          "type": "collection",
+          "entry": [
+            {
+              "resource": {
+                "resourceType": "Observation",
+                "id": "o1",
+                "status": "final",
+                "code": { "text": "x" },
+                "subject": { "reference": "Patient/999" }
+              }
+            }
+          ]
+        }
+        "#;
+
+        // Validate against JSON `Value`, not typed `Bundle`, so `fullUrl` stays the
+        // FHIR string form expected by aggregation checks (typed round-trips can
+        // reshape primitive wrappers).
+        let bundle_pass_value: serde_json::Value =
+            serde_json::from_str(bundle_pass_json).expect("bundle JSON should parse to Value");
+        let bundle_pass_for_eval: Bundle = serde_json::from_value(bundle_pass_value.clone())
+            .expect("bundle JSON should deserialize into R5 Bundle");
+        let evaluator_pass =
+            R5FhirPathEvaluator::new(Resource::Bundle(Box::new(bundle_pass_for_eval)));
+
+        let issues_pass = run_validate_profile(
+            &validator(),
+            &bundle_pass_value,
+            "Bundle",
+            &profile,
+            &evaluator_pass,
+            None,
+        );
+
+        assert!(
+            !issues_pass.iter().any(|i| {
+                i.fhir_path == "Bundle.entry.resource.subject" && i.code == "structure"
+            }),
+            "expected no structure issue on bundle with matching entry, got {issues_pass:?}"
+        );
+
+        let bundle_fail_value: serde_json::Value =
+            serde_json::from_str(bundle_fail_json).expect("bundle JSON should parse to Value");
+        let bundle_fail_for_eval: Bundle = serde_json::from_value(bundle_fail_value.clone())
+            .expect("bundle JSON should deserialize into R5 Bundle");
+        let evaluator_fail =
+            R5FhirPathEvaluator::new(Resource::Bundle(Box::new(bundle_fail_for_eval)));
+
+        let issues_fail = run_validate_profile(
+            &validator(),
+            &bundle_fail_value,
+            "Bundle",
+            &profile,
+            &evaluator_fail,
+            None,
+        );
+
+        assert!(
+            issues_fail.iter().any(|i| {
+                i.fhir_path == "Bundle.entry.resource.subject" && i.code == "structure"
+            }),
+            "expected structure issue when subject reference does not match bundle entries, got {issues_fail:?}"
+        );
     }
 }

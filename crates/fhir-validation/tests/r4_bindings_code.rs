@@ -6,11 +6,10 @@ mod common {
 #[cfg(test)]
 mod tests {
     use crate::common::fixtures::{
-        MockTerminologyService, assert_has_binding_issue, assert_has_error, load_resource,
-        r4_evaluator_for,
+        assert_has_binding_issue, assert_has_error, load_resource, r4_evaluator_for,
     };
+    use fhir_validation::LocalTerminologyService;
     use fhir_validation::r4::binding::validate_primitive_code_binding;
-    use fhir_validation::terminology::types::TerminologyMembershipOutcome;
     use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::{FhirVersion, TerminologyValidationError};
@@ -53,17 +52,7 @@ mod tests {
 
     #[test]
     fn remote_false_produces_warning_for_extensible_binding() {
-        let term = MockTerminologyService {
-            result: Ok(TerminologyMembershipOutcome {
-                is_member: false,
-                message: None,
-                diagnostics: Vec::new(),
-                system: None,
-                code: None,
-                version: None,
-                display: None,
-            }),
-        };
+        let term = LocalTerminologyService::new(FhirVersion::R4);
 
         let issues = validate_primitive_code_binding(
             &validator(),

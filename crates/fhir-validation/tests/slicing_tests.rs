@@ -2207,6 +2207,7 @@ fn profile_discriminator_falls_back_to_validation_when_no_meta_profile_present()
             base_definition: None,
             element_rules: vec![],
             invariants: vec![],
+            ..Default::default()
         },
     )]);
     let config = ValidationConfig::default();

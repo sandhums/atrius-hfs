@@ -138,10 +138,12 @@ fn starts_with_valid_context(expr: &str) -> bool {
     };
 
     !first.is_empty()
-        && first.chars().next().map(|c| c.is_ascii_uppercase()).unwrap_or(false)
         && first
             .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            .next()
+            .map(|c| c.is_ascii_uppercase())
+            .unwrap_or(false)
+        && first.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 fn segment_is_allowed(segment: &str) -> bool {
@@ -157,10 +159,7 @@ fn segment_is_allowed(segment: &str) -> bool {
         .strip_prefix("ofType(")
         .and_then(|rest| rest.strip_suffix(')'))
     {
-        return !name.is_empty()
-            && name
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '_');
+        return !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
     }
 
     if let Some(url) = segment
@@ -238,7 +237,6 @@ fn is_simple_fhirpath_subset_expression(expr: &str) -> bool {
     if expr.contains('[') || expr.contains(']') {
         return false;
     }
-
 
     split_simple_fhirpath_segments(expr)
         .map(|segments| segments.into_iter().all(segment_is_allowed))
@@ -587,7 +585,7 @@ mod tests {
             None,
             "Reference target is invalid",
         );
-         println!("{:?}", &issue);
+        println!("{:?}", &issue);
         let json = validation_issue_to_operation_outcome_issue(&issue);
         assert_eq!(
             json["expression"][0],

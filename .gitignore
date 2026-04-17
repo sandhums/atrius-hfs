@@ -20,3 +20,4 @@ AGENTS.md
 
 # Test artifacts
 /test-artifacts
+/crates/fhir/tests/

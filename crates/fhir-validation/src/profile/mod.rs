@@ -1,5 +1,7 @@
 pub mod cardinality;
+pub mod element_bounds;
 pub mod extract;
+pub mod extract_core;
 pub mod helpers;
 pub mod profile_registry;
 pub mod slicing;

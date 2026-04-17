@@ -223,6 +223,7 @@ mod tests {
             type_constraints: vec![],
             slicing: None,
             slice_name: None,
+            ..Default::default()
         }
     }
 

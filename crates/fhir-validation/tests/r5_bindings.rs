@@ -8,13 +8,13 @@ mod common {
 }
 
 use common::fixtures::{
-    MockTerminologyService, assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient,
-    load_resource, r5_evaluator_for,
+    assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient, load_resource,
+    r5_evaluator_for,
 };
+use fhir_validation::LocalTerminologyService;
 use fhir_validation::Validator;
 use fhir_validation::issue_to_op_outcome::validation_issues_to_operation_outcome;
 use fhir_validation::terminology::service::RemoteTerminologyService;
-use fhir_validation::terminology::types::TerminologyMembershipOutcome;
 use helios_fhir::FhirVersion;
 use reqwest::Client;
 use std::time::Duration;
@@ -118,17 +118,7 @@ async fn r5_sd_async() {
 #[ignore]
 #[test]
 fn r5_sd_sync() {
-    let term = MockTerminologyService {
-        result: Ok(TerminologyMembershipOutcome {
-            is_member: true,
-            message: None,
-            diagnostics: Vec::new(),
-            system: None,
-            code: None,
-            version: None,
-            display: None,
-        }),
-    };
+    let term = LocalTerminologyService::new(FhirVersion::R5);
 
     let resource = load_resource(FhirVersion::R5, "valid/structuredefinition-language.json");
     let evaluator = r5_evaluator_for(&resource);
