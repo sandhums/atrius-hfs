@@ -170,7 +170,7 @@ fn summarize_codeable_concept_codings(cc: &CodeableConcept) -> String {
 /// 4. Convert any miss into a `ValidationIssue` based on binding strength.
 ///
 /// This is the synchronous variant.
-/// See also: `validate_primitive_code_binding_async`.
+#[allow(clippy::too_many_arguments)]/// See also: `validate_primitive_code_binding_async`.
 pub fn validate_primitive_code_binding<F>(
     validator: &Validator,
     fhir_path: &str,
@@ -193,7 +193,7 @@ where
     let local_outcome = evaluate_local_primitive_code_binding::<R5BindingAdapter, _>(
         valueset_url,
         &code.to_string(),
-        |_, _, _| local_check(&code.to_string()),
+        |_, _, _| local_check(code),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -227,7 +227,7 @@ where
     let local_outcome = evaluate_local_primitive_value_binding::<R5BindingAdapter, _>(
         valueset_url,
         &value.to_string(),
-        |_, _, _| local_check(&value.to_string()),
+        |_, _, _| local_check(value),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -242,6 +242,7 @@ where
 /// Async variant of `validate_primitive_code_binding`.
 ///
 /// Uses `TerminologyService` for remote terminology calls.
+#[allow(clippy::too_many_arguments)]
 pub async fn validate_primitive_code_binding_async<F>(
     validator: &Validator,
     fhir_path: &str,
@@ -264,7 +265,7 @@ where
     let local_outcome = evaluate_local_primitive_code_binding::<R5BindingAdapter, _>(
         valueset_url,
         &code.to_string(),
-        |_, _, _| local_check(&code.to_string()),
+        |_, _, _| local_check(code),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -298,7 +299,7 @@ where
     let local_outcome = evaluate_local_primitive_value_binding::<R5BindingAdapter, _>(
         valueset_url,
         &value.to_string(),
-        |_, _, _| local_check(&value.to_string()),
+        |_, _, _| local_check(value),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {

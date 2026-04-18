@@ -8,7 +8,7 @@ mod common {
      use crate::common::fixtures::{assert_has_invariant, assert_no_errors};
      use helios_fhir::{FhirResource, FhirVersion};
      pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-         let FhirResource::R4(r) = resource;
+         let FhirResource::R4(r) = resource else { panic!("expected R4 FhirResource") };
          R4FhirPathEvaluator::new((**r).clone())
      }
      #[test]

@@ -83,8 +83,12 @@ use crate::ValidationError;
 use helios_fhir::FhirResource;
 #[cfg(feature = "R4")]
 use helios_fhir::r4::Resource;
+#[cfg(feature = "R4B")]
+use helios_fhir::r4b::Resource as R4BResource;
 #[cfg(feature = "R5")]
 use helios_fhir::r5::Resource as R5Resource;
+#[cfg(feature = "R6")]
+use helios_fhir::r6::Resource as R6Resource;
 use helios_fhirpath::evaluator::convert_resource_to_result;
 use helios_fhirpath::{EvaluationContext, evaluate_expression};
 use helios_fhirpath_support::EvaluationResult;
@@ -153,7 +157,7 @@ impl GenericFhirPathEvaluator {
         if normalized_focus_path.is_empty() {
             let result = evaluate_expression(expression, &self.context).map_err(|e| {
                 ValidationError::FhirPath(helios_fhirpath_support::EvaluationError::SemanticError(
-                    format!("{e}"),
+                    e.to_string(),
                 ))
             })?;
 
@@ -447,6 +451,71 @@ impl FhirPathEvaluator for R4FhirPathEvaluator {
         self.inner.eval_path(path)
     }
 }
+/// FHIRPath evaluator for R4B resources.
+///
+/// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
+/// R4B resources into `FhirResource` before evaluation.
+#[cfg(feature = "R4B")]
+pub struct R4BFhirPathEvaluator {
+    inner: GenericFhirPathEvaluator,
+}
+#[cfg(feature = "R4B")]
+impl R4BFhirPathEvaluator {
+    /// Create an R4B evaluator rooted at the given resource.
+    pub fn new(resource: R4BResource) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource(FhirResource::R4B(Box::new(
+                resource,
+            ))),
+        }
+    }
+
+    /// Evaluate an arbitrary FHIRPath expression against the R4B resource.
+    pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
+        self.inner.eval_expression(expr)
+    }
+    /// Create an R4B evaluator with an explicit current focus value.
+    pub fn new_with_focus(resource: Resource, focus: EvaluationResult) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
+                FhirResource::R4(Box::new(resource)),
+                focus,
+            ),
+        }
+    }
+}
+#[cfg(feature = "R4B")]
+impl FhirPathEvaluator for R4BFhirPathEvaluator {
+    fn eval_invariant(
+        &self,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError> {
+        self.inner.eval_invariant(declared_path, expression)
+    }
+
+    fn eval_invariant_on(
+        &self,
+        focus: EvaluationResult,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError> {
+        self.inner
+            .eval_invariant_on(focus, declared_path, expression)
+    }
+
+    fn eval_invariants_on(
+        &self,
+        focus: EvaluationResult,
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>> {
+        self.inner.eval_invariants_on(focus, invariants)
+    }
+
+    fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
+        self.inner.eval_path(path)
+    }
+}
 /// FHIRPath evaluator for R5 resources.
 ///
 /// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
@@ -512,7 +581,71 @@ impl FhirPathEvaluator for R5FhirPathEvaluator {
         self.inner.eval_path(path)
     }
 }
+/// FHIRPath evaluator for R6 resources.
+///
+/// This is a thin wrapper over `GenericFhirPathEvaluator` that converts
+/// R6 resources into `FhirResource` before evaluation.
+#[cfg(feature = "R6")]
+pub struct R6FhirPathEvaluator {
+    inner: GenericFhirPathEvaluator,
+}
+#[cfg(feature = "R6")]
+impl R6FhirPathEvaluator {
+    /// Create an R6 evaluator rooted at the given resource.
+    pub fn new(resource: R6Resource) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource(FhirResource::R6(Box::new(
+                resource,
+            ))),
+        }
+    }
 
+    /// Evaluate an arbitrary FHIRPath expression against the R6 resource.
+    pub fn eval_expression(&self, expr: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
+        self.inner.eval_expression(expr)
+    }
+    /// Create an R6 evaluator with an explicit current focus value.
+    pub fn new_with_focus(resource: R6Resource, focus: EvaluationResult) -> Self {
+        Self {
+            inner: GenericFhirPathEvaluator::from_fhir_resource_with_focus(
+                FhirResource::R6(Box::new(resource)),
+                focus,
+            ),
+        }
+    }
+}
+#[cfg(feature = "R6")]
+impl FhirPathEvaluator for R6FhirPathEvaluator {
+    fn eval_invariant(
+        &self,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError> {
+        self.inner.eval_invariant(declared_path, expression)
+    }
+
+    fn eval_invariant_on(
+        &self,
+        focus: EvaluationResult,
+        declared_path: &str,
+        expression: &str,
+    ) -> Result<bool, ValidationError> {
+        self.inner
+            .eval_invariant_on(focus, declared_path, expression)
+    }
+
+    fn eval_invariants_on(
+        &self,
+        focus: EvaluationResult,
+        invariants: &[InvariantExprRef<'_>],
+    ) -> Vec<Result<bool, ValidationError>> {
+        self.inner.eval_invariants_on(focus, invariants)
+    }
+
+    fn eval_path(&self, path: &str) -> Result<Vec<EvaluationResult>, ValidationError> {
+        self.inner.eval_path(path)
+    }
+}
 /// Normalize a declared invariant path to a relative FHIRPath expression.
 ///
 /// In StructureDefinition invariants, the declared path is usually of the form

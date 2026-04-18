@@ -368,7 +368,7 @@ fn extract_type_codes(obj: &Map<String, Value>) -> Vec<String> {
             arr.iter()
                 .filter_map(|e| e.as_object())
                 .filter_map(|t| t.get("code").and_then(|v| v.as_str()))
-                .map(|c| normalize_fhir_element_type_code(c))
+                .map(normalize_fhir_element_type_code)
                 .collect()
         })
         .unwrap_or_default()

@@ -15,7 +15,7 @@ use fhir_validation_types::{
 /// [`kind`] and [`derivation`] mirror `StructureDefinition.kind` and
 /// `StructureDefinition.derivation` (FHIR ValueSets, aligned with
 /// `helios-fhir` R5 terminology code systems).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExtractedProfile {
     pub url: String,
     pub version: Option<String>,
@@ -32,22 +32,22 @@ pub struct ExtractedProfile {
     pub element_rules: Vec<ExtractedElementRule>,
 }
 
-impl Default for ExtractedProfile {
-    fn default() -> Self {
-        Self {
-            url: String::new(),
-            version: None,
-            name: None,
-            title: None,
-            resource_type: String::new(),
-            base_definition: None,
-            kind: StructureDefinitionKind::default(),
-            derivation: TypeDerivationRule::default(),
-            invariants: Vec::new(),
-            element_rules: Vec::new(),
-        }
-    }
-}
+// impl Default for ExtractedProfile {
+//     fn default() -> Self {
+//         Self {
+//             url: String::new(),
+//             version: None,
+//             name: None,
+//             title: None,
+//             resource_type: String::new(),
+//             base_definition: None,
+//             kind: StructureDefinitionKind::default(),
+//             derivation: TypeDerivationRule::default(),
+//             invariants: Vec::new(),
+//             element_rules: Vec::new(),
+//         }
+//     }
+// }
 
 /// Extracted fixed or pattern constraint captured as normalized JSON.
 ///
@@ -67,7 +67,7 @@ pub enum ExtractedValueConstraint {
 /// `ElementDefinition.condition` is **not** extracted: enforcing conditional
 /// element applicability requires evaluating the referenced condition expressions
 /// in context, which is deferred to future work.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExtractedElementRule {
     pub id: String,
     pub path: String,
@@ -99,28 +99,28 @@ pub struct ExtractedElementRule {
     pub is_modifier_reason: Option<String>,
 }
 
-impl Default for ExtractedElementRule {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            path: String::new(),
-            min: None,
-            max: None,
-            binding: None,
-            constraints: Vec::new(),
-            value_constraint: None,
-            type_constraints: Vec::new(),
-            slicing: None,
-            slice_name: None,
-            max_length: None,
-            min_value: None,
-            max_value: None,
-            must_support: None,
-            is_modifier: None,
-            is_modifier_reason: None,
-        }
-    }
-}
+// impl Default for ExtractedElementRule {
+//     fn default() -> Self {
+//         Self {
+//             id: String::new(),
+//             path: String::new(),
+//             min: None,
+//             max: None,
+//             binding: None,
+//             constraints: Vec::new(),
+//             value_constraint: None,
+//             type_constraints: Vec::new(),
+//             slicing: None,
+//             slice_name: None,
+//             max_length: None,
+//             min_value: None,
+//             max_value: None,
+//             must_support: None,
+//             is_modifier: None,
+//             is_modifier_reason: None,
+//         }
+//     }
+// }
 /// Extracted type constraint for an element.
 ///
 /// `code` is the primary allowed type code, while `profiles` and

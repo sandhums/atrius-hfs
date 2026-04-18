@@ -162,7 +162,7 @@ fn eval_invariant_declared_path_still_works() {
     let evaluator = R5FhirPathEvaluator::new(root_patient_resource());
 
     let result = evaluator.eval_invariant("Patient", "active.exists()");
-    assert_eq!(result.unwrap(), true);
+    assert!(result.unwrap());
 
     let result = evaluator.eval_invariant("Patient", "birthDate.exists()");
     assert_eq!(result.unwrap(), false);

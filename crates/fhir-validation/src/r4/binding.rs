@@ -171,6 +171,7 @@ fn summarize_codeable_concept_codings(cc: &CodeableConcept) -> String {
 ///
 /// This is the synchronous variant.
 /// See also: `validate_primitive_code_binding_async`.
+#[allow(clippy::too_many_arguments)]
 pub fn validate_primitive_code_binding<F>(
     validator: &Validator,
     fhir_path: &str,
@@ -193,7 +194,7 @@ where
     let local_outcome = evaluate_local_primitive_code_binding::<R4BindingAdapter, _>(
         valueset_url,
         &code.to_string(),
-        |_, _, _| local_check(&code.to_string()),
+        |_, _, _| local_check(code),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -227,7 +228,7 @@ where
     let local_outcome = evaluate_local_primitive_value_binding::<R4BindingAdapter, _>(
         valueset_url,
         &value.to_string(),
-        |_, _, _| local_check(&value.to_string()),
+        |_, _, _| local_check(value),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -242,6 +243,7 @@ where
 /// Async variant of `validate_primitive_code_binding`.
 ///
 /// Uses `TerminologyService` for remote terminology calls.
+#[allow(clippy::too_many_arguments)]
 pub async fn validate_primitive_code_binding_async<F>(
     validator: &Validator,
     fhir_path: &str,
@@ -264,7 +266,7 @@ where
     let local_outcome = evaluate_local_primitive_code_binding::<R4BindingAdapter, _>(
         valueset_url,
         &code.to_string(),
-        |_, _, _| local_check(&code.to_string()),
+        |_, _, _| local_check(code),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
@@ -298,7 +300,7 @@ where
     let local_outcome = evaluate_local_primitive_value_binding::<R4BindingAdapter, _>(
         valueset_url,
         &value.to_string(),
-        |_, _, _| local_check(&value.to_string()),
+        |_, _, _| local_check(value),
     );
 
     match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {

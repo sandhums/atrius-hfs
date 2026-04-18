@@ -1350,7 +1350,7 @@ fn validate_type_profile_constraints<T: Serialize>(
                                 active_profiles: state.active_profiles.clone(),
                             };
                             let nested_issues = validate_profile_with_depth(
-                                &ctx,
+                                ctx,
                                 &mut child_state,
                                 actual,
                                 nested_resource_type,
@@ -1492,7 +1492,7 @@ fn validate_type_profile_constraints<T: Serialize>(
                                     active_profiles: state.active_profiles.clone(),
                                 };
                                 let nested_issues = validate_profile_with_depth(
-                                    &ctx,
+                                    ctx,
                                     &mut child_state,
                                     actual,
                                     nested_resource_type,
@@ -1694,7 +1694,7 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                                     active_profiles: state.active_profiles.clone(),
                                 };
                                 let nested_issues = validate_profile_with_depth_async(
-                                    &ctx,
+                                    ctx,
                                     &mut child_state,
                                     actual,
                                     nested_resource_type,
@@ -1838,7 +1838,7 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                                         active_profiles: state.active_profiles.clone(),
                                     };
                                     let nested_issues = validate_profile_with_depth_async(
-                                        &ctx,
+                                        ctx,
                                         &mut child_state,
                                         actual,
                                         nested_resource_type,
@@ -1930,7 +1930,7 @@ pub async fn validate_declared_profiles_async<T: Serialize>(
         {
             Some(profile) => {
                 issues.extend(
-                    validate_profile_async(&ctx, state, resource, resource_type, profile).await,
+                    validate_profile_async(ctx, state, resource, resource_type, profile).await,
                 );
             }
             None => {
@@ -1974,7 +1974,7 @@ pub fn validate_declared_profiles<T: Serialize>(
         {
             Some(profile) => {
                 issues.extend(validate_profile(
-                    &ctx,
+                    ctx,
                     state,
                     resource,
                     resource_type,

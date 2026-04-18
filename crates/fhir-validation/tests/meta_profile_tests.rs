@@ -137,7 +137,7 @@ mod tests {
         let issues =
             validator.validate_resource_with_profiles(&resource, None, &evaluator, &registry);
 
-        assert!(issues.len() >= 1);
+        assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.code == "not-found"));
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.meta.profile"));
         assert!(issues.iter().any(|i| {

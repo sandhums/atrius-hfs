@@ -9,8 +9,9 @@
 //! - The validator continues to return `Vec<ValidationIssue>` as its canonical
 //!   internal representation.
 //! - OperationOutcome is treated as a derived presentation layer.
-//! - This module supports both JSON OperationOutcome generation and typed R5
-//!   OperationOutcome construction.
+//! - This module builds a version-agnostic `OperationOutcome` JSON object, then
+//!   optionally materializes typed [`helios_fhir`] `OperationOutcome` values for the
+//!   FHIR release enabled via crate features (`R4`, `R4B`, `R5`, `R6`).
 //!
 //! Mapping policy:
 //! - `ValidationIssue.severity` -> `OperationOutcome.issue.severity`
@@ -32,31 +33,9 @@ use crate::validation_issue_detail::{
     classify_validation_source,
 };
 use fhir_validation_types::Severity;
-#[cfg(feature = "R5")]
-use helios_fhir::r5::OperationOutcome as R5OperationOutcome;
-#[cfg(feature = "R5")]
-use helios_fhir::r5::OperationOutcomeIssue as R5OperationOutcomeIssue;
-#[cfg(feature = "R5")]
-use helios_fhir::r5::Resource;
-#[cfg(feature = "R5")]
-use helios_fhir::r5::terminology::code_systems::{
-    IssueSeverity as R5IssueSeverity, IssueType as R5IssueType,
-};
 use serde_json::{Value, json};
 
 fn severity_to_fhir(value: Severity) -> &'static str {
-    #[cfg(feature = "R5")]
-    {
-        let severity = match value {
-            Severity::Fatal => R5IssueSeverity::Fatal,
-            Severity::Error => R5IssueSeverity::Error,
-            Severity::Warning => R5IssueSeverity::Warning,
-            Severity::Information => R5IssueSeverity::Information,
-        };
-        return severity.as_code();
-    }
-
-    #[cfg(not(feature = "R5"))]
     match value {
         Severity::Fatal => "fatal",
         Severity::Error => "error",
@@ -65,37 +44,45 @@ fn severity_to_fhir(value: Severity) -> &'static str {
     }
 }
 
+/// Map internal validator codes to FHIR `OperationOutcome.issue.code` strings.
+///
+/// Aligns with the FHIR *Issue Type* value set codes (see `helios_fhir` generated
+/// `IssueType` per release). Unknown or internal-only codes fall back to `processing`.
 fn code_to_fhir(code: &str) -> &'static str {
-    #[cfg(feature = "R5")]
-    {
-        return R5IssueType::try_from_code(code)
-            .map(R5IssueType::as_code)
-            .unwrap_or(R5IssueType::Processing.as_code());
-    }
-
-    #[cfg(not(feature = "R5"))]
     match code {
         "invalid" => "invalid",
         "structure" => "structure",
         "required" => "required",
         "value" => "value",
-        "not-found" => "not-found",
-        "deleted" => "deleted",
-        "multiple-matches" => "multiple-matches",
-        "conflict" => "conflict",
-        "lock-error" => "lock-error",
-        "not-supported" => "not-supported",
-        "duplicate" => "duplicate",
-        "processing" => "processing",
-        "transient" => "transient",
+        "invariant" => "invariant",
         "security" => "security",
         "login" => "login",
         "unknown" => "unknown",
+        "expired" => "expired",
+        "forbidden" => "forbidden",
+        "suppressed" => "suppressed",
+        "processing" => "processing",
+        "not-supported" => "not-supported",
+        "duplicate" => "duplicate",
+        "multiple-matches" => "multiple-matches",
+        "not-found" => "not-found",
+        "deleted" => "deleted",
+        "too-long" => "too-long",
+        "code-invalid" => "code-invalid",
+        "extension" => "extension",
+        "too-costly" => "too-costly",
+        "business-rule" => "business-rule",
+        "conflict" => "conflict",
+        "limited-filter" => "limited-filter",
+        "transient" => "transient",
+        "lock-error" => "lock-error",
+        "no-store" => "no-store",
+        "exception" => "exception",
+        "timeout" => "timeout",
+        "incomplete" => "incomplete",
+        "throttled" => "throttled",
         "informational" => "informational",
         "success" => "success",
-        // Internal validation categories that do not have a dedicated 1:1 FHIR
-        // issue-type mapping are surfaced as generic processing failures.
-        "invariant" => "processing",
         _ => "processing",
     }
 }
@@ -377,14 +364,11 @@ pub fn validation_issue_to_operation_outcome_issue(issue: &ValidationIssue) -> V
 }
 
 /// Convert a slice of validation issues into a FHIR `OperationOutcome` JSON document.
+///
+/// This projection is shared across FHIR releases; use
+/// [`validation_issues_to_r4_operation_outcome`] (and the `r4b` / `r5` / `r6`
+/// siblings) when you need a typed [`helios_fhir`] model for a specific version.
 pub fn validation_issues_to_operation_outcome(issues: &[ValidationIssue]) -> Value {
-    #[cfg(feature = "R5")]
-    {
-        if let Ok(typed_json) = validation_issues_to_r5_operation_outcome_json(issues) {
-            return typed_json;
-        }
-    }
-
     let converted: Vec<Value> = issues
         .iter()
         .map(validation_issue_to_operation_outcome_issue)
@@ -396,55 +380,72 @@ pub fn validation_issues_to_operation_outcome(issues: &[ValidationIssue]) -> Val
     })
 }
 
-#[cfg(feature = "R5")]
-fn validation_issue_to_r5_operation_outcome_issue(
-    issue: &ValidationIssue,
-) -> R5OperationOutcomeIssue {
-    let details = serde_json::from_value(details_json(issue)).ok();
-
-    R5OperationOutcomeIssue {
-        severity: severity_to_fhir(issue.severity).to_string().into(),
-        code: code_to_fhir(&issue.code).to_string().into(),
-        details,
-        diagnostics: Some(issue.diagnostics.clone().into()),
-        expression: issue_location_expression(issue).map(|value| vec![value.into()]),
-        extension: source_expression_extension_json(issue)
-            .and_then(|value| serde_json::from_value(value).ok()),
-        ..Default::default()
-    }
+/// Deserialize [`validation_issues_to_operation_outcome`] into the R4 `OperationOutcome` type.
+#[cfg(feature = "R4")]
+pub fn validation_issues_to_r4_operation_outcome(
+    issues: &[ValidationIssue],
+) -> Result<helios_fhir::r4::OperationOutcome, serde_json::Error> {
+    serde_json::from_value(validation_issues_to_operation_outcome(issues))
 }
 
-/// Convert a slice of validation issues into a typed R5 `OperationOutcome`.
-///
-/// This builds the generated R5 model directly so schema-level fields are mapped
-/// explicitly (severity/code/details/diagnostics/expression).
+/// Serialize an R4 [`helios_fhir::r4::OperationOutcome`] as a versioned [`helios_fhir::r4::Resource`] JSON value.
+#[cfg(feature = "R4")]
+pub fn validation_issues_to_r4_operation_outcome_json(
+    issues: &[ValidationIssue],
+) -> Result<Value, serde_json::Error> {
+    let outcome = validation_issues_to_r4_operation_outcome(issues)?;
+    serde_json::to_value(helios_fhir::r4::Resource::OperationOutcome(Box::new(outcome)))
+}
+
+/// Deserialize [`validation_issues_to_operation_outcome`] into the R4B `OperationOutcome` type.
+#[cfg(feature = "R4B")]
+pub fn validation_issues_to_r4b_operation_outcome(
+    issues: &[ValidationIssue],
+) -> Result<helios_fhir::r4b::OperationOutcome, serde_json::Error> {
+    serde_json::from_value(validation_issues_to_operation_outcome(issues))
+}
+
+/// Serialize an R4B [`helios_fhir::r4b::OperationOutcome`] as a versioned [`helios_fhir::r4b::Resource`] JSON value.
+#[cfg(feature = "R4B")]
+pub fn validation_issues_to_r4b_operation_outcome_json(
+    issues: &[ValidationIssue],
+) -> Result<Value, serde_json::Error> {
+    let outcome = validation_issues_to_r4b_operation_outcome(issues)?;
+    serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(Box::new(outcome)))
+}
+
+/// Deserialize [`validation_issues_to_operation_outcome`] into the R5 `OperationOutcome` type.
 #[cfg(feature = "R5")]
 pub fn validation_issues_to_r5_operation_outcome(
     issues: &[ValidationIssue],
-) -> Result<R5OperationOutcome, serde_json::Error> {
-    Ok(R5OperationOutcome {
-        issue: Some(
-            issues
-                .iter()
-                .map(validation_issue_to_r5_operation_outcome_issue)
-                .collect(),
-        ),
-        ..Default::default()
-    })
+) -> Result<helios_fhir::r5::OperationOutcome, serde_json::Error> {
+    serde_json::from_value(validation_issues_to_operation_outcome(issues))
 }
 
-/// Convert validation issues into OperationOutcome JSON by serializing the
-/// typed R5 resource.
-///
-/// This keeps the typed R5 conversion as the canonical implementation while
-/// still exposing a convenient JSON helper for callers that want to return a
-/// JSON payload directly.
+/// Serialize an R5 [`helios_fhir::r5::OperationOutcome`] as a versioned [`helios_fhir::r5::Resource`] JSON value.
 #[cfg(feature = "R5")]
 pub fn validation_issues_to_r5_operation_outcome_json(
     issues: &[ValidationIssue],
 ) -> Result<Value, serde_json::Error> {
     let outcome = validation_issues_to_r5_operation_outcome(issues)?;
-    serde_json::to_value(Resource::OperationOutcome(Box::new(outcome)))
+    serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(Box::new(outcome)))
+}
+
+/// Deserialize [`validation_issues_to_operation_outcome`] into the R6 `OperationOutcome` type.
+#[cfg(feature = "R6")]
+pub fn validation_issues_to_r6_operation_outcome(
+    issues: &[ValidationIssue],
+) -> Result<helios_fhir::r6::OperationOutcome, serde_json::Error> {
+    serde_json::from_value(validation_issues_to_operation_outcome(issues))
+}
+
+/// Serialize an R6 [`helios_fhir::r6::OperationOutcome`] as a versioned [`helios_fhir::r6::Resource`] JSON value.
+#[cfg(feature = "R6")]
+pub fn validation_issues_to_r6_operation_outcome_json(
+    issues: &[ValidationIssue],
+) -> Result<Value, serde_json::Error> {
+    let outcome = validation_issues_to_r6_operation_outcome(issues)?;
+    serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(Box::new(outcome)))
 }
 
 #[cfg(test)]
@@ -654,7 +655,7 @@ mod tests {
         assert_eq!(json["extension"][2]["valueString"], "dom-2");
     }
     #[test]
-    fn maps_invariant_code_to_processing() {
+    fn maps_invariant_code_to_issue_type_invariant() {
         let issue = mk_issue(
             Severity::Error,
             "invariant",
@@ -665,10 +666,7 @@ mod tests {
         );
 
         let json = validation_issue_to_operation_outcome_issue(&issue);
-        #[cfg(feature = "R5")]
         assert_eq!(json["code"], "invariant");
-        #[cfg(not(feature = "R5"))]
-        assert_eq!(json["code"], "processing");
     }
     #[test]
     fn maps_unknown_code_to_processing() {
@@ -765,8 +763,10 @@ mod tests {
 
         let outcome = validation_issues_to_r5_operation_outcome(&issues)
             .expect("typed R5 OperationOutcome should deserialize from generated JSON");
-        let json = serde_json::to_value(Resource::OperationOutcome(Box::new(outcome)))
-            .expect("typed R5 OperationOutcome should serialize back to JSON");
+        let json = serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(
+            Box::new(outcome),
+        ))
+        .expect("typed R5 OperationOutcome should serialize back to JSON");
 
         assert_eq!(json["resourceType"], "OperationOutcome");
         assert_eq!(json["issue"].as_array().unwrap().len(), 2);
@@ -791,6 +791,146 @@ mod tests {
         let direct = validation_issues_to_operation_outcome(&issues);
         let typed_json = validation_issues_to_r5_operation_outcome_json(&issues)
             .expect("typed R5 OperationOutcome JSON helper should succeed");
+
+        assert_eq!(typed_json, direct);
+        assert_eq!(
+            typed_json["issue"][0]["diagnostics"],
+            "Gender code is invalid"
+        );
+        assert_eq!(
+            typed_json["issue"][0]["extension"][0]["valueCode"],
+            "canonical-uri"
+        );
+        assert_eq!(
+            typed_json["issue"][0]["extension"][1]["valueUri"],
+            "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1"
+        );
+    }
+
+    // Run with e.g. `cargo test -p fhir-validation --features "R4,R4B"` — `R4B` alone
+    // does not compile here because `helios-fhirpath` still matches on `FhirVersion::R4`
+    // when the R4 module is omitted from `helios-fhir`.
+    #[cfg(feature = "R4B")]
+    #[test]
+    fn converts_multiple_issues_to_typed_r4b_operation_outcome() {
+        let issues = vec![
+            mk_issue(
+                Severity::Error,
+                "value",
+                "Patient.gender",
+                Some("Patient.gender"),
+                None,
+                "Gender code is invalid",
+            ),
+            mk_issue(
+                Severity::Warning,
+                "invariant",
+                "Patient",
+                Some("Patient"),
+                None,
+                "Narrative should be present",
+            ),
+        ];
+
+        let outcome = validation_issues_to_r4b_operation_outcome(&issues)
+            .expect("typed R4B OperationOutcome should deserialize from generated JSON");
+        let json = serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(
+            Box::new(outcome),
+        ))
+        .expect("typed R4B OperationOutcome should serialize back to JSON");
+
+        assert_eq!(json["resourceType"], "OperationOutcome");
+        assert_eq!(json["issue"].as_array().unwrap().len(), 2);
+        assert_eq!(json["issue"][0]["severity"], "error");
+        assert_eq!(json["issue"][1]["severity"], "warning");
+        assert_eq!(json["issue"][0]["expression"][0], "Patient.gender");
+        assert_eq!(json["issue"][1]["expression"][0], "Patient");
+    }
+
+    #[cfg(feature = "R4B")]
+    #[test]
+    fn r4b_operation_outcome_json_helper_matches_direct_json_projection() {
+        let issues = vec![mk_issue(
+            Severity::Error,
+            "value",
+            "Patient.gender",
+            Some("Patient.gender"),
+            Some("http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1"),
+            "Gender code is invalid",
+        )];
+
+        let direct = validation_issues_to_operation_outcome(&issues);
+        let typed_json = validation_issues_to_r4b_operation_outcome_json(&issues)
+            .expect("typed R4B OperationOutcome JSON helper should succeed");
+
+        assert_eq!(typed_json, direct);
+        assert_eq!(
+            typed_json["issue"][0]["diagnostics"],
+            "Gender code is invalid"
+        );
+        assert_eq!(
+            typed_json["issue"][0]["extension"][0]["valueCode"],
+            "canonical-uri"
+        );
+        assert_eq!(
+            typed_json["issue"][0]["extension"][1]["valueUri"],
+            "http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1"
+        );
+    }
+
+    // Same as R4B: use `--features "R4,R6"` (not `R6` alone) for this workspace.
+    #[cfg(feature = "R6")]
+    #[test]
+    fn converts_multiple_issues_to_typed_r6_operation_outcome() {
+        let issues = vec![
+            mk_issue(
+                Severity::Error,
+                "value",
+                "Patient.gender",
+                Some("Patient.gender"),
+                None,
+                "Gender code is invalid",
+            ),
+            mk_issue(
+                Severity::Warning,
+                "invariant",
+                "Patient",
+                Some("Patient"),
+                None,
+                "Narrative should be present",
+            ),
+        ];
+
+        let outcome = validation_issues_to_r6_operation_outcome(&issues)
+            .expect("typed R6 OperationOutcome should deserialize from generated JSON");
+        let json = serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(
+            Box::new(outcome),
+        ))
+        .expect("typed R6 OperationOutcome should serialize back to JSON");
+
+        assert_eq!(json["resourceType"], "OperationOutcome");
+        assert_eq!(json["issue"].as_array().unwrap().len(), 2);
+        assert_eq!(json["issue"][0]["severity"], "error");
+        assert_eq!(json["issue"][1]["severity"], "warning");
+        assert_eq!(json["issue"][0]["expression"][0], "Patient.gender");
+        assert_eq!(json["issue"][1]["expression"][0], "Patient");
+    }
+
+    #[cfg(feature = "R6")]
+    #[test]
+    fn r6_operation_outcome_json_helper_matches_direct_json_projection() {
+        let issues = vec![mk_issue(
+            Severity::Error,
+            "value",
+            "Patient.gender",
+            Some("Patient.gender"),
+            Some("http://hl7.org/fhir/ValueSet/administrative-gender|4.0.1"),
+            "Gender code is invalid",
+        )];
+
+        let direct = validation_issues_to_operation_outcome(&issues);
+        let typed_json = validation_issues_to_r6_operation_outcome_json(&issues)
+            .expect("typed R6 OperationOutcome JSON helper should succeed");
 
         assert_eq!(typed_json, direct);
         assert_eq!(

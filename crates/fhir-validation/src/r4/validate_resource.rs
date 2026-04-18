@@ -81,7 +81,7 @@ fn validate_r4_declared_profiles(
     evaluator: &dyn FhirPathEvaluator,
     profile_registry: &ProfileRegistry,
 ) -> Vec<ValidationIssue> {
-    let mut ctx = ValidationContext {
+    let ctx = ValidationContext {
         fhir_version: FhirVersion::R4,
         validator,
         terminology,
@@ -90,7 +90,7 @@ fn validate_r4_declared_profiles(
         extracted_profile_map: profile_registry.as_map(),
     };
     let mut state = ValidationState::default();
-    validate_declared_profiles(&mut ctx, &mut state, resource, resource.resource_name())
+    validate_declared_profiles(&ctx, &mut state, resource, resource.resource_name())
 }
 
 #[cfg(feature = "R4")]
@@ -101,7 +101,7 @@ async fn validate_r4_declared_profiles_async(
     evaluator: &dyn FhirPathEvaluator,
     profile_registry: &ProfileRegistry,
 ) -> Vec<ValidationIssue> {
-    let mut ctx = AsyncValidationContext {
+    let ctx = AsyncValidationContext {
         fhir_version: FhirVersion::R4,
         validator,
         terminology,
@@ -110,5 +110,5 @@ async fn validate_r4_declared_profiles_async(
         extracted_profile_map: profile_registry.as_map(),
     };
     let mut state = ValidationState::default();
-    validate_declared_profiles_async(&mut ctx, &mut state, resource, resource.resource_name()).await
+    validate_declared_profiles_async(&ctx, &mut state, resource, resource.resource_name()).await
 }

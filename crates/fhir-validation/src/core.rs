@@ -38,10 +38,20 @@ use crate::r4::{
     validate_r4_resource, validate_r4_resource_async, validate_r4_resource_async_with_profiles,
     validate_r4_resource_with_profiles,
 };
+#[cfg(feature = "R4B")]
+use crate::r4b::{
+    validate_r4b_resource, validate_r4b_resource_async, validate_r4b_resource_async_with_profiles,
+    validate_r4b_resource_with_profiles,
+};
 #[cfg(feature = "R5")]
 use crate::r5::{
     validate_r5_resource, validate_r5_resource_async, validate_r5_resource_async_with_profiles,
     validate_r5_resource_with_profiles,
+};
+#[cfg(feature = "R6")]
+use crate::r6::{
+    validate_r6_resource, validate_r6_resource_async, validate_r6_resource_async_with_profiles,
+    validate_r6_resource_with_profiles,
 };
 
 /// A single validation issue that can later be mapped to
@@ -304,18 +314,18 @@ impl From<helios_fhirpath_support::EvaluationError> for ValidationError {
 }
 
 /// Shared validator entry point used by generated and handwritten validation code.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Validator {
     pub config: ValidationConfig,
 }
 
-impl Default for Validator {
-    fn default() -> Self {
-        Self {
-            config: ValidationConfig::default(),
-        }
-    }
-}
+// impl Default for Validator {
+//     fn default() -> Self {
+//         Self {
+//             config: ValidationConfig::default(),
+//         }
+//     }
+// }
 
 impl Validator {
     /// Create a validator with the provided configuration
@@ -355,22 +365,22 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                validate_r4_resource(&self, res.as_ref(), terminology, evaluator)
+                validate_r4_resource(self, res.as_ref(), terminology, evaluator)
             }
 
             #[cfg(feature = "R4B")]
             helios_fhir::FhirResource::R4B(res) => {
-                self.validate_r4b_resource(res, terminology, evaluator)
+                validate_r4b_resource(self, res.as_ref(), terminology, evaluator)
             }
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                validate_r5_resource(&self, res, terminology, evaluator)
+                validate_r5_resource(self, res.as_ref(), terminology, evaluator)
             }
 
             #[cfg(feature = "R6")]
             helios_fhir::FhirResource::R6(res) => {
-                self.validate_r6_resource(res, terminology, evaluator)
+                validate_r6_resource(self, res.as_ref(), terminology, evaluator)
             }
         }
     }
@@ -383,22 +393,22 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
-                validate_r4_resource_async(&self, res.as_ref(), terminology, evaluator).await
+                validate_r4_resource_async(self, res.as_ref(), terminology, evaluator).await
             }
 
             #[cfg(feature = "R4B")]
             helios_fhir::FhirResource::R4B(res) => {
-                self.validate_r4b_resource(res, terminology, evaluator)
+                validate_r4b_resource_async(self, res.as_ref(), terminology, evaluator).await
             }
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
-                validate_r5_resource_async(&self, res, terminology, evaluator).await
+                validate_r5_resource_async(self, res.as_ref(), terminology, evaluator).await
             }
 
             #[cfg(feature = "R6")]
             helios_fhir::FhirResource::R6(res) => {
-                self.validate_r6_resource(res, terminology, evaluator)
+                validate_r6_resource_async(self, res.as_ref(), terminology, evaluator).await
             }
         }
     }
@@ -413,7 +423,7 @@ impl Validator {
         match resource {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => validate_r4_resource_with_profiles(
-                &self,
+                self,
                 res.as_ref(),
                 terminology,
                 evaluator,
@@ -421,23 +431,31 @@ impl Validator {
             ),
 
             #[cfg(feature = "R4B")]
-            helios_fhir::FhirResource::R4B(res) => {
-                self.validate_r4b_resource(res, terminology, evaluator)
-            }
+            helios_fhir::FhirResource::R4B(res) => validate_r4b_resource_with_profiles(
+                self,
+                res.as_ref(),
+                terminology,
+                evaluator,
+                profile_registry,
+            ),
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => validate_r5_resource_with_profiles(
-                &self,
-                res,
+                self,
+                res.as_ref(),
                 terminology,
                 evaluator,
                 profile_registry,
             ),
 
             #[cfg(feature = "R6")]
-            helios_fhir::FhirResource::R6(res) => {
-                self.validate_r6_resource(res, terminology, evaluator)
-            }
+            helios_fhir::FhirResource::R6(res) => validate_r6_resource_with_profiles(
+                self,
+                res.as_ref(),
+                terminology,
+                evaluator,
+                profile_registry,
+            ),
         }
     }
 
@@ -452,7 +470,7 @@ impl Validator {
             #[cfg(feature = "R4")]
             helios_fhir::FhirResource::R4(res) => {
                 validate_r4_resource_async_with_profiles(
-                    &self,
+                    self,
                     res.as_ref(),
                     terminology,
                     evaluator,
@@ -463,14 +481,21 @@ impl Validator {
 
             #[cfg(feature = "R4B")]
             helios_fhir::FhirResource::R4B(res) => {
-                self.validate_r4b_resource(res, terminology, evaluator)
+                validate_r4b_resource_async_with_profiles(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                    .await
             }
 
             #[cfg(feature = "R5")]
             helios_fhir::FhirResource::R5(res) => {
                 validate_r5_resource_async_with_profiles(
-                    &self,
-                    res,
+                    self,
+                    res.as_ref(),
                     terminology,
                     evaluator,
                     profile_registry,
@@ -480,7 +505,14 @@ impl Validator {
 
             #[cfg(feature = "R6")]
             helios_fhir::FhirResource::R6(res) => {
-                self.validate_r6_resource(res, terminology, evaluator)
+                validate_r6_resource_async_with_profiles(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                    .await
             }
         }
     }
@@ -499,13 +531,9 @@ impl Validator {
             #[cfg(feature = "R5")]
             helios_fhir::FhirVersion::R5 => self.apply_r5_bindings(focus, bindings, terminology),
             #[cfg(feature = "R4B")]
-            helios_fhir::FhirVersion::R4B => {
-                todo!()
-            }
+            helios_fhir::FhirVersion::R4B => self.apply_r4b_bindings(focus, bindings, terminology),
             #[cfg(feature = "R6")]
-            helios_fhir::FhirVersion::R6 => {
-                todo!()
-            }
+            helios_fhir::FhirVersion::R6 => self.apply_r6_bindings(focus, bindings, terminology),
         }
     }
     #[cfg(any(feature = "R4", feature = "R5"))]
@@ -529,11 +557,13 @@ impl Validator {
             }
             #[cfg(feature = "R4B")]
             helios_fhir::FhirVersion::R4B => {
-                todo!()
+                self.apply_r4b_bindings_async(focus, bindings, terminology)
+                    .await
             }
             #[cfg(feature = "R6")]
             helios_fhir::FhirVersion::R6 => {
-                todo!()
+                self.apply_r6_bindings_async(focus, bindings, terminology)
+                    .await
             }
         }
     }
@@ -554,6 +584,25 @@ impl Validator {
     {
         crate::r4::binding::apply_r4_bindings(self, focus, bindings, terminology)
     }
+
+    /// Apply R4B binding definitions to the current focus value.
+    ///
+    /// This delegates to the R4B binding module, which resolves binding paths,
+    /// validates primitive codes / `Coding` / `CodeableConcept`, and falls back
+    /// to remote terminology when local validation is insufficient.
+    #[cfg(feature = "R4B")]
+    pub fn apply_r4b_bindings<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyServiceSync>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r4b::binding::apply_r4b_bindings(self, focus, bindings, terminology)
+    }
+
     /// Apply R5 binding definitions to the current focus value.
     ///
     /// This delegates to the R5 binding module, which resolves binding paths,
@@ -571,6 +620,25 @@ impl Validator {
     {
         crate::r5::binding::apply_r5_bindings(self, focus, bindings, terminology)
     }
+
+    /// Apply R6 binding definitions to the current focus value.
+    ///
+    /// This delegates to the R6 binding module, which resolves binding paths,
+    /// validates primitive codes / `Coding` / `CodeableConcept`, and falls back
+    /// to remote terminology when local validation is insufficient.
+    #[cfg(feature = "R6")]
+    pub fn apply_r6_bindings<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyServiceSync>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r6::binding::apply_r6_bindings(self, focus, bindings, terminology)
+    }
+
     #[cfg(feature = "R4")]
     pub async fn apply_r4_bindings_async<T>(
         &self,
@@ -583,6 +651,20 @@ impl Validator {
     {
         crate::r4::binding::apply_r4_bindings_async(self, focus, bindings, terminology).await
     }
+
+    #[cfg(feature = "R4B")]
+    pub async fn apply_r4b_bindings_async<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyService>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r4b::binding::apply_r4b_bindings_async(self, focus, bindings, terminology).await
+    }
+
     #[cfg(feature = "R5")]
     pub async fn apply_r5_bindings_async<T>(
         &self,
@@ -594,6 +676,19 @@ impl Validator {
         T: serde::Serialize,
     {
         crate::r5::binding::apply_r5_bindings_async(self, focus, bindings, terminology).await
+    }
+
+    #[cfg(feature = "R6")]
+    pub async fn apply_r6_bindings_async<T>(
+        &self,
+        focus: &T,
+        bindings: &[BindingDef],
+        terminology: Option<&dyn TerminologyService>,
+    ) -> Vec<ValidationIssue>
+    where
+        T: serde::Serialize,
+    {
+        crate::r6::binding::apply_r6_bindings_async(self, focus, bindings, terminology).await
     }
     /// Apply generated invariants to a focused value using the supplied
     /// `FhirPathEvaluator`.
@@ -715,7 +810,7 @@ fn rebase_instance_path(current: &str, actual_root_path: &str) -> String {
     }
 
     let split_at = current
-        .find(|c| c == '.' || c == '[')
+        .find(['.', '['])
         .unwrap_or(current.len());
 
     let suffix = &current[split_at..];
