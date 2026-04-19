@@ -1,10 +1,20 @@
+
+
+
+#[cfg(feature = "R4")]
+use fhir_validation::profile::extract::extract_r4_structure_definition_profile;
+#[cfg(feature = "R4B")]
+use fhir_validation::profile::extract::extract_r4b_structure_definition_profile;
 #[cfg(feature = "R5")]
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
+#[cfg(feature = "R6")]
+use fhir_validation::profile::extract::extract_r6_structure_definition_profile;
 use fhir_validation::profile::types::ExtractedProfile;
 use fhir_validation::{Severity, ValidationIssue};
 use helios_fhir::{FhirResource, FhirVersion};
 use std::fs;
 use std::path::PathBuf;
+
 
 pub fn fixture_path(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -73,12 +83,14 @@ pub fn load_profile(version: FhirVersion, rel: &str) -> ExtractedProfile {
     match version {
         #[cfg(feature = "R4")]
         FhirVersion::R4 => {
-            todo!("R4 profile extraction fixtures are not implemented yet")
+            let sd: helios_fhir::r4::StructureDefinition = serde_json::from_str(&json).unwrap();
+            extract_r4_structure_definition_profile(&sd).unwrap()
         }
 
         #[cfg(feature = "R4B")]
         FhirVersion::R4B => {
-            todo!("R4B profile extraction fixtures are not implemented yet")
+            let sd: helios_fhir::r4b::StructureDefinition = serde_json::from_str(&json).unwrap();
+            extract_r4b_structure_definition_profile(&sd).unwrap()
         }
 
         #[cfg(feature = "R5")]
@@ -89,7 +101,8 @@ pub fn load_profile(version: FhirVersion, rel: &str) -> ExtractedProfile {
 
         #[cfg(feature = "R6")]
         FhirVersion::R6 => {
-            todo!("R6 profile extraction fixtures are not implemented yet")
+            let sd: helios_fhir::r6::StructureDefinition = serde_json::from_str(&json).unwrap();
+            extract_r6_structure_definition_profile(&sd).unwrap()
         }
     }
 }

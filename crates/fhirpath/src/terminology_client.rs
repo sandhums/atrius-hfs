@@ -284,6 +284,63 @@ impl TerminologyClient {
         }
     }
 
+    /// Validates a code against a ValueSet using a full FHIR `Parameters` resource body.
+    ///
+    /// This is the preferred path when the caller already has a complete `$validate-code`
+    /// parameter set (for example a full `Parameters` JSON value produced by the validation
+    /// crate’s request serializer). It uses the same URL routing as [`Self::validate_vs`]:
+    ///
+    /// - Canonicals under `http://hl7.org/fhir/ValueSet/{id}` are sent to
+    ///   `[base]/ValueSet/{id}/$validate-code`, and the `url` input parameter is removed from
+    ///   the body so the instance target matches the legacy narrow client behavior.
+    /// - All other value set references use `[base]/ValueSet/$validate-code` with parameters
+    ///   unchanged.
+    pub async fn validate_code_with_parameters(
+        &self,
+        valueset_canonical: &str,
+        mut parameters: Value,
+    ) -> FhirPathResult<Value> {
+        let local_valueset_id = Self::local_valueset_id_from_canonical(valueset_canonical);
+        let url = if let Some(valueset_id) = local_valueset_id {
+            if let Some(param_array) = parameters.get_mut("parameter").and_then(|p| p.as_array_mut())
+            {
+                param_array.retain(|p| {
+                    p.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|n| n != "url")
+                        .unwrap_or(true)
+                });
+            }
+            format!("{}/ValueSet/{}/$validate-code", self.base_url, valueset_id)
+        } else {
+            format!("{}/ValueSet/$validate-code", self.base_url)
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&parameters)
+            .header("Content-Type", "application/fhir+json")
+            .header("Accept", "application/fhir+json")
+            .send()
+            .await
+            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
+
+        if response.status().is_success() {
+            response
+                .json()
+                .await
+                .map_err(|e| FhirPathError::ParseError(e.to_string()))
+        } else {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            Err(FhirPathError::TerminologyError(format!(
+                "ValueSet validation failed with status {}: {}",
+                status, body
+            )))
+        }
+    }
+
     /// Validates a code against a CodeSystem
     ///
     /// # Arguments

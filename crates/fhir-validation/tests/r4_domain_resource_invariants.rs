@@ -4,7 +4,9 @@ mod common {
 }
 mod tests {
     use crate::common::fixtures::{assert_has_invariant, assert_no_errors};
-    use crate::common::fixtures::{assert_has_invariant_expression, load_resource, local_terminology_r4};
+    use crate::common::fixtures::{
+        assert_has_invariant_expression, load_resource, local_terminology_r4,
+    };
     use fhir_validation::R4FhirPathEvaluator;
     use helios_fhir::{FhirResource, FhirVersion};
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {

@@ -152,8 +152,12 @@ mod tests {
         let validator = Validator::default();
 
         let term = local_terminology_r5();
-        let issues =
-            validator.validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
+        let issues = validator.validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
 
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.code == "not-found"));

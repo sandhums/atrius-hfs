@@ -22,7 +22,8 @@
 //! `parts/dispatch.rs` (resource dispatchers), aggregated by a small `all.rs` that
 //! uses `include!` so `fhir-validation` can pull everything into one module.
 use crate::model::{
-    BindingModel, FieldModel, InvariantModel, ParentKind, StructureKind, TypeValidationModel,
+    BindingModel, BindingTargetKindModel, FieldModel, InvariantModel, ParentKind, StructureKind,
+    TypeValidationModel,
 };
 use crate::versions::FhirVersion;
 use std::collections::HashMap;
@@ -666,6 +667,18 @@ fn emit_bindings_const(ty: &TypeValidationModel, bindings: &[BindingModel], outp
             "        target_kind: {},\n",
             binding.target_kind.as_rust_tokens()
         ));
+        if matches!(binding.target_kind, BindingTargetKindModel::Choice) {
+            output.push_str("        choice_type_codes: Some(vec![");
+            for (i, code) in binding.bindable_type_codes.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(", ");
+                }
+                output.push_str(&format!("{:?}.to_string()", code));
+            }
+            output.push_str("]),\n");
+        } else {
+            output.push_str("        choice_type_codes: None,\n");
+        }
         output.push_str("    },\n");
     }
 

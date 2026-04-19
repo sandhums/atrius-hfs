@@ -2,10 +2,10 @@
 //!
 //! This module implements ValueSet binding validation for generated R6 resources.
 //!
-//! Supported binding target kinds:
-//! - primitive `code`
-//! - `Coding`
-//! - `CodeableConcept`
+//! Supported binding target kinds (per FHIR `ElementDefinition.binding`):
+//! - primitives `code`, `string`, `uri`
+//! - `Coding`, `CodeableConcept`, `Quantity`, `CodeableReference`
+//! - choice `[x]` elements ([`BindingTargetKind::Choice`]): handler is chosen from the instance JSON shape
 //!
 //! Validation flow:
 //!
@@ -23,8 +23,9 @@
 //! terminology servers may be required.
 
 use crate::binding::common::{
-    classify_local_outcome, execute_remote_async, execute_remote_sync,
-    get_json_values_with_instance_paths, prettify_remote_terminology_error, relative_binding_path,
+    bindable_primitive_string_value, choice_declared_allows_kind, classify_local_outcome,
+    execute_remote_async, execute_remote_sync, get_json_values_with_instance_paths,
+    prettify_remote_terminology_error, primitive_choice_target_kind, relative_binding_path,
     root_instance_path,
 };
 use crate::binding::engine::{
@@ -40,6 +41,7 @@ use helios_fhir::TerminologyValidationError;
 use helios_fhir::r6::terminology::index as terminology_index;
 use helios_fhir::r6::{CodeableConcept, CodeableReference, Coding, Quantity};
 use serde::Serialize;
+use serde_json::Value;
 
 struct R6BindingAdapter;
 
@@ -902,6 +904,233 @@ fn local_binding_instance_path(binding_path: &str, matched_instance_path: &str) 
     matched_instance_path.to_string()
 }
 
+/// Infer a concrete [`BindingTargetKind`] from instance JSON for choice `[x]` elements.
+fn infer_r6_choice_kind(value: &Value, declared: Option<&[String]>) -> Option<BindingTargetKind> {
+    if bindable_primitive_string_value(value).is_some() {
+        let k = primitive_choice_target_kind(declared);
+        return choice_declared_allows_kind(declared, k).then_some(k);
+    }
+    if !matches!(value, Value::Object(_)) {
+        return None;
+    }
+    let v = value.clone();
+    if choice_declared_allows_kind(declared, BindingTargetKind::Quantity)
+        && serde_json::from_value::<Quantity>(v.clone()).ok().is_some()
+    {
+        return Some(BindingTargetKind::Quantity);
+    }
+    if choice_declared_allows_kind(declared, BindingTargetKind::CodeableReference)
+        && serde_json::from_value::<CodeableReference>(v.clone())
+            .ok()
+            .is_some()
+    {
+        return Some(BindingTargetKind::CodeableReference);
+    }
+    if choice_declared_allows_kind(declared, BindingTargetKind::CodeableConcept)
+        && serde_json::from_value::<CodeableConcept>(v.clone())
+            .ok()
+            .is_some()
+    {
+        return Some(BindingTargetKind::CodeableConcept);
+    }
+    if choice_declared_allows_kind(declared, BindingTargetKind::Coding)
+        && serde_json::from_value::<Coding>(v).ok().is_some()
+    {
+        return Some(BindingTargetKind::Coding);
+    }
+    None
+}
+
+fn apply_r6_binding_sync_single(
+    validator: &Validator,
+    binding: &BindingDef,
+    field_value: &Value,
+    kind: BindingTargetKind,
+    terminology: Option<&dyn TerminologyServiceSync>,
+) -> Vec<ValidationIssue> {
+    match kind {
+        BindingTargetKind::Code => {
+            let code_value =
+                bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
+            let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
+            validate_primitive_code_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                code_value,
+                implicit_system,
+                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
+                terminology,
+            )
+        }
+        BindingTargetKind::String | BindingTargetKind::Uri => {
+            let text =
+                bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
+            validate_primitive_value_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                text,
+                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
+                terminology,
+            )
+        }
+        BindingTargetKind::Coding => {
+            let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
+            validate_coding_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                coding.as_ref(),
+                |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
+                terminology,
+            )
+        }
+        BindingTargetKind::CodeableConcept => {
+            let codeable_concept =
+                serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
+            validate_codeable_concept_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                codeable_concept.as_ref(),
+                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                terminology,
+            )
+        }
+        BindingTargetKind::Quantity => {
+            let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
+            validate_quantity_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                quantity.as_ref(),
+                |quantity| {
+                    terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+                },
+                terminology,
+            )
+        }
+        BindingTargetKind::CodeableReference => {
+            let codeable_reference =
+                serde_json::from_value::<CodeableReference>(field_value.clone()).ok();
+            validate_codeable_reference_binding(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                codeable_reference.as_ref(),
+                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                terminology,
+            )
+        }
+        BindingTargetKind::Choice | BindingTargetKind::Unsupported => vec![],
+    }
+}
+
+async fn apply_r6_binding_async_single(
+    validator: &Validator,
+    binding: &BindingDef,
+    field_value: &Value,
+    kind: BindingTargetKind,
+    terminology: Option<&dyn TerminologyService>,
+) -> Vec<ValidationIssue> {
+    match kind {
+        BindingTargetKind::Code => {
+            let code_value =
+                bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
+            let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
+            validate_primitive_code_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                code_value,
+                implicit_system,
+                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::String | BindingTargetKind::Uri => {
+            let text =
+                bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
+            validate_primitive_value_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                text,
+                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::Coding => {
+            let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
+            validate_coding_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                coding.as_ref(),
+                |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::CodeableConcept => {
+            let codeable_concept =
+                serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
+            validate_codeable_concept_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                codeable_concept.as_ref(),
+                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::Quantity => {
+            let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
+            validate_quantity_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                quantity.as_ref(),
+                |quantity| {
+                    terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+                },
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::CodeableReference => {
+            let codeable_reference =
+                serde_json::from_value::<CodeableReference>(field_value.clone()).ok();
+            validate_codeable_reference_binding_async(
+                validator,
+                &binding.path,
+                binding.value_set.as_str(),
+                binding.strength,
+                codeable_reference.as_ref(),
+                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
+                terminology,
+            )
+            .await
+        }
+        BindingTargetKind::Choice | BindingTargetKind::Unsupported => vec![],
+    }
+}
+
 /// Apply binding validation to a serialized R6 resource.
 ///
 /// This function:
@@ -954,147 +1183,34 @@ where
             root_instance_path(&binding.path),
             relative_path,
         );
-        // println!(
-        //     "binding path={}, target={:?}, matches={:?}",
-        //     binding.path,
-        //     binding.target_kind,
-        //     field_values
-        //         .iter()
-        //         .map(|(_, p)| p.clone())
-        //         .collect::<Vec<_>>()
-        // );
-        // println!(
-        //     "binding path={}, relative={}, matches={:?}",
-        //     binding.path,
-        //     relative_binding_path(binding.path),
-        //     field_values.iter().map(|(_, p)| p.clone()).collect::<Vec<_>>()
-        // );
-        match binding.target_kind {
-            BindingTargetKind::Code => {
-                for (field_value, instance_path) in &field_values {
-                    let code_value = field_value.as_str();
-
-                    let implicit_system =
-                        terminology_index::implicit_system(binding.value_set.as_str());
-                    let mut child_issues = validate_primitive_code_binding(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        code_value,
-                        implicit_system,
-                        |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                        terminology,
-                    );
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
+        for (field_value, instance_path) in &field_values {
+            match binding.target_kind {
+                BindingTargetKind::Unsupported => {}
+                BindingTargetKind::Choice => {
+                    if let Some(kind) =
+                        infer_r6_choice_kind(field_value, binding.choice_type_codes.as_deref())
+                    {
+                        let mut child_issues = apply_r6_binding_sync_single(
+                            validator,
+                            binding,
+                            field_value,
+                            kind,
+                            terminology,
+                        );
+                        let stamped_instance_path =
+                            local_binding_instance_path(&binding.path, instance_path);
+                        for issue in &mut child_issues {
+                            issue.instance_path = Some(stamped_instance_path.clone());
+                        }
+                        issues.extend(child_issues);
                     }
-
-                    issues.extend(child_issues);
                 }
-            }
-
-            BindingTargetKind::Coding => {
-                for (field_value, instance_path) in &field_values {
-                    let coding = serde_json::from_value::<Coding>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_coding_binding(
+                kind => {
+                    let mut child_issues = apply_r6_binding_sync_single(
                         validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        coding.as_ref(),
-                        |coding| {
-                            terminology_index::validate_coding(binding.value_set.as_str(), coding)
-                        },
-                        terminology,
-                    );
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::CodeableConcept => {
-                for (field_value, instance_path) in &field_values {
-                    let codeable_concept =
-                        serde_json::from_value::<CodeableConcept>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_codeable_concept_binding(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        codeable_concept.as_ref(),
-                        |cc| {
-                            terminology_index::validate_codeable_concept(
-                                binding.value_set.as_str(),
-                                cc,
-                            )
-                        },
-                        terminology,
-                    );
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::Quantity => {
-                for (field_value, instance_path) in &field_values {
-                    let quantity = serde_json::from_value::<Quantity>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_quantity_binding(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        quantity.as_ref(),
-                        |quantity| {
-                            terminology_index::validate_quantity(
-                                binding.value_set.as_str(),
-                                quantity,
-                            )
-                        },
-                        terminology,
-                    );
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::CodeableReference => {
-                for (field_value, instance_path) in &field_values {
-                    let codeable_reference =
-                        serde_json::from_value::<CodeableReference>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_codeable_reference_binding(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        codeable_reference.as_ref(),
-                        |cc| {
-                            terminology_index::validate_codeable_concept(
-                                binding.value_set.as_str(),
-                                cc,
-                            )
-                        },
+                        binding,
+                        field_value,
+                        kind,
                         terminology,
                     );
                     let stamped_instance_path =
@@ -1104,10 +1220,6 @@ where
                     }
                     issues.extend(child_issues);
                 }
-            }
-
-            _ => {
-                // no-op for unsupported / unhandled target kinds
             }
         }
     }
@@ -1157,151 +1269,38 @@ where
             root_instance_path(&binding.path),
             relative_path,
         );
-        // println!(
-        //     "binding path={}, relative={}, matches={:?},field_values len = {}",
-        //     binding.path,
-        //     relative_binding_path(binding.path),
-        //     field_values.iter().map(|(_, p)| p.clone()).collect::<Vec<_>>(),
-        //     field_values.len()
-        // );
-        match binding.target_kind {
-            BindingTargetKind::Code => {
-                for (field_value, instance_path) in &field_values {
-                    let code_value = field_value.as_str();
-
-                    let implicit_system =
-                        terminology_index::implicit_system(binding.value_set.as_str());
-                    let mut child_issues = validate_primitive_code_binding_async(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        code_value,
-                        implicit_system,
-                        |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                        terminology,
-                    )
-                    .await;
-
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
+        for (field_value, instance_path) in &field_values {
+            match binding.target_kind {
+                BindingTargetKind::Unsupported => {}
+                BindingTargetKind::Choice => {
+                    if let Some(kind) =
+                        infer_r6_choice_kind(field_value, binding.choice_type_codes.as_deref())
+                    {
+                        let mut child_issues = apply_r6_binding_async_single(
+                            validator,
+                            binding,
+                            field_value,
+                            kind,
+                            terminology,
+                        )
+                        .await;
+                        let stamped_instance_path =
+                            local_binding_instance_path(&binding.path, instance_path);
+                        for issue in &mut child_issues {
+                            issue.instance_path = Some(stamped_instance_path.clone());
+                        }
+                        issues.extend(child_issues);
                     }
-
-                    issues.extend(child_issues);
                 }
-            }
-
-            BindingTargetKind::Coding => {
-                for (field_value, instance_path) in &field_values {
-                    let coding = serde_json::from_value::<Coding>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_coding_binding_async(
+                kind => {
+                    let mut child_issues = apply_r6_binding_async_single(
                         validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        coding.as_ref(),
-                        |coding| {
-                            terminology_index::validate_coding(binding.value_set.as_str(), coding)
-                        },
+                        binding,
+                        field_value,
+                        kind,
                         terminology,
                     )
                     .await;
-
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::CodeableConcept => {
-                for (field_value, instance_path) in &field_values {
-                    let codeable_concept =
-                        serde_json::from_value::<CodeableConcept>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_codeable_concept_binding_async(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        codeable_concept.as_ref(),
-                        |cc| {
-                            terminology_index::validate_codeable_concept(
-                                binding.value_set.as_str(),
-                                cc,
-                            )
-                        },
-                        terminology,
-                    )
-                    .await;
-
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::Quantity => {
-                for (field_value, instance_path) in &field_values {
-                    let quantity = serde_json::from_value::<Quantity>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_quantity_binding_async(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        quantity.as_ref(),
-                        |quantity| {
-                            terminology_index::validate_quantity(
-                                binding.value_set.as_str(),
-                                quantity,
-                            )
-                        },
-                        terminology,
-                    )
-                    .await;
-
-                    let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
-                    for issue in &mut child_issues {
-                        issue.instance_path = Some(stamped_instance_path.clone());
-                    }
-
-                    issues.extend(child_issues);
-                }
-            }
-
-            BindingTargetKind::CodeableReference => {
-                for (field_value, instance_path) in &field_values {
-                    let codeable_reference =
-                        serde_json::from_value::<CodeableReference>((*field_value).clone()).ok();
-
-                    let mut child_issues = validate_codeable_reference_binding_async(
-                        validator,
-                        &binding.path,
-                        binding.value_set.as_str(),
-                        binding.strength,
-                        codeable_reference.as_ref(),
-                        |cc| {
-                            terminology_index::validate_codeable_concept(
-                                binding.value_set.as_str(),
-                                cc,
-                            )
-                        },
-                        terminology,
-                    )
-                    .await;
-
                     let stamped_instance_path =
                         local_binding_instance_path(&binding.path, instance_path);
                     for issue in &mut child_issues {
@@ -1310,8 +1309,6 @@ where
                     issues.extend(child_issues);
                 }
             }
-
-            _ => {}
         }
     }
 

@@ -77,6 +77,17 @@ impl TypeDerivationRule {
     }
 }
 
+/// Which concrete type a ValueSet [`ElementDefinition.binding`](https://hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.binding)
+/// applies to at runtime.
+///
+/// FHIR allows bindings only on types that carry terminology: primitive `code`,
+/// `string`, `uri`, and datatypes `Coding`, `CodeableConcept`, `CodeableReference`,
+/// and `Quantity` (see the binding rules on `ElementDefinition`).
+///
+/// [`Choice`](BindingTargetKind::Choice) is used when the element declares multiple
+/// bindable types (for example a choice `[x]`); the validator picks the handler
+/// from the instance JSON shape. [`Unsupported`](BindingTargetKind::Unsupported)
+/// means the declared types are not bindable (or cannot be classified).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BindingTargetKind {
     Code,
@@ -151,6 +162,31 @@ pub fn binding_target_kind_from_element_type_codes(type_codes: &[String]) -> Bin
     }
 }
 
+/// Map a single FHIR element `type.code` to [`BindingTargetKind`] when that type participates in
+/// terminology bindings (`code`, `string`, `uri`, `Coding`, `CodeableConcept`, `CodeableReference`,
+/// `Quantity`).
+pub fn binding_target_kind_for_element_type_code(code: &str) -> Option<BindingTargetKind> {
+    match code {
+        "code" => Some(BindingTargetKind::Code),
+        "string" => Some(BindingTargetKind::String),
+        "uri" => Some(BindingTargetKind::Uri),
+        "Coding" => Some(BindingTargetKind::Coding),
+        "CodeableConcept" => Some(BindingTargetKind::CodeableConcept),
+        "CodeableReference" => Some(BindingTargetKind::CodeableReference),
+        "Quantity" => Some(BindingTargetKind::Quantity),
+        _ => None,
+    }
+}
+
+/// Subset of element `type` codes that are bindable for ValueSet validation.
+pub fn bindable_element_type_codes(type_codes: &[String]) -> Vec<String> {
+    type_codes
+        .iter()
+        .filter(|c| binding_target_kind_for_element_type_code(c.as_str()).is_some())
+        .cloned()
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingDef {
     pub path: String,
@@ -158,6 +194,10 @@ pub struct BindingDef {
     pub value_set: String,
     pub binding_name: Option<String>,
     pub target_kind: BindingTargetKind,
+    /// When [`BindingTargetKind::Choice`], declared bindable `ElementDefinition.type` codes for
+    /// this element (same filter as [`bindable_element_type_codes`]). `None` when not a choice
+    /// binding.
+    pub choice_type_codes: Option<Vec<String>>,
 }
 /// One generated FHIR invariant attached to a resource or element.
 ///
@@ -213,5 +253,27 @@ mod binding_target_kind_tests {
             ]),
             BindingTargetKind::Choice
         );
+    }
+
+    #[test]
+    fn bindable_element_type_codes_filters_non_terminology_types() {
+        let codes = vec![
+            "boolean".to_string(),
+            "string".to_string(),
+            "Quantity".to_string(),
+        ];
+        assert_eq!(
+            bindable_element_type_codes(&codes),
+            vec!["string".to_string(), "Quantity".to_string()]
+        );
+    }
+
+    #[test]
+    fn binding_target_kind_for_element_type_code_maps_bindable_only() {
+        assert_eq!(
+            binding_target_kind_for_element_type_code("CodeableConcept"),
+            Some(BindingTargetKind::CodeableConcept)
+        );
+        assert_eq!(binding_target_kind_for_element_type_code("boolean"), None);
     }
 }

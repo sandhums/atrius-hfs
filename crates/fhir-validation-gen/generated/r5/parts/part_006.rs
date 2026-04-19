@@ -61,6 +61,7 @@ static CONCEPT_MAP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConceptMap.versionAlgorithm[x]".to_string(),
@@ -68,6 +69,7 @@ static CONCEPT_MAP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
         value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ConceptMap.status".to_string(),
@@ -75,6 +77,7 @@ static CONCEPT_MAP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|5.0.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConceptMap.jurisdiction".to_string(),
@@ -82,6 +85,7 @@ static CONCEPT_MAP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
         value_set: "http://hl7.org/fhir/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConceptMap.topic".to_string(),
@@ -89,6 +93,7 @@ static CONCEPT_MAP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
         value_set: "http://hl7.org/fhir/ValueSet/definition-topic".to_string(),
         binding_name: Some("DefinitionTopic".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -524,6 +529,7 @@ static CONCEPT_MAP_PROPERTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/conceptmap-property-type|5.0.0".to_string(),
         binding_name: Some("PropertyType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -605,6 +611,7 @@ static CONCEPT_MAP_ADDITIONAL_ATTRIBUTE_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/conceptmap-attribute-type|5.0.0".to_string(),
         binding_name: Some("ConceptMapmapAttributeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -906,6 +913,7 @@ static CONCEPT_MAP_GROUP_ELEMENT_TARGET_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/concept-map-relationship|5.0.0".to_string(),
         binding_name: Some("ConceptMapRelationship".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1326,6 +1334,7 @@ static CONCEPT_MAP_GROUP_UNMAPPED_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
         value_set: "http://hl7.org/fhir/ValueSet/conceptmap-unmapped-mode|5.0.0".to_string(),
         binding_name: Some("ConceptMapGroupUnmappedMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConceptMap.group.unmapped.relationship".to_string(),
@@ -1333,6 +1342,7 @@ static CONCEPT_MAP_GROUP_UNMAPPED_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
         value_set: "http://hl7.org/fhir/ValueSet/concept-map-relationship|5.0.0".to_string(),
         binding_name: Some("UnmappedConceptMapRelationship".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1463,6 +1473,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.clinicalStatus".to_string(),
@@ -1470,6 +1481,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/condition-clinical|5.0.0".to_string(),
         binding_name: Some("ConditionClinicalStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.verificationStatus".to_string(),
@@ -1477,6 +1489,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/condition-ver-status|5.0.0".to_string(),
         binding_name: Some("ConditionVerificationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.category".to_string(),
@@ -1484,6 +1497,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/condition-category".to_string(),
         binding_name: Some("ConditionCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.severity".to_string(),
@@ -1491,6 +1505,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/condition-severity".to_string(),
         binding_name: Some("ConditionSeverity".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.code".to_string(),
@@ -1498,6 +1513,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/condition-code".to_string(),
         binding_name: Some("ConditionKind".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.bodySite".to_string(),
@@ -1505,6 +1521,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/body-site".to_string(),
         binding_name: Some("BodySite".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.evidence".to_string(),
@@ -1512,6 +1529,7 @@ static CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
         value_set: "http://hl7.org/fhir/ValueSet/clinical-findings".to_string(),
         binding_name: Some("ManifestationOrSymptom".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1900,6 +1918,7 @@ static CONDITION_PARTICIPANT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
         value_set: "http://hl7.org/fhir/ValueSet/participation-role-type".to_string(),
         binding_name: Some("ConditionParticipantFunction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2000,6 +2019,7 @@ static CONDITION_STAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/condition-stage".to_string(),
         binding_name: Some("ConditionStage".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Condition.stage.type".to_string(),
@@ -2007,6 +2027,7 @@ static CONDITION_STAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/condition-stage-type".to_string(),
         binding_name: Some("ConditionStageType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2163,6 +2184,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.versionAlgorithm[x]".to_string(),
@@ -2170,6 +2192,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.status".to_string(),
@@ -2177,6 +2200,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|5.0.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.jurisdiction".to_string(),
@@ -2184,6 +2208,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.code".to_string(),
@@ -2191,6 +2216,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/condition-code".to_string(),
         binding_name: Some("ConditionKind".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.severity".to_string(),
@@ -2198,6 +2224,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/condition-severity".to_string(),
         binding_name: Some("ConditionSeverity".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.bodySite".to_string(),
@@ -2205,6 +2232,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/body-site".to_string(),
         binding_name: Some("BodySite".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.stage".to_string(),
@@ -2212,6 +2240,7 @@ static CONDITION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/condition-stage".to_string(),
         binding_name: Some("ConditionStage".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2598,6 +2627,7 @@ static CONDITION_DEFINITION_OBSERVATION_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/observation-category".to_string(),
         binding_name: Some("ObservationCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.observation.code".to_string(),
@@ -2605,6 +2635,7 @@ static CONDITION_DEFINITION_OBSERVATION_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/observation-codes".to_string(),
         binding_name: Some("ObservationCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2694,6 +2725,7 @@ static CONDITION_DEFINITION_MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://terminology.hl7.org/ValueSet/medicationrequest-category".to_string(),
         binding_name: Some("MedicationRequestCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.medication.code".to_string(),
@@ -2701,6 +2733,7 @@ static CONDITION_DEFINITION_MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/medication-codes".to_string(),
         binding_name: Some("MedicationCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2790,6 +2823,7 @@ static CONDITION_DEFINITION_PRECONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_
         value_set: "http://hl7.org/fhir/ValueSet/condition-precondition-type|5.0.0".to_string(),
         binding_name: Some("ConditionPreconditionType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ConditionDefinition.precondition.code".to_string(),
@@ -2797,6 +2831,7 @@ static CONDITION_DEFINITION_PRECONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_
         value_set: "http://hl7.org/fhir/ValueSet/observation-codes".to_string(),
         binding_name: Some("ObservationCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2923,6 +2958,7 @@ static CONDITION_DEFINITION_QUESTIONNAIRE_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/condition-questionnaire-purpose|5.0.0".to_string(),
         binding_name: Some("ConditionQuestionnairePurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3130,6 +3166,7 @@ static CONSENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.status".to_string(),
@@ -3137,6 +3174,7 @@ static CONSENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/consent-state-codes|5.0.0".to_string(),
         binding_name: Some("ConsentState".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.category".to_string(),
@@ -3144,6 +3182,7 @@ static CONSENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/consent-category".to_string(),
         binding_name: Some("ConsentCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.regulatoryBasis".to_string(),
@@ -3151,6 +3190,7 @@ static CONSENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/consent-policy".to_string(),
         binding_name: Some("ConsentRegulatoryBasis".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.decision".to_string(),
@@ -3158,6 +3198,7 @@ static CONSENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/consent-provision-type|5.0.0".to_string(),
         binding_name: Some("ConsentProvisionType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3654,6 +3695,7 @@ static CONSENT_VERIFICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/consent-verification".to_string(),
         binding_name: Some("ConsentVerificationType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3770,6 +3812,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/consent-action".to_string(),
         binding_name: Some("ConsentAction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.provision.securityLabel".to_string(),
@@ -3777,6 +3820,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/security-label-examples".to_string(),
         binding_name: Some("SecurityLabels".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.provision.purpose".to_string(),
@@ -3784,6 +3828,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://terminology.hl7.org/ValueSet/v3-PurposeOfUse".to_string(),
         binding_name: Some("PurposeOfUse".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.provision.documentType".to_string(),
@@ -3791,6 +3836,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/consent-content-class".to_string(),
         binding_name: Some("ConsentContentClass".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.provision.resourceType".to_string(),
@@ -3798,6 +3844,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/resource-types".to_string(),
         binding_name: Some("ConsentContentClass".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Consent.provision.code".to_string(),
@@ -3805,6 +3852,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/consent-content-code".to_string(),
         binding_name: Some("ConsentContentCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4025,6 +4073,7 @@ static CONSENT_PROVISION_ACTOR_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/participation-role-type".to_string(),
         binding_name: Some("ConsentActorRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4124,6 +4173,7 @@ static CONSENT_PROVISION_DATA_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/consent-data-meaning|5.0.0".to_string(),
         binding_name: Some("ConsentDataMeaning".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4248,6 +4298,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.status".to_string(),
@@ -4255,6 +4306,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-status|5.0.0".to_string(),
         binding_name: Some("ContractStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.legalState".to_string(),
@@ -4262,6 +4314,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-legalstate".to_string(),
         binding_name: Some("ContractLegalState".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.contentDerivative".to_string(),
@@ -4269,6 +4322,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-content-derivative".to_string(),
         binding_name: Some("ContractContentDerivative".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.expirationType".to_string(),
@@ -4276,6 +4330,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-expiration-type".to_string(),
         binding_name: Some("ContractExpiration".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.scope".to_string(),
@@ -4283,6 +4338,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-scope".to_string(),
         binding_name: Some("ContractScope".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.type".to_string(),
@@ -4290,6 +4346,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-type".to_string(),
         binding_name: Some("ContractType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.subType".to_string(),
@@ -4297,6 +4354,7 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/contract-subtype".to_string(),
         binding_name: Some("ContractSubtype".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4820,6 +4878,7 @@ static CONTRACT_CONTENT_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/contract-definition-type".to_string(),
         binding_name: Some("ContractDefinitionType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.contentDefinition.subType".to_string(),
@@ -4827,6 +4886,7 @@ static CONTRACT_CONTENT_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/contract-definition-subtype".to_string(),
         binding_name: Some("ContractDefinitionSubtype".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.contentDefinition.publicationStatus".to_string(),
@@ -4834,6 +4894,7 @@ static CONTRACT_CONTENT_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/contract-publicationstatus|5.0.0".to_string(),
         binding_name: Some("ContractPublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4935,6 +4996,7 @@ static CONTRACT_TERM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/contract-term-type".to_string(),
         binding_name: Some("ContractTermType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.subType".to_string(),
@@ -4942,6 +5004,7 @@ static CONTRACT_TERM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/contract-term-subtype".to_string(),
         binding_name: Some("ContractTermSubType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5170,6 +5233,7 @@ static CONTRACT_TERM_SECURITY_LABEL_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/contract-security-classification".to_string(),
         binding_name: Some("ContractSecurityClassification".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.securityLabel.category".to_string(),
@@ -5177,6 +5241,7 @@ static CONTRACT_TERM_SECURITY_LABEL_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/contract-security-category".to_string(),
         binding_name: Some("ContractSecurityCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.securityLabel.control".to_string(),
@@ -5184,6 +5249,7 @@ static CONTRACT_TERM_SECURITY_LABEL_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/contract-security-control".to_string(),
         binding_name: Some("ContractSecurityControl".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5294,6 +5360,7 @@ static CONTRACT_TERM_OFFER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/contract-term-type".to_string(),
         binding_name: Some("ContractTermType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.offer.decision".to_string(),
@@ -5301,6 +5368,7 @@ static CONTRACT_TERM_OFFER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://terminology.hl7.org/ValueSet/v3-ActConsentDirective".to_string(),
         binding_name: Some("ContractDecisionType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.offer.decisionMode".to_string(),
@@ -5308,6 +5376,7 @@ static CONTRACT_TERM_OFFER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/contract-decision-mode".to_string(),
         binding_name: Some("ContractDecisionMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5489,6 +5558,7 @@ static CONTRACT_TERM_OFFER_PARTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
         value_set: "http://hl7.org/fhir/ValueSet/contract-party-role".to_string(),
         binding_name: Some("ContractPartyRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5783,6 +5853,7 @@ static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/contract-assetscope".to_string(),
         binding_name: Some("ContractAssetScope".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.asset.type".to_string(),
@@ -5790,6 +5861,7 @@ static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/contract-assettype".to_string(),
         binding_name: Some("ContractAssetType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.asset.subtype".to_string(),
@@ -5797,6 +5869,7 @@ static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/contract-assetsubtype".to_string(),
         binding_name: Some("ContractAssetSubtype".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.asset.relationship".to_string(),
@@ -5804,6 +5877,7 @@ static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/consent-content-class".to_string(),
         binding_name: Some("ConsentContentClass".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.asset.periodType".to_string(),
@@ -5811,6 +5885,7 @@ static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
         value_set: "http://hl7.org/fhir/ValueSet/asset-availability".to_string(),
         binding_name: Some("AssetAvailabilityType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6029,6 +6104,7 @@ static CONTRACT_TERM_ASSET_CONTEXT_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/contract-assetcontext".to_string(),
         binding_name: Some("ContractAssetContext".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6331,6 +6407,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/contract-action".to_string(),
         binding_name: Some("ContractAction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.action.intent".to_string(),
@@ -6338,6 +6415,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://terminology.hl7.org/ValueSet/v3-PurposeOfUse".to_string(),
         binding_name: Some("ContractActionReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.action.status".to_string(),
@@ -6345,6 +6423,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/contract-actionstatus".to_string(),
         binding_name: Some("ContractActionStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.action.performerType".to_string(),
@@ -6352,6 +6431,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/participation-role-type".to_string(),
         binding_name: Some("ContractActionPerformerType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.action.performerRole".to_string(),
@@ -6359,6 +6439,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/security-role-type".to_string(),
         binding_name: Some("ContractActionPerformerRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Contract.term.action.reason".to_string(),
@@ -6366,6 +6447,7 @@ static CONTRACT_TERM_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://terminology.hl7.org/ValueSet/v3-PurposeOfUse".to_string(),
         binding_name: Some("ContractActionReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6639,6 +6721,7 @@ static CONTRACT_TERM_ACTION_SUBJECT_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/contract-actorrole".to_string(),
         binding_name: Some("ContractActorRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 

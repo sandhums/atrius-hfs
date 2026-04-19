@@ -19,6 +19,7 @@ static EVIDENCE_STATISTIC_ATTRIBUTE_ESTIMATE_BINDINGS: std::sync::LazyLock<Vec<f
         value_set: "http://hl7.org/fhir/ValueSet/attribute-estimate-type".to_string(),
         binding_name: Some("AttributeEstimateType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -138,6 +139,7 @@ static EVIDENCE_STATISTIC_MODEL_CHARACTERISTIC_BINDINGS: std::sync::LazyLock<Vec
         value_set: "http://hl7.org/fhir/ValueSet/statistic-model-code".to_string(),
         binding_name: Some("StatisticModelCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -263,6 +265,7 @@ static EVIDENCE_STATISTIC_MODEL_CHARACTERISTIC_VARIABLE_BINDINGS: std::sync::Laz
         value_set: "http://hl7.org/fhir/ValueSet/variable-handling|4.3.0".to_string(),
         binding_name: Some("EvidenceVariableHandling".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -397,6 +400,7 @@ static EVIDENCE_CERTAINTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
         value_set: "http://hl7.org/fhir/ValueSet/certainty-type".to_string(),
         binding_name: Some("EvidenceCertaintyType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Evidence.certainty.rating".to_string(),
@@ -404,6 +408,7 @@ static EVIDENCE_CERTAINTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
         value_set: "http://hl7.org/fhir/ValueSet/certainty-rating".to_string(),
         binding_name: Some("EvidenceCertaintyRating".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -544,6 +549,7 @@ static EVIDENCE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/languages".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.status".to_string(),
@@ -551,6 +557,7 @@ static EVIDENCE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|4.3.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.type".to_string(),
@@ -558,6 +565,7 @@ static EVIDENCE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/evidence-report-type".to_string(),
         binding_name: Some("EvidenceReportType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1044,6 +1052,7 @@ static EVIDENCE_REPORT_SUBJECT_CHARACTERISTIC_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/focus-characteristic-code".to_string(),
         binding_name: Some("FocusCharacteristicCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1200,6 +1209,7 @@ static EVIDENCE_REPORT_RELATES_TO_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
         value_set: "http://hl7.org/fhir/ValueSet/report-relation-type|4.3.0".to_string(),
         binding_name: Some("ReportRelationshipType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1328,6 +1338,7 @@ static EVIDENCE_REPORT_SECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/evidence-report-section".to_string(),
         binding_name: Some("ReportSectionType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.section.mode".to_string(),
@@ -1335,6 +1346,7 @@ static EVIDENCE_REPORT_SECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/list-mode|4.3.0".to_string(),
         binding_name: Some("SectionMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.section.orderedBy".to_string(),
@@ -1342,6 +1354,7 @@ static EVIDENCE_REPORT_SECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/list-order".to_string(),
         binding_name: Some("SectionEntryOrder".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.section.entryClassifier".to_string(),
@@ -1349,6 +1362,7 @@ static EVIDENCE_REPORT_SECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/evidence-classifier-code".to_string(),
         binding_name: Some("EvidenceClassifier".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceReport.section.emptyReason".to_string(),
@@ -1356,6 +1370,7 @@ static EVIDENCE_REPORT_SECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
         value_set: "http://hl7.org/fhir/ValueSet/list-empty-reason".to_string(),
         binding_name: Some("SectionEmptyReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1595,6 +1610,7 @@ static EVIDENCE_VARIABLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/languages".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceVariable.status".to_string(),
@@ -1602,6 +1618,7 @@ static EVIDENCE_VARIABLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|4.3.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceVariable.characteristicCombination".to_string(),
@@ -1609,6 +1626,7 @@ static EVIDENCE_VARIABLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/characteristic-combination|4.3.0".to_string(),
         binding_name: Some("CharacteristicCombination".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceVariable.handling".to_string(),
@@ -1616,6 +1634,7 @@ static EVIDENCE_VARIABLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/variable-handling|4.3.0".to_string(),
         binding_name: Some("EvidenceVariableHandling".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1924,6 +1943,7 @@ static EVIDENCE_VARIABLE_CHARACTERISTIC_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/characteristic-method".to_string(),
         binding_name: Some("CharacteristicMethod".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "EvidenceVariable.characteristic.groupMeasure".to_string(),
@@ -1931,6 +1951,7 @@ static EVIDENCE_VARIABLE_CHARACTERISTIC_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/group-measure|4.3.0".to_string(),
         binding_name: Some("GroupMeasure".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2350,6 +2371,7 @@ static EXAMPLE_SCENARIO_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types:
         value_set: "http://hl7.org/fhir/ValueSet/languages".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExampleScenario.status".to_string(),
@@ -2357,6 +2379,7 @@ static EXAMPLE_SCENARIO_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types:
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|4.3.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExampleScenario.jurisdiction".to_string(),
@@ -2364,6 +2387,7 @@ static EXAMPLE_SCENARIO_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types:
         value_set: "http://hl7.org/fhir/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2633,6 +2657,7 @@ static EXAMPLE_SCENARIO_ACTOR_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/examplescenario-actor-type|4.3.0".to_string(),
         binding_name: Some("ExampleScenarioActorType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2714,6 +2739,7 @@ static EXAMPLE_SCENARIO_INSTANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
         value_set: "http://hl7.org/fhir/ValueSet/resource-types|4.3.0".to_string(),
         binding_name: Some("FHIRResourceType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3307,6 +3333,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/languages".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.status".to_string(),
@@ -3314,6 +3341,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/explanationofbenefit-status|4.3.0".to_string(),
         binding_name: Some("ExplanationOfBenefitStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.type".to_string(),
@@ -3321,6 +3349,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/claim-type".to_string(),
         binding_name: Some("ClaimType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.subType".to_string(),
@@ -3328,6 +3357,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/claim-subtype".to_string(),
         binding_name: Some("ClaimSubType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.use".to_string(),
@@ -3335,6 +3365,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/claim-use|4.3.0".to_string(),
         binding_name: Some("Use".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.priority".to_string(),
@@ -3342,6 +3373,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/process-priority".to_string(),
         binding_name: Some("ProcessPriority".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.fundsReserveRequested".to_string(),
@@ -3349,6 +3381,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/fundsreserve".to_string(),
         binding_name: Some("FundsReserve".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.fundsReserve".to_string(),
@@ -3356,6 +3389,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/fundsreserve".to_string(),
         binding_name: Some("FundsReserve".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.outcome".to_string(),
@@ -3363,6 +3397,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/remittance-outcome|4.3.0".to_string(),
         binding_name: Some("RemittanceOutcome".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.formCode".to_string(),
@@ -3370,6 +3405,7 @@ static EXPLANATION_OF_BENEFIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
         value_set: "http://hl7.org/fhir/ValueSet/forms".to_string(),
         binding_name: Some("Forms".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3974,6 +4010,7 @@ static EXPLANATION_OF_BENEFIT_RELATED_BINDINGS: std::sync::LazyLock<Vec<fhir_val
         value_set: "http://hl7.org/fhir/ValueSet/related-claim-relationship".to_string(),
         binding_name: Some("RelatedClaimRelationship".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4085,6 +4122,7 @@ static EXPLANATION_OF_BENEFIT_PAYEE_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/payeetype".to_string(),
         binding_name: Some("PayeeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4184,6 +4222,7 @@ static EXPLANATION_OF_BENEFIT_CARE_TEAM_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/claim-careteamrole".to_string(),
         binding_name: Some("CareTeamRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.careTeam.qualification".to_string(),
@@ -4191,6 +4230,7 @@ static EXPLANATION_OF_BENEFIT_CARE_TEAM_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/provider-qualification".to_string(),
         binding_name: Some("ProviderQualification".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4288,6 +4328,7 @@ static EXPLANATION_OF_BENEFIT_SUPPORTING_INFO_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/claim-informationcategory".to_string(),
         binding_name: Some("InformationCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.supportingInfo.code".to_string(),
@@ -4295,6 +4336,7 @@ static EXPLANATION_OF_BENEFIT_SUPPORTING_INFO_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/claim-exception".to_string(),
         binding_name: Some("InformationCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.supportingInfo.reason".to_string(),
@@ -4302,6 +4344,7 @@ static EXPLANATION_OF_BENEFIT_SUPPORTING_INFO_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/missing-tooth-reason".to_string(),
         binding_name: Some("MissingReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4490,6 +4533,7 @@ static EXPLANATION_OF_BENEFIT_DIAGNOSIS_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/icd-10".to_string(),
         binding_name: Some("ICD10".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.diagnosis.type".to_string(),
@@ -4497,6 +4541,7 @@ static EXPLANATION_OF_BENEFIT_DIAGNOSIS_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/ex-diagnosistype".to_string(),
         binding_name: Some("DiagnosisType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.diagnosis.onAdmission".to_string(),
@@ -4504,6 +4549,7 @@ static EXPLANATION_OF_BENEFIT_DIAGNOSIS_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/ex-diagnosis-on-admission".to_string(),
         binding_name: Some("DiagnosisOnAdmission".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.diagnosis.packageCode".to_string(),
@@ -4511,6 +4557,7 @@ static EXPLANATION_OF_BENEFIT_DIAGNOSIS_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/ex-diagnosisrelatedgroup".to_string(),
         binding_name: Some("DiagnosisRelatedGroup".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4658,6 +4705,7 @@ static EXPLANATION_OF_BENEFIT_PROCEDURE_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/ex-procedure-type".to_string(),
         binding_name: Some("ProcedureType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.procedure.procedure[x]".to_string(),
@@ -4665,6 +4713,7 @@ static EXPLANATION_OF_BENEFIT_PROCEDURE_BINDINGS: std::sync::LazyLock<Vec<fhir_v
         value_set: "http://hl7.org/fhir/ValueSet/icd-10-procedures".to_string(),
         binding_name: Some("ICD10_Procedures".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
 ]);
 
@@ -4911,6 +4960,7 @@ static EXPLANATION_OF_BENEFIT_ACCIDENT_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://terminology.hl7.org/ValueSet/v3-ActIncidentCode".to_string(),
         binding_name: Some("AccidentType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5043,6 +5093,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/ex-revenue-center".to_string(),
         binding_name: Some("RevenueCenter".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.category".to_string(),
@@ -5050,6 +5101,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/ex-benefitcategory".to_string(),
         binding_name: Some("BenefitCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.productOrService".to_string(),
@@ -5057,6 +5109,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/service-uscls".to_string(),
         binding_name: Some("ServiceProduct".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.modifier".to_string(),
@@ -5064,6 +5117,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/claim-modifiers".to_string(),
         binding_name: Some("Modifiers".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.programCode".to_string(),
@@ -5071,6 +5125,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/ex-program-code".to_string(),
         binding_name: Some("ProgramCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.location[x]".to_string(),
@@ -5078,6 +5133,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/service-place".to_string(),
         binding_name: Some("ServicePlace".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.bodySite".to_string(),
@@ -5085,6 +5141,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/tooth".to_string(),
         binding_name: Some("OralSites".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.subSite".to_string(),
@@ -5092,6 +5149,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
         value_set: "http://hl7.org/fhir/ValueSet/surface".to_string(),
         binding_name: Some("Surface".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5458,6 +5516,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_ADJUDICATION_BINDINGS: std::sync::LazyLock<Ve
         value_set: "http://hl7.org/fhir/ValueSet/adjudication".to_string(),
         binding_name: Some("Adjudication".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.adjudication.reason".to_string(),
@@ -5465,6 +5524,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_ADJUDICATION_BINDINGS: std::sync::LazyLock<Ve
         value_set: "http://hl7.org/fhir/ValueSet/adjudication-reason".to_string(),
         binding_name: Some("AdjudicationReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5566,6 +5626,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/ex-revenue-center".to_string(),
         binding_name: Some("RevenueCenter".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.category".to_string(),
@@ -5573,6 +5634,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/ex-benefitcategory".to_string(),
         binding_name: Some("BenefitCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.productOrService".to_string(),
@@ -5580,6 +5642,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/service-uscls".to_string(),
         binding_name: Some("ServiceProduct".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.modifier".to_string(),
@@ -5587,6 +5650,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/claim-modifiers".to_string(),
         binding_name: Some("Modifiers".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.programCode".to_string(),
@@ -5594,6 +5658,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/ex-program-code".to_string(),
         binding_name: Some("ProgramCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5801,6 +5866,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_SUB_DETAIL_BINDINGS: std::sync::LazyLo
         value_set: "http://hl7.org/fhir/ValueSet/ex-revenue-center".to_string(),
         binding_name: Some("RevenueCenter".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.subDetail.category".to_string(),
@@ -5808,6 +5874,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_SUB_DETAIL_BINDINGS: std::sync::LazyLo
         value_set: "http://hl7.org/fhir/ValueSet/ex-benefitcategory".to_string(),
         binding_name: Some("BenefitCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.subDetail.productOrService".to_string(),
@@ -5815,6 +5882,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_SUB_DETAIL_BINDINGS: std::sync::LazyLo
         value_set: "http://hl7.org/fhir/ValueSet/service-uscls".to_string(),
         binding_name: Some("ServiceProduct".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.subDetail.modifier".to_string(),
@@ -5822,6 +5890,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_SUB_DETAIL_BINDINGS: std::sync::LazyLo
         value_set: "http://hl7.org/fhir/ValueSet/claim-modifiers".to_string(),
         binding_name: Some("Modifiers".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.item.detail.subDetail.programCode".to_string(),
@@ -5829,6 +5898,7 @@ static EXPLANATION_OF_BENEFIT_ITEM_DETAIL_SUB_DETAIL_BINDINGS: std::sync::LazyLo
         value_set: "http://hl7.org/fhir/ValueSet/ex-program-code".to_string(),
         binding_name: Some("ProgramCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6013,6 +6083,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/service-uscls".to_string(),
         binding_name: Some("ServiceProduct".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.addItem.modifier".to_string(),
@@ -6020,6 +6091,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/claim-modifiers".to_string(),
         binding_name: Some("Modifiers".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.addItem.programCode".to_string(),
@@ -6027,6 +6099,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/ex-program-code".to_string(),
         binding_name: Some("ProgramCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.addItem.location[x]".to_string(),
@@ -6034,6 +6107,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/service-place".to_string(),
         binding_name: Some("ServicePlace".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.addItem.bodySite".to_string(),
@@ -6041,6 +6115,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/tooth".to_string(),
         binding_name: Some("OralSites".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ExplanationOfBenefit.addItem.subSite".to_string(),
@@ -6048,6 +6123,7 @@ static EXPLANATION_OF_BENEFIT_ADD_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/surface".to_string(),
         binding_name: Some("Surface".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 

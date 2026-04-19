@@ -300,12 +300,13 @@ Implements TerminologyBackend using the Helios terminology client.
 
 This adapter:
 	•	receives a typed request
-	•	maps it into the current Helios client signature
-	•	executes the remote request
+	•	validates it with `ValidateVsRequest::validate`
+	•	serializes the full `$validate-code` parameter set via `ValidateVsRequest::to_parameters_json`
+	•	posts it through `TerminologyClient::validate_code_with_parameters` (same URL routing as the narrow `validate_vs` helper, including HL7 built-in ValueSet instance paths)
 	•	converts backend errors into validation errors
 	•	returns raw JSON to the service layer
 
-This isolates Helios-specific behavior from the rest of the engine.
+This isolates Helios-specific transport from the rest of the engine while forwarding every modeled request field the server accepts.
 
 ⸻
 
@@ -471,8 +472,8 @@ Atrius Validation Engine v1 is functional, but some areas are intentionally inco
 Known limitations
 	•	R5 is the primary target; R4 support is not yet fully aligned in all binding paths
 	•	remote terminology integration is currently focused on the validation patterns needed by binding enforcement
-	•	the current Helios backend implementation primarily supports primitive code request mapping
-	•	some advanced $validate-code request fields are modeled but not yet fully exercised end-to-end
+	•	remote `$validate-code` calls serialize the full `ValidateVsRequest` shape; whether a given field affects the outcome still depends on the remote server’s FHIR version and capabilities
+	•	some advanced $validate-code request fields are modeled but not yet fully exercised end-to-end in automated tests
 	•	behavior may differ depending on the capabilities and FHIR version of the remote terminology server
 	•	not all future terminology operations ($lookup, $expand, $subsumes, etc.) are implemented yet
 
@@ -499,8 +500,8 @@ It delivers:
 
 Likely next steps include:
 	•	complete R4 parity for binding handling
-	•	broaden remote terminology request support
-	•	richer use of ValidateVsRequest
+	•	broader automated coverage of remote `$validate-code` parameter combinations
+	•	deeper integration tests against live or containerized terminology servers
 	•	support for more terminology operations
 	•	stronger request-shape tests and parser tests
 	•	improved compatibility handling across remote terminology servers

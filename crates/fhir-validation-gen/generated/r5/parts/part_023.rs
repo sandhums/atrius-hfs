@@ -19,6 +19,7 @@ static VISION_PRESCRIPTION_LENS_SPECIFICATION_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/vision-product".to_string(),
         binding_name: Some("VisionProduct".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "VisionPrescription.lensSpecification.eye".to_string(),
@@ -26,6 +27,7 @@ static VISION_PRESCRIPTION_LENS_SPECIFICATION_BINDINGS: std::sync::LazyLock<Vec<
         value_set: "http://hl7.org/fhir/ValueSet/vision-eye-codes|5.0.0".to_string(),
         binding_name: Some("VisionEyes".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -157,6 +159,7 @@ static VISION_PRESCRIPTION_LENS_SPECIFICATION_PRISM_BINDINGS: std::sync::LazyLoc
         value_set: "http://hl7.org/fhir/ValueSet/vision-base-codes|5.0.0".to_string(),
         binding_name: Some("VisionBase".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -280,6 +283,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|5.0.0".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ViewDefinition.versionAlgorithm[x]".to_string(),
@@ -287,6 +291,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "ViewDefinition.status".to_string(),
@@ -294,6 +299,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|5.0.0".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ViewDefinition.jurisdiction".to_string(),
@@ -301,6 +307,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ViewDefinition.resource".to_string(),
@@ -308,6 +315,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/resource-types".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ViewDefinition.fhirVersion".to_string(),
@@ -315,6 +323,7 @@ static VIEW_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         value_set: "http://hl7.org/fhir/ValueSet/FHIR-version".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 

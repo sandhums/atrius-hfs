@@ -117,6 +117,7 @@ static INSURANCE_PLAN_SPECIFIC_COST_BENEFIT_COST_BINDINGS: std::sync::LazyLock<V
         value_set: "http://hl7.org/fhir/ValueSet/insuranceplan-applicability|6.0.0-ballot3".to_string(),
         binding_name: Some("BenefitCostApplicability".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -264,6 +265,7 @@ static INSURANCE_PRODUCT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "InsuranceProduct.status".to_string(),
@@ -271,6 +273,7 @@ static INSURANCE_PRODUCT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "InsuranceProduct.type".to_string(),
@@ -278,6 +281,7 @@ static INSURANCE_PRODUCT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
         value_set: "http://hl7.org/fhir/ValueSet/insuranceproduct-type".to_string(),
         binding_name: Some("InsuranceProductType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1001,6 +1005,7 @@ static INVOICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Invoice.status".to_string(),
@@ -1008,6 +1013,7 @@ static INVOICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/invoice-status|6.0.0-ballot3".to_string(),
         binding_name: Some("InvoiceStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -1609,6 +1615,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Library.versionAlgorithm[x]".to_string(),
@@ -1616,6 +1623,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "Library.status".to_string(),
@@ -1623,6 +1631,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Library.type".to_string(),
@@ -1630,6 +1639,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://terminology.hl7.org/ValueSet/library-type".to_string(),
         binding_name: Some("LibraryType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Library.subject[x]".to_string(),
@@ -1637,6 +1647,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/participant-resource-types".to_string(),
         binding_name: Some("SubjectType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "Library.jurisdiction".to_string(),
@@ -1644,6 +1655,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Library.topic".to_string(),
@@ -1651,6 +1663,7 @@ static LIBRARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/definition-topic".to_string(),
         binding_name: Some("DefinitionTopic".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2116,6 +2129,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "List.status".to_string(),
@@ -2123,6 +2137,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/list-status|6.0.0-ballot3".to_string(),
         binding_name: Some("ListStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "List.mode".to_string(),
@@ -2130,6 +2145,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/list-mode|6.0.0-ballot3".to_string(),
         binding_name: Some("ListMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "List.code".to_string(),
@@ -2137,6 +2153,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/list-example-codes".to_string(),
         binding_name: Some("ListPurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "List.orderedBy".to_string(),
@@ -2144,6 +2161,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/list-order".to_string(),
         binding_name: Some("ListOrder".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "List.emptyReason".to_string(),
@@ -2151,6 +2169,7 @@ static LIST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
         value_set: "http://hl7.org/fhir/ValueSet/list-empty-reason".to_string(),
         binding_name: Some("ListEmptyReason".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2406,6 +2425,7 @@ static LIST_ENTRY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
         value_set: "http://hl7.org/fhir/ValueSet/list-item-flag".to_string(),
         binding_name: Some("ListItemFlag".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2527,6 +2547,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.status".to_string(),
@@ -2534,6 +2555,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/location-status|6.0.0-ballot3".to_string(),
         binding_name: Some("LocationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.operationalStatus".to_string(),
@@ -2541,6 +2563,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://terminology.hl7.org/ValueSet/v2-0116".to_string(),
         binding_name: Some("OperationalStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.code".to_string(),
@@ -2548,6 +2571,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/iso3166-1-2".to_string(),
         binding_name: Some("LocationCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.mode".to_string(),
@@ -2555,6 +2579,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/location-mode|6.0.0-ballot3".to_string(),
         binding_name: Some("LocationMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.type".to_string(),
@@ -2562,6 +2587,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://terminology.hl7.org/ValueSet/service-type".to_string(),
         binding_name: Some("LocationType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.form".to_string(),
@@ -2569,6 +2595,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/location-form".to_string(),
         binding_name: Some("LocationForm".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Location.characteristic".to_string(),
@@ -2576,6 +2603,7 @@ static LOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         value_set: "http://hl7.org/fhir/ValueSet/location-characteristic".to_string(),
         binding_name: Some("LocationCharacteristic".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -2996,6 +3024,7 @@ static MANUFACTURED_ITEM_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ManufacturedItemDefinition.status".to_string(),
@@ -3003,6 +3032,7 @@ static MANUFACTURED_ITEM_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ManufacturedItemDefinition.manufacturedDoseForm".to_string(),
@@ -3010,6 +3040,7 @@ static MANUFACTURED_ITEM_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/manufactured-dose-form".to_string(),
         binding_name: Some("ManufacturedDoseForm".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ManufacturedItemDefinition.unitOfPresentation".to_string(),
@@ -3017,6 +3048,7 @@ static MANUFACTURED_ITEM_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/unit-of-presentation".to_string(),
         binding_name: Some("UnitOfPresentation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "ManufacturedItemDefinition.ingredient".to_string(),
@@ -3024,6 +3056,7 @@ static MANUFACTURED_ITEM_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
         value_set: "http://hl7.org/fhir/ValueSet/substance-codes".to_string(),
         binding_name: Some("SNOMEDCTSubstanceCodes".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3271,6 +3304,7 @@ static MANUFACTURED_ITEM_DEFINITION_PROPERTY_BINDINGS: std::sync::LazyLock<Vec<f
         value_set: "http://hl7.org/fhir/ValueSet/product-characteristic-codes".to_string(),
         binding_name: Some("SNOMEDCTCharacteristicCodes".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -3748,6 +3782,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.versionAlgorithm[x]".to_string(),
@@ -3755,6 +3790,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "Measure.status".to_string(),
@@ -3762,6 +3798,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.subject[x]".to_string(),
@@ -3769,6 +3806,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/participant-resource-types".to_string(),
         binding_name: Some("SubjectType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "Measure.jurisdiction".to_string(),
@@ -3776,6 +3814,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
         binding_name: Some("Jurisdiction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.reportingFrequency".to_string(),
@@ -3783,6 +3822,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/frequency-unit".to_string(),
         binding_name: Some("ReportingFrequency".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Quantity,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.topic".to_string(),
@@ -3790,6 +3830,7 @@ static MEASURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
         value_set: "http://hl7.org/fhir/ValueSet/definition-topic".to_string(),
         binding_name: Some("DefinitionTopic".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4235,6 +4276,7 @@ static MEASURE_TERM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
         value_set: "http://hl7.org/fhir/ValueSet/measure-definition-example".to_string(),
         binding_name: Some("DefinitionCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4320,6 +4362,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/measure-group-example".to_string(),
         binding_name: Some("MeasureGroupExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.type".to_string(),
@@ -4327,6 +4370,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://terminology.hl7.org/ValueSet/measure-type".to_string(),
         binding_name: Some("MeasureType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.subject[x]".to_string(),
@@ -4334,6 +4378,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/participant-resource-types".to_string(),
         binding_name: Some("SubjectType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.basis".to_string(),
@@ -4341,6 +4386,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/fhir-types|6.0.0-ballot3".to_string(),
         binding_name: Some("BasisType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.scoring".to_string(),
@@ -4348,6 +4394,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://terminology.hl7.org/ValueSet/measure-scoring".to_string(),
         binding_name: Some("MeasureScoring".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.scoringUnit".to_string(),
@@ -4355,6 +4402,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://hl7.org/fhir/ValueSet/measure-scoring-unit".to_string(),
         binding_name: Some("MeasureScoringUnit".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.compositeScoring".to_string(),
@@ -4362,6 +4410,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://terminology.hl7.org/ValueSet/composite-measure-scoring".to_string(),
         binding_name: Some("CompositeMeasureScoring".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.improvementNotation".to_string(),
@@ -4369,6 +4418,7 @@ static MEASURE_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
         value_set: "http://terminology.hl7.org/ValueSet/measure-improvement-notation".to_string(),
         binding_name: Some("MeasureImprovementNotation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4684,6 +4734,7 @@ static MEASURE_GROUP_POPULATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validatio
         value_set: "http://terminology.hl7.org/ValueSet/measure-population".to_string(),
         binding_name: Some("MeasurePopulationType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.group.population.aggregateMethod".to_string(),
@@ -4691,6 +4742,7 @@ static MEASURE_GROUP_POPULATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validatio
         value_set: "http://terminology.hl7.org/ValueSet/measure-aggregate-method".to_string(),
         binding_name: Some("MeasureAggregateMethod".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4806,6 +4858,7 @@ static MEASURE_GROUP_STRATIFIER_BINDINGS: std::sync::LazyLock<Vec<fhir_validatio
         value_set: "http://hl7.org/fhir/ValueSet/measure-stratifier-example".to_string(),
         binding_name: Some("MeasureStratifierExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -4940,6 +4993,7 @@ static MEASURE_GROUP_STRATIFIER_COMPONENT_BINDINGS: std::sync::LazyLock<Vec<fhir
         value_set: "http://hl7.org/fhir/ValueSet/measure-stratifier-example".to_string(),
         binding_name: Some("MeasureStratifierExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5051,6 +5105,7 @@ static MEASURE_SUPPLEMENTAL_DATA_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
         value_set: "http://hl7.org/fhir/ValueSet/measure-supplemental-data-example".to_string(),
         binding_name: Some("MeasureSupplementalDataExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Measure.supplementalData.usage".to_string(),
@@ -5058,6 +5113,7 @@ static MEASURE_SUPPLEMENTAL_DATA_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
         value_set: "http://terminology.hl7.org/ValueSet/measure-data-usage".to_string(),
         binding_name: Some("MeasureDataUsage".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5204,6 +5260,7 @@ static MEASURE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.category".to_string(),
@@ -5211,6 +5268,7 @@ static MEASURE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
         value_set: "http://hl7.org/fhir/ValueSet/measurereport-category".to_string(),
         binding_name: Some("MeasureCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.status".to_string(),
@@ -5218,6 +5276,7 @@ static MEASURE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
         value_set: "http://hl7.org/fhir/ValueSet/measure-report-status|6.0.0-ballot3".to_string(),
         binding_name: Some("MeasureReportStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.type".to_string(),
@@ -5225,6 +5284,7 @@ static MEASURE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
         value_set: "http://hl7.org/fhir/ValueSet/measure-report-type|6.0.0-ballot3".to_string(),
         binding_name: Some("MeasureReportType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.dataUpdateType".to_string(),
@@ -5232,6 +5292,7 @@ static MEASURE_REPORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
         value_set: "http://hl7.org/fhir/ValueSet/submit-data-update-type|6.0.0-ballot3".to_string(),
         binding_name: Some("SubmitDataUpdateType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5552,6 +5613,7 @@ static MEASURE_REPORT_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://hl7.org/fhir/ValueSet/measure-group-example".to_string(),
         binding_name: Some("MeasureGroupExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.group.type".to_string(),
@@ -5559,6 +5621,7 @@ static MEASURE_REPORT_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://terminology.hl7.org/ValueSet/measure-type".to_string(),
         binding_name: Some("MeasureType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.group.scoring".to_string(),
@@ -5566,6 +5629,7 @@ static MEASURE_REPORT_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://terminology.hl7.org/ValueSet/measure-scoring".to_string(),
         binding_name: Some("MeasureScoring".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.group.improvementNotation".to_string(),
@@ -5573,6 +5637,7 @@ static MEASURE_REPORT_GROUP_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
         value_set: "http://terminology.hl7.org/ValueSet/measure-improvement-notation".to_string(),
         binding_name: Some("MeasureImprovementNotation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5826,6 +5891,7 @@ static MEASURE_REPORT_GROUP_POPULATION_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://terminology.hl7.org/ValueSet/measure-population".to_string(),
         binding_name: Some("MeasurePopulation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5972,6 +6038,7 @@ static MEASURE_REPORT_GROUP_STRATIFIER_BINDINGS: std::sync::LazyLock<Vec<fhir_va
         value_set: "http://hl7.org/fhir/ValueSet/measure-stratifier-example".to_string(),
         binding_name: Some("MeasureStratifierExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6082,6 +6149,7 @@ static MEASURE_REPORT_GROUP_STRATIFIER_STRATUM_BINDINGS: std::sync::LazyLock<Vec
         value_set: "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example".to_string(),
         binding_name: Some("MeasureReportStratifierValueExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string(), "Quantity".to_string()]),
     },
 ]);
 
@@ -6362,6 +6430,7 @@ static MEASURE_REPORT_GROUP_STRATIFIER_STRATUM_COMPONENT_BINDINGS: std::sync::La
         value_set: "http://hl7.org/fhir/ValueSet/measure-stratifier-example".to_string(),
         binding_name: Some("MeasureStratifierExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "MeasureReport.group.stratifier.stratum.component.value[x]".to_string(),
@@ -6369,6 +6438,7 @@ static MEASURE_REPORT_GROUP_STRATIFIER_STRATUM_COMPONENT_BINDINGS: std::sync::La
         value_set: "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example".to_string(),
         binding_name: Some("MeasureReportStratifierValueExample".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string(), "Quantity".to_string()]),
     },
 ]);
 
@@ -6532,6 +6602,7 @@ static MEASURE_REPORT_GROUP_STRATIFIER_STRATUM_POPULATION_BINDINGS: std::sync::L
         value_set: "http://terminology.hl7.org/ValueSet/measure-population".to_string(),
         binding_name: Some("MeasurePopulation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 
@@ -6706,6 +6777,7 @@ static MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Medication.code".to_string(),
@@ -6713,6 +6785,7 @@ static MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
         value_set: "http://hl7.org/fhir/ValueSet/medication-codes".to_string(),
         binding_name: Some("MedicationFormalRepresentation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Medication.status".to_string(),
@@ -6720,6 +6793,7 @@ static MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
         value_set: "http://hl7.org/fhir/ValueSet/medication-status|6.0.0-ballot3".to_string(),
         binding_name: Some("MedicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Medication.doseForm".to_string(),
@@ -6727,6 +6801,7 @@ static MEDICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
         value_set: "http://hl7.org/fhir/ValueSet/medication-form-codes".to_string(),
         binding_name: Some("MedicationForm".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
     },
 ]);
 

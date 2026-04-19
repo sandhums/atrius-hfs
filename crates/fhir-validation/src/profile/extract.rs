@@ -112,3 +112,15 @@ pub fn extract_r5_structure_definition_profile(
     })?;
     extract_structure_definition_profile_from_json(&v)
 }
+
+#[cfg(feature = "R6")]
+pub fn extract_r6_structure_definition_profile(
+    sd: &helios_fhir::r6::StructureDefinition,
+) -> Result<ExtractedProfile, ValidationError> {
+    let v = serde_json::to_value(sd).map_err(|err| {
+        ValidationError::InvalidStructureDefinition(format!(
+            "Failed to serialize StructureDefinition to JSON: {err}"
+        ))
+    })?;
+    extract_structure_definition_profile_from_json(&v)
+}

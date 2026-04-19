@@ -8,7 +8,9 @@ mod common {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::fixtures::{load_fixture, load_profile, load_resource, local_terminology_r5};
+    use crate::common::fixtures::{
+        load_fixture, load_profile, load_resource, local_terminology_r5,
+    };
     use fhir_validation::profile::types::{ExtractedElementRule, ExtractedProfile};
     use fhir_validation::profile::validate::validate_profile;
     use fhir_validation::validation_context::{ValidationContext, ValidationState};

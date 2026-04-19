@@ -9,9 +9,9 @@ use crate::profile::types::{
     ExtractedValueConstraint,
 };
 use fhir_validation_types::{
-    BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
-    StructureDefinitionKind, TypeDerivationRule, binding_target_kind_from_element_type_codes,
-    normalize_fhir_element_type_code,
+    bindable_element_type_codes, BindingDef, BindingStrength, BindingTargetKind, InvariantDef,
+    Severity, StructureDefinitionKind, TypeDerivationRule,
+    binding_target_kind_from_element_type_codes, normalize_fhir_element_type_code,
 };
 use serde_json::{Map, Value};
 use std::collections::HashMap;
@@ -408,12 +408,24 @@ fn extract_binding(path: String, resolved: &Value) -> Result<Option<BindingDef>,
         binding_target_kind_from_element_type_codes(&type_codes)
     };
 
+    let choice_type_codes = if target_kind == BindingTargetKind::Choice {
+        let bindable = bindable_element_type_codes(&type_codes);
+        if bindable.is_empty() {
+            None
+        } else {
+            Some(bindable)
+        }
+    } else {
+        None
+    };
+
     Ok(Some(BindingDef {
         path,
         strength,
         value_set,
         binding_name,
         target_kind,
+        choice_type_codes,
     }))
 }
 

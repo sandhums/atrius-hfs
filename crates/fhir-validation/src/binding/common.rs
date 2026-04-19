@@ -7,18 +7,68 @@
 //! - utilities for mapping a generated binding path to the root resource/datatype
 //!   instance path used during validation
 //!
-//! Version-specific binding modules (`r4/binding.rs`, `r5/binding.rs`) use these
-//! helpers to validate primitive `code`, `Coding`, and `CodeableConcept` values
-//! while preserving precise instance locations.
+//! Version-specific binding modules (`r4/binding.rs`, `r5/binding.rs`, etc.) use these
+//! helpers to validate ValueSet bindings on the
+//! [FHIR bindable types](https://hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.binding):
+//! primitive `code`, `string`, `uri`, `Coding`, `CodeableConcept`, `Quantity`,
+//! and `CodeableReference` (where the version supports it), while preserving
+//! precise instance locations.
 
 use crate::binding::engine::LocalBindingOutcome;
 use crate::service::{TerminologyService, TerminologyServiceSync};
 use crate::types::TerminologyMembershipOutcome;
 use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
 use crate::{ValidationError, ValidationIssue, Validator};
-use fhir_validation_types::{BindingStrength, Severity};
+use fhir_validation_types::{
+    binding_target_kind_for_element_type_code, BindingStrength, BindingTargetKind, Severity,
+};
 use helios_fhir::TerminologyValidationError;
 use serde_json::Value;
+
+/// Whether `kind` is among declared choice type codes (`None` / empty slice = unrestricted).
+pub(crate) fn choice_declared_allows_kind(
+    declared: Option<&[String]>,
+    kind: BindingTargetKind,
+) -> bool {
+    match declared {
+        None => true,
+        Some(codes) if codes.is_empty() => true,
+        Some(codes) => codes
+            .iter()
+            .filter_map(|c| binding_target_kind_for_element_type_code(c.as_str()))
+            .any(|k| k == kind),
+    }
+}
+
+/// Map string-ish instance JSON to a primitive [`BindingTargetKind`] using declared choice codes.
+pub(crate) fn primitive_choice_target_kind(declared: Option<&[String]>) -> BindingTargetKind {
+    match declared {
+        None => BindingTargetKind::String,
+        Some(codes) => {
+            if codes.iter().any(|c| c.as_str() == "code") {
+                BindingTargetKind::Code
+            } else if codes.iter().any(|c| c.as_str() == "string") {
+                BindingTargetKind::String
+            } else if codes.iter().any(|c| c.as_str() == "uri") {
+                BindingTargetKind::Uri
+            } else {
+                BindingTargetKind::String
+            }
+        }
+    }
+}
+
+/// Extract primitive text for terminology binding from instance JSON.
+///
+/// Accepts a JSON string or the generated element shape `{"value": "..."}` used
+/// for FHIR primitives such as `code`, `string`, and `uri`.
+pub(crate) fn bindable_primitive_string_value(value: &Value) -> Option<&str> {
+    match value {
+        Value::String(s) => Some(s.as_str()),
+        Value::Object(map) => map.get("value").and_then(|v| v.as_str()),
+        _ => None,
+    }
+}
 
 /// Convert a binding miss into a `ValidationIssue` using validator policy for
 /// the supplied binding strength.
