@@ -394,7 +394,9 @@ pub fn validation_issues_to_r4_operation_outcome_json(
     issues: &[ValidationIssue],
 ) -> Result<Value, serde_json::Error> {
     let outcome = validation_issues_to_r4_operation_outcome(issues)?;
-    serde_json::to_value(helios_fhir::r4::Resource::OperationOutcome(Box::new(outcome)))
+    serde_json::to_value(helios_fhir::r4::Resource::OperationOutcome(Box::new(
+        outcome,
+    )))
 }
 
 /// Deserialize [`validation_issues_to_operation_outcome`] into the R4B `OperationOutcome` type.
@@ -411,7 +413,9 @@ pub fn validation_issues_to_r4b_operation_outcome_json(
     issues: &[ValidationIssue],
 ) -> Result<Value, serde_json::Error> {
     let outcome = validation_issues_to_r4b_operation_outcome(issues)?;
-    serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(Box::new(outcome)))
+    serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(Box::new(
+        outcome,
+    )))
 }
 
 /// Deserialize [`validation_issues_to_operation_outcome`] into the R5 `OperationOutcome` type.
@@ -428,7 +432,9 @@ pub fn validation_issues_to_r5_operation_outcome_json(
     issues: &[ValidationIssue],
 ) -> Result<Value, serde_json::Error> {
     let outcome = validation_issues_to_r5_operation_outcome(issues)?;
-    serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(Box::new(outcome)))
+    serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(Box::new(
+        outcome,
+    )))
 }
 
 /// Deserialize [`validation_issues_to_operation_outcome`] into the R6 `OperationOutcome` type.
@@ -445,7 +451,9 @@ pub fn validation_issues_to_r6_operation_outcome_json(
     issues: &[ValidationIssue],
 ) -> Result<Value, serde_json::Error> {
     let outcome = validation_issues_to_r6_operation_outcome(issues)?;
-    serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(Box::new(outcome)))
+    serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(Box::new(
+        outcome,
+    )))
 }
 
 #[cfg(test)]
@@ -763,9 +771,9 @@ mod tests {
 
         let outcome = validation_issues_to_r5_operation_outcome(&issues)
             .expect("typed R5 OperationOutcome should deserialize from generated JSON");
-        let json = serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(
-            Box::new(outcome),
-        ))
+        let json = serde_json::to_value(helios_fhir::r5::Resource::OperationOutcome(Box::new(
+            outcome,
+        )))
         .expect("typed R5 OperationOutcome should serialize back to JSON");
 
         assert_eq!(json["resourceType"], "OperationOutcome");
@@ -834,9 +842,9 @@ mod tests {
 
         let outcome = validation_issues_to_r4b_operation_outcome(&issues)
             .expect("typed R4B OperationOutcome should deserialize from generated JSON");
-        let json = serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(
-            Box::new(outcome),
-        ))
+        let json = serde_json::to_value(helios_fhir::r4b::Resource::OperationOutcome(Box::new(
+            outcome,
+        )))
         .expect("typed R4B OperationOutcome should serialize back to JSON");
 
         assert_eq!(json["resourceType"], "OperationOutcome");
@@ -903,9 +911,9 @@ mod tests {
 
         let outcome = validation_issues_to_r6_operation_outcome(&issues)
             .expect("typed R6 OperationOutcome should deserialize from generated JSON");
-        let json = serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(
-            Box::new(outcome),
-        ))
+        let json = serde_json::to_value(helios_fhir::r6::Resource::OperationOutcome(Box::new(
+            outcome,
+        )))
         .expect("typed R6 OperationOutcome should serialize back to JSON");
 
         assert_eq!(json["resourceType"], "OperationOutcome");

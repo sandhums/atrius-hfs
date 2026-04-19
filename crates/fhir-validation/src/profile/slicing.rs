@@ -427,7 +427,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
 ///
 /// FHIR slicing uses AND semantics when multiple discriminators are declared,
 /// so every discriminator must match for the item to belong to the slice.
- #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn matches_slice(
     actual: &Value,
     item_index: usize,

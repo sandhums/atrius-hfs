@@ -4,7 +4,7 @@ mod common {
 }
 mod tests {
 
-    use crate::common::fixtures::{load_profile, load_resource};
+    use crate::common::fixtures::{load_profile, load_resource, local_terminology_r5};
     use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use fhir_validation::profile::types::{
@@ -16,9 +16,9 @@ mod tests {
         R5FhirPathEvaluator, StructureDefinitionKind, TypeDerivationRule, TypeProfileMatchMode,
         Validator,
     };
-    use helios_fhir::{FhirResource, FhirVersion};
     use helios_fhir::r5::StructureDefinition;
     use helios_fhir::r5::{Bundle, Parameters, Patient, Resource};
+    use helios_fhir::{FhirResource, FhirVersion};
     use serde_json::json;
     pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
         let FhirResource::R5(r) = resource else {
@@ -48,10 +48,11 @@ mod tests {
         registry: Option<&ProfileRegistry>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let extracted_profile_map = std::collections::HashMap::new();
+        let term = local_terminology_r5();
         let ctx = ValidationContext {
             fhir_version: FhirVersion::R5,
             validator,
-            terminology: None,
+            terminology: Some(&term),
             evaluator,
             runtime_profile_registry: registry,
             extracted_profile_map: &extracted_profile_map,
@@ -69,8 +70,13 @@ mod tests {
 
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues =
-            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        let term = local_terminology_r5();
+        let issues = validator().validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
 
         assert_eq!(issues.len(), 5);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
@@ -93,8 +99,13 @@ mod tests {
         registry.insert(profile);
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues =
-            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        let term = local_terminology_r5();
+        let issues = validator().validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
         // println!("issues: {:?}", issues);
         assert_eq!(issues.len(), 4);
         assert_eq!(issues[0].fhir_path, "Patient");

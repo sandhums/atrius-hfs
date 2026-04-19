@@ -10,10 +10,10 @@ mod tests {
     use crate::common::fixtures::{
         assert_has_binding_issue, eval_r5_patient_expr, load_r5_patient, load_resource,
     };
-    use fhir_validation::{LocalTerminologyService, R5FhirPathEvaluator};
     use fhir_validation::Validator;
     use fhir_validation::issue_to_op_outcome::validation_issues_to_operation_outcome;
     use fhir_validation::terminology::service::RemoteTerminologyService;
+    use fhir_validation::{LocalTerminologyService, R5FhirPathEvaluator};
     use helios_fhir::{FhirResource, FhirVersion};
     use reqwest::Client;
     use std::time::Duration;

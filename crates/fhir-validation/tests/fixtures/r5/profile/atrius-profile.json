@@ -38,8 +38,8 @@
           {
             "key": "atrius-pat-ident-1",
             "severity": "error",
-            "human": "If identifier is present, at least one value must be present",
-            "expression": "identifier.exists() implies identifier.value.exists()"
+            "human": "Each identifier must have a value",
+            "expression": "value.exists()"
           }
         ]
       },

@@ -3,13 +3,15 @@ mod common {
     pub mod fixtures;
 }
 mod tests {
-    use fhir_validation::R4FhirPathEvaluator;
-    use crate::common::fixtures::{assert_has_warning, load_resource};
     use crate::common::fixtures::{assert_has_invariant, assert_issue_count, assert_no_errors};
+    use crate::common::fixtures::{assert_has_warning, load_resource, local_terminology_r4};
+    use fhir_validation::R4FhirPathEvaluator;
     use helios_fhir::{FhirResource, FhirVersion};
 
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else { panic!("expected R4 FhirResource") };
+        let FhirResource::R4(r) = resource else {
+            panic!("expected R4 FhirResource")
+        };
         R4FhirPathEvaluator::new((**r).clone())
     }
     #[test]
@@ -21,7 +23,8 @@ mod tests {
 
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -33,7 +36,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_issue_count(&issues, 2);
         assert_has_invariant(
@@ -51,7 +55,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -64,7 +69,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
         assert_issue_count(&issues, 1);
         assert_has_invariant(
             &issues,
@@ -82,7 +88,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -95,7 +102,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -108,7 +116,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_issue_count(&issues, 2);
         assert_has_invariant(
@@ -131,7 +140,8 @@ mod tests {
 
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
         assert_has_warning(&issues);

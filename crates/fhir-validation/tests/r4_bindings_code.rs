@@ -6,15 +6,17 @@ mod common {
 #[cfg(test)]
 mod tests {
     use crate::common::fixtures::{
-        assert_has_binding_issue, assert_has_error, load_resource
+        assert_has_binding_issue, assert_has_error, load_resource, local_terminology_r4,
     };
-    use fhir_validation::{LocalTerminologyService, R4FhirPathEvaluator};
     use fhir_validation::r4::binding::validate_primitive_code_binding;
+    use fhir_validation::{LocalTerminologyService, R4FhirPathEvaluator};
     use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::{FhirResource, FhirVersion, TerminologyValidationError};
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else { panic!("expected R4 FhirResource") };
+        let FhirResource::R4(r) = resource else {
+            panic!("expected R4 FhirResource")
+        };
         R4FhirPathEvaluator::new((**r).clone())
     }
     fn validator() -> Validator {
@@ -106,7 +108,8 @@ mod tests {
         );
         let validator = Validator::default();
         let evaluator = r4_evaluator_for(&resource);
-        let issues = validator.validate_resource(&resource, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&resource, Some(&term), &evaluator);
         // println!("{:#?}", issues);
         assert_has_binding_issue(
             &issues,

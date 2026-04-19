@@ -3,15 +3,19 @@ mod common {
     pub mod fixtures;
 }
 mod tests {
+    use crate::common::fixtures::load_resource;
+    use crate::common::fixtures::{
+        assert_has_invariant, assert_issue_count, assert_no_errors, local_terminology_r4,
+    };
     use fhir_validation::R4FhirPathEvaluator;
-    use crate::common::fixtures::{load_resource};
-    use crate::common::fixtures::{assert_has_invariant, assert_issue_count, assert_no_errors};
     use helios_fhir::{FhirResource, FhirVersion};
     use helios_fhirpath::evaluator::apply_additive;
     use helios_fhirpath_support::EvaluationResult;
 
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else { panic!("expected R4 FhirResource") };
+        let FhirResource::R4(r) = resource else {
+            panic!("expected R4 FhirResource")
+        };
         R4FhirPathEvaluator::new((**r).clone())
     }
     #[test]
@@ -19,7 +23,8 @@ mod tests {
         let r = load_resource(FhirVersion::R4, "valid/patient/patient-example.json");
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -32,7 +37,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_issue_count(&issues, 2);
         assert_has_invariant(
@@ -49,7 +55,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -62,7 +69,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
     }
@@ -75,7 +83,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
         assert_issue_count(&issues, 1);
         assert_has_invariant(
             &issues,
@@ -107,7 +116,8 @@ mod tests {
         let left = EvaluationResult::string("hello".to_string());
         let right = EvaluationResult::string("world".to_string());
 
-        let result = apply_additive(&left, "+", &right).expect("string concatenation should succeed");
+        let result =
+            apply_additive(&left, "+", &right).expect("string concatenation should succeed");
 
         match result {
             EvaluationResult::String(value, ..) => assert_eq!(value, "helloworld"),
@@ -120,7 +130,8 @@ mod tests {
         let left = EvaluationResult::string("#".to_string());
         let right = EvaluationResult::string("Org1".to_string());
 
-        let result = apply_additive(&left, "+", &right).expect("string concatenation should succeed");
+        let result =
+            apply_additive(&left, "+", &right).expect("string concatenation should succeed");
 
         match result {
             EvaluationResult::String(value, ..) => assert_eq!(value, "#Org1"),

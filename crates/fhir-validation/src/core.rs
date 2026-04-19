@@ -488,7 +488,7 @@ impl Validator {
                     evaluator,
                     profile_registry,
                 )
-                    .await
+                .await
             }
 
             #[cfg(feature = "R5")]
@@ -512,7 +512,7 @@ impl Validator {
                     evaluator,
                     profile_registry,
                 )
-                    .await
+                .await
             }
         }
     }
@@ -693,9 +693,25 @@ impl Validator {
     /// Apply generated invariants to a focused value using the supplied
     /// `FhirPathEvaluator`.
     ///
-    /// The `instance_root_path` is used to stamp concrete instance paths on all
-    /// emitted issues so callers can map a failure back to the exact location in
-    /// the validated resource.
+    /// # Contract (bulk evaluation)
+    ///
+    /// `focus` is serialized to JSON and converted to a single FHIRPath root; **all** invariant
+    /// expressions are evaluated with that same root as `$this`. This is efficient when many
+    /// rules share one focus (e.g. validating `ele-1` on a nested datatype where `focus` is that
+    /// datatype instance, or root profile rules where `focus` is the whole resource).
+    ///
+    /// Do **not** rely on this method to implement FHIR’s “context = element at
+    /// `InvariantDef.path`” rule when `focus` is the **full resource** and paths point at nested
+    /// elements: expressions written **relative to the element** need
+    /// [`FhirPathEvaluator::eval_invariant`] instead (see [`crate::profile::validate`] for profile
+    /// constraints).
+    ///
+    /// `InvariantExprRef::declared_path` is passed through to the evaluator for diagnostics; in
+    /// the bulk path the evaluator does **not** use it to change `$this` (see
+    /// [`FhirPathEvaluator::eval_invariants_on`](crate::FhirPathEvaluator::eval_invariants_on)).
+    ///
+    /// The `instance_root_path` is used to stamp concrete instance paths on all emitted issues
+    /// so callers can map a failure back to the logical location in the validated resource.
     pub fn apply_invariants<T>(
         &self,
         focus: &T,
@@ -809,9 +825,7 @@ fn rebase_instance_path(current: &str, actual_root_path: &str) -> String {
         return actual_root_path.to_string();
     }
 
-    let split_at = current
-        .find(['.', '['])
-        .unwrap_or(current.len());
+    let split_at = current.find(['.', '[']).unwrap_or(current.len());
 
     let suffix = &current[split_at..];
     if suffix.is_empty() {

@@ -168,6 +168,17 @@ pub fn relative_profile_path<'a>(resource_type: &str, absolute_path: &'a str) ->
     absolute_path.strip_prefix(&prefix)
 }
 
+/// `true` when `structure_path` is only the resource root (e.g. `Patient`).
+///
+/// Constraints on the root are evaluated with the resource as FHIRPath context (same as
+/// [`crate::Validator::apply_invariants`]). Nested paths use declared-path focus via
+/// [`FhirPathEvaluator::eval_invariant`](crate::FhirPathEvaluator::eval_invariant).
+pub fn is_root_profile_element_path(resource_type: &str, structure_path: &str) -> bool {
+    relative_profile_path(resource_type, structure_path)
+        .map(|rel| rel.is_empty())
+        .unwrap_or(false)
+}
+
 fn count_relative_path(root: &Value, relative_path: &str) -> usize {
     if relative_path.is_empty() {
         return terminal_count(root);

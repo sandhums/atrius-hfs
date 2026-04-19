@@ -3,10 +3,10 @@ mod common {
     pub mod fixtures;
 }
 mod tests {
-    use fhir_validation::R5FhirPathEvaluator;
     use crate::common::fixtures::{
-        assert_has_invariant, assert_issue_count, load_resource
+        assert_has_invariant, assert_issue_count, load_resource, local_terminology_r5,
     };
+    use fhir_validation::R5FhirPathEvaluator;
     use helios_fhir::{FhirResource, FhirVersion};
     pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
         let FhirResource::R5(r) = resource else {
@@ -20,7 +20,8 @@ mod tests {
 
         let validator = fhir_validation::Validator::default();
         let evaluator = r5_evaluator_for(&r);
-        let _issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r5();
+        let _issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         // assert!(issues.is_empty());
         // assert_no_errors(&issues);
@@ -34,7 +35,8 @@ mod tests {
 
         let validator = fhir_validation::Validator::default();
         let evaluator = r5_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r5();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_has_invariant(
             &issues,
@@ -51,7 +53,8 @@ mod tests {
 
         let validator = fhir_validation::Validator::default();
         let evaluator = r5_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r5();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_has_invariant(
             &issues,
@@ -72,7 +75,8 @@ mod tests {
         );
         let validator = fhir_validation::Validator::default();
         let evaluator = r5_evaluator_for(&r);
-        let issues = validator.validate_resource(&r, None, &evaluator);
+        let term = local_terminology_r5();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
         assert_issue_count(&issues, 3);
         assert_has_invariant(
             &issues,

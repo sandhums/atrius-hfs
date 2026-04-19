@@ -1,4 +1,3 @@
-
 #[cfg(feature = "R5")]
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::types::ExtractedProfile;
@@ -99,6 +98,20 @@ pub fn load_profile(version: FhirVersion, rel: &str) -> ExtractedProfile {
 pub fn load_r5_patient(rel: &str) -> helios_fhir::r5::Patient {
     let json = load_fixture(FhirVersion::R5, rel);
     serde_json::from_str(&json).unwrap()
+}
+
+/// Local terminology for synchronous validation tests: delegates to generated
+/// `helios_fhir` ValueSet / code validation (same local-first path as production).
+#[cfg(feature = "R4")]
+#[allow(dead_code)] // Not every integration test crate that includes this module calls it.
+pub fn local_terminology_r4() -> fhir_validation::LocalTerminologyService {
+    fhir_validation::LocalTerminologyService::new(FhirVersion::R4)
+}
+
+#[cfg(feature = "R5")]
+#[allow(dead_code)] // Not every integration test crate that includes this module calls it.
+pub fn local_terminology_r5() -> fhir_validation::LocalTerminologyService {
+    fhir_validation::LocalTerminologyService::new(FhirVersion::R5)
 }
 #[allow(dead_code)]
 fn issue_matches_requested_severity(issue: &ValidationIssue, severity: Severity) -> bool {

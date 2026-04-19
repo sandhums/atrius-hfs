@@ -170,7 +170,8 @@ fn summarize_codeable_concept_codings(cc: &CodeableConcept) -> String {
 /// 4. Convert any miss into a `ValidationIssue` based on binding strength.
 ///
 /// This is the synchronous variant.
-#[allow(clippy::too_many_arguments)]/// See also: `validate_primitive_code_binding_async`.
+#[allow(clippy::too_many_arguments)]
+/// See also: `validate_primitive_code_binding_async`.
 pub fn validate_primitive_code_binding<F>(
     validator: &Validator,
     fhir_path: &str,

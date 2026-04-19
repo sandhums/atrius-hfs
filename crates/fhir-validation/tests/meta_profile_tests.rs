@@ -4,9 +4,9 @@ mod common {
 #[cfg(all(test, feature = "R5"))]
 mod tests {
 
-    use crate::common::fixtures::{load_profile, load_resource};
-    use fhir_validation::{R5FhirPathEvaluator, Validator};
+    use crate::common::fixtures::{load_profile, load_resource, local_terminology_r5};
     use fhir_validation::profile::profile_registry::ProfileRegistry;
+    use fhir_validation::{R5FhirPathEvaluator, Validator};
     use helios_fhir::{FhirResource, FhirVersion};
 
     pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
@@ -26,8 +26,13 @@ mod tests {
         let evaluator = r5_evaluator_for(&resource);
         let mut registry = ProfileRegistry::new();
         registry.insert(profile);
-        let issues =
-            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        let term = local_terminology_r5();
+        let issues = validator().validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
         // println!("issues: {:#?}", issues);
         assert!(issues.len() >= 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
@@ -70,8 +75,13 @@ mod tests {
         let evaluator = r5_evaluator_for(&resource);
         let mut registry = ProfileRegistry::new();
         registry.insert(profile);
-        let issues =
-            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        let term = local_terminology_r5();
+        let issues = validator().validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
         // println!("issues: {:?}", issues);
         assert_eq!(issues.len(), 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
@@ -81,9 +91,11 @@ mod tests {
             })
         );
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
-        assert!(issues.iter().any(|i| {
-            i.expression.as_deref() == Some("identifier.exists() implies identifier.value.exists()")
-        }));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.expression.as_deref() == Some("value.exists()"))
+        );
     }
 
     #[test]
@@ -98,8 +110,13 @@ mod tests {
 
         let evaluator = r5_evaluator_for(&resource);
 
-        let issues =
-            validator().validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+        let term = local_terminology_r5();
+        let issues = validator().validate_resource_with_profiles(
+            &resource,
+            Some(&term),
+            &evaluator,
+            &registry,
+        );
         // println!("{:?}", issues);
         assert!(issues.len() >= 4);
         assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
@@ -134,8 +151,9 @@ mod tests {
 
         let validator = Validator::default();
 
+        let term = local_terminology_r5();
         let issues =
-            validator.validate_resource_with_profiles(&resource, None, &evaluator, &registry);
+            validator.validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
 
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.code == "not-found"));

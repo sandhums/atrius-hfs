@@ -339,15 +339,25 @@ impl GenericFhirPathEvaluator {
 /// - evaluating invariants relative to a declared FHIR path
 /// - evaluating invariants on an explicit focus value
 /// - resolving FHIRPath expressions to collections
+///
+/// # Caller contract
+///
+/// - Use [`FhirPathEvaluator::eval_invariant`] when the FHIRPath must run in the context of the
+///   **element** identified by `declared_path` (possibly repeated); the implementation resolves
+///   that path from `%resource` and evaluates `expression` per focus.
+/// - Use [`FhirPathEvaluator::eval_invariants_on`] when every expression should run on the **same**
+///   pre-built `focus` value (same `$this`). The `InvariantExprRef::declared_path` field is used
+///   for error messages only, **not** to re-target `$this` per invariant.
 pub trait FhirPathEvaluator {
-    /// Evaluate an invariant using the invariant's declared FHIR path as focus.
+    /// Evaluate `expression` with evaluation context set from `declared_path` (FHIR: constraint
+    /// context is the value at that path; all repeats must satisfy the expression when applicable).
     fn eval_invariant(
         &self,
         declared_path: &str,
         expression: &str,
     ) -> Result<bool, ValidationError>;
 
-    /// Evaluate an invariant on an already-resolved explicit focus value.
+    /// Evaluate `expression` with `$this` = `focus`; `declared_path` is for diagnostics.
     fn eval_invariant_on(
         &self,
         focus: EvaluationResult,
@@ -355,11 +365,11 @@ pub trait FhirPathEvaluator {
         expression: &str,
     ) -> Result<bool, ValidationError>;
 
-    /// Evaluate multiple invariants on an already-resolved explicit focus value.
+    /// Evaluate each invariant’s `expression` with the **same** `$this` = `focus`.
     ///
-    /// This avoids rebuilding or repeatedly cloning the same focused evaluation
-    /// context when several invariant expressions must be checked against the
-    /// same focus item.
+    /// `InvariantExprRef::declared_path` does **not** change the focus; it is only referenced in
+    /// error text. Prefer [`FhirPathEvaluator::eval_invariant`] when expressions assume the element
+    /// at each path, not the serialized root passed here.
     fn eval_invariants_on(
         &self,
         focus: EvaluationResult,
@@ -382,6 +392,10 @@ pub trait FhirPathEvaluator {
 /// - enables bulk evaluation
 /// - reduces allocation overhead
 /// - supports dynamic validation rules in the future
+///
+/// In [`FhirPathEvaluator::eval_invariants_on`], `declared_path` is **not** used to resolve
+/// focus; only `expression` is evaluated against the provided `focus`. For path-based focus, use
+/// [`FhirPathEvaluator::eval_invariant`].
 pub struct InvariantExprRef<'a> {
     pub declared_path: &'a str,
     pub expression: &'a str,

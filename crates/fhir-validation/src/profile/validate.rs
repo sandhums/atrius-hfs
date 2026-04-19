@@ -1,5 +1,42 @@
+//! Profile validation: [`ExtractedProfile`] instances against resource JSON (sync and async).
+//!
+//! # Element `constraint` evaluation (FHIRPath)
+//!
+//! [`StructureDefinition`](https://hl7.org/fhir/structuredefinition.html) constraints are
+//! evaluated so that, where applicable, FHIRPath runs in the **same context as the
+//! specification** (the value at the element’s path).
+//!
+//! ## [`ExtractedProfile::invariants`] (profile / root row only)
+//!
+//! The extractor only fills this from differential elements whose `path` equals the resource
+//! type (e.g. `Patient`, `Organization`). These are **resource-level** rules.
+//!
+//! They are evaluated with [`Validator::apply_invariants`], which serializes the full resource
+//! once and uses bulk [`FhirPathEvaluator::eval_invariants_on`]. That matches expressions written
+//! for the resource root (e.g. “at least one name or identifier”, or
+//! `active = true implies name.exists()`).
+//!
+//! ## [`ExtractedElementRule::constraints`] (per-element rules)
+//!
+//! For a rule whose [`ExtractedElementRule::path`] is **deeper than the resource type** (e.g.
+//! `Patient.identifier`, `CapabilityStatement.rest.resource`), each
+//! [`InvariantDef::expression`] is evaluated via [`FhirPathEvaluator::eval_invariant`], which
+//! resolves the declared path to the correct focus (including each repeated node) and sets
+//! `$this` accordingly. This supports **element-relative** FHIRPath (e.g. cpb-12’s
+//! `searchParam.select(name).isDistinct()`, or `value.exists()` on an identifier slice).
+//!
+//! If a rule path is classified as **root-only** (resource type and nothing else), we still use
+//! [`Validator::apply_invariants`] for backward compatibility with expressions that assume the
+//! whole resource as focus. See [`apply_profile_element_rule_invariants`] and
+//! [`crate::profile::cardinality::is_root_profile_element_path`].
+//!
+//! **Note:** Generated resource validators (outside this module) pass a **nested** `self` into
+//! [`Validator::apply_invariants`]; that is unchanged and remains correct for datatype-local
+//! rules such as `ele-1` on nested structures.
+
 use crate::profile::cardinality::{
-    relative_profile_path, validate_max_cardinality, validate_min_cardinality,
+    is_root_profile_element_path, relative_profile_path, validate_max_cardinality,
+    validate_min_cardinality,
 };
 use crate::profile::element_bounds::validate_element_bounds;
 use crate::profile::helpers::{
@@ -11,7 +48,7 @@ use crate::profile::types::{ExtractedProfile, ExtractedTypeConstraint, Extracted
 use crate::validation_context::AsyncValidationContext;
 pub use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
-use crate::{TypeProfileMatchMode, ValidationIssue};
+use crate::{FhirPathEvaluator, InvariantDef, TypeProfileMatchMode, ValidationIssue};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeSet, HashSet};
@@ -22,6 +59,9 @@ use std::pin::Pin;
 /// This is the public entry point for profile-based validation. It initializes
 /// recursion-cycle tracking and then delegates to [`validate_profile_with_depth`]
 /// for the actual validation pipeline.
+///
+/// **Invariants:** Profile-level and element-level FHIRPath constraints are applied as
+/// described in the [`crate::profile::validate`] module documentation.
 pub fn validate_profile<T: Serialize>(
     ctx: &ValidationContext<'_>,
     state: &mut ValidationState,
@@ -42,11 +82,51 @@ pub async fn validate_profile_async<T: Serialize>(
     validate_profile_with_depth_async(ctx, state, resource, resource_type, profile).await
 }
 
+/// Applies `ElementDefinition.constraint` entries from a single [`ExtractedElementRule`].
+///
+/// - **Root path** ([`is_root_profile_element_path`]): uses [`Validator::apply_invariants`] with
+///   the full serialized `resource` and bulk [`FhirPathEvaluator::eval_invariants_on`].
+/// - **Non-root path**: one [`FhirPathEvaluator::eval_invariant`] call per [`InvariantDef`], so
+///   the declared [`InvariantDef::path`] drives focus resolution and each expression sees the
+///   correct FHIRPath `$this` for that element.
+fn apply_profile_element_rule_invariants<T: Serialize>(
+    validator: &crate::Validator,
+    resource: &T,
+    evaluator: &dyn FhirPathEvaluator,
+    resource_type: &str,
+    rule_path: &str,
+    constraints: &[InvariantDef],
+) -> Vec<ValidationIssue> {
+    if constraints.is_empty() {
+        return Vec::new();
+    }
+
+    if is_root_profile_element_path(resource_type, rule_path) {
+        return validator.apply_invariants(resource, constraints, evaluator, resource_type);
+    }
+
+    let mut issues = Vec::new();
+    for inv in constraints {
+        match evaluator.eval_invariant(inv.path.as_str(), inv.expression.as_str()) {
+            Ok(true) => {}
+            Ok(false) => {
+                issues.push(ValidationIssue::from_invariant_def(inv).with_instance_path(rule_path));
+            }
+            Err(e) => {
+                issues.push(
+                    ValidationIssue::from_invariant_error(inv, e).with_instance_path(rule_path),
+                );
+            }
+        }
+    }
+    issues
+}
+
 /// Internal profile validation pipeline with recursion-depth and cycle tracking.
 ///
 /// The pipeline currently performs, in order:
-/// - profile-level invariants
-/// - element-level invariants
+/// - profile-level invariants ([`ExtractedProfile::invariants`], always root path — see module docs)
+/// - element-level invariants ([`apply_profile_element_rule_invariants`] per rule with constraints)
 /// - minimum cardinality
 /// - maximum cardinality
 /// - slicing validation
@@ -126,16 +206,13 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
 
         for rule in &profile.element_rules {
             if !rule.constraints.is_empty() {
-                // validator.trace(format!(
-                //     "Applying {} invariant(s) on {}",
-                //     rule.constraints.len(),
-                //     rule.path
-                // ));
-                issues.extend(ctx.validator.apply_invariants(
+                issues.extend(apply_profile_element_rule_invariants(
+                    ctx.validator,
                     resource,
-                    rule.constraints.as_slice(),
                     ctx.evaluator,
+                    resource_type,
                     rule.path.as_str(),
+                    rule.constraints.as_slice(),
                 ));
             }
         }
@@ -283,16 +360,13 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
 
     for rule in &profile.element_rules {
         if !rule.constraints.is_empty() {
-            // validator.trace(format!(
-            //     "Applying {} invariant(s) on {}",
-            //     rule.constraints.len(),
-            //     rule.path
-            // ));
-            issues.extend(ctx.validator.apply_invariants(
+            issues.extend(apply_profile_element_rule_invariants(
+                ctx.validator,
                 resource,
-                rule.constraints.as_slice(),
                 ctx.evaluator,
+                resource_type,
                 rule.path.as_str(),
+                rule.constraints.as_slice(),
             ));
         }
     }

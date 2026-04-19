@@ -76,6 +76,22 @@
 //! - invariant failures produce invariant issues
 //! - malformed or unavailable terminology responses produce terminology issues
 //!
+//! # Invariant evaluation: bulk focus vs path-rooted
+//!
+//! - [`Validator::apply_invariants`](crate::Validator::apply_invariants) serializes **`focus`**
+//!   once, sets that value as the FHIRPath evaluation root, and runs
+//!   [`FhirPathEvaluator::eval_invariants_on`]. Every `InvariantDef.expression` in the slice is
+//!   evaluated against **the same** `$this`. Use this when **`focus` is already the node the
+//!   expressions assume** (e.g. generated validators passing a nested `self`, or root-level
+//!   profile rules on the full resource). The `InvariantDef.path` fields are **not** used to
+//!   re-resolve focus in this path (they are still attached to issues for reporting).
+//! - [`FhirPathEvaluator::eval_invariant`] resolves **`declared_path`** from the resource, then
+//!   evaluates **`expression`** with `$this` at each resolved focus. Use this (or profile
+//!   validation’s element rules) when constraints are **element-scoped** and expressions are
+//!   **relative to that element** (see [`crate::profile::validate`]).
+//! - Evaluation errors surface as [`ValidationIssue`] rows with code `exception` via
+//!   [`ValidationIssue::from_invariant_error`]; logical failures use code `invariant`.
+//!
 //! # Versioned modules
 //!
 //! Version-specific modules expose the generated traits, dispatchers, and helper
