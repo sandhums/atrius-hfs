@@ -1,7 +1,6 @@
 //! Messages for [`crate::ValidationError::InvalidStructureDefinition`] when parsing
 //! `StructureDefinition` JSON for profile validation.
 
-use crate::ValidationError;
 use std::fmt;
 
 /// Structured reason for a failed StructureDefinition extraction.
@@ -96,8 +95,3 @@ impl fmt::Display for StructureDefinitionExtractMessage {
     }
 }
 
-impl From<StructureDefinitionExtractMessage> for ValidationError {
-    fn from(msg: StructureDefinitionExtractMessage) -> Self {
-        Self::InvalidStructureDefinition(msg.to_string())
-    }
-}

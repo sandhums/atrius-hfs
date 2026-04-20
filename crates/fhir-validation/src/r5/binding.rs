@@ -590,6 +590,16 @@ where
                 )];
             }
 
+            if let Some(err) = scan.last_local_failure {
+                return crate::binding::common::local_error_to_issues(
+                    ctx.validator,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
+                    ctx.strength,
+                    err,
+                );
+            }
+
             let diagnostics = scan.last_miss_diagnostics.unwrap_or_else(|| {
                 let coding_summary = summarize_codeable_concept_codings(cc);
                 format!(
@@ -713,6 +723,16 @@ where
                     "CodeableConcept has no usable coding with a code value for terminology validation"
                         .to_string(),
                 )];
+            }
+
+            if let Some(err) = scan.last_local_failure {
+                return crate::binding::common::local_error_to_issues(
+                    ctx.validator,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
+                    ctx.strength,
+                    err,
+                );
             }
 
             let diagnostics = scan.last_miss_diagnostics.unwrap_or_else(|| {

@@ -330,6 +330,8 @@ Defines shared terminology result and error types such as:
 
 These types allow the service and validator layers to work with structured terminology outcomes instead of raw server payloads.
 
+For the full **`ValidationError` / `ValidationIssue` model**, `std::error::Error` chaining, and **production** guidance (HTTP clients, retries, PII in logs), see **[Errors.md](Errors.md)**.
+
 ⸻
 
 ### Generated Validators

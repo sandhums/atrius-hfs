@@ -23,15 +23,14 @@ pub use fhir_validation_types::{
     StructureDefinitionKind, TypeDerivationRule,
 };
 
+use crate::error::ValidationError;
 use crate::issue_code;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
-use crate::terminology::types::TerminologyRemoteError;
 use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
 use crate::{FhirPathEvaluator, InvariantExprRef};
 
 use crate::profile::profile_registry::ProfileRegistry;
 use helios_fhirpath::handlers::json_value_to_evaluation_result;
-use std::fmt;
 use tracing::debug;
 
 #[cfg(feature = "R4")]
@@ -269,63 +268,6 @@ impl Default for ValidationConfig {
 pub enum TypeProfileMatchMode {
     Any, // OR (current behavior)
     All, // AND (strict)
-}
-/// Errors raised while evaluating invariants or terminology-backed validation.
-#[derive(Debug, Clone)]
-pub enum ValidationError {
-    FhirPath(helios_fhirpath_support::EvaluationError),
-    Terminology(String),
-    TerminologyRemote(TerminologyRemoteError),
-    /// `$validate-code` returned JSON that is not a usable FHIR `Parameters` result (e.g. missing
-    /// `parameter` or boolean `result`).
-    MalformedTerminologyResponse(String),
-    /// [`crate::terminology::requests::ValidateVsRequest`] failed checks before the request was sent.
-    InvalidValidateVsRequest(String),
-    InvalidStructureDefinition(String),
-    Other(String),
-}
-
-impl fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::FhirPath(e) => write!(f, "{}", e),
-            Self::Terminology(e) => write!(f, "{}", e),
-            Self::InvalidStructureDefinition(e) => write!(f, "{}", e),
-            Self::MalformedTerminologyResponse(msg) => write!(f, "{}", msg),
-            Self::InvalidValidateVsRequest(msg) => write!(f, "{}", msg),
-            ValidationError::TerminologyRemote(err) => {
-                if !err.diagnostics.is_empty() {
-                    write!(f, "{}", err.diagnostics.join("; "))
-                } else if let Some(body) = &err.raw_body {
-                    write!(f, "{}", body)
-                } else if let Some(status) = err.status {
-                    write!(
-                        f,
-                        "Remote terminology validation failed with status {}",
-                        status
-                    )
-                } else {
-                    write!(f, "Remote terminology validation failed")
-                }
-            }
-            Self::Other(e) => write!(f, "{}", e),
-        }
-    }
-}
-
-impl std::error::Error for ValidationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::FhirPath(e) => Some(e),
-            _ => None,
-        }
-    }
-}
-
-impl From<helios_fhirpath_support::EvaluationError> for ValidationError {
-    fn from(e: helios_fhirpath_support::EvaluationError) -> Self {
-        Self::FhirPath(e)
-    }
 }
 
 /// Shared validator entry point used by generated and handwritten validation code.
@@ -738,7 +680,7 @@ impl Validator {
                     for invariant in invariants {
                         issues.push(ValidationIssue::from_invariant_error(
                             invariant,
-                            ValidationError::Other(format!(
+                            ValidationError::Internal(format!(
                                 "Failed to convert focus into evaluation result: {}",
                                 err
                             )),
@@ -751,7 +693,7 @@ impl Validator {
                 for invariant in invariants {
                     issues.push(ValidationIssue::from_invariant_error(
                         invariant,
-                        ValidationError::Other(format!(
+                        ValidationError::Internal(format!(
                             "Failed to serialize focus for invariant evaluation: {}",
                             err
                         )),

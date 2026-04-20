@@ -162,7 +162,9 @@ impl ValidationIssueDetailCode {
             Self::BusinessRuleViolation => "Business rule or profile constraint was not satisfied",
             Self::ValidationException => "Validation encountered an unexpected error",
             Self::ValidationFailure => "Validation failed for this element",
-            Self::RequiredBindingMiss => "Code is not in the required value set",
+            Self::RequiredBindingMiss => {
+                "Does not satisfy the required value set binding (verify system, code, and display)"
+            }
             Self::PatternConstraintMismatch => {
                 "Element value does not match the profile pattern constraint"
             }
@@ -178,9 +180,15 @@ impl ValidationIssueDetailCode {
             Self::ProfileCycleDetected => "Profile cycle detected",
             Self::CodeWithoutSystem => "Code is missing a system",
             Self::InvalidBindableValue => "Value is not valid for the data type or binding",
-            Self::ExtensibleBindingMiss => "Code is not in the extensible value set",
-            Self::PreferredBindingMiss => "Code is not in the preferred value set",
-            Self::ExampleBindingMiss => "Code is not in the example value set",
+            Self::ExtensibleBindingMiss => {
+                "Does not satisfy the extensible value set binding (verify system, code, and display)"
+            }
+            Self::PreferredBindingMiss => {
+                "Does not satisfy the preferred value set binding (verify system, code, and display)"
+            }
+            Self::ExampleBindingMiss => {
+                "Does not satisfy the example value set binding (verify system, code, and display)"
+            }
             Self::SliceMinCardinalityMissing => "Slice min cardinality is missing",
             Self::SliceMaxCardinalityExceeded => "Slice max cardinality is exceeded",
             Self::SliceOpenAtEndViolation => "Slice open at end is not allowed",

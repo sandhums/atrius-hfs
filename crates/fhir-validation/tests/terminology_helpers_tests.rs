@@ -1,6 +1,10 @@
 //! Tests for terminology helper error mapping and `$validate-code` parsing.
 
-use fhir_validation::ValidationError;
+use fhir_validation::{
+    MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyRequestInvalid,
+    ValidationError,
+};
+use helios_fhir::TerminologyValidationError;
 use fhir_validation::terminology::helpers::{
     build_remote_terminology_error, parse_validate_vs_result, terminology_remote_from_fhir_path_error,
 };
@@ -12,6 +16,14 @@ use serde_json::json;
 fn fhir_path_validation_error_chains_source() {
     let inner = EvaluationError::TypeError("x".to_string());
     let err = ValidationError::FhirPath(inner.clone());
+    let src = std::error::Error::source(&err).expect("source");
+    assert_eq!(src.to_string(), inner.to_string());
+}
+
+#[test]
+fn local_terminology_validation_error_chains_source() {
+    let inner = TerminologyValidationError::InvalidInput("bad".to_string());
+    let err = ValidationError::LocalTerminology(inner.clone());
     let src = std::error::Error::source(&err).expect("source");
     assert_eq!(src.to_string(), inner.to_string());
 }
@@ -50,14 +62,91 @@ fn parse_validate_vs_result_ok() {
 }
 
 #[test]
+fn parse_validate_vs_result_ok_without_resource_type() {
+    let body = json!({
+        "parameter": [
+            {"name": "result", "valueBoolean": false}
+        ]
+    });
+    let out = parse_validate_vs_result(&body).unwrap();
+    assert!(!out.is_member);
+}
+
+#[test]
+fn parse_validate_vs_result_wrong_resource_type() {
+    let body = json!({
+        "resourceType": "OperationOutcome",
+        "parameter": []
+    });
+    let err = parse_validate_vs_result(&body).unwrap_err();
+    match err {
+        ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::WrongResourceType { got },
+        )) if got == "OperationOutcome" => {}
+        _ => panic!("unexpected {err:?}"),
+    }
+}
+
+#[test]
+fn parse_validate_vs_result_parameter_entry_not_object() {
+    let body = json!({
+        "resourceType": "Parameters",
+        "parameter": ["not-an-object"]
+    });
+    let err = parse_validate_vs_result(&body).unwrap_err();
+    match err {
+        ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::ParameterEntryNotObject { index },
+        )) if index == 0 => {}
+        _ => panic!("unexpected {err:?}"),
+    }
+}
+
+#[test]
+fn parse_validate_vs_result_result_not_boolean() {
+    let body = json!({
+        "resourceType": "Parameters",
+        "parameter": [{"name": "result", "valueString": "true"}]
+    });
+    let err = parse_validate_vs_result(&body).unwrap_err();
+    match err {
+        ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::ResultValueNotBoolean,
+        )) => {}
+        _ => panic!("unexpected {err:?}"),
+    }
+}
+
+#[test]
+fn invalid_request_chains_source() {
+    let inner = TerminologyRequestInvalid {
+        message: "bad request".to_string(),
+    };
+    let err = ValidationError::InvalidRequest(inner.clone());
+    let src = std::error::Error::source(&err).expect("source");
+    assert_eq!(src.to_string(), inner.message);
+}
+
+#[test]
+fn validation_error_as_remote_malformed_parameters() {
+    let err = ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+        MalformedValidateCodeParameters::MissingParameterArray,
+    ));
+    assert_eq!(
+        err.as_remote_malformed_parameters(),
+        Some(&MalformedValidateCodeParameters::MissingParameterArray)
+    );
+}
+
+#[test]
 fn parse_validate_vs_result_missing_parameter_array() {
     let body = json!({"resourceType": "Parameters"});
     let err = parse_validate_vs_result(&body).unwrap_err();
     match err {
-        ValidationError::MalformedTerminologyResponse(msg) => {
-            assert!(msg.contains("parameter"));
-        }
-        other => panic!("unexpected {other:?}"),
+        ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::MissingParameterArray,
+        )) => {}
+        _ => panic!("unexpected {err:?}"),
     }
 }
 
@@ -69,10 +158,10 @@ fn parse_validate_vs_result_missing_result() {
     });
     let err = parse_validate_vs_result(&body).unwrap_err();
     match err {
-        ValidationError::MalformedTerminologyResponse(msg) => {
-            assert!(msg.contains("result"));
-        }
-        other => panic!("unexpected {other:?}"),
+        ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::MissingResultBoolean,
+        )) => {}
+        _ => panic!("unexpected {err:?}"),
     }
 }
 

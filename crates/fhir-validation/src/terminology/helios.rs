@@ -9,6 +9,7 @@
 //! populated on [`ValidateVsRequest`](crate::requests::ValidateVsRequest) (not
 //! only primitive `code` / `system` / `display`).
 use crate::ValidationError;
+use crate::error::TerminologyRequestInvalid;
 use crate::backend::TerminologyBackend;
 use crate::helpers::terminology_remote_from_fhir_path_error;
 use crate::requests::ValidateVsRequest;
@@ -48,7 +49,9 @@ impl TerminologyBackend for HeliosTerminologyBackend {
         req: &ValidateVsRequest,
     ) -> Result<serde_json::Value, ValidationError> {
         if let Err(e) = req.validate() {
-            return Err(ValidationError::InvalidValidateVsRequest(e));
+            return Err(ValidationError::InvalidRequest(TerminologyRequestInvalid {
+                message: e,
+            }));
         }
 
         let body = req.to_parameters_json();
@@ -56,7 +59,7 @@ impl TerminologyBackend for HeliosTerminologyBackend {
             .validate_code_with_parameters(&req.valueset_url, body)
             .await
             .map_err(|e: FhirPathError| {
-                ValidationError::TerminologyRemote(terminology_remote_from_fhir_path_error(&e))
+                ValidationError::from(terminology_remote_from_fhir_path_error(&e))
             })
     }
 }

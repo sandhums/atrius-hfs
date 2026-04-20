@@ -1,3 +1,6 @@
+use helios_fhir::TerminologyValidationError;
+
+/// Outcome of a narrow [`crate::terminology::service::TerminologyService::member_of`] check.
 #[derive(Debug, Clone)]
 pub struct TerminologyMembershipOutcome {
     pub is_member: bool,
@@ -10,6 +13,12 @@ pub struct TerminologyMembershipOutcome {
     pub code: Option<String>,
     pub version: Option<String>,
     pub display: Option<String>,
+    /// When the backend used the same structured errors as local `validate_coding` (for example
+    /// [`TerminologyValidationError::WrongDisplay`]), this preserves that variant so binding
+    /// validation can map it through [`crate::binding::common::local_error_to_issues`].
+    ///
+    /// Remote `$validate-code` responses do not set this; they only populate `message` / metadata.
+    pub local_failure: Option<TerminologyValidationError>,
 }
 
 #[derive(Debug, Clone)]

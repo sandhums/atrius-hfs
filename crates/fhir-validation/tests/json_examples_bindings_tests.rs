@@ -11,13 +11,16 @@ mod common {
     pub mod fixtures;
 }
 
+use std::time::Duration;
+use reqwest::Client;
 use crate::common::fhir_json_examples::{
     R5_CURATED, count_severities, fhir_json_dir, is_binding_like_issue, load_r5_fhir_resource,
 };
-use crate::common::fixtures::{assert_no_errors, local_terminology_r5};
+use crate::common::fixtures::{assert_has_binding_issue, assert_has_binding_issue_with_diagnostics, assert_no_errors, local_terminology_r5};
 use fhir_validation::issue_to_op_outcome::validation_issues_to_r5_operation_outcome;
 use fhir_validation::{R5FhirPathEvaluator, Validator};
-use helios_fhir::FhirResource;
+use fhir_validation::service::RemoteTerminologyService;
+use helios_fhir::{FhirResource, FhirVersion};
 
 fn evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
     let FhirResource::R5(r) = resource else {
@@ -76,13 +79,61 @@ fn patient_genomic_binding_example_no_errors() {
 }
 
 #[test]
-fn coverage_eligibility_request_example() {
+fn coverage_eligibility_request_wrong_valueset_binding_example_local() {
     let resource = load_r5_fhir_resource("coverageeligibilityrequest-example.json");
     let evaluator = evaluator_for(&resource);
     let term = local_terminology_r5();
     let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);
     let op_outcome = validation_issues_to_r5_operation_outcome(&issues).unwrap();
-    let ser_op_outcome = serde_json::to_string_pretty(&op_outcome).unwrap();
-    println!("{:?}", issues);
-    println!("{}", ser_op_outcome);
+    let _ser_op_outcome = serde_json::to_string_pretty(&op_outcome).unwrap();
+    assert_has_binding_issue(
+          &issues,
+          "CoverageEligibilityRequest.meta.tag[0]",
+          "http://hl7.org/fhir/ValueSet/common-tags",
+    );
 }
+#[test]
+fn coverage_eligibility_request_code_without_system_local() {
+    let resource = load_r5_fhir_resource("coverageeligibilityrequest-example.json");
+    let evaluator = evaluator_for(&resource);
+    let term = local_terminology_r5();
+    let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);
+    let op_outcome = validation_issues_to_r5_operation_outcome(&issues).unwrap();
+    let _ser_op_outcome = serde_json::to_string_pretty(&op_outcome).unwrap();
+    assert_has_binding_issue_with_diagnostics(
+        &issues,
+        "CoverageEligibilityRequest.priority",
+        "http://hl7.org/fhir/ValueSet/process-priority",
+        "Coding.system is required"
+    );
+}
+#[tokio::test]
+async fn coverage_eligibility_request_wrong_valueset_binding_example_async() {
+    let resource = load_r5_fhir_resource("coverageeligibilityrequest-example.json");
+    let client = Client::builder()
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(8))
+        .pool_idle_timeout(Duration::from_secs(30))
+        .pool_max_idle_per_host(8)
+        .tcp_keepalive(Duration::from_secs(30))
+        .build()
+        .expect("failed to build reqwest client");
+    let term = RemoteTerminologyService::with_client(
+        client,
+        "http://localhost:8080/fhir".to_string(),
+        FhirVersion::R5,
+    );
+
+    let evaluator = evaluator_for(&resource);
+
+    let issues = Validator::default().validate_resource_async(&resource, Some(&term), &evaluator).await;
+    let op_outcome = validation_issues_to_r5_operation_outcome(&issues).unwrap();
+    let ser_op_outcome = serde_json::to_string_pretty(&op_outcome).unwrap();
+    assert_has_binding_issue_with_diagnostics(
+        &issues,
+        "CoverageEligibilityRequest.meta.tag[0]",
+        "http://hl7.org/fhir/ValueSet/common-tags",
+        "The system 'http://terminology.hl7.org/CodeSystem/v3-ActReason' is not included in this ValueSet."
+    );
+}
+

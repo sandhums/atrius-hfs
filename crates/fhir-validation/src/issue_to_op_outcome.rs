@@ -757,12 +757,14 @@ mod tests {
             None,
             "Longer explanation for implementers",
         )
-        .with_summary("Code is not in the required value set");
+        .with_summary(
+            "Does not satisfy the required value set binding (verify system, code, and display)",
+        );
 
         let json = validation_issue_to_operation_outcome_issue(&issue);
         assert_eq!(
             json["details"]["text"],
-            "Code is not in the required value set"
+            "Does not satisfy the required value set binding (verify system, code, and display)"
         );
     }
     #[cfg(feature = "R5")]

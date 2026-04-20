@@ -75,6 +75,10 @@ pub(crate) fn bindable_primitive_string_value(value: &Value) -> Option<&str> {
 /// Convert a binding miss into a `ValidationIssue` using validator policy for
 /// the supplied binding strength.
 ///
+/// Summary text is intentionally generic: terminology may reject a binding for
+/// missing membership, wrong system, or display/designation mismatch—see
+/// `diagnostics` for the specific explanation (e.g. remote `$validate-code` message).
+///
 /// Returns `None` when the binding strength should not surface an issue.
 pub fn issue_for_binding_miss(
     validator: &Validator,
@@ -180,6 +184,8 @@ pub struct CodeableConceptRemoteScan {
     pub any_remote_undecidable: bool,
     pub remote_undecidable_message: Option<String>,
     pub last_miss_diagnostics: Option<String>,
+    /// Structured failure from [`TerminologyMembershipOutcome::local_failure`] (e.g. wrong display).
+    pub last_local_failure: Option<TerminologyValidationError>,
 }
 
 /// Merge one [`TerminologyServiceSync::member_of`] / async `member_of` result into [`CodeableConceptRemoteScan`].
@@ -201,6 +207,9 @@ pub fn merge_remote_member_of_for_coding(
             }
         }
         Ok(o) => {
+            if let Some(err) = o.local_failure.clone() {
+                scan.last_local_failure = Some(err);
+            }
             scan.last_miss_diagnostics = Some(o.message.unwrap_or_else(|| {
                 if let Some(system) = system {
                     format!(
@@ -452,45 +461,122 @@ pub(crate) fn prettify_remote_terminology_error(
     valueset_url: &str,
     err: &crate::ValidationError,
 ) -> String {
-    match err {
-        crate::ValidationError::InvalidValidateVsRequest(msg)
-        | crate::ValidationError::MalformedTerminologyResponse(msg) => {
-            format!(
-                "Remote terminology validation failed for ValueSet '{}': {}",
-                valueset_url, msg
-            )
-        }
-        crate::ValidationError::TerminologyRemote(remote) => {
-            if !remote.diagnostics.is_empty() {
-                return format!(
-                    "Remote terminology validation failed for ValueSet '{}': {}",
-                    valueset_url,
-                    remote.diagnostics.join("; ")
-                );
-            }
-            if let Some(body) = &remote.raw_body {
-                return format!(
-                    "Remote terminology validation failed for ValueSet '{}': {}",
-                    valueset_url, body
-                );
-            }
+    err.remote_binding_failure_diagnostics(valueset_url)
+}
 
-            if let Some(status) = remote.status {
-                return format!(
-                    "Remote terminology validation failed for ValueSet '{}' with status {}",
-                    valueset_url, status
-                );
-            }
+/// Inputs needed to turn a [`ValidationError`] from a ValueSet binding / `member_of` path into
+/// [`ValidationIssue`] rows (path, ValueSet URL, binding strength, and validator policy).
+#[derive(Debug, Clone, Copy)]
+pub struct TerminologyIssueContext<'a> {
+    pub validator: &'a Validator,
+    pub fhir_path: &'a str,
+    pub valueset_url: &'a str,
+    pub strength: BindingStrength,
+}
 
-            format!(
-                "Remote terminology validation failed for ValueSet '{}'",
-                valueset_url
-            )
+impl<'a> TerminologyIssueContext<'a> {
+    pub fn new(
+        validator: &'a Validator,
+        fhir_path: &'a str,
+        valueset_url: &'a str,
+        strength: BindingStrength,
+    ) -> Self {
+        Self {
+            validator,
+            fhir_path,
+            valueset_url,
+            strength,
         }
-        _ => format!("Remote terminology validation failed: {}", err),
     }
 }
 
+/// Map any [`ValidationError`] from terminology binding / [`crate::TerminologyService::member_of`]
+/// into [`ValidationIssue`] rows.
+///
+/// - [`ValidationError::LocalTerminology`] uses [`local_error_to_issues`] (binding strength and
+///   structured [`TerminologyValidationError`] semantics).
+/// - [`ValidationError::RemoteTerminology`] uses the same terminology issue shape as remote
+///   `$validate-code` failures ([`terminology_validation_issue`]).
+/// - Other variants are rare on this path; they are mapped to exception / structure / generic
+///   terminology issues so callers always get a stable issue list.
+pub fn validation_error_to_issues(
+    ctx: &TerminologyIssueContext<'_>,
+    err: &ValidationError,
+) -> Vec<ValidationIssue> {
+    match err {
+        ValidationError::LocalTerminology(e) => {
+            local_error_to_issues(
+                ctx.validator,
+                ctx.fhir_path,
+                ctx.valueset_url,
+                ctx.strength,
+                e.clone(),
+            )
+        }
+        ValidationError::RemoteTerminology(_) => {
+            vec![terminology_validation_issue(
+                ctx.fhir_path,
+                ctx.valueset_url,
+                err.remote_binding_failure_diagnostics(ctx.valueset_url),
+            )]
+        }
+        ValidationError::InvalidRequest(req) => {
+            vec![terminology_validation_issue(
+                ctx.fhir_path,
+                ctx.valueset_url,
+                req.message.clone(),
+            )]
+        }
+        ValidationError::FhirPath(e) => {
+            vec![ValidationIssue {
+                severity: Severity::Error,
+                code: issue_code::EXCEPTION.to_string(),
+                fhir_path: ctx.fhir_path.to_string(),
+                instance_path: None,
+                expression: Some(ctx.valueset_url.to_string()),
+                expression_kind: Some(ValidationSourceKind::CanonicalUri),
+                source_invariant_key: None,
+                summary: Some(
+                    "FHIRPath evaluation failed during terminology validation".to_string(),
+                ),
+                detail_code: Some(ValidationIssueDetailCode::ValidationException),
+                diagnostics: e.to_string(),
+            }]
+        }
+        ValidationError::InvalidStructureDefinition(msg) => {
+            vec![ValidationIssue {
+                severity: Severity::Error,
+                code: issue_code::STRUCTURE.to_string(),
+                fhir_path: ctx.fhir_path.to_string(),
+                instance_path: None,
+                expression: Some(ctx.valueset_url.to_string()),
+                expression_kind: Some(ValidationSourceKind::CanonicalUri),
+                source_invariant_key: None,
+                summary: Some("StructureDefinition extraction failed".to_string()),
+                detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
+                diagnostics: msg.to_string(),
+            }]
+        }
+        ValidationError::Internal(msg) => {
+            vec![terminology_validation_issue(
+                ctx.fhir_path,
+                ctx.valueset_url,
+                msg.clone(),
+            )]
+        }
+    }
+}
+
+impl ValidationError {
+    /// Converts this orchestration error into [`ValidationIssue`] rows for ValueSet binding /
+    /// [`crate::TerminologyService::member_of`] paths.
+    ///
+    /// Equivalent to [`validation_error_to_issues`] with this error. There is no single-issue or
+    /// context-free conversion: diagnostics and codes depend on [`TerminologyIssueContext`].
+    pub fn to_binding_issues(&self, ctx: &TerminologyIssueContext<'_>) -> Vec<ValidationIssue> {
+        validation_error_to_issues(ctx, self)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct RemoteMembershipRequest {
@@ -527,6 +613,15 @@ impl<'a> BindingCheckContextSync<'a> {
             strength,
             terminology,
         }
+    }
+
+    pub fn terminology_issue_context(&self) -> TerminologyIssueContext<'a> {
+        TerminologyIssueContext::new(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+        )
     }
 
     pub fn from_binding(
@@ -601,6 +696,15 @@ impl<'a> BindingCheckContextAsync<'a> {
             strength,
             terminology,
         }
+    }
+
+    pub fn terminology_issue_context(&self) -> TerminologyIssueContext<'a> {
+        TerminologyIssueContext::new(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+        )
     }
 
     pub fn from_binding(
@@ -731,6 +835,10 @@ pub fn remote_result_to_issues(
             issues
         }
         Ok(outcome) => {
+            if let Some(err) = outcome.local_failure.clone() {
+                return local_error_to_issues(validator, fhir_path, valueset_url, strength, err);
+            }
+
             let diagnostics = outcome.message.unwrap_or_else(|| {
                 if let Some(system) = &req.system {
                     format!(
@@ -757,12 +865,8 @@ pub fn remote_result_to_issues(
             issues
         }
         Err(e) => {
-            issues.push(crate::binding::common::terminology_validation_issue(
-                fhir_path,
-                valueset_url,
-                prettify_remote_terminology_error(valueset_url, &e),
-            ));
-            issues
+            let ctx = TerminologyIssueContext::new(validator, fhir_path, valueset_url, strength);
+            validation_error_to_issues(&ctx, &e)
         }
     }
 }
@@ -844,10 +948,18 @@ pub mod binding_issue_summary {
 
 fn binding_miss_summary(strength: BindingStrength) -> &'static str {
     match strength {
-        BindingStrength::Required => "Code is not in the required value set",
-        BindingStrength::Extensible => "Code is outside the extensible value set",
-        BindingStrength::Preferred => "Code is outside the preferred value set",
-        BindingStrength::Example => "Code is outside the example value set",
+        BindingStrength::Required => {
+            "Does not satisfy the required value set binding (verify system, code, and display)"
+        }
+        BindingStrength::Extensible => {
+            "Does not satisfy the extensible value set binding (verify system, code, and display)"
+        }
+        BindingStrength::Preferred => {
+            "Does not satisfy the preferred value set binding (verify system, code, and display)"
+        }
+        BindingStrength::Example => {
+            "Does not satisfy the example value set binding (verify system, code, and display)"
+        }
     }
 }
 

@@ -8,6 +8,7 @@
 //! For sync validation without a remote server, see [`super::LocalTerminologyService`], which
 //! delegates to generated ValueSet helpers in `helios_fhir`.
 use crate::ValidationError;
+use crate::error::{remote_terminology_error_kind_label, validation_error_kind_label};
 use crate::backend::TerminologyBackend;
 use crate::helpers::parse_validate_vs_result;
 use crate::requests::ValidateVsRequest;
@@ -16,7 +17,7 @@ use crate::terminology::types::TerminologyMembershipOutcome;
 use async_trait::async_trait;
 use helios_fhir::FhirVersion;
 use std::sync::Arc;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn};
 
 /// Trait representing a terminology validation service.
 ///
@@ -140,14 +141,32 @@ impl TerminologyService for RemoteTerminologyService {
             ..Default::default()
         };
 
-        let outcome = self.validate_vs(&req).await?;
-        debug!(
-            valueset_url,
-            system,
-            code,
-            ?outcome,
-            "remote terminology outcome"
-        );
-        Ok(outcome)
+        match self.validate_vs(&req).await {
+            Ok(outcome) => {
+                debug!(
+                    valueset_url,
+                    system,
+                    code,
+                    ?outcome,
+                    "remote terminology outcome"
+                );
+                Ok(outcome)
+            }
+            Err(e) => {
+                let remote_detail: Option<&'static str> = match &e {
+                    ValidationError::RemoteTerminology(r) => {
+                        Some(remote_terminology_error_kind_label(r))
+                    }
+                    _ => None,
+                };
+                warn!(
+                    valueset_url = %valueset_url,
+                    error_kind = validation_error_kind_label(&e),
+                    remote_detail = remote_detail.unwrap_or("n/a"),
+                    "remote terminology member_of failed"
+                );
+                Err(e)
+            }
+        }
     }
 }

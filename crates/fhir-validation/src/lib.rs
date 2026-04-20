@@ -66,7 +66,10 @@
 //! Non-2xx remote responses are represented as structured remote terminology
 //! errors and surfaced as terminology validation issues with readable
 //! diagnostics. Unusable `$validate-code` JSON (for example missing `parameter`
-//! or boolean `result`) is reported as [`ValidationError::MalformedTerminologyResponse`].
+//! or boolean `result`) is reported as [`ValidationError::RemoteTerminology`] with
+//! [`RemoteTerminologyError::MalformedResponse`] ([`MalformedValidateCodeParameters`]).
+//! Request assembly failures before any HTTP call use [`ValidationError::InvalidRequest`]
+//! ([`TerminologyRequestInvalid`]).
 //!
 //! # Severity model
 //!
@@ -97,9 +100,19 @@
 //!
 //! Version-specific modules expose the generated traits, dispatchers, and helper
 //! functions for each supported FHIR release.
+//!
+//! # Errors and issues
+//!
+//! Pipeline failures use [`ValidationError`] ([`crate::error`] module). User-visible results are
+//! [`ValidationIssue`] rows. For terminology binding paths, [`TerminologyIssueContext`] and
+//! [`validation_error_to_issues`](crate::binding::common::validation_error_to_issues) (or
+//! [`ValidationError::to_binding_issues`](crate::ValidationError::to_binding_issues)) map
+//! [`ValidationError`] to issues. See **[`Errors.md`](./Errors.md)** in this crate for a full
+//! description of the error model.
 
 pub mod binding;
 pub mod core;
+pub mod error;
 pub mod evaluators;
 pub mod issue_code;
 pub mod issue_to_op_outcome;
@@ -109,6 +122,12 @@ pub mod validation_context;
 pub mod validation_issue_detail;
 
 pub use core::*;
+pub use error::{
+    MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyRequestInvalid,
+    ValidationError, malformed_validate_code_parameters_kind_label,
+    remote_terminology_error_kind_label, validation_error_kind_label,
+};
+pub use binding::common::{TerminologyIssueContext, validation_error_to_issues};
 pub use evaluators::*;
 pub use issue_to_op_outcome::VALIDATION_SOURCE_INVARIANT_KEY_URL;
 use terminology::service::{TerminologyService, TerminologyServiceSync};

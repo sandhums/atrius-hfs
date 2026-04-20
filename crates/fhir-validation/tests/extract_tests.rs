@@ -2,6 +2,7 @@
 mod tests {
 
     use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
+    use fhir_validation::profile::structure_definition_extract::StructureDefinitionExtractMessage;
     use fhir_validation::{StructureDefinitionKind, TypeDerivationRule, ValidationError};
     use fhir_validation_types::BindingTargetKind;
     use helios_fhir::r5::StructureDefinition;
@@ -391,15 +392,10 @@ mod tests {
         let sd: StructureDefinition = serde_json::from_value(json).expect("deserialize SD");
         let err = extract_r5_structure_definition_profile(&sd).unwrap_err();
         match err {
-            ValidationError::InvalidStructureDefinition(msg) => {
-                assert!(
-                    msg.contains("Unknown StructureDefinition.kind"),
-                    "unexpected message: {msg}"
-                );
-                assert!(
-                    msg.contains("not-a-valid-kind"),
-                    "unexpected message: {msg}"
-                );
+            ValidationError::InvalidStructureDefinition(
+                StructureDefinitionExtractMessage::UnknownKind { value },
+            ) => {
+                assert_eq!(value, "not-a-valid-kind");
             }
             other => panic!("expected InvalidStructureDefinition, got {other:?}"),
         }
@@ -414,15 +410,10 @@ mod tests {
         let sd: StructureDefinition = serde_json::from_value(json).expect("deserialize SD");
         let err = extract_r5_structure_definition_profile(&sd).unwrap_err();
         match err {
-            ValidationError::InvalidStructureDefinition(msg) => {
-                assert!(
-                    msg.contains("Unknown StructureDefinition.derivation"),
-                    "unexpected message: {msg}"
-                );
-                assert!(
-                    msg.contains("invalid-derivation"),
-                    "unexpected message: {msg}"
-                );
+            ValidationError::InvalidStructureDefinition(
+                StructureDefinitionExtractMessage::UnknownDerivation { value },
+            ) => {
+                assert_eq!(value, "invalid-derivation");
             }
             other => panic!("expected InvalidStructureDefinition, got {other:?}"),
         }

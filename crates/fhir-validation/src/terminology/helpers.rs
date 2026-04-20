@@ -1,4 +1,5 @@
 use crate::ValidationError;
+use crate::error::{MalformedValidateCodeParameters, RemoteTerminologyError};
 use crate::types::{TerminologyMembershipOutcome, TerminologyRemoteError};
 use helios_fhirpath::error::FhirPathError;
 
@@ -115,17 +116,26 @@ pub fn build_remote_terminology_error(msg: &str) -> TerminologyRemoteError {
 /// preserving the membership result together with any server-provided message
 /// and basic terminology metadata such as code, system, version, and display.
 ///
-/// Malformed `Parameters` payloads produce [`ValidationError::MalformedTerminologyResponse`].
+/// Malformed `Parameters` payloads produce [`ValidationError::RemoteTerminology`] with
+/// [`RemoteTerminologyError::MalformedResponse`] ([`MalformedValidateCodeParameters`]).
 pub fn parse_validate_vs_result(
     body: &serde_json::Value,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
+    if let Some(serde_json::Value::String(rt)) = body.get("resourceType") {
+        if rt != "Parameters" {
+            return Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
+                MalformedValidateCodeParameters::WrongResourceType { got: rt.clone() },
+            )));
+        }
+    }
+
     let params = body
         .get("parameter")
         .and_then(|p| p.as_array())
         .ok_or_else(|| {
-            ValidationError::MalformedTerminologyResponse(
-                "Expected FHIR Parameters resource with a `parameter` array".to_string(),
-            )
+            ValidationError::from(RemoteTerminologyError::MalformedResponse(
+                MalformedValidateCodeParameters::MissingParameterArray,
+            ))
         })?;
 
     let mut result = None;
@@ -136,12 +146,37 @@ pub fn parse_validate_vs_result(
     let mut version = None;
     let mut system = None;
 
-    for p in params {
+    for (index, p) in params.iter().enumerate() {
+        if !p.is_object() {
+            return Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
+                MalformedValidateCodeParameters::ParameterEntryNotObject { index },
+            )));
+        }
+
         let name = p.get("name").and_then(|n| n.as_str()).unwrap_or_default();
 
         match name {
             "result" => {
-                result = p.get("valueBoolean").and_then(|v| v.as_bool());
+                if let Some(v) = p.get("valueBoolean") {
+                    if let Some(b) = v.as_bool() {
+                        result = Some(b);
+                    } else {
+                        return Err(ValidationError::from(
+                            RemoteTerminologyError::MalformedResponse(
+                                MalformedValidateCodeParameters::ResultValueNotBoolean,
+                            ),
+                        ));
+                    }
+                } else if p
+                    .as_object()
+                    .is_some_and(|o| o.keys().any(|k| k.starts_with("value")))
+                {
+                    return Err(ValidationError::from(
+                        RemoteTerminologyError::MalformedResponse(
+                            MalformedValidateCodeParameters::ResultValueNotBoolean,
+                        ),
+                    ));
+                }
             }
             "code" => {
                 code = p
@@ -188,9 +223,10 @@ pub fn parse_validate_vs_result(
             system,
             version,
             display,
+            local_failure: None,
         }),
-        None => Err(ValidationError::MalformedTerminologyResponse(
-            "$validate-code Parameters response did not include a boolean `result`".to_string(),
-        )),
+        None => Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
+            MalformedValidateCodeParameters::MissingResultBoolean,
+        ))),
     }
 }

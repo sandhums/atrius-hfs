@@ -6,10 +6,12 @@
 //! local indices exist.
 
 use crate::ValidationError;
+use crate::error::validation_error_kind_label;
 use crate::terminology::service::TerminologyServiceSync;
 use crate::terminology::types::TerminologyMembershipOutcome;
 use helios_fhir::FhirVersion;
 use helios_fhir::TerminologyValidationError;
+use tracing::warn;
 
 /// Terminology service that delegates to embedded `helios_fhir` ValueSet validation (`validate_code` /
 /// `validate_coding`).
@@ -38,6 +40,7 @@ impl LocalTerminologyService {
             code: None,
             version: None,
             display: None,
+            local_failure: None,
         }
     }
 
@@ -52,7 +55,25 @@ impl LocalTerminologyService {
             code: None,
             version: None,
             display: None,
+            local_failure: None,
         }
+    }
+}
+
+/// Non-member outcome carrying a structured [`TerminologyValidationError`] from generated
+/// `validate_coding` / `validate_code` (for example display mismatch).
+fn non_member_with_local_failure(err: TerminologyValidationError) -> TerminologyMembershipOutcome {
+    let msg = err.to_string();
+    TerminologyMembershipOutcome {
+        is_member: false,
+        remote_validation_required: false,
+        message: Some(msg.clone()),
+        diagnostics: vec![msg],
+        system: None,
+        code: None,
+        version: None,
+        display: None,
+        local_failure: Some(err),
     }
 }
 
@@ -60,7 +81,9 @@ fn map_validation_error(
     err: TerminologyValidationError,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
     match err {
-        TerminologyValidationError::InvalidInput(msg) => Err(ValidationError::Terminology(msg)),
+        TerminologyValidationError::InvalidInput(_) => {
+            Err(ValidationError::LocalTerminology(err))
+        }
         TerminologyValidationError::MissingSystem(_) => Ok(LocalTerminologyService::not_member()),
         TerminologyValidationError::RemoteValidationRequired(msg) => {
             Ok(TerminologyMembershipOutcome {
@@ -72,15 +95,12 @@ fn map_validation_error(
                 code: None,
                 version: None,
                 display: None,
+                local_failure: None,
             })
         }
         TerminologyValidationError::UnknownCode { .. }
-        | TerminologyValidationError::NotInValueSet { .. } => {
-            Ok(LocalTerminologyService::not_member())
-        }
-        TerminologyValidationError::WrongDisplay { .. } => {
-            Ok(LocalTerminologyService::not_member())
-        }
+        | TerminologyValidationError::NotInValueSet { .. }
+        | TerminologyValidationError::WrongDisplay { .. } => Ok(non_member_with_local_failure(err)),
     }
 }
 
@@ -192,7 +212,7 @@ impl TerminologyServiceSync for LocalTerminologyService {
         code: &str,
         display: Option<&str>,
     ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-        match self.fhir_version {
+        let out = match self.fhir_version {
             #[cfg(feature = "R4")]
             FhirVersion::R4 => member_of_r4(valueset_url, system, code, display),
             #[cfg(feature = "R5")]
@@ -201,6 +221,14 @@ impl TerminologyServiceSync for LocalTerminologyService {
             FhirVersion::R4B => Ok(Self::not_member()),
             #[cfg(feature = "R6")]
             FhirVersion::R6 => Ok(Self::not_member()),
+        };
+        if let Err(ref e) = out {
+            warn!(
+                valueset_url = %valueset_url,
+                error_kind = validation_error_kind_label(e),
+                "local terminology member_of error"
+            );
         }
+        out
     }
 }
