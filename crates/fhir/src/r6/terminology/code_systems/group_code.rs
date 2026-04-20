@@ -79,14 +79,28 @@ impl GroupType_a53ddbfe {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::PatientList => Some("A list of patients for the purpose of some kind of clinical treatment."),
-            Self::Family => Some("A group of persons and/or animals that constitute a family. The definition of family is not precisely fixed and subject to much variableness in interpretation."),
-            Self::Household => Some("A group of persons and/or animals that reside in a singe house. Both the definitions of \'reside\' and \'house\' are not precisely fixed."),
+            Self::PatientList => {
+                Some("A list of patients for the purpose of some kind of clinical treatment.")
+            }
+            Self::Family => Some(
+                "A group of persons and/or animals that constitute a family. The definition of family is not precisely fixed and subject to much variableness in interpretation.",
+            ),
+            Self::Household => Some(
+                "A group of persons and/or animals that reside in a singe house. Both the definitions of \'reside\' and \'house\' are not precisely fixed.",
+            ),
             Self::Workplace => Some("A group of persons who work together in a single place."),
-            Self::EventAttendee => Some("Group contains a set of persons and/or animals who were at the same place at the same time. This is typically used for an infection event"),
-            Self::ExposureGroup => Some("Group contains a set of persons and/or animals who were exposed to some antigen or infectious agent."),
-            Self::Herd => Some("Group contains a set of animals that are treated as a coherent group."),
-            Self::Locality => Some("Group contains HealthcareService resources that are found in a single geographical location."),
+            Self::EventAttendee => Some(
+                "Group contains a set of persons and/or animals who were at the same place at the same time. This is typically used for an infection event",
+            ),
+            Self::ExposureGroup => Some(
+                "Group contains a set of persons and/or animals who were exposed to some antigen or infectious agent.",
+            ),
+            Self::Herd => {
+                Some("Group contains a set of animals that are treated as a coherent group.")
+            }
+            Self::Locality => Some(
+                "Group contains HealthcareService resources that are found in a single geographical location.",
+            ),
             Self::Organization => Some("A collection of healthcare services."),
             Self::Collection => Some("A collection of entities for an arbitrary reason."),
         }
@@ -161,5 +175,4 @@ impl GroupType_a53ddbfe {
             })
             .unwrap_or(false)
     }
-
 }

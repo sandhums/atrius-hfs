@@ -57,7 +57,9 @@ impl DeviceMetricOperationalStatus {
         match self {
             Self::On => Some("The DeviceMetric is operating and will generate DeviceObservations."),
             Self::Off => Some("The DeviceMetric is not operating."),
-            Self::Standby => Some("The DeviceMetric is operating, but will not generate any DeviceObservations."),
+            Self::Standby => {
+                Some("The DeviceMetric is operating, but will not generate any DeviceObservations.")
+            }
             Self::EnteredInError => Some("The DeviceMetric was entered in error."),
         }
     }
@@ -119,5 +121,4 @@ impl DeviceMetricOperationalStatus {
             })
             .unwrap_or(false)
     }
-
 }

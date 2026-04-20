@@ -105,5 +105,4 @@ impl PaymentAdjustmentReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

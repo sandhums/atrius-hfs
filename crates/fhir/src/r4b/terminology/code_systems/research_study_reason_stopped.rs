@@ -17,7 +17,8 @@ pub enum ResearchStudyReasonStopped {
 }
 
 impl ResearchStudyReasonStopped {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/research-study-reason-stopped";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/research-study-reason-stopped";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -55,10 +56,16 @@ impl ResearchStudyReasonStopped {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AccrualGoalMet => Some("The study prematurely ended because the accrual goal was met."),
+            Self::AccrualGoalMet => {
+                Some("The study prematurely ended because the accrual goal was met.")
+            }
             Self::ClosedDueToToxicity => Some("The study prematurely ended due to toxicity."),
-            Self::ClosedDueToLackOfStudyProgress => Some("The study prematurely ended due to lack of study progress."),
-            Self::TemporarilyClosedPerStudyDesign => Some("The study prematurely ended temporarily per study design."),
+            Self::ClosedDueToLackOfStudyProgress => {
+                Some("The study prematurely ended due to lack of study progress.")
+            }
+            Self::TemporarilyClosedPerStudyDesign => {
+                Some("The study prematurely ended temporarily per study design.")
+            }
         }
     }
 
@@ -119,5 +126,4 @@ impl ResearchStudyReasonStopped {
             })
             .unwrap_or(false)
     }
-
 }

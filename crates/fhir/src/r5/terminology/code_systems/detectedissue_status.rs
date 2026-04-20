@@ -98,5 +98,4 @@ impl DetectedIssueStatus {
             })
             .unwrap_or(false)
     }
-
 }

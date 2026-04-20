@@ -606,11 +606,13 @@ impl fhir_validation::r5::R5Validatable for Requirements {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 RequirementsVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 RequirementsVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -804,11 +806,13 @@ impl fhir_validation::r5::R5ValidatableAsync for Requirements {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 RequirementsVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 RequirementsVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding_async(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Requirements.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -3680,11 +3684,13 @@ impl fhir_validation::r5::R5Validatable for SearchParameter {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 SearchParameterVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 SearchParameterVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -3882,11 +3888,13 @@ impl fhir_validation::r5::R5ValidatableAsync for SearchParameter {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 SearchParameterVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 SearchParameterVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding_async(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SearchParameter.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -4238,7 +4246,8 @@ impl fhir_validation::r5::R5Validatable for ServiceRequest {
                 ServiceRequestAsNeeded::Boolean(_value) => {
                 }
                 ServiceRequestAsNeeded::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(validator, "ServiceRequest.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ServiceRequest.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value));
                     issues.extend(child_issues);
                 }
             }
@@ -4678,7 +4687,8 @@ impl fhir_validation::r5::R5ValidatableAsync for ServiceRequest {
                 ServiceRequestAsNeeded::Boolean(_value) => {
                 }
                 ServiceRequestAsNeeded::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(validator, "ServiceRequest.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ServiceRequest.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -5925,7 +5935,8 @@ impl fhir_validation::r5::R5Validatable for SpecimenCollection {
         if let Some(choice) = &self.fasting_status {
             match choice {
                 SpecimenCollectionFastingStatus::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(validator, "Specimen.collection.fastingStatus[x]", "http://terminology.hl7.org/ValueSet/v2-0916", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0916", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Specimen.collection.fastingStatus[x]", "http://terminology.hl7.org/ValueSet/v2-0916", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0916", value));
                     issues.extend(child_issues);
                 }
                 SpecimenCollectionFastingStatus::Duration(value) => {
@@ -6066,7 +6077,8 @@ impl fhir_validation::r5::R5ValidatableAsync for SpecimenCollection {
         if let Some(choice) = &self.fasting_status {
             match choice {
                 SpecimenCollectionFastingStatus::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(validator, "Specimen.collection.fastingStatus[x]", "http://terminology.hl7.org/ValueSet/v2-0916", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0916", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Specimen.collection.fastingStatus[x]", "http://terminology.hl7.org/ValueSet/v2-0916", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0916", value)).await;
                     issues.extend(child_issues);
                 }
                 SpecimenCollectionFastingStatus::Duration(value) => {
@@ -6478,11 +6490,13 @@ impl fhir_validation::r5::R5Validatable for SpecimenDefinition {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 SpecimenDefinitionVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 SpecimenDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -6714,11 +6728,13 @@ impl fhir_validation::r5::R5ValidatableAsync for SpecimenDefinition {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 SpecimenDefinitionVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 SpecimenDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding_async(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SpecimenDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -7141,7 +7157,8 @@ impl fhir_validation::r5::R5Validatable for SpecimenDefinitionTypeTestedContaine
         if let Some(choice) = &self.additive {
             match choice {
                 SpecimenDefinitionTypeTestedContainerAdditiveAdditive::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(validator, "SpecimenDefinition.typeTested.container.additive.additive[x]", "http://terminology.hl7.org/ValueSet/v2-0371", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0371", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SpecimenDefinition.typeTested.container.additive.additive[x]", "http://terminology.hl7.org/ValueSet/v2-0371", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0371", value));
                     issues.extend(child_issues);
                 }
                 SpecimenDefinitionTypeTestedContainerAdditiveAdditive::Reference(value) => {
@@ -7220,7 +7237,8 @@ impl fhir_validation::r5::R5ValidatableAsync for SpecimenDefinitionTypeTestedCon
         if let Some(choice) = &self.additive {
             match choice {
                 SpecimenDefinitionTypeTestedContainerAdditiveAdditive::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(validator, "SpecimenDefinition.typeTested.container.additive.additive[x]", "http://terminology.hl7.org/ValueSet/v2-0371", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0371", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SpecimenDefinition.typeTested.container.additive.additive[x]", "http://terminology.hl7.org/ValueSet/v2-0371", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v2-0371", value)).await;
                     issues.extend(child_issues);
                 }
                 SpecimenDefinitionTypeTestedContainerAdditiveAdditive::Reference(value) => {

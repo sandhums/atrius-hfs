@@ -54,6 +54,7 @@ fn code_to_fhir(code: &str) -> &'static str {
         "structure" => "structure",
         "required" => "required",
         "value" => "value",
+        "terminology" => "code-invalid",
         "invariant" => "invariant",
         "security" => "security",
         "login" => "login",
@@ -459,6 +460,7 @@ pub fn validation_issues_to_r6_operation_outcome_json(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::issue_code;
 
     fn mk_issue(
         severity: Severity,
@@ -643,7 +645,7 @@ mod tests {
 
         let issue = ValidationIssue {
             severity: Severity::Error,
-            code: "invariant".to_string(),
+            code: issue_code::INVARIANT.to_string(),
             fhir_path: "Patient".to_string(),
             instance_path: Some("Patient".to_string()),
             expression: Some("Patient.name.empty()".to_string()),
@@ -676,6 +678,22 @@ mod tests {
         let json = validation_issue_to_operation_outcome_issue(&issue);
         assert_eq!(json["code"], "invariant");
     }
+
+    #[test]
+    fn maps_terminology_code_to_code_invalid() {
+        let issue = mk_issue(
+            Severity::Error,
+            issue_code::TERMINOLOGY,
+            "Patient",
+            Some("Patient"),
+            None,
+            "ValueSet membership failed",
+        );
+
+        let json = validation_issue_to_operation_outcome_issue(&issue);
+        assert_eq!(json["code"], "code-invalid");
+    }
+
     #[test]
     fn maps_unknown_code_to_processing() {
         let issue = mk_issue(

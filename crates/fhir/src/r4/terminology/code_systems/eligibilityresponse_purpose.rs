@@ -55,10 +55,18 @@ impl EligibilityResponsePurpose {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AuthRequirements => Some("The prior authorization requirements for the listed, or discovered if specified, converages for the categories of service and/or specifed biling codes are requested."),
-            Self::Benefits => Some("The plan benefits and optionally benefits consumed  for the listed, or discovered if specified, converages are requested."),
-            Self::Discovery => Some("The insurer is requested to report on any coverages which they are aware of in addition to any specifed."),
-            Self::Validation => Some("A check that the specified coverages are in-force is requested."),
+            Self::AuthRequirements => Some(
+                "The prior authorization requirements for the listed, or discovered if specified, converages for the categories of service and/or specifed biling codes are requested.",
+            ),
+            Self::Benefits => Some(
+                "The plan benefits and optionally benefits consumed  for the listed, or discovered if specified, converages are requested.",
+            ),
+            Self::Discovery => Some(
+                "The insurer is requested to report on any coverages which they are aware of in addition to any specifed.",
+            ),
+            Self::Validation => {
+                Some("A check that the specified coverages are in-force is requested.")
+            }
         }
     }
 
@@ -119,5 +127,4 @@ impl EligibilityResponsePurpose {
             })
             .unwrap_or(false)
     }
-
 }

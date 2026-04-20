@@ -74,11 +74,19 @@ impl TaskInputOutputParameterType {
             Self::CollectedSpecimen => Some("A specimen that has been collected."),
             Self::ReferenceResults => Some("Reference results to compare against."),
             Self::PriorResults => Some("Results from a previous order."),
-            Self::ConcomitantMedications => Some("Medications, supplements or drugs the patient consumes at the same time as something else."),
+            Self::ConcomitantMedications => Some(
+                "Medications, supplements or drugs the patient consumes at the same time as something else.",
+            ),
             Self::FillerOrder => Some("The order number associated with the filler."),
-            Self::DataQuery => Some("Indicates the parameters of a FHIR RESTful search to be executed whose results are requested by a data-request Task. The content will be the portion of the query URL following the \'base\'. E.g.  `Observation?code=foo`."),
-            Self::DataCode => Some("A code describing the information requested by a data-request Task - often a code for a type of document"),
-            Self::DataValue => Some("A FHIR resource, typically a search-set Bundle, containing the requested information in response to a data-request Task"),
+            Self::DataQuery => Some(
+                "Indicates the parameters of a FHIR RESTful search to be executed whose results are requested by a data-request Task. The content will be the portion of the query URL following the \'base\'. E.g.  `Observation?code=foo`.",
+            ),
+            Self::DataCode => Some(
+                "A code describing the information requested by a data-request Task - often a code for a type of document",
+            ),
+            Self::DataValue => Some(
+                "A FHIR resource, typically a search-set Bundle, containing the requested information in response to a data-request Task",
+            ),
         }
     }
 
@@ -147,5 +155,4 @@ impl TaskInputOutputParameterType {
             })
             .unwrap_or(false)
     }
-
 }

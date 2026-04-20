@@ -14,7 +14,8 @@ pub enum MedicationKnowledgeStatusCodes {
 }
 
 impl MedicationKnowledgeStatusCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationknowledge-status";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationknowledge-status";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -110,5 +111,4 @@ impl MedicationKnowledgeStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

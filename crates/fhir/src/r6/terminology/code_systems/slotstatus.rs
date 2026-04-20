@@ -59,11 +59,19 @@ impl SlotStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Busy => Some("Indicates that the time interval is busy because one  or more events have been scheduled for that interval."),
+            Self::Busy => Some(
+                "Indicates that the time interval is busy because one  or more events have been scheduled for that interval.",
+            ),
             Self::Free => Some("Indicates that the time interval is free for scheduling."),
-            Self::BusyUnavailable => Some("Indicates that the time interval is busy and that the interval cannot be scheduled."),
-            Self::BusyTentative => Some("Indicates that the time interval is busy because one or more events have been tentatively scheduled for that interval."),
-            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
+            Self::BusyUnavailable => Some(
+                "Indicates that the time interval is busy and that the interval cannot be scheduled.",
+            ),
+            Self::BusyTentative => Some(
+                "Indicates that the time interval is busy because one or more events have been tentatively scheduled for that interval.",
+            ),
+            Self::EnteredInError => {
+                Some("This instance should not have been part of this patient\'s medical record.")
+            }
         }
     }
 
@@ -126,5 +134,4 @@ impl SlotStatus {
             })
             .unwrap_or(false)
     }
-
 }

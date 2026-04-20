@@ -55,10 +55,14 @@ impl LibraryType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::LogicLibrary => Some("The resource is a shareable library of formalized knowledge."),
+            Self::LogicLibrary => {
+                Some("The resource is a shareable library of formalized knowledge.")
+            }
             Self::ModelDefinition => Some("The resource is a definition of an information model."),
             Self::AssetCollection => Some("The resource is a collection of knowledge assets."),
-            Self::ModuleDefinition => Some("The resource defines the dependencies, parameters, and data requirements for a particular module or evaluation context."),
+            Self::ModuleDefinition => Some(
+                "The resource defines the dependencies, parameters, and data requirements for a particular module or evaluation context.",
+            ),
         }
     }
 
@@ -119,5 +123,4 @@ impl LibraryType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -126,5 +126,4 @@ impl EpisodeOfCareType {
             })
             .unwrap_or(false)
     }
-
 }

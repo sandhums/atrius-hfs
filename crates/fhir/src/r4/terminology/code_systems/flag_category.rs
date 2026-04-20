@@ -81,7 +81,9 @@ impl FlagCategory {
         match self {
             Self::Diet => Some("Flags related to the subject\'s dietary needs."),
             Self::Drug => Some("Flags related to the subject\'s medications."),
-            Self::Lab => Some("Flags related to performing laboratory tests and related processes (e.g. phlebotomy)."),
+            Self::Lab => Some(
+                "Flags related to performing laboratory tests and related processes (e.g. phlebotomy).",
+            ),
             Self::Admin => Some("Flags related to administrative and financial processes."),
             Self::Contact => Some("Flags related to coming into contact with the patient."),
             Self::Clinical => Some("Flags related to the subject\'s clinical data."),
@@ -161,5 +163,4 @@ impl FlagCategory {
             })
             .unwrap_or(false)
     }
-
 }

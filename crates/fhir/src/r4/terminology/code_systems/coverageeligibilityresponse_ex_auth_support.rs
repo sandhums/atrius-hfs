@@ -21,7 +21,8 @@ pub enum CoverageEligibilityResponseAuthSupportCodes {
 }
 
 impl CoverageEligibilityResponseAuthSupportCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/coverageeligibilityresponse-ex-auth-support";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/coverageeligibilityresponse-ex-auth-support";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -73,10 +74,16 @@ impl CoverageEligibilityResponseAuthSupportCodes {
         match self {
             Self::Laborder => Some("A request or authorization for laboratory diagnostic tests."),
             Self::Labreport => Some("A report on laboratory diagnostic test(s)."),
-            Self::Diagnosticimageorder => Some("A request or authorization for diagnostic imaging."),
+            Self::Diagnosticimageorder => {
+                Some("A request or authorization for diagnostic imaging.")
+            }
             Self::Diagnosticimagereport => Some("A report on diagnostic image(s)."),
-            Self::Professionalreport => Some("A report from a licensed professional regarding the siutation, condition or proposed treatment."),
-            Self::Accidentreport => Some("A formal accident report as would be filed with police or a simlar official body."),
+            Self::Professionalreport => Some(
+                "A report from a licensed professional regarding the siutation, condition or proposed treatment.",
+            ),
+            Self::Accidentreport => Some(
+                "A formal accident report as would be filed with police or a simlar official body.",
+            ),
             Self::Model => Some("A physical model of the affected area."),
             Self::Picture => Some("A photograph of the affected area."),
         }
@@ -147,5 +154,4 @@ impl CoverageEligibilityResponseAuthSupportCodes {
             })
             .unwrap_or(false)
     }
-
 }

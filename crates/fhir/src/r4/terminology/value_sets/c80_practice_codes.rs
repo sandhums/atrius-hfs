@@ -17,15 +17,132 @@ impl PracticeSettingCodeValueSet {
     pub const IS_EXAMPLE: bool = false;
     pub const HAS_NONLOCAL_RULES: bool = false;
     pub const INCLUDE_VALUESETS: &'static [&'static str] = &[];
-    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &[
-        "http://snomed.info/sct",
-    ];
+    pub const INCLUDED_SYSTEMS: &'static [&'static str] = &["http://snomed.info/sct"];
 
     /// Best-effort local membership check.
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "408467006" | "394577000" | "394578005" | "421661004" | "408462000" | "394579002" | "394804000" | "394580004" | "394803006" | "408480009" | "408454008" | "394809005" | "394592004" | "394600006" | "394601005" | "394581000" | "408478003" | "394812008" | "408444009" | "394582007" | "408475000" | "410005002" | "394583002" | "419772000" | "394584008" | "408443003" | "394802001" | "394915009" | "394814009" | "394808002" | "394811001" | "408446006" | "394586005" | "394916005" | "408472002" | "394597005" | "394598000" | "394807007" | "419192003" | "408468001" | "394593009" | "394813003" | "410001006" | "394589003" | "394591006" | "394599008" | "394649004" | "408470005" | "394585009" | "394821009" | "422191005" | "394594003" | "416304004" | "418960008" | "394882004" | "394806003" | "394588006" | "408459003" | "394607009" | "419610006" | "418058008" | "420208008" | "418652005" | "418535003" | "418862001" | "419365004" | "418002000" | "419983000" | "419170002" | "419472004" | "394539006" | "420112009" | "409968004" | "394587001" | "394913002" | "408440000" | "418112009" | "419815003" | "394914008" | "408455009" | "394602003" | "408447002" | "394810000" | "408450004" | "408476004" | "408469009" | "408466002" | "408471009" | "408464004" | "408441001" | "408465003" | "394605001" | "394608004" | "408461007" | "408460008" | "408460008" | "394606000" | "408449004" | "394608004" | "418018006" | "394604002" | "394609007" | "408474001" | "394610002" | "394611003" | "408477008" | "394801008" | "408463005" | "419321007" | "394576009" | "394590007" | "409967009" | "408448007" | "419043006" | "394612005" | "394733009" | "394732004"));
+            return Some(matches!(
+                code,
+                "408467006"
+                    | "394577000"
+                    | "394578005"
+                    | "421661004"
+                    | "408462000"
+                    | "394579002"
+                    | "394804000"
+                    | "394580004"
+                    | "394803006"
+                    | "408480009"
+                    | "408454008"
+                    | "394809005"
+                    | "394592004"
+                    | "394600006"
+                    | "394601005"
+                    | "394581000"
+                    | "408478003"
+                    | "394812008"
+                    | "408444009"
+                    | "394582007"
+                    | "408475000"
+                    | "410005002"
+                    | "394583002"
+                    | "419772000"
+                    | "394584008"
+                    | "408443003"
+                    | "394802001"
+                    | "394915009"
+                    | "394814009"
+                    | "394808002"
+                    | "394811001"
+                    | "408446006"
+                    | "394586005"
+                    | "394916005"
+                    | "408472002"
+                    | "394597005"
+                    | "394598000"
+                    | "394807007"
+                    | "419192003"
+                    | "408468001"
+                    | "394593009"
+                    | "394813003"
+                    | "410001006"
+                    | "394589003"
+                    | "394591006"
+                    | "394599008"
+                    | "394649004"
+                    | "408470005"
+                    | "394585009"
+                    | "394821009"
+                    | "422191005"
+                    | "394594003"
+                    | "416304004"
+                    | "418960008"
+                    | "394882004"
+                    | "394806003"
+                    | "394588006"
+                    | "408459003"
+                    | "394607009"
+                    | "419610006"
+                    | "418058008"
+                    | "420208008"
+                    | "418652005"
+                    | "418535003"
+                    | "418862001"
+                    | "419365004"
+                    | "418002000"
+                    | "419983000"
+                    | "419170002"
+                    | "419472004"
+                    | "394539006"
+                    | "420112009"
+                    | "409968004"
+                    | "394587001"
+                    | "394913002"
+                    | "408440000"
+                    | "418112009"
+                    | "419815003"
+                    | "394914008"
+                    | "408455009"
+                    | "394602003"
+                    | "408447002"
+                    | "394810000"
+                    | "408450004"
+                    | "408476004"
+                    | "408469009"
+                    | "408466002"
+                    | "408471009"
+                    | "408464004"
+                    | "408441001"
+                    | "408465003"
+                    | "394605001"
+                    | "394608004"
+                    | "408461007"
+                    | "408460008"
+                    | "408460008"
+                    | "394606000"
+                    | "408449004"
+                    | "394608004"
+                    | "418018006"
+                    | "394604002"
+                    | "394609007"
+                    | "408474001"
+                    | "394610002"
+                    | "394611003"
+                    | "408477008"
+                    | "394801008"
+                    | "408463005"
+                    | "419321007"
+                    | "394576009"
+                    | "394590007"
+                    | "409967009"
+                    | "408448007"
+                    | "419043006"
+                    | "394612005"
+                    | "394733009"
+                    | "394732004"
+            ));
         }
         None
     }
@@ -35,7 +152,126 @@ impl PracticeSettingCodeValueSet {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://snomed.info/sct" {
-            return Some(matches!(code, "408467006" | "394577000" | "394578005" | "421661004" | "408462000" | "394579002" | "394804000" | "394580004" | "394803006" | "408480009" | "408454008" | "394809005" | "394592004" | "394600006" | "394601005" | "394581000" | "408478003" | "394812008" | "408444009" | "394582007" | "408475000" | "410005002" | "394583002" | "419772000" | "394584008" | "408443003" | "394802001" | "394915009" | "394814009" | "394808002" | "394811001" | "408446006" | "394586005" | "394916005" | "408472002" | "394597005" | "394598000" | "394807007" | "419192003" | "408468001" | "394593009" | "394813003" | "410001006" | "394589003" | "394591006" | "394599008" | "394649004" | "408470005" | "394585009" | "394821009" | "422191005" | "394594003" | "416304004" | "418960008" | "394882004" | "394806003" | "394588006" | "408459003" | "394607009" | "419610006" | "418058008" | "420208008" | "418652005" | "418535003" | "418862001" | "419365004" | "418002000" | "419983000" | "419170002" | "419472004" | "394539006" | "420112009" | "409968004" | "394587001" | "394913002" | "408440000" | "418112009" | "419815003" | "394914008" | "408455009" | "394602003" | "408447002" | "394810000" | "408450004" | "408476004" | "408469009" | "408466002" | "408471009" | "408464004" | "408441001" | "408465003" | "394605001" | "394608004" | "408461007" | "408460008" | "408460008" | "394606000" | "408449004" | "394608004" | "418018006" | "394604002" | "394609007" | "408474001" | "394610002" | "394611003" | "408477008" | "394801008" | "408463005" | "419321007" | "394576009" | "394590007" | "409967009" | "408448007" | "419043006" | "394612005" | "394733009" | "394732004"));
+            return Some(matches!(
+                code,
+                "408467006"
+                    | "394577000"
+                    | "394578005"
+                    | "421661004"
+                    | "408462000"
+                    | "394579002"
+                    | "394804000"
+                    | "394580004"
+                    | "394803006"
+                    | "408480009"
+                    | "408454008"
+                    | "394809005"
+                    | "394592004"
+                    | "394600006"
+                    | "394601005"
+                    | "394581000"
+                    | "408478003"
+                    | "394812008"
+                    | "408444009"
+                    | "394582007"
+                    | "408475000"
+                    | "410005002"
+                    | "394583002"
+                    | "419772000"
+                    | "394584008"
+                    | "408443003"
+                    | "394802001"
+                    | "394915009"
+                    | "394814009"
+                    | "394808002"
+                    | "394811001"
+                    | "408446006"
+                    | "394586005"
+                    | "394916005"
+                    | "408472002"
+                    | "394597005"
+                    | "394598000"
+                    | "394807007"
+                    | "419192003"
+                    | "408468001"
+                    | "394593009"
+                    | "394813003"
+                    | "410001006"
+                    | "394589003"
+                    | "394591006"
+                    | "394599008"
+                    | "394649004"
+                    | "408470005"
+                    | "394585009"
+                    | "394821009"
+                    | "422191005"
+                    | "394594003"
+                    | "416304004"
+                    | "418960008"
+                    | "394882004"
+                    | "394806003"
+                    | "394588006"
+                    | "408459003"
+                    | "394607009"
+                    | "419610006"
+                    | "418058008"
+                    | "420208008"
+                    | "418652005"
+                    | "418535003"
+                    | "418862001"
+                    | "419365004"
+                    | "418002000"
+                    | "419983000"
+                    | "419170002"
+                    | "419472004"
+                    | "394539006"
+                    | "420112009"
+                    | "409968004"
+                    | "394587001"
+                    | "394913002"
+                    | "408440000"
+                    | "418112009"
+                    | "419815003"
+                    | "394914008"
+                    | "408455009"
+                    | "394602003"
+                    | "408447002"
+                    | "394810000"
+                    | "408450004"
+                    | "408476004"
+                    | "408469009"
+                    | "408466002"
+                    | "408471009"
+                    | "408464004"
+                    | "408441001"
+                    | "408465003"
+                    | "394605001"
+                    | "394608004"
+                    | "408461007"
+                    | "408460008"
+                    | "408460008"
+                    | "394606000"
+                    | "408449004"
+                    | "394608004"
+                    | "418018006"
+                    | "394604002"
+                    | "394609007"
+                    | "408474001"
+                    | "394610002"
+                    | "394611003"
+                    | "408477008"
+                    | "394801008"
+                    | "408463005"
+                    | "419321007"
+                    | "394576009"
+                    | "394590007"
+                    | "409967009"
+                    | "408448007"
+                    | "419043006"
+                    | "394612005"
+                    | "394733009"
+                    | "394732004"
+            ));
         }
         None
     }
@@ -181,7 +417,9 @@ impl PracticeSettingCodeValueSet {
     /// and none matched, or if there are no codings.
     pub fn contains_codeable_concept(cc: &CodeableConcept) -> Option<bool> {
         let codings = cc.coding.as_ref()?;
-        if codings.is_empty() { return None; }
+        if codings.is_empty() {
+            return None;
+        }
 
         let mut any_none = false;
         for c in codings {
@@ -199,25 +437,35 @@ impl PracticeSettingCodeValueSet {
     pub fn validate(system: &str, code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains(system, code) {
             Some(true) => Ok(()),
-            Some(false) => {
-                match Self::code_known_in_system(system, code) {
-                    Some(false) => Err(TerminologyValidationError::UnknownCode { system: system.to_string(), code: code.to_string() }),
-                    _ => Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some(system.to_string()), code: code.to_string() }),
-                }
-            }
-            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
+            Some(false) => match Self::code_known_in_system(system, code) {
+                Some(false) => Err(TerminologyValidationError::UnknownCode {
+                    system: system.to_string(),
+                    code: code.to_string(),
+                }),
+                _ => Err(TerminologyValidationError::NotInValueSet {
+                    valueset_url: Self::URL.to_string(),
+                    system: Some(system.to_string()),
+                    code: code.to_string(),
+                }),
+            },
+            None => Err(TerminologyValidationError::RemoteValidationRequired(
+                "Remote terminology validation required".to_string(),
+            )),
         }
     }
-
 
     /// Validate a primitive `code` against this ValueSet using best-effort local logic.
     pub fn validate_code(code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains_implicit_code(code) {
             Some(true) => Ok(()),
-            Some(false) => {
-                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some("http://snomed.info/sct".to_string()), code: code.to_string() })
-            }
-            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
+            Some(false) => Err(TerminologyValidationError::NotInValueSet {
+                valueset_url: Self::URL.to_string(),
+                system: Some("http://snomed.info/sct".to_string()),
+                code: code.to_string(),
+            }),
+            None => Err(TerminologyValidationError::RemoteValidationRequired(
+                "Remote terminology validation required".to_string(),
+            )),
         }
     }
 
@@ -229,12 +477,36 @@ impl PracticeSettingCodeValueSet {
 
     /// Validate a Coding against this ValueSet using best-effort local logic.
     pub fn validate_coding(coding: &Coding) -> Result<(), TerminologyValidationError> {
-        let code = coding.code.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::InvalidInput("Coding.code is required".to_string()))?;
-        let system = coding.system.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::MissingSystem("Coding.system is required".to_string()))?;
-        if let Some(provided) = coding.display.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()) {
+        let code = coding
+            .code
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                TerminologyValidationError::InvalidInput("Coding.code is required".to_string())
+            })?;
+        let system = coding
+            .system
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                TerminologyValidationError::MissingSystem("Coding.system is required".to_string())
+            })?;
+        if let Some(provided) = coding
+            .display
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+        {
             if let Some(expected) = Self::expected_display(system, code) {
                 if provided != expected {
-                    return Err(TerminologyValidationError::WrongDisplay { system: system.to_string(), code: code.to_string(), expected: expected.to_string(), provided: provided.to_string() });
+                    return Err(TerminologyValidationError::WrongDisplay {
+                        system: system.to_string(),
+                        code: code.to_string(),
+                        expected: expected.to_string(),
+                        provided: provided.to_string(),
+                    });
                 }
             }
         }
@@ -242,10 +514,18 @@ impl PracticeSettingCodeValueSet {
     }
 
     /// Validate a CodeableConcept against this ValueSet using best-effort local logic.
-    pub fn validate_codeable_concept(cc: &CodeableConcept) -> Result<(), TerminologyValidationError> {
-        let codings = cc.coding.as_ref().ok_or_else(|| TerminologyValidationError::InvalidInput("CodeableConcept.coding is required".to_string()))?;
+    pub fn validate_codeable_concept(
+        cc: &CodeableConcept,
+    ) -> Result<(), TerminologyValidationError> {
+        let codings = cc.coding.as_ref().ok_or_else(|| {
+            TerminologyValidationError::InvalidInput(
+                "CodeableConcept.coding is required".to_string(),
+            )
+        })?;
         if codings.is_empty() {
-            return Err(TerminologyValidationError::InvalidInput("CodeableConcept.coding must not be empty".to_string()));
+            return Err(TerminologyValidationError::InvalidInput(
+                "CodeableConcept.coding must not be empty".to_string(),
+            ));
         }
         let mut last_error: Option<TerminologyValidationError> = None;
         let mut saw_remote = false;
@@ -257,11 +537,17 @@ impl PracticeSettingCodeValueSet {
             }
         }
         if saw_remote {
-            Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string()))
+            Err(TerminologyValidationError::RemoteValidationRequired(
+                "Remote terminology validation required".to_string(),
+            ))
         } else if let Some(err) = last_error {
             Err(err)
         } else {
-            Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: "".to_string() })
+            Err(TerminologyValidationError::NotInValueSet {
+                valueset_url: Self::URL.to_string(),
+                system: None,
+                code: "".to_string(),
+            })
         }
     }
-  }
+}

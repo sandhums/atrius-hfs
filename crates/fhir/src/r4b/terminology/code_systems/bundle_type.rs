@@ -75,15 +75,33 @@ impl BundleType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Document => Some("The bundle is a document. The first resource is a Composition."),
-            Self::Message => Some("The bundle is a message. The first resource is a MessageHeader."),
-            Self::Transaction => Some("The bundle is a transaction - intended to be processed by a server as an atomic commit."),
-            Self::TransactionResponse => Some("The bundle is a transaction response. Because the response is a transaction response, the transaction has succeeded, and all responses are error free."),
-            Self::Batch => Some("The bundle is a set of actions - intended to be processed by a server as a group of independent actions."),
-            Self::BatchResponse => Some("The bundle is a batch response. Note that as a batch, some responses may indicate failure and others success."),
-            Self::History => Some("The bundle is a list of resources from a history interaction on a server."),
-            Self::Searchset => Some("The bundle is a list of resources returned as a result of a search/query interaction, operation, or message."),
-            Self::Collection => Some("The bundle is a set of resources collected into a single package for ease of distribution that imposes no processing obligations or behavioral rules beyond persistence."),
+            Self::Document => {
+                Some("The bundle is a document. The first resource is a Composition.")
+            }
+            Self::Message => {
+                Some("The bundle is a message. The first resource is a MessageHeader.")
+            }
+            Self::Transaction => Some(
+                "The bundle is a transaction - intended to be processed by a server as an atomic commit.",
+            ),
+            Self::TransactionResponse => Some(
+                "The bundle is a transaction response. Because the response is a transaction response, the transaction has succeeded, and all responses are error free.",
+            ),
+            Self::Batch => Some(
+                "The bundle is a set of actions - intended to be processed by a server as a group of independent actions.",
+            ),
+            Self::BatchResponse => Some(
+                "The bundle is a batch response. Note that as a batch, some responses may indicate failure and others success.",
+            ),
+            Self::History => {
+                Some("The bundle is a list of resources from a history interaction on a server.")
+            }
+            Self::Searchset => Some(
+                "The bundle is a list of resources returned as a result of a search/query interaction, operation, or message.",
+            ),
+            Self::Collection => Some(
+                "The bundle is a set of resources collected into a single package for ease of distribution that imposes no processing obligations or behavioral rules beyond persistence.",
+            ),
         }
     }
 
@@ -154,5 +172,4 @@ impl BundleType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -67,13 +67,23 @@ impl DosageConditionCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::IfNeeded => Some("Whether this is needed. Note that this is different to PRN, because the entire course is if required, not on a per dose basis"),
-            Self::Tolerates => Some("Whether the patient tolerates a medication (e.g. SCT 1303423003)"),
-            Self::ProblemAbates => Some("Whether a symptom, problem of finding abates. It\'s not really important what type it is. This is considered equivalent to \'patient responds to medication\'. The degree of abatement is not defined"),
-            Self::ProblemPresents => Some("Whether a symptom, problem of finding presents. It\'s not really important what type it is."),
+            Self::IfNeeded => Some(
+                "Whether this is needed. Note that this is different to PRN, because the entire course is if required, not on a per dose basis",
+            ),
+            Self::Tolerates => {
+                Some("Whether the patient tolerates a medication (e.g. SCT 1303423003)")
+            }
+            Self::ProblemAbates => Some(
+                "Whether a symptom, problem of finding abates. It\'s not really important what type it is. This is considered equivalent to \'patient responds to medication\'. The degree of abatement is not defined",
+            ),
+            Self::ProblemPresents => Some(
+                "Whether a symptom, problem of finding presents. It\'s not really important what type it is.",
+            ),
             Self::MedicationTolerated => Some("Medication Is Tolerated"),
             Self::MedicationFunded => Some("Medication Is Funded / Approved"),
-            Self::MedicationAvailable => Some("(Sufficient) medication Is Available (e.g. Supply issues)"),
+            Self::MedicationAvailable => {
+                Some("(Sufficient) medication Is Available (e.g. Supply issues)")
+            }
         }
     }
 
@@ -140,5 +150,4 @@ impl DosageConditionCodes {
             })
             .unwrap_or(false)
     }
-
 }

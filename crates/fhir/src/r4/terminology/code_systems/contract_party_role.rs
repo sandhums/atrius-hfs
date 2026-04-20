@@ -98,5 +98,4 @@ impl ContractResourcePartyRoleCodes {
             })
             .unwrap_or(false)
     }
-
 }

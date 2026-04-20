@@ -16,7 +16,8 @@ pub enum CitationClassificationType {
 }
 
 impl CitationClassificationType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/citation-classification-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/citation-classification-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl CitationClassificationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::CitationSource => Some("Citation repository where this citation was created or copied from"),
-            Self::MedlineOwner => Some("The party responsible for creating and validating the MEDLINE citation"),
-            Self::FevirPlatformUse => Some("Used for Citation sharing on the Fast Evidence Interoperability Resources (FEvIR) Platform"),
+            Self::CitationSource => {
+                Some("Citation repository where this citation was created or copied from")
+            }
+            Self::MedlineOwner => {
+                Some("The party responsible for creating and validating the MEDLINE citation")
+            }
+            Self::FevirPlatformUse => Some(
+                "Used for Citation sharing on the Fast Evidence Interoperability Resources (FEvIR) Platform",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl CitationClassificationType {
             })
             .unwrap_or(false)
     }
-
 }

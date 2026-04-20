@@ -357,5 +357,4 @@ impl ServiceCategory {
             })
             .unwrap_or(false)
     }
-
 }

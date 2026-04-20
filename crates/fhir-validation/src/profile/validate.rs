@@ -45,6 +45,7 @@ use crate::profile::helpers::{
 use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::slicing::validate_slicing;
 use crate::profile::types::{ExtractedProfile, ExtractedTypeConstraint, ExtractedValueConstraint};
+use crate::issue_code;
 use crate::validation_context::AsyncValidationContext;
 pub use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
@@ -550,7 +551,7 @@ fn validate_type_constraints<T: Serialize>(
         if choice_info.has_multiple_in_same_parent {
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
-                code: "structure".to_string(),
+                code: issue_code::STRUCTURE.to_string(),
                 summary: Some(
                     "Polymorphic [x] element has multiple type representations at once".to_string(),
                 ),
@@ -597,7 +598,7 @@ fn validate_type_constraints<T: Serialize>(
 
         issues.push(ValidationIssue {
             severity: crate::Severity::Error,
-            code: "structure".to_string(),
+            code: issue_code::STRUCTURE.to_string(),
             summary: Some("Choice element type is not allowed by the profile".to_string()),
             expression_kind: None,
             source_invariant_key: None,
@@ -785,7 +786,7 @@ fn validate_target_profile_constraints<T: Serialize>(
 
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
-                code: "structure".to_string(),
+                code: issue_code::STRUCTURE.to_string(),
                 summary: Some(
                     "Reference target resource type is not allowed by targetProfile".to_string(),
                 ),
@@ -891,7 +892,7 @@ fn validate_reference_aggregate_versioning_constraints<T: Serialize>(
 
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
-                code: "structure".to_string(),
+                code: issue_code::STRUCTURE.to_string(),
                 summary: Some(
                     "Reference or canonical value does not satisfy type aggregation/versioning rules"
                         .to_string(),
@@ -1029,7 +1030,7 @@ fn is_referenced_style_reference(ref_url: &str) -> bool {
 fn json_stringish_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get("value").and_then(|v| v.as_str()),
+        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
         _ => None,
     }
 }
@@ -1387,7 +1388,7 @@ fn validate_type_profile_constraints<T: Serialize>(
                 if !declared_match_ok {
                     issues.push(ValidationIssue {
                         severity: crate::Severity::Error,
-                        code: "structure".to_string(),
+                        code: issue_code::STRUCTURE.to_string(),
                         summary: Some(
                             "Nested resource meta.profile does not satisfy type.profile requirement"
                                 .to_string(),
@@ -1451,7 +1452,7 @@ fn validate_type_profile_constraints<T: Serialize>(
                     {
                         issues.push(ValidationIssue {
                             severity: crate::Severity::Error,
-                            code: "structure".to_string(),
+                            code: issue_code::STRUCTURE.to_string(),
                             summary: Some(
                                 "meta.profile is missing and resourceType fallback is disabled for type.profile"
                                     .to_string(),
@@ -1504,7 +1505,7 @@ fn validate_type_profile_constraints<T: Serialize>(
                         if !allowed_resource_types.is_empty() {
                             issues.push(ValidationIssue {
                                 severity: crate::Severity::Error,
-                                code: "structure".to_string(),
+                                code: issue_code::STRUCTURE.to_string(),
                                 summary: Some(
                                     "Nested resource type does not match type.profile expectation"
                                         .to_string(),
@@ -1731,7 +1732,7 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                     if !declared_match_ok {
                         issues.push(ValidationIssue {
                         severity: crate::Severity::Error,
-                        code: "structure".to_string(),
+                        code: issue_code::STRUCTURE.to_string(),
                         summary: Some(
                             "Nested resource meta.profile does not satisfy type.profile requirement"
                                 .to_string(),
@@ -1796,7 +1797,7 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                         {
                             issues.push(ValidationIssue {
                             severity: crate::Severity::Error,
-                            code: "structure".to_string(),
+                            code: issue_code::STRUCTURE.to_string(),
                             summary: Some(
                                 "meta.profile is missing and resourceType fallback is disabled for type.profile"
                                     .to_string(),
@@ -1849,7 +1850,7 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
                             if !allowed_resource_types.is_empty() {
                                 issues.push(ValidationIssue {
                                 severity: crate::Severity::Error,
-                                code: "structure".to_string(),
+                                code: issue_code::STRUCTURE.to_string(),
                                 summary: Some(
                                     "Nested resource type does not match type.profile expectation"
                                         .to_string(),
@@ -2181,7 +2182,7 @@ fn validate_value_constraints<T: Serialize>(
 
         issues.push(ValidationIssue {
             severity: crate::Severity::Error,
-            code: "value".to_string(),
+            code: issue_code::VALUE.to_string(),
             summary,
             expression_kind: None,
             source_invariant_key: None,

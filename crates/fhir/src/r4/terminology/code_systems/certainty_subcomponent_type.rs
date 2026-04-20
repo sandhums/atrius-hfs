@@ -21,7 +21,8 @@ pub enum CertaintySubcomponentType {
 }
 
 impl CertaintySubcomponentType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/certainty-subcomponent-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/certainty-subcomponent-type";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -72,12 +73,20 @@ impl CertaintySubcomponentType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::RiskOfBias => Some("methodologic concerns reducing internal validity."),
-            Self::Inconsistency => Some("concerns that findings are not similar enough to support certainty."),
+            Self::Inconsistency => {
+                Some("concerns that findings are not similar enough to support certainty.")
+            }
             Self::Indirectness => Some("concerns reducing external validity."),
             Self::Imprecision => Some("High quality evidence."),
-            Self::PublicationBias => Some("likelihood that what is published misrepresents what is available to publish."),
-            Self::DoseResponseGradient => Some("higher certainty due to dose response relationship."),
-            Self::PlausibleConfounding => Some("higher certainty due to risk of bias in opposite direction."),
+            Self::PublicationBias => Some(
+                "likelihood that what is published misrepresents what is available to publish.",
+            ),
+            Self::DoseResponseGradient => {
+                Some("higher certainty due to dose response relationship.")
+            }
+            Self::PlausibleConfounding => {
+                Some("higher certainty due to risk of bias in opposite direction.")
+            }
             Self::LargeEffect => Some("higher certainty due to large effect size."),
         }
     }
@@ -147,5 +156,4 @@ impl CertaintySubcomponentType {
             })
             .unwrap_or(false)
     }
-
 }

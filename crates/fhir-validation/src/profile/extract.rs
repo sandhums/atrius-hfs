@@ -63,6 +63,7 @@
 //! that function.
 
 use crate::ValidationError;
+use crate::profile::structure_definition_extract::StructureDefinitionExtractMessage as SdMsg;
 use crate::profile::types::ExtractedProfile;
 
 pub use crate::profile::extract_core::extract_structure_definition_profile_from_json;
@@ -74,9 +75,9 @@ pub fn extract_r4_structure_definition_profile(
     sd: &helios_fhir::r4::StructureDefinition,
 ) -> Result<ExtractedProfile, ValidationError> {
     let v = serde_json::to_value(sd).map_err(|err| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Failed to serialize StructureDefinition to JSON: {err}"
-        ))
+        ValidationError::from(SdMsg::SerializeFailed {
+            error: err.to_string(),
+        })
     })?;
     extract_structure_definition_profile_from_json(&v)
 }
@@ -87,9 +88,9 @@ pub fn extract_r4b_structure_definition_profile(
     sd: &helios_fhir::r4b::StructureDefinition,
 ) -> Result<ExtractedProfile, ValidationError> {
     let v = serde_json::to_value(sd).map_err(|err| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Failed to serialize StructureDefinition to JSON: {err}"
-        ))
+        ValidationError::from(SdMsg::SerializeFailed {
+            error: err.to_string(),
+        })
     })?;
     extract_structure_definition_profile_from_json(&v)
 }
@@ -106,9 +107,9 @@ pub fn extract_r5_structure_definition_profile(
     sd: &helios_fhir::r5::StructureDefinition,
 ) -> Result<ExtractedProfile, ValidationError> {
     let v = serde_json::to_value(sd).map_err(|err| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Failed to serialize StructureDefinition to JSON: {err}"
-        ))
+        ValidationError::from(SdMsg::SerializeFailed {
+            error: err.to_string(),
+        })
     })?;
     extract_structure_definition_profile_from_json(&v)
 }
@@ -118,9 +119,9 @@ pub fn extract_r6_structure_definition_profile(
     sd: &helios_fhir::r6::StructureDefinition,
 ) -> Result<ExtractedProfile, ValidationError> {
     let v = serde_json::to_value(sd).map_err(|err| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Failed to serialize StructureDefinition to JSON: {err}"
-        ))
+        ValidationError::from(SdMsg::SerializeFailed {
+            error: err.to_string(),
+        })
     })?;
     extract_structure_definition_profile_from_json(&v)
 }

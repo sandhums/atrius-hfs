@@ -60,10 +60,14 @@ impl ConsentActionCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Collect => Some("Gather retrieved information for storage"),
-            Self::Access => Some("Retrieval without permitting collection, use or disclosure. e.g., no screen-scraping for collection, use or disclosure (view-only access)"),
+            Self::Access => Some(
+                "Retrieval without permitting collection, use or disclosure. e.g., no screen-scraping for collection, use or disclosure (view-only access)",
+            ),
             Self::Use => Some("Utilize the retrieved information"),
             Self::Disclose => Some("Transfer retrieved information"),
-            Self::Correct => Some("Allow retrieval of a patient\'s information for the purpose of update or rectify"),
+            Self::Correct => Some(
+                "Allow retrieval of a patient\'s information for the purpose of update or rectify",
+            ),
         }
     }
 
@@ -126,5 +130,4 @@ impl ConsentActionCodes {
             })
             .unwrap_or(false)
     }
-
 }

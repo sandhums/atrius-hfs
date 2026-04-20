@@ -98,5 +98,4 @@ impl MaxOccurs {
             })
             .unwrap_or(false)
     }
-
 }

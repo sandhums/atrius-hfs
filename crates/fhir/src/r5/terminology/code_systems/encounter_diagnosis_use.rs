@@ -105,5 +105,4 @@ impl EncounterDiagnosisUse {
             })
             .unwrap_or(false)
     }
-
 }

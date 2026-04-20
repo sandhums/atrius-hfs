@@ -133,5 +133,4 @@ impl DeviceUsageAdherenceReason {
             })
             .unwrap_or(false)
     }
-
 }

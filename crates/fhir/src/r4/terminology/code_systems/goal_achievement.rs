@@ -75,14 +75,22 @@ impl GoalAchievementStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InProgress => Some("The goal is being sought but has not yet been reached. (Also applies if the goal was reached in the past but there has been regression and the goal is again being sought)."),
+            Self::InProgress => Some(
+                "The goal is being sought but has not yet been reached. (Also applies if the goal was reached in the past but there has been regression and the goal is again being sought).",
+            ),
             Self::Improving => Some("The goal is being sought, and is progressing."),
             Self::Worsening => Some("The goal is being sought, but is regressing."),
             Self::NoChange => Some("The goal is being sought, but the trend is flat."),
             Self::Achieved => Some("The goal has been met."),
-            Self::Sustaining => Some("The goal has been met, but ongoing activity is needed to sustain the goal objective."),
-            Self::NotAchieved => Some("The goal has not been met and there might or might not have been progress towards target."),
-            Self::NoProgress => Some("The goal has not been met and little to no progress towards target."),
+            Self::Sustaining => Some(
+                "The goal has been met, but ongoing activity is needed to sustain the goal objective.",
+            ),
+            Self::NotAchieved => Some(
+                "The goal has not been met and there might or might not have been progress towards target.",
+            ),
+            Self::NoProgress => {
+                Some("The goal has not been met and little to no progress towards target.")
+            }
             Self::NotAttainable => Some("The goal is not possible to be met."),
         }
     }
@@ -154,5 +162,4 @@ impl GoalAchievementStatus {
             })
             .unwrap_or(false)
     }
-
 }

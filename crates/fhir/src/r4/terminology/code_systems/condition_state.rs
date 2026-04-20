@@ -112,5 +112,4 @@ impl ConditionState {
             })
             .unwrap_or(false)
     }
-
 }

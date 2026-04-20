@@ -98,5 +98,4 @@ impl ContractResourceAssetSubTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

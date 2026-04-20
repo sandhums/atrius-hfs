@@ -231,5 +231,4 @@ impl USCLSCodes {
             })
             .unwrap_or(false)
     }
-
 }

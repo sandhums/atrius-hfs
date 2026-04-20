@@ -126,5 +126,4 @@ impl ProductNameType {
             })
             .unwrap_or(false)
     }
-
 }

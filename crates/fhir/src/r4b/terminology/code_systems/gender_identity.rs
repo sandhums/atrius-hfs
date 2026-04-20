@@ -140,5 +140,4 @@ impl GenderIdentity {
             })
             .unwrap_or(false)
     }
-
 }

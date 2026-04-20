@@ -62,10 +62,16 @@ impl AdverseEventSeriousness {
             Self::Serious => Some("Serious"),
             Self::SeriousResultsInDeath => Some("Results in death"),
             Self::SeriousIsLifeThreatening => Some("Is Life-threatening"),
-            Self::SeriousResultsInHospitalization => Some("Requires or prolongs inpatient hospitalization"),
-            Self::SeriousResultsInDisability => Some("Results in persistent or significant disability/incapacity"),
+            Self::SeriousResultsInHospitalization => {
+                Some("Requires or prolongs inpatient hospitalization")
+            }
+            Self::SeriousResultsInDisability => {
+                Some("Results in persistent or significant disability/incapacity")
+            }
             Self::SeriousIsBirthDefect => Some("Is a congenital anomaly/birth defect"),
-            Self::SeriousRequiresPreventImpairment => Some("Requires intervention to prevent permanent impairment"),
+            Self::SeriousRequiresPreventImpairment => {
+                Some("Requires intervention to prevent permanent impairment")
+            }
         }
     }
 
@@ -75,10 +81,16 @@ impl AdverseEventSeriousness {
             Self::Serious => Some("Serious."),
             Self::SeriousResultsInDeath => Some("Results in death."),
             Self::SeriousIsLifeThreatening => Some("Is Life-threatening."),
-            Self::SeriousResultsInHospitalization => Some("Requires inpatient hospitalization or causes prolongation of existing hospitalization."),
-            Self::SeriousResultsInDisability => Some("Results in persistent or significant disability/incapacity."),
+            Self::SeriousResultsInHospitalization => Some(
+                "Requires inpatient hospitalization or causes prolongation of existing hospitalization.",
+            ),
+            Self::SeriousResultsInDisability => {
+                Some("Results in persistent or significant disability/incapacity.")
+            }
             Self::SeriousIsBirthDefect => Some("Is a congenital anomaly/birth defect."),
-            Self::SeriousRequiresPreventImpairment => Some("Requires intervention to prevent permanent impairment or damage (i.e., an important medical event that requires medical judgement)."),
+            Self::SeriousRequiresPreventImpairment => Some(
+                "Requires intervention to prevent permanent impairment or damage (i.e., an important medical event that requires medical judgement).",
+            ),
         }
     }
 
@@ -147,5 +159,4 @@ impl AdverseEventSeriousness {
             })
             .unwrap_or(false)
     }
-
 }

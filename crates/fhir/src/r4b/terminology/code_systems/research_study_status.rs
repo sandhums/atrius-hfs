@@ -43,7 +43,9 @@ impl ResearchStudyStatus {
             Self::Disapproved => "disapproved",
             Self::InReview => "in-review",
             Self::TemporarilyClosedToAccrual => "temporarily-closed-to-accrual",
-            Self::TemporarilyClosedToAccrualAndIntervention => "temporarily-closed-to-accrual-and-intervention",
+            Self::TemporarilyClosedToAccrualAndIntervention => {
+                "temporarily-closed-to-accrual-and-intervention"
+            }
             Self::Withdrawn => "withdrawn",
         }
     }
@@ -59,7 +61,9 @@ impl ResearchStudyStatus {
             "disapproved" => Self::Disapproved,
             "in-review" => Self::InReview,
             "temporarily-closed-to-accrual" => Self::TemporarilyClosedToAccrual,
-            "temporarily-closed-to-accrual-and-intervention" => Self::TemporarilyClosedToAccrualAndIntervention,
+            "temporarily-closed-to-accrual-and-intervention" => {
+                Self::TemporarilyClosedToAccrualAndIntervention
+            }
             "withdrawn" => Self::Withdrawn,
             _ => return None,
         })
@@ -76,7 +80,9 @@ impl ResearchStudyStatus {
             Self::Disapproved => Some("Disapproved"),
             Self::InReview => Some("In Review"),
             Self::TemporarilyClosedToAccrual => Some("Temporarily Closed to Accrual"),
-            Self::TemporarilyClosedToAccrualAndIntervention => Some("Temporarily Closed to Accrual and Intervention"),
+            Self::TemporarilyClosedToAccrualAndIntervention => {
+                Some("Temporarily Closed to Accrual and Intervention")
+            }
             Self::Withdrawn => Some("Withdrawn"),
         }
     }
@@ -84,15 +90,27 @@ impl ResearchStudyStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("Study is opened for accrual."),
-            Self::AdministrativelyCompleted => Some("Study is completed prematurely and will not resume; patients are no longer examined nor treated."),
+            Self::AdministrativelyCompleted => Some(
+                "Study is completed prematurely and will not resume; patients are no longer examined nor treated.",
+            ),
             Self::Approved => Some("Protocol is approved by the review board."),
-            Self::ClosedToAccrual => Some("Study is closed for accrual; patients can be examined and treated."),
-            Self::ClosedToAccrualAndIntervention => Some("Study is closed to accrual and intervention, i.e. the study is closed to enrollment, all study subjects have completed treatment or intervention but are still being followed according to the primary objective of the study."),
-            Self::Completed => Some("Study is closed to accrual and intervention, i.e. the study is closed to enrollment, all study subjects have completed treatment\nor intervention but are still being followed according to the primary objective of the study."),
+            Self::ClosedToAccrual => {
+                Some("Study is closed for accrual; patients can be examined and treated.")
+            }
+            Self::ClosedToAccrualAndIntervention => Some(
+                "Study is closed to accrual and intervention, i.e. the study is closed to enrollment, all study subjects have completed treatment or intervention but are still being followed according to the primary objective of the study.",
+            ),
+            Self::Completed => Some(
+                "Study is closed to accrual and intervention, i.e. the study is closed to enrollment, all study subjects have completed treatment\nor intervention but are still being followed according to the primary objective of the study.",
+            ),
             Self::Disapproved => Some("Protocol was disapproved by the review board."),
             Self::InReview => Some("Protocol is submitted to the review board for approval."),
-            Self::TemporarilyClosedToAccrual => Some("Study is temporarily closed for accrual; can be potentially resumed in the future; patients can be examined and treated."),
-            Self::TemporarilyClosedToAccrualAndIntervention => Some("Study is temporarily closed for accrual and intervention and potentially can be resumed in the future."),
+            Self::TemporarilyClosedToAccrual => Some(
+                "Study is temporarily closed for accrual; can be potentially resumed in the future; patients can be examined and treated.",
+            ),
+            Self::TemporarilyClosedToAccrualAndIntervention => Some(
+                "Study is temporarily closed for accrual and intervention and potentially can be resumed in the future.",
+            ),
             Self::Withdrawn => Some("Protocol was withdrawn by the lead organization."),
         }
     }
@@ -168,5 +186,4 @@ impl ResearchStudyStatus {
             })
             .unwrap_or(false)
     }
-
 }

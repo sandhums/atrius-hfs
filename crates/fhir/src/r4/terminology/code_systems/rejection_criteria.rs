@@ -126,5 +126,4 @@ impl RejectionCriterion {
             })
             .unwrap_or(false)
     }
-
 }

@@ -16,7 +16,8 @@ pub enum AdverseEventCausalityMethod {
 }
 
 impl AdverseEventCausalityMethod {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/adverse-event-causality-method";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/adverse-event-causality-method";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -112,5 +113,4 @@ impl AdverseEventCausalityMethod {
             })
             .unwrap_or(false)
     }
-
 }

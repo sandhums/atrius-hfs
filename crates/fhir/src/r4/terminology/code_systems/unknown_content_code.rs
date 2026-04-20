@@ -55,9 +55,15 @@ impl UnknownContentCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::No => Some("The application does not accept either unknown elements or extensions."),
-            Self::Extensions => Some("The application accepts unknown extensions, but not unknown elements."),
-            Self::Elements => Some("The application accepts unknown elements, but not unknown extensions."),
+            Self::No => {
+                Some("The application does not accept either unknown elements or extensions.")
+            }
+            Self::Extensions => {
+                Some("The application accepts unknown extensions, but not unknown elements.")
+            }
+            Self::Elements => {
+                Some("The application accepts unknown elements, but not unknown extensions.")
+            }
             Self::Both => Some("The application accepts unknown elements and extensions."),
         }
     }
@@ -119,5 +125,4 @@ impl UnknownContentCode {
             })
             .unwrap_or(false)
     }
-
 }

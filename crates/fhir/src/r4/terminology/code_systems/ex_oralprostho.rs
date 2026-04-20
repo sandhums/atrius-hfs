@@ -119,5 +119,4 @@ impl OralProsthoMaterialTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

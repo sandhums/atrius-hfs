@@ -62,7 +62,9 @@ impl PatchOperation {
             Self::Add => Some("Add content at the nominated location."),
             Self::Insert => Some("Insert content at the nominated location."),
             Self::Delete => Some("Delete content from the nominated location."),
-            Self::Replace => Some("Replace the content with the new content at the nominated location."),
+            Self::Replace => {
+                Some("Replace the content with the new content at the nominated location.")
+            }
             Self::Move_ => Some("Move content from one location to another."),
         }
     }
@@ -126,5 +128,4 @@ impl PatchOperation {
             })
             .unwrap_or(false)
     }
-
 }

@@ -15,7 +15,8 @@ pub enum ImmunizationProgramEligibility {
 }
 
 impl ImmunizationProgramEligibility {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/immunization-program-eligibility";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/immunization-program-eligibility";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -48,7 +49,9 @@ impl ImmunizationProgramEligibility {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Ineligible => Some("The patient is not eligible for the funding program."),
-            Self::Uninsured => Some("The patient is eligible for the funding program because they are uninsured."),
+            Self::Uninsured => {
+                Some("The patient is eligible for the funding program because they are uninsured.")
+            }
         }
     }
 
@@ -105,5 +108,4 @@ impl ImmunizationProgramEligibility {
             })
             .unwrap_or(false)
     }
-
 }

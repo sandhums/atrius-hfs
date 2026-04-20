@@ -47,8 +47,12 @@ impl DeviceAlertAnnunciation {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Local => Some("The signal is annunciated on or adjacent to the detecting device (e.g., at the bedside)"),
-            Self::Remote => Some("The signal is annunciated at a place away from the detecting device (e.g., at a nursing station)"),
+            Self::Local => Some(
+                "The signal is annunciated on or adjacent to the detecting device (e.g., at the bedside)",
+            ),
+            Self::Remote => Some(
+                "The signal is annunciated at a place away from the detecting device (e.g., at a nursing station)",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl DeviceAlertAnnunciation {
             })
             .unwrap_or(false)
     }
-
 }

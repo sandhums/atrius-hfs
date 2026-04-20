@@ -126,5 +126,4 @@ impl ContractTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -119,5 +119,4 @@ impl ClaimCareTeamRoleCodes {
             })
             .unwrap_or(false)
     }
-
 }

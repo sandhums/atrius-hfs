@@ -47,8 +47,12 @@ impl ActionApplicabilityBehavior {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::All => Some("The applicability of each action is evaluated independently; if the applicability criteria for an action evaluates to true, it is applied."),
-            Self::Any => Some("The applicability of each action is evaluated in order; the first action for which the applicability criteria evaluates to true is applied, and processing of the parent action stops."),
+            Self::All => Some(
+                "The applicability of each action is evaluated independently; if the applicability criteria for an action evaluates to true, it is applied.",
+            ),
+            Self::Any => Some(
+                "The applicability of each action is evaluated in order; the first action for which the applicability criteria evaluates to true is applied, and processing of the parent action stops.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ActionApplicabilityBehavior {
             })
             .unwrap_or(false)
     }
-
 }

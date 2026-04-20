@@ -68,12 +68,24 @@ impl SubstanceCategoryCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Allergen => Some("A substance that causes an allergic reaction."),
-            Self::Biological => Some("A substance that is produced by or extracted from a biological source."),
-            Self::Body => Some("A substance that comes directly from a human or an animal (e.g. blood, urine, feces, tears, etc.)."),
-            Self::Chemical => Some("Any organic or inorganic substance of a particular molecular identity, including -- (i) any combination of such substances occurring in whole or in part as a result of a chemical reaction or occurring in nature and (ii) any element or uncombined radical (http://www.epa.gov/opptintr/import-export/pubs/importguide.pdf)."),
-            Self::Food => Some("A food, dietary ingredient, or dietary supplement for human or animal."),
-            Self::Drug => Some("A substance intended for use in the diagnosis, cure, mitigation, treatment, or prevention of disease in man or other animals (Federal Food Drug and Cosmetic Act)."),
-            Self::Material => Some("A finished product which is not normally ingested, absorbed or injected (e.g. steel, iron, wood, plastic and paper)."),
+            Self::Biological => {
+                Some("A substance that is produced by or extracted from a biological source.")
+            }
+            Self::Body => Some(
+                "A substance that comes directly from a human or an animal (e.g. blood, urine, feces, tears, etc.).",
+            ),
+            Self::Chemical => Some(
+                "Any organic or inorganic substance of a particular molecular identity, including -- (i) any combination of such substances occurring in whole or in part as a result of a chemical reaction or occurring in nature and (ii) any element or uncombined radical (http://www.epa.gov/opptintr/import-export/pubs/importguide.pdf).",
+            ),
+            Self::Food => {
+                Some("A food, dietary ingredient, or dietary supplement for human or animal.")
+            }
+            Self::Drug => Some(
+                "A substance intended for use in the diagnosis, cure, mitigation, treatment, or prevention of disease in man or other animals (Federal Food Drug and Cosmetic Act).",
+            ),
+            Self::Material => Some(
+                "A finished product which is not normally ingested, absorbed or injected (e.g. steel, iron, wood, plastic and paper).",
+            ),
         }
     }
 
@@ -140,5 +152,4 @@ impl SubstanceCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

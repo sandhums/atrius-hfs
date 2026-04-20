@@ -119,5 +119,4 @@ impl RiskAssessmentOutcome {
             })
             .unwrap_or(false)
     }
-
 }

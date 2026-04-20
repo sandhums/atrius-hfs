@@ -55,7 +55,9 @@ impl DoseLimitScopeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Dosage => Some("Maximum quantity for the dosage (depends on scope whether it\'s the course, a step, or a choice)"),
+            Self::Dosage => Some(
+                "Maximum quantity for the dosage (depends on scope whether it\'s the course, a step, or a choice)",
+            ),
             Self::Period => Some("Maximum dosage per specified period"),
             Self::Administration => Some("Maximum Dosage for a single dose"),
             Self::Lifetime => Some("Maximum amount of lifetime exposure across all dosages ever"),
@@ -119,5 +121,4 @@ impl DoseLimitScopeCodes {
             })
             .unwrap_or(false)
     }
-
 }

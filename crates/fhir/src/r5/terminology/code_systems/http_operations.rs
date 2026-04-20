@@ -140,5 +140,4 @@ impl TestScriptRequestMethodCode {
             })
             .unwrap_or(false)
     }
-
 }

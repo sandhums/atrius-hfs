@@ -91,19 +91,43 @@ impl GroupInvolvement {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::IndexCase => Some("The first case that is the reason for creating the group. Usually the first known infection, but other kinds of first are known."),
-            Self::PrimaryExposure => Some("Patient is included in the list on the grounds of being a primary exposure case (sometimes, but not neceessarily, direct exposure to the index case, or a known infected person)."),
-            Self::SecondaryExposure => Some("Patient is included in the list on the grounds of being a secondary exposure case - that is, exposed to a potentially infected patient or person of interest."),
-            Self::PrimaryContact => Some("Patient is included in the list on the grounds of being the primary contact point for a family, household, workplace, etc."),
-            Self::FamilyMember => Some("Patient is included in the list on the grounds of being a family member in a family group. See [Relationships inside the group](group.html#relationships) for more detailed family relationships."),
-            Self::Owner => Some("Household member is a legally / officially registered owner of the dwelling that contains the household. Or at least, considers themselves the rightful owner."),
-            Self::Resident => Some("Household member is a resident - that is, they consistently reside in the dwelling."),
-            Self::Visitor => Some("Household member is transiently visiting the dwelling during (part of) the period of interest, or, for a workplace, a person who was/is in the workplace but not an employee"),
-            Self::Staff => Some("Household member is a member of the staff working in the dwelling (and by implication, not a resident)."),
+            Self::IndexCase => Some(
+                "The first case that is the reason for creating the group. Usually the first known infection, but other kinds of first are known.",
+            ),
+            Self::PrimaryExposure => Some(
+                "Patient is included in the list on the grounds of being a primary exposure case (sometimes, but not neceessarily, direct exposure to the index case, or a known infected person).",
+            ),
+            Self::SecondaryExposure => Some(
+                "Patient is included in the list on the grounds of being a secondary exposure case - that is, exposed to a potentially infected patient or person of interest.",
+            ),
+            Self::PrimaryContact => Some(
+                "Patient is included in the list on the grounds of being the primary contact point for a family, household, workplace, etc.",
+            ),
+            Self::FamilyMember => Some(
+                "Patient is included in the list on the grounds of being a family member in a family group. See [Relationships inside the group](group.html#relationships) for more detailed family relationships.",
+            ),
+            Self::Owner => Some(
+                "Household member is a legally / officially registered owner of the dwelling that contains the household. Or at least, considers themselves the rightful owner.",
+            ),
+            Self::Resident => Some(
+                "Household member is a resident - that is, they consistently reside in the dwelling.",
+            ),
+            Self::Visitor => Some(
+                "Household member is transiently visiting the dwelling during (part of) the period of interest, or, for a workplace, a person who was/is in the workplace but not an employee",
+            ),
+            Self::Staff => Some(
+                "Household member is a member of the staff working in the dwelling (and by implication, not a resident).",
+            ),
             Self::Pet => Some("Group member is animal kept as a pet by the family/household."),
-            Self::FullTime => Some("This is the group member\'s primary workplace on a consistent basis."),
-            Self::PartTime => Some("The group member works in the workplace, but on an occasional basis."),
-            Self::Casual => Some("The group member was working in the workplace, but is not consistently present."),
+            Self::FullTime => {
+                Some("This is the group member\'s primary workplace on a consistent basis.")
+            }
+            Self::PartTime => {
+                Some("The group member works in the workplace, but on an occasional basis.")
+            }
+            Self::Casual => Some(
+                "The group member was working in the workplace, but is not consistently present.",
+            ),
         }
     }
 
@@ -182,5 +206,4 @@ impl GroupInvolvement {
             })
             .unwrap_or(false)
     }
-
 }

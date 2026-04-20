@@ -48,7 +48,9 @@ impl DetectedIssueStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Mitigated => Some("Indicates the detected issue has been mitigated"),
-            Self::ProcessingError => Some("Indicates that an error occurred in the evaluation of the proposed action. For example, a drug/drug interaction detected issue could have a status of processing-error to indicate that an error was encountered attempting to determine whether there was a drug-drug interaction."),
+            Self::ProcessingError => Some(
+                "Indicates that an error occurred in the evaluation of the proposed action. For example, a drug/drug interaction detected issue could have a status of processing-error to indicate that an error was encountered attempting to determine whether there was a drug-drug interaction.",
+            ),
         }
     }
 
@@ -105,5 +107,4 @@ impl DetectedIssueStatus {
             })
             .unwrap_or(false)
     }
-
 }

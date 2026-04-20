@@ -10184,7 +10184,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_111175 => Some("Other Marker"),
             Self::_111176 => Some("Unspecified"),
             Self::_111177 => Some("View and Laterality Marker is missing"),
-            Self::_111178 => Some("View and Laterality Marker does not have both view and laterality"),
+            Self::_111178 => {
+                Some("View and Laterality Marker does not have both view and laterality")
+            }
             Self::_111179 => Some("View and Laterality Marker does not have approved codes"),
             Self::_111180 => Some("View and Laterality Marker is not near the axilla"),
             Self::_111181 => Some("View and Laterality Marker overlaps breast tissue"),
@@ -10305,7 +10307,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_111318 => Some("Leukemic infiltration"),
             Self::_111320 => Some("Lympathic vessel invasion"),
             Self::_111321 => Some("Lymphoma"),
-            Self::_111322 => Some("Occult carcinoma presenting with axillary lymph node metastases"),
+            Self::_111322 => {
+                Some("Occult carcinoma presenting with axillary lymph node metastases")
+            }
             Self::_111323 => Some("Metastatic cancer to the breast"),
             Self::_111324 => Some("Metastatic cancer to the breast from the colon"),
             Self::_111325 => Some("Metastatic cancer to the breast from the lung"),
@@ -10398,7 +10402,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_111418 => Some("Review of an outside study"),
             Self::_111419 => Some("Additional evaluation requested from abnormal screening exam"),
             Self::_111420 => Some("History of benign breast biopsy"),
-            Self::_111421 => Some("Personal history of breast cancer with breast conservation therapy"),
+            Self::_111421 => {
+                Some("Personal history of breast cancer with breast conservation therapy")
+            }
             Self::_111423 => Some("Physical Examination Results"),
             Self::_111424 => Some("Comparison to previous findings"),
             Self::_111425 => Some("Intraluminal filling defect"),
@@ -10976,7 +10982,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_112182 => Some("Median Attenuation Coefficient"),
             Self::_112183 => Some("Standard Deviation of Attenuation Coefficient"),
             Self::_112184 => Some("Performance of Pediatric and Adult Thoracic CT"),
-            Self::_112185 => Some("Performance of CT for Detection of Pulmonary Embolism in Adults"),
+            Self::_112185 => {
+                Some("Performance of CT for Detection of Pulmonary Embolism in Adults")
+            }
             Self::_112186 => Some("Performance of High-Resolution CT of the Lungs in Adults"),
             Self::_112187 => Some("Unspecified method of calculation"),
             Self::_112188 => Some("Two-dimensional method"),
@@ -12668,7 +12676,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::AU => Some("Audio object"),
             Self::BDUS => Some("Ultrasound Bone Densitometry (modality)"),
             Self::BI => Some("Biomagnetic imaging device"),
-            Self::BMD => Some("Bone Mineral Densitometry by X-Ray (modality), including dual-energy X-Ray absorptiometry (DXA) and morphometric X-Ray absorptiometry (MXA)"),
+            Self::BMD => Some(
+                "Bone Mineral Densitometry by X-Ray (modality), including dual-energy X-Ray absorptiometry (DXA) and morphometric X-Ray absorptiometry (MXA)",
+            ),
             Self::CAD => Some("Computer Assisted Detection/Diagnosis device"),
             Self::CAPTURE => Some("Image Capture Device, includes video capture"),
             Self::CD => Some("Color flow Doppler"),
@@ -12701,7 +12711,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::HC => Some("Hard Copy"),
             Self::HD => Some("Hemodynamic Waveform acquisition device"),
             Self::IO => Some("Intra-oral Radiography device"),
-            Self::IVOCT => Some("An acquisition device, process or method that performs intravascular optical coherence tomography"),
+            Self::IVOCT => Some(
+                "An acquisition device, process or method that performs intravascular optical coherence tomography",
+            ),
             Self::IVUS => Some("Intravascular Ultrasound device"),
             Self::KER => Some("Keratometry device"),
             Self::KO => Some("Key Object Selection object"),
@@ -12712,33 +12724,57 @@ impl DICOMControlledTerminologyDefinitions {
             Self::M => Some("Male sex"),
             Self::MA => Some("Magnetic resonance angiography"),
             Self::MC => Some("Male sex changed to Female sex"),
-            Self::MCD => Some("A device that creates DICOM PS3.10 interchange media; e.g. a CD creator that is managed by the Media Creation Management Service Class"),
-            Self::MEDIM => Some("Equipment that retrieved and imported objects from interchange Media"),
+            Self::MCD => Some(
+                "A device that creates DICOM PS3.10 interchange media; e.g. a CD creator that is managed by the Media Creation Management Service Class",
+            ),
+            Self::MEDIM => {
+                Some("Equipment that retrieved and imported objects from interchange Media")
+            }
             Self::MG => Some("Mammography device"),
             Self::MP => Some("Male Pseudohermaphrodite"),
             Self::MR => Some("Magnetic Resonance device"),
             Self::MS => Some("Magnetic resonance spectroscopy"),
-            Self::NEARLINE => Some("Instances need to be retrieved from relatively slow media such as optical disk or tape"),
+            Self::NEARLINE => Some(
+                "Instances need to be retrieved from relatively slow media such as optical disk or tape",
+            ),
             Self::NM => Some("Nuclear Medicine device"),
-            Self::OAM => Some("Measurements of the axial length of the eye, which are done by various devices"),
-            Self::OCT => Some("Modality device that uses an interferometric, non-invasive optical tomographic technique to image 2D slices and 3D volumes of tissue using visible and near visible frequencies"),
+            Self::OAM => Some(
+                "Measurements of the axial length of the eye, which are done by various devices",
+            ),
+            Self::OCT => Some(
+                "Modality device that uses an interferometric, non-invasive optical tomographic technique to image 2D slices and 3D volumes of tissue using visible and near visible frequencies",
+            ),
             Self::OFFLINE => Some("Instances need to be retrieved by manual intervention"),
             Self::ONLINE => Some("Instances are immediately available"),
             Self::OP => Some("Ophthalmic photography modality"),
-            Self::OPM => Some("Modality device that measures corneal topography, corneal or retinal thickness, and other similar parameters that are typically displayed as maps"),
-            Self::OPR => Some("Modality device that measures the refractive characteristics of the eye"),
-            Self::OPT => Some("Tomography of the eye acquired by a modality that is based on light and optical principles. Tomography based on other principles, such as ultrasound, is excluded"),
-            Self::OPV => Some("Modality device that measures visual fields and perform visual perimetry"),
-            Self::OSS => Some("An acquisition device, process or method that performs optical surface scanning"),
+            Self::OPM => Some(
+                "Modality device that measures corneal topography, corneal or retinal thickness, and other similar parameters that are typically displayed as maps",
+            ),
+            Self::OPR => {
+                Some("Modality device that measures the refractive characteristics of the eye")
+            }
+            Self::OPT => Some(
+                "Tomography of the eye acquired by a modality that is based on light and optical principles. Tomography based on other principles, such as ultrasound, is excluded",
+            ),
+            Self::OPV => {
+                Some("Modality device that measures visual fields and perform visual perimetry")
+            }
+            Self::OSS => Some(
+                "An acquisition device, process or method that performs optical surface scanning",
+            ),
             Self::OT => Some("Other Modality device"),
             Self::PR => Some("Presentation State object"),
-            Self::PRINT => Some("Hard Copy Print Server; includes printers with embedded DICOM print server"),
+            Self::PRINT => {
+                Some("Hard Copy Print Server; includes printers with embedded DICOM print server")
+            }
             Self::PT => Some("Positron emission tomography (PET) device"),
             Self::PX => Some("Panoramic X-Ray device"),
             Self::REG => Some("Registration"),
             Self::RF => Some("Radiofluoroscopy device"),
             Self::RG => Some("Radiographic imaging (conventional film/screen)"),
-            Self::RT => Some("Radiation Therapy Device; includes linear accelerator, proton therapy"),
+            Self::RT => {
+                Some("Radiation Therapy Device; includes linear accelerator, proton therapy")
+            }
             Self::RTDOSE => Some("Radiotherapy Dose"),
             Self::RTIMAGE => Some("Radiotherapy Imaging device; includes portal imaging"),
             Self::RTPLAN => Some("Radiotherapy Plan"),
@@ -12760,102 +12796,212 @@ impl DICOMControlledTerminologyDefinitions {
             Self::WSD => Some("Workstation"),
             Self::XA => Some("X-Ray Angiography device"),
             Self::XC => Some("External-camera Photography device"),
-            Self::_109001 => Some("A signal transmitted for the purpose of interchange of the current time, not specific to any source or methodology"),
+            Self::_109001 => Some(
+                "A signal transmitted for the purpose of interchange of the current time, not specific to any source or methodology",
+            ),
             Self::_109002 => Some("A signal that is generated for each detection of a heart beat"),
-            Self::_109003 => Some("A signal transmitted by the Inter-Range Instrumentation Group for the purpose of synchronizing time clocks"),
-            Self::_109004 => Some("A signal that indicated that X-Ray source has been activated for fluoroscopy use"),
-            Self::_109005 => Some("A signal that indicated that the X-Ray source has been activated for image recording"),
+            Self::_109003 => Some(
+                "A signal transmitted by the Inter-Range Instrumentation Group for the purpose of synchronizing time clocks",
+            ),
+            Self::_109004 => Some(
+                "A signal that indicated that X-Ray source has been activated for fluoroscopy use",
+            ),
+            Self::_109005 => Some(
+                "A signal that indicated that the X-Ray source has been activated for image recording",
+            ),
             Self::_109006 => Some("An electrical signal derived from two electrodes"),
             Self::_109007 => Some("An electrophysiological recording from the HIS nerve bundle"),
-            Self::_109008 => Some("An electrical signal from one electrode relative to an indifferent potential"),
+            Self::_109008 => {
+                Some("An electrical signal from one electrode relative to an indifferent potential")
+            }
             Self::_109009 => Some("The voltage stimulus during cardiac pacing"),
             Self::_109010 => Some("The power injected during RF ablation procedure"),
-            Self::_109011 => Some("Electrophysiological signals acquired using a multi-splined catheter each equipped with multiple electrodes"),
-            Self::_109012 => Some("Electrophysiological signals acquired using a steerable catheter"),
+            Self::_109011 => Some(
+                "Electrophysiological signals acquired using a multi-splined catheter each equipped with multiple electrodes",
+            ),
+            Self::_109012 => {
+                Some("Electrophysiological signals acquired using a steerable catheter")
+            }
             Self::_109013 => Some("A voltage measurement not otherwise specified"),
-            Self::_109014 => Some("A signal point that is 35% of the peak thermal cardiac output signal"),
-            Self::_109015 => Some("A signal point that is 70% of the peak thermal cardiac output signal"),
-            Self::_109016 => Some("The peak pressure of each heart beat in the atrium caused by the atrial contraction"),
+            Self::_109014 => {
+                Some("A signal point that is 35% of the peak thermal cardiac output signal")
+            }
+            Self::_109015 => {
+                Some("A signal point that is 70% of the peak thermal cardiac output signal")
+            }
+            Self::_109016 => Some(
+                "The peak pressure of each heart beat in the atrium caused by the atrial contraction",
+            ),
             Self::_109017 => Some("The average of several A wave pressure measurements"),
-            Self::_109018 => Some("An identified cardiac beat used in the determination of a measurement"),
-            Self::_109019 => Some("An identified cardiac beat not used in the determination of a measurement"),
+            Self::_109018 => {
+                Some("An identified cardiac beat used in the determination of a measurement")
+            }
+            Self::_109019 => {
+                Some("An identified cardiac beat not used in the determination of a measurement")
+            }
             Self::_109020 => Some("The average of several diastolic pressure measurements"),
             Self::_109021 => Some("The lowest pressure value excluding any undershoot artifact"),
-            Self::_109022 => Some("The moment at the end of the diastolic phase of the cardiac cycle"),
+            Self::_109022 => {
+                Some("The moment at the end of the diastolic phase of the cardiac cycle")
+            }
             Self::_109023 => Some("The moment at the end of respiratory expiration"),
             Self::_109024 => Some("The moment at the end of respiratory inspiration"),
             Self::_109025 => Some("The maximum positive rate of change of pressure"),
             Self::_109026 => Some("The maximum negative rate of change of pressure"),
-            Self::_109027 => Some("The average blood pressure value, generally over 2 or more seconds"),
-            Self::_109028 => Some("The peak change in blood temperature during a thermal cardiac output measurement"),
+            Self::_109027 => {
+                Some("The average blood pressure value, generally over 2 or more seconds")
+            }
+            Self::_109028 => Some(
+                "The peak change in blood temperature during a thermal cardiac output measurement",
+            ),
             Self::_109029 => Some("The moment respiratory expiration begins"),
             Self::_109030 => Some("The moment of respiratory inspiration begins"),
-            Self::_109031 => Some("The first discernible blood temperature change following the injectate during a thermal cardiac output measurement"),
+            Self::_109031 => Some(
+                "The first discernible blood temperature change following the injectate during a thermal cardiac output measurement",
+            ),
             Self::_109032 => Some("The average of several systolic blood pressure measurements"),
-            Self::_109033 => Some("The highest systolic blood pressure value excluding any overshoot artifact"),
-            Self::_109034 => Some("The peak pressure of each heart beat in the atrium caused by the filling of the atrium"),
+            Self::_109033 => {
+                Some("The highest systolic blood pressure value excluding any overshoot artifact")
+            }
+            Self::_109034 => Some(
+                "The peak pressure of each heart beat in the atrium caused by the filling of the atrium",
+            ),
             Self::_109035 => Some("The average of several V wave pressure measurements"),
             Self::_109036 => Some("The moment at which a heart valve closes"),
             Self::_109037 => Some("The moment at which a heart valve opens"),
             Self::_109038 => Some("The moment when RF ablation current is turned off"),
             Self::_109039 => Some("The moment when RF ablation current is turned on"),
-            Self::_109040 => Some("The moment in the cardiac cycle when the HIS bundle nerves depolarize"),
+            Self::_109040 => {
+                Some("The moment in the cardiac cycle when the HIS bundle nerves depolarize")
+            }
             Self::_109041 => Some("The surface electrocardiogram of the atrial contraction"),
-            Self::_109042 => Some("The first negative deflection of the electrocardiogram caused by ventricular depolarization"),
-            Self::_109043 => Some("The first positive deflection the electrocardiogram caused by ventricular depolarization"),
+            Self::_109042 => Some(
+                "The first negative deflection of the electrocardiogram caused by ventricular depolarization",
+            ),
+            Self::_109043 => Some(
+                "The first positive deflection the electrocardiogram caused by ventricular depolarization",
+            ),
             Self::_109044 => Some("The first negative deflection after the R wave"),
             Self::_109045 => Some("The beginning of the atrial contraction"),
-            Self::_109046 => Some("The beginning of the second atrial contraction of two consecutive beats"),
-            Self::_109047 => Some("The stimulation interval during cardiac stimulation first used in a pacing train"),
-            Self::_109048 => Some("The stimulation interval different from the first stimulation interval used in a pacing train"),
-            Self::_109049 => Some("A stimulation interval different from and subsequent to the second interval in a pacing train"),
-            Self::_109050 => Some("Describes a stimulation interval different from and subsequent to the third interval in a pacing train"),
-            Self::_109051 => Some("The electrocardiogram deflection caused by ventricular repolarization"),
-            Self::_109052 => Some("The peak pressure of each heart beat monitored in the atrium caused by the filling of the atrium"),
+            Self::_109046 => {
+                Some("The beginning of the second atrial contraction of two consecutive beats")
+            }
+            Self::_109047 => Some(
+                "The stimulation interval during cardiac stimulation first used in a pacing train",
+            ),
+            Self::_109048 => Some(
+                "The stimulation interval different from the first stimulation interval used in a pacing train",
+            ),
+            Self::_109049 => Some(
+                "A stimulation interval different from and subsequent to the second interval in a pacing train",
+            ),
+            Self::_109050 => Some(
+                "Describes a stimulation interval different from and subsequent to the third interval in a pacing train",
+            ),
+            Self::_109051 => {
+                Some("The electrocardiogram deflection caused by ventricular repolarization")
+            }
+            Self::_109052 => Some(
+                "The peak pressure of each heart beat monitored in the atrium caused by the filling of the atrium",
+            ),
             Self::_109053 => Some("The second V wave measurement of two consecutive beats"),
             Self::_109054 => Some("A description of the physiological condition of the patient"),
             Self::_109055 => Some("The exercise level during a progressive cardiac stress test"),
-            Self::_109056 => Some("A series of physiological challenges designed to progressively increase the work of the heart"),
+            Self::_109056 => Some(
+                "A series of physiological challenges designed to progressively increase the work of the heart",
+            ),
             Self::_109057 => Some("A subpart of a cardiac catheterization procedure"),
-            Self::_109058 => Some("The subpart of a cardiac catheterization procedure in which a radio-opaque contrast medium is injected into the patient"),
-            Self::_109059 => Some("Physical changes administered to a patient in order to elicit an physiological response"),
+            Self::_109058 => Some(
+                "The subpart of a cardiac catheterization procedure in which a radio-opaque contrast medium is injected into the patient",
+            ),
+            Self::_109059 => Some(
+                "Physical changes administered to a patient in order to elicit an physiological response",
+            ),
             Self::_109060 => Some("Enumeration of a subpart of a catheterization procedure"),
             Self::_109061 => Some("A subpart of an electrophysiological procedure"),
             Self::_109063 => Some("A means of defining a series of cardiac stimulation pulses"),
             Self::_109070 => Some("End of the contraction phase of the cardiac cycle"),
-            Self::_109071 => Some("Time for a median particle to travel from point of injection to point of detection"),
+            Self::_109071 => Some(
+                "Time for a median particle to travel from point of injection to point of detection",
+            ),
             Self::_109072 => Some("The time constant of isovolumic pressure fall"),
             Self::_109073 => Some("Maximum velocity of myocardial contractility"),
-            Self::_109080 => Some("Total time for the acquisition is shorter than cardiac cycle, no gating is applied; see Cardiac Synchronization Technique (0018,9037)"),
-            Self::_109081 => Some("Certain thresholds have been set for a gating window that defines the acceptance of measurement data during the acquisition; see Cardiac Synchronization Technique (0018,9037)"),
-            Self::_109082 => Some("Certain thresholds have been set for a gating window that defines the acceptance of measurement data after the acquisition; see Cardiac Synchronization Technique (0018,9037)"),
-            Self::_109083 => Some("There is a constant RR interval, which makes thresholding not required; see Cardiac Synchronization Technique (0018,9037); e.g. Pacemaker"),
-            Self::_109091 => Some("Imaging after injection of tracer during increased cardiac workload or increased myocardial blood flow, achieved by either exercise or pharmacologic means"),
-            Self::_109092 => Some("Imaging after injection of additional tracer under resting conditions"),
-            Self::_109093 => Some("Imaging after allowing a moderate amount of time for tracer to move from its initial sites of uptake. Example: For Thallium imaging this would correspond to imaging 2-6 hours after injection"),
-            Self::_109094 => Some("Imaging after allowing an extended amount of time for tracer to move from its initial sites of uptake. Example: For Thallium imaging this would correspond to imaging more than 6 hours after injection"),
+            Self::_109080 => Some(
+                "Total time for the acquisition is shorter than cardiac cycle, no gating is applied; see Cardiac Synchronization Technique (0018,9037)",
+            ),
+            Self::_109081 => Some(
+                "Certain thresholds have been set for a gating window that defines the acceptance of measurement data during the acquisition; see Cardiac Synchronization Technique (0018,9037)",
+            ),
+            Self::_109082 => Some(
+                "Certain thresholds have been set for a gating window that defines the acceptance of measurement data after the acquisition; see Cardiac Synchronization Technique (0018,9037)",
+            ),
+            Self::_109083 => Some(
+                "There is a constant RR interval, which makes thresholding not required; see Cardiac Synchronization Technique (0018,9037); e.g. Pacemaker",
+            ),
+            Self::_109091 => Some(
+                "Imaging after injection of tracer during increased cardiac workload or increased myocardial blood flow, achieved by either exercise or pharmacologic means",
+            ),
+            Self::_109092 => {
+                Some("Imaging after injection of additional tracer under resting conditions")
+            }
+            Self::_109093 => Some(
+                "Imaging after allowing a moderate amount of time for tracer to move from its initial sites of uptake. Example: For Thallium imaging this would correspond to imaging 2-6 hours after injection",
+            ),
+            Self::_109094 => Some(
+                "Imaging after allowing an extended amount of time for tracer to move from its initial sites of uptake. Example: For Thallium imaging this would correspond to imaging more than 6 hours after injection",
+            ),
             Self::_109095 => Some("Peak cardiac stress state"),
             Self::_109096 => Some("Recovery from cardiac stress"),
-            Self::_109101 => Some("Equipment that originally acquired the data stored within composite instances; e.g. a CT, MR or Ultrasound modality"),
-            Self::_109102 => Some("Equipment that has processed composite instances to create new composite instances; e.g. a 3D Workstation"),
-            Self::_109103 => Some("Equipment that has modified existing composite instances (without creating new composite instances); e.g. a QA Station or Archive"),
-            Self::_109104 => Some("Equipment that has modified an existing composite instance to remove patient identifying information"),
-            Self::_109105 => Some("Equipment that has processed composite instances to create new composite instances by extracting selected frames from the original instance"),
-            Self::_109106 => Some("Equipment that has processed composite instances to create new composite instances by converting classic single frame images to enhanced multi-frame image, or vice versa and updating other instances to maintain referential integrity"),
+            Self::_109101 => Some(
+                "Equipment that originally acquired the data stored within composite instances; e.g. a CT, MR or Ultrasound modality",
+            ),
+            Self::_109102 => Some(
+                "Equipment that has processed composite instances to create new composite instances; e.g. a 3D Workstation",
+            ),
+            Self::_109103 => Some(
+                "Equipment that has modified existing composite instances (without creating new composite instances); e.g. a QA Station or Archive",
+            ),
+            Self::_109104 => Some(
+                "Equipment that has modified an existing composite instance to remove patient identifying information",
+            ),
+            Self::_109105 => Some(
+                "Equipment that has processed composite instances to create new composite instances by extracting selected frames from the original instance",
+            ),
+            Self::_109106 => Some(
+                "Equipment that has processed composite instances to create new composite instances by converting classic single frame images to enhanced multi-frame image, or vice versa and updating other instances to maintain referential integrity",
+            ),
             Self::_109110 => Some("The sound of a human\'s speech, recorded during a procedure"),
             Self::_109111 => Some("The voice of a device operator, recorded during a procedure"),
-            Self::_109112 => Some("The ambient sound recorded during a procedure, which may or may not include voice and other types of sound"),
+            Self::_109112 => Some(
+                "The ambient sound recorded during a procedure, which may or may not include voice and other types of sound",
+            ),
             Self::_109113 => Some("The Doppler waveform recorded as an audible signal"),
             Self::_109114 => Some("The sound of the human heart beating"),
             Self::_109115 => Some("Any sound made by the human body"),
-            Self::_109116 => Some("A digitized signal from the patient arterial system collected through pulse oximetry or other means"),
-            Self::_109117 => Some("A digitized signal from the patient respiratory system representing respiration"),
-            Self::_109120 => Some("The occasion on which a procedure was performed on admission to a specialist unit; e.g. intensive care"),
-            Self::_109121 => Some("The occasion on which a procedure was performed on discharge from hospital as an in-patient"),
-            Self::_109122 => Some("The occasion on which a procedure was performed on discharge from a specialist unit; e.g. intensive care"),
-            Self::_109123 => Some("The occasion on which a procedure was performed immediately prior to non-surgical intervention; e.g, percutaneous angioplasty, biopsy"),
-            Self::_109124 => Some("The occasion on which a procedure was performed immediately after to non-surgical intervention; e.g, percutaneous angioplasty, biopsy"),
-            Self::_109125 => Some("The occasion on which a procedure was performed at the most recent outpatient visit"),
+            Self::_109116 => Some(
+                "A digitized signal from the patient arterial system collected through pulse oximetry or other means",
+            ),
+            Self::_109117 => Some(
+                "A digitized signal from the patient respiratory system representing respiration",
+            ),
+            Self::_109120 => Some(
+                "The occasion on which a procedure was performed on admission to a specialist unit; e.g. intensive care",
+            ),
+            Self::_109121 => Some(
+                "The occasion on which a procedure was performed on discharge from hospital as an in-patient",
+            ),
+            Self::_109122 => Some(
+                "The occasion on which a procedure was performed on discharge from a specialist unit; e.g. intensive care",
+            ),
+            Self::_109123 => Some(
+                "The occasion on which a procedure was performed immediately prior to non-surgical intervention; e.g, percutaneous angioplasty, biopsy",
+            ),
+            Self::_109124 => Some(
+                "The occasion on which a procedure was performed immediately after to non-surgical intervention; e.g, percutaneous angioplasty, biopsy",
+            ),
+            Self::_109125 => Some(
+                "The occasion on which a procedure was performed at the most recent outpatient visit",
+            ),
             Self::_109132 => Some("The active or passive joint positioning during acquisition"),
             Self::_109133 => Some("A physical force applied during acquisition"),
             Self::_109134 => Some("Prior to voiding"),
@@ -12884,132 +13030,380 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_109220 => Some("Working Canine Association of Canada"),
             Self::_109221 => Some("World Kennel Club"),
             Self::_109222 => Some("World Wide Kennel Club"),
-            Self::_109701 => Some("Evaluation of overall image quality as described in section 7.3.2 of [IEC 62563-1]"),
-            Self::_109702 => Some("Visual verification of sufficient grayscale resolution based on 8 and 10-bit markers as described in section 7.3.3 of [IEC 62563-1]"),
-            Self::_109703 => Some("Visual evaluation of luminance response using the TG18-CT test pattern as described in section 7.3.4 of [IEC 62563-1]"),
-            Self::_109704 => Some("Visual detection of luminance non-uniformities as described in section 7.3.5 of [IEC 62563-1]"),
-            Self::_109705 => Some("Visual verification of color uniformity as described in section 7.3.6 of [IEC 62563-1]"),
-            Self::_109706 => Some("Visual detection of defective pixels on dark (TG18-UN80) and bright (TG18-UN10) images as described in section 7.3.7 of [IEC 62563-1]"),
-            Self::_109707 => Some("Visual evaluation of veiling glare by looking at low contrast objects on 2 test patterns as described in section 7.3.8 of [IEC 62563-1]"),
-            Self::_109708 => Some("Visual evaluation of geometry, phase/clock correction and clipping as described in section 7.3.9 of [IEC 62563-1]"),
-            Self::_109709 => Some("Visual evaluation of viewing angle as described in section 7.3.10 of [IEC 62563-1]"),
-            Self::_109710 => Some("Visual evaluation of the appearance of clinical images as described in section 7.3.11 of [IEC 62563-1]"),
-            Self::_109801 => Some("AAPM TG18-QC Pattern used for evaluation of resolution, luminance, distortion, artifacts. See [AAPM OR 03]"),
-            Self::_109802 => Some("AAPM TG18-BR Pattern used for the evaluation of the display of low-contrast, fine-detail image structures See [AAPM OR 03]"),
-            Self::_109803 => Some("AAPM TG18-PQC Pattern used for evaluation of resolution, luminance, contrast transfer for prints. See [AAPM OR 03]"),
-            Self::_109804 => Some("AAPM TG18-CT Pattern used for evaluation of luminance response. See [AAPM OR 03]"),
-            Self::_109805 => Some("The 1st image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109806 => Some("The 2nd image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109807 => Some("The 3rd image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109808 => Some("The 4th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109809 => Some("The 5th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109810 => Some("The 6th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109811 => Some("The 7th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109812 => Some("The 8th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109813 => Some("The 9th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109814 => Some("The 10th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration series. See [AAPM OR 03]"),
-            Self::_109815 => Some("The 11th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109816 => Some("The 12th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109817 => Some("The 13th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109818 => Some("The 14th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109819 => Some("The 15th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109820 => Some("The 16th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109821 => Some("The 17th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109822 => Some("The 18th image in the AAPM TG18-LN8- set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109823 => Some("The 1st image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109824 => Some("The 2 nd image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109825 => Some("The 3rd image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109826 => Some("The 4th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109827 => Some("The 5th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109828 => Some("The 6th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109829 => Some("The 7th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109830 => Some("The 8th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109831 => Some("The 9th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109832 => Some("The 10th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109833 => Some("The 11th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109834 => Some("The 12th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109835 => Some("The 13th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109836 => Some("The 14th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109837 => Some("The 15th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109838 => Some("The 16th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109839 => Some("The 17th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109840 => Some("The 18th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]"),
-            Self::_109841 => Some("The AAPM TG18-UN10 Pattern used for evaluation of luminance and color uniformity, and angular response. See [AAPM OR 03]"),
-            Self::_109842 => Some("The AAPM TG18-UN80 Pattern used for evaluation of luminance and color uniformity, and angular response. See [AAPM OR 03]"),
-            Self::_109843 => Some("The AAPM TG18-UNL10 Pattern is the AAPM TG-18 UN10 Pattern with added defining lines. See [AAPM OR 03]"),
-            Self::_109844 => Some("The AAPM TG18-UNL80 Pattern is the AAPM TG-18 UN80 Pattern with added defining lines. See [AAPM OR 03]"),
-            Self::_109845 => Some("The AAPM TG18-AD Pattern used for visual evaluation of the reflection of ambient light from the display. See [AAPM OR 03]"),
-            Self::_109846 => Some("The AAPM TG18-MP Pattern used for evaluation of Luminance response (bit-depth resolution). See [AAPM OR 03]"),
-            Self::_109847 => Some("The AAPM TG18-RH10 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 10% luminance level. See [AAPM OR 03]"),
-            Self::_109848 => Some("The AAPM TG18-RH50 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 50% luminance level. See [AAPM OR 03]"),
-            Self::_109849 => Some("The AAPM TG18-RH89 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 89% luminance level. See [AAPM OR 03]"),
-            Self::_109850 => Some("The AAPM TG18-RV10 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 10% luminance level. See [AAPM OR 03]"),
-            Self::_109851 => Some("The AAPM TG18-RV50 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 50% luminance level. See [AAPM OR 03]"),
-            Self::_109852 => Some("The AAPM TG18-RV89 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 89% luminance level. See [AAPM OR 03]"),
-            Self::_109853 => Some("The AAPM TG18-PX Pattern used for the assessment of display resolution. See [AAPM OR 03]"),
-            Self::_109854 => Some("The AAPM TG18-CX Pattern used to assess display resolution and resolution uniformity. See [AAPM OR 03]"),
-            Self::_109855 => Some("The AAPM TG18-LPH10 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109856 => Some("The AAPM TG18-LPH50 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 50% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109857 => Some("The AAPM TG18-LPH89 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 89% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109858 => Some("The AAPM TG18-LPV10 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109859 => Some("The AAPM TG18-LPV50 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 50% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109860 => Some("The AAPM TG18-LPV89 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 89% background level of the maximum pixel value. See [AAPM OR 03]"),
-            Self::_109861 => Some("The AAPM TG18-AFC Pattern used to assess display noise. See [AAPM OR 03]"),
-            Self::_109862 => Some("The AAPM TG18-NS10 Pattern is AAPM TG18-RV10/RH10 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]"),
-            Self::_109863 => Some("The AAPM TG18-NS50 Pattern is AAPM TG18-RV50/RH50 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]"),
-            Self::_109864 => Some("The AAPM TG18-NS89 Pattern is AAPM TG18-RV89/RH89 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]"),
-            Self::_109865 => Some("The TG18-GV Pattern used to assess display veiling. See [AAPM OR 03]"),
-            Self::_109866 => Some("The TG18-GVN Pattern used to assess display veiling. This pattern is identical to AAPM TG18-GV Pattern except that the large-diameter white circle is replaced with a black circle, creating a completely black pattern except for the presence of low-contrast targets. See [AAPM OR 03]"),
-            Self::_109867 => Some("The TG18-GQ Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GV except that is lacks the central low-contrast objects. See [AAPM OR 03]"),
-            Self::_109868 => Some("TG18-GQN Pattern used for the quantitative assessment of veiling glare. This pattern is identical to AAPM TG18-GQ Pattern except that the large-diameter white circle is replaced with a black circle, creating a completely black pattern except for the presence of low-contrast targets. See [AAPM OR 03]"),
-            Self::_109869 => Some("The TG18-GQB Pattern used for the quantitative assessment of veiling glare. This pattern is identical to AAPM TG18-GQ Pattern except eliminating the central black circle. See [AAPM OR 03]"),
-            Self::_109870 => Some("The TG18-GA03 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 3. See [AAPM OR 03]"),
-            Self::_109871 => Some("The TG18-GA05 Pattern This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 5. See [AAPM OR 03]"),
-            Self::_109872 => Some("The TG18-GA08 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 8. See [AAPM OR 03]"),
-            Self::_109873 => Some("The TG18-GA10 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 10. See [AAPM OR 03]"),
-            Self::_109874 => Some("The TG18-GA15 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 15"),
-            Self::_109875 => Some("The TG18-GA20 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 20. See [AAPM OR 03]"),
-            Self::_109876 => Some("The TG18-GA25 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 25. See [AAPM OR 03]"),
-            Self::_109877 => Some("The TG18-GA30 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 30. See [AAPM OR 03]"),
-            Self::_109878 => Some("The AAPM TG18-CH Image is a reference anatomical PA chest image. See [AAPM OR 03]"),
-            Self::_109879 => Some("The AAPM TG18-KN Image is a reference anatomical knee image. See [AAPM OR 03]"),
-            Self::_109880 => Some("The AAPM TG18-MM1 Image is a reference anatomical mammogram image. See [AAPM OR 03]"),
-            Self::_109881 => Some("The AAPM TG18-MM2 Image is a reference anatomical mammogram image. See [AAPM OR 03]"),
-            Self::_109901 => Some("The IEC OIQ Pattern is used as an alternative to the TG18-QC Pattern. See [IEC 62563-1]"),
-            Self::_109902 => Some("The IEC ANG Pattern used for angular viewing evaluation. See [IEC 62563-1]"),
-            Self::_109903 => Some("The IEC GD Pattern used for geometrical image evaluation. See [IEC 62563-1]"),
-            Self::_109904 => Some("The IEC BN01 Pattern is used as analternative to the TG18-LN-01 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109905 => Some("The IEC BN02 Pattern is used as analternative to the TG18-LN-02 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109906 => Some("The IEC BN03 Pattern is used as analternative to the TG18-LN-03 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109907 => Some("The IEC BN04 Pattern is used as analternative to the TG18-LN-04 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109908 => Some("The IEC BN05 Pattern is used as analternative to the TG18-LN-05 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109909 => Some("The IEC BN06 Pattern is used as analternative to the TG18-LN-06 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109910 => Some("The IEC BN07 Pattern is used as analternative to the TG18-LN-07 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109911 => Some("The IEC BN08 Pattern is used as analternative to the TG18-LN-08 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109912 => Some("The IEC BN09 Pattern is used as analternative to the TG18-LN-09 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109913 => Some("The IEC BN10 Pattern is used as analternative to the TG18-LN-10 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109914 => Some("The IEC BN11 Pattern is used as analternative to the TG18-LN-11 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109915 => Some("The IEC BN12 Pattern is used as analternative to the TG18-LN-12 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109916 => Some("The IEC BN13 Pattern is used as analternative to the TG18-LN-13 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109917 => Some("The IEC BN14 Pattern is used as analternative to the TG18-LN-14 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109918 => Some("The IEC BN15 Pattern is used as analternative to the TG18-LN-15 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109919 => Some("The IEC BN16 Pattern is used as analternative to the TG18-LN-16 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109920 => Some("The IEC BN17 Pattern is used as analternative to the TG18-LN-17 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109921 => Some("The IEC BN18 Pattern is used as analternative to the TG18-LN-18 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]"),
-            Self::_109931 => Some("Test image \"Bild 2\" for the gray-scale reproduction of imaging devices. See [DIN 6868-57]"),
-            Self::_109932 => Some("Test image \"Bild 3\" for the geometrical imaging properties of imaging devices. See [DIN 6868-57]"),
-            Self::_109933 => Some("Test image \"Bild 5\" for displaying the spatial and contrast resolution as well as the line structure of imaging devices. See [DIN 6868-57]"),
-            Self::_109941 => Some("An alternative to AAPM TG18-UN80, specified at 100% of maximum pixel value"),
-            Self::_109943 => Some("A standard display test pattern. See [SMPTE RP133]. A pattern is available at http://www.dclunie.com/images/smpte.512.512.8.gif"),
+            Self::_109701 => Some(
+                "Evaluation of overall image quality as described in section 7.3.2 of [IEC 62563-1]",
+            ),
+            Self::_109702 => Some(
+                "Visual verification of sufficient grayscale resolution based on 8 and 10-bit markers as described in section 7.3.3 of [IEC 62563-1]",
+            ),
+            Self::_109703 => Some(
+                "Visual evaluation of luminance response using the TG18-CT test pattern as described in section 7.3.4 of [IEC 62563-1]",
+            ),
+            Self::_109704 => Some(
+                "Visual detection of luminance non-uniformities as described in section 7.3.5 of [IEC 62563-1]",
+            ),
+            Self::_109705 => Some(
+                "Visual verification of color uniformity as described in section 7.3.6 of [IEC 62563-1]",
+            ),
+            Self::_109706 => Some(
+                "Visual detection of defective pixels on dark (TG18-UN80) and bright (TG18-UN10) images as described in section 7.3.7 of [IEC 62563-1]",
+            ),
+            Self::_109707 => Some(
+                "Visual evaluation of veiling glare by looking at low contrast objects on 2 test patterns as described in section 7.3.8 of [IEC 62563-1]",
+            ),
+            Self::_109708 => Some(
+                "Visual evaluation of geometry, phase/clock correction and clipping as described in section 7.3.9 of [IEC 62563-1]",
+            ),
+            Self::_109709 => Some(
+                "Visual evaluation of viewing angle as described in section 7.3.10 of [IEC 62563-1]",
+            ),
+            Self::_109710 => Some(
+                "Visual evaluation of the appearance of clinical images as described in section 7.3.11 of [IEC 62563-1]",
+            ),
+            Self::_109801 => Some(
+                "AAPM TG18-QC Pattern used for evaluation of resolution, luminance, distortion, artifacts. See [AAPM OR 03]",
+            ),
+            Self::_109802 => Some(
+                "AAPM TG18-BR Pattern used for the evaluation of the display of low-contrast, fine-detail image structures See [AAPM OR 03]",
+            ),
+            Self::_109803 => Some(
+                "AAPM TG18-PQC Pattern used for evaluation of resolution, luminance, contrast transfer for prints. See [AAPM OR 03]",
+            ),
+            Self::_109804 => Some(
+                "AAPM TG18-CT Pattern used for evaluation of luminance response. See [AAPM OR 03]",
+            ),
+            Self::_109805 => Some(
+                "The 1st image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109806 => Some(
+                "The 2nd image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109807 => Some(
+                "The 3rd image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109808 => Some(
+                "The 4th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109809 => Some(
+                "The 5th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109810 => Some(
+                "The 6th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109811 => Some(
+                "The 7th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109812 => Some(
+                "The 8th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109813 => Some(
+                "The 9th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109814 => Some(
+                "The 10th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration series. See [AAPM OR 03]",
+            ),
+            Self::_109815 => Some(
+                "The 11th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109816 => Some(
+                "The 12th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109817 => Some(
+                "The 13th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109818 => Some(
+                "The 14th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109819 => Some(
+                "The 15th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109820 => Some(
+                "The 16th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109821 => Some(
+                "The 17th image in the AAPM TG18-LN8 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109822 => Some(
+                "The 18th image in the AAPM TG18-LN8- set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109823 => Some(
+                "The 1st image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109824 => Some(
+                "The 2 nd image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109825 => Some(
+                "The 3rd image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109826 => Some(
+                "The 4th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109827 => Some(
+                "The 5th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109828 => Some(
+                "The 6th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109829 => Some(
+                "The 7th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109830 => Some(
+                "The 8th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109831 => Some(
+                "The 9th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109832 => Some(
+                "The 10th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109833 => Some(
+                "The 11th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109834 => Some(
+                "The 12th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109835 => Some(
+                "The 13th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109836 => Some(
+                "The 14th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109837 => Some(
+                "The 15th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109838 => Some(
+                "The 16th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109839 => Some(
+                "The 17th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109840 => Some(
+                "The 18th image in the AAPM TG18-LN12 set used for DICOM grayscale calibration. See [AAPM OR 03]",
+            ),
+            Self::_109841 => Some(
+                "The AAPM TG18-UN10 Pattern used for evaluation of luminance and color uniformity, and angular response. See [AAPM OR 03]",
+            ),
+            Self::_109842 => Some(
+                "The AAPM TG18-UN80 Pattern used for evaluation of luminance and color uniformity, and angular response. See [AAPM OR 03]",
+            ),
+            Self::_109843 => Some(
+                "The AAPM TG18-UNL10 Pattern is the AAPM TG-18 UN10 Pattern with added defining lines. See [AAPM OR 03]",
+            ),
+            Self::_109844 => Some(
+                "The AAPM TG18-UNL80 Pattern is the AAPM TG-18 UN80 Pattern with added defining lines. See [AAPM OR 03]",
+            ),
+            Self::_109845 => Some(
+                "The AAPM TG18-AD Pattern used for visual evaluation of the reflection of ambient light from the display. See [AAPM OR 03]",
+            ),
+            Self::_109846 => Some(
+                "The AAPM TG18-MP Pattern used for evaluation of Luminance response (bit-depth resolution). See [AAPM OR 03]",
+            ),
+            Self::_109847 => Some(
+                "The AAPM TG18-RH10 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 10% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109848 => Some(
+                "The AAPM TG18-RH50 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 50% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109849 => Some(
+                "The AAPM TG18-RH89 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 horizontal lines at 89% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109850 => Some(
+                "The AAPM TG18-RV10 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 10% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109851 => Some(
+                "The AAPM TG18-RV50 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 50% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109852 => Some(
+                "The AAPM TG18-RV89 Pattern used for LSF-line spectra function-(1k and 2k) evaluation by 5 vertical lines at 89% luminance level. See [AAPM OR 03]",
+            ),
+            Self::_109853 => Some(
+                "The AAPM TG18-PX Pattern used for the assessment of display resolution. See [AAPM OR 03]",
+            ),
+            Self::_109854 => Some(
+                "The AAPM TG18-CX Pattern used to assess display resolution and resolution uniformity. See [AAPM OR 03]",
+            ),
+            Self::_109855 => Some(
+                "The AAPM TG18-LPH10 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109856 => Some(
+                "The AAPM TG18-LPH50 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 50% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109857 => Some(
+                "The AAPM TG18-LPH89 Pattern used to assess display resolution. This pattern has horizontal bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 89% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109858 => Some(
+                "The AAPM TG18-LPV10 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 10% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109859 => Some(
+                "The AAPM TG18-LPV50 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 50% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109860 => Some(
+                "The AAPM TG18-LPV89 Pattern used to assess display resolution. This pattern has vertical bars consisting of alternating single-pixel-wide lines across the faceplate of display. The lines have a 12% positive contrast against 89% background level of the maximum pixel value. See [AAPM OR 03]",
+            ),
+            Self::_109861 => {
+                Some("The AAPM TG18-AFC Pattern used to assess display noise. See [AAPM OR 03]")
+            }
+            Self::_109862 => Some(
+                "The AAPM TG18-NS10 Pattern is AAPM TG18-RV10/RH10 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]",
+            ),
+            Self::_109863 => Some(
+                "The AAPM TG18-NS50 Pattern is AAPM TG18-RV50/RH50 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]",
+            ),
+            Self::_109864 => Some(
+                "The AAPM TG18-NS89 Pattern is AAPM TG18-RV89/RH89 with only difference being the absence of the single line at the center of the measurement area. See [AAPM OR 03]",
+            ),
+            Self::_109865 => {
+                Some("The TG18-GV Pattern used to assess display veiling. See [AAPM OR 03]")
+            }
+            Self::_109866 => Some(
+                "The TG18-GVN Pattern used to assess display veiling. This pattern is identical to AAPM TG18-GV Pattern except that the large-diameter white circle is replaced with a black circle, creating a completely black pattern except for the presence of low-contrast targets. See [AAPM OR 03]",
+            ),
+            Self::_109867 => Some(
+                "The TG18-GQ Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GV except that is lacks the central low-contrast objects. See [AAPM OR 03]",
+            ),
+            Self::_109868 => Some(
+                "TG18-GQN Pattern used for the quantitative assessment of veiling glare. This pattern is identical to AAPM TG18-GQ Pattern except that the large-diameter white circle is replaced with a black circle, creating a completely black pattern except for the presence of low-contrast targets. See [AAPM OR 03]",
+            ),
+            Self::_109869 => Some(
+                "The TG18-GQB Pattern used for the quantitative assessment of veiling glare. This pattern is identical to AAPM TG18-GQ Pattern except eliminating the central black circle. See [AAPM OR 03]",
+            ),
+            Self::_109870 => Some(
+                "The TG18-GA03 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 3. See [AAPM OR 03]",
+            ),
+            Self::_109871 => Some(
+                "The TG18-GA05 Pattern This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 5. See [AAPM OR 03]",
+            ),
+            Self::_109872 => Some(
+                "The TG18-GA08 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 8. See [AAPM OR 03]",
+            ),
+            Self::_109873 => Some(
+                "The TG18-GA10 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 10. See [AAPM OR 03]",
+            ),
+            Self::_109874 => Some(
+                "The TG18-GA15 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 15",
+            ),
+            Self::_109875 => Some(
+                "The TG18-GA20 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 20. See [AAPM OR 03]",
+            ),
+            Self::_109876 => Some(
+                "The TG18-GA25 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 25. See [AAPM OR 03]",
+            ),
+            Self::_109877 => Some(
+                "The TG18-GA30 Pattern used for quantitative assessment of veiling glare. This pattern is identical to TG18-GQ except that the radius of the central black circle is varied as r = 30. See [AAPM OR 03]",
+            ),
+            Self::_109878 => Some(
+                "The AAPM TG18-CH Image is a reference anatomical PA chest image. See [AAPM OR 03]",
+            ),
+            Self::_109879 => Some(
+                "The AAPM TG18-KN Image is a reference anatomical knee image. See [AAPM OR 03]",
+            ),
+            Self::_109880 => Some(
+                "The AAPM TG18-MM1 Image is a reference anatomical mammogram image. See [AAPM OR 03]",
+            ),
+            Self::_109881 => Some(
+                "The AAPM TG18-MM2 Image is a reference anatomical mammogram image. See [AAPM OR 03]",
+            ),
+            Self::_109901 => Some(
+                "The IEC OIQ Pattern is used as an alternative to the TG18-QC Pattern. See [IEC 62563-1]",
+            ),
+            Self::_109902 => {
+                Some("The IEC ANG Pattern used for angular viewing evaluation. See [IEC 62563-1]")
+            }
+            Self::_109903 => {
+                Some("The IEC GD Pattern used for geometrical image evaluation. See [IEC 62563-1]")
+            }
+            Self::_109904 => Some(
+                "The IEC BN01 Pattern is used as analternative to the TG18-LN-01 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109905 => Some(
+                "The IEC BN02 Pattern is used as analternative to the TG18-LN-02 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109906 => Some(
+                "The IEC BN03 Pattern is used as analternative to the TG18-LN-03 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109907 => Some(
+                "The IEC BN04 Pattern is used as analternative to the TG18-LN-04 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109908 => Some(
+                "The IEC BN05 Pattern is used as analternative to the TG18-LN-05 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109909 => Some(
+                "The IEC BN06 Pattern is used as analternative to the TG18-LN-06 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109910 => Some(
+                "The IEC BN07 Pattern is used as analternative to the TG18-LN-07 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109911 => Some(
+                "The IEC BN08 Pattern is used as analternative to the TG18-LN-08 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109912 => Some(
+                "The IEC BN09 Pattern is used as analternative to the TG18-LN-09 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109913 => Some(
+                "The IEC BN10 Pattern is used as analternative to the TG18-LN-10 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109914 => Some(
+                "The IEC BN11 Pattern is used as analternative to the TG18-LN-11 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109915 => Some(
+                "The IEC BN12 Pattern is used as analternative to the TG18-LN-12 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109916 => Some(
+                "The IEC BN13 Pattern is used as analternative to the TG18-LN-13 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109917 => Some(
+                "The IEC BN14 Pattern is used as analternative to the TG18-LN-14 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109918 => Some(
+                "The IEC BN15 Pattern is used as analternative to the TG18-LN-15 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109919 => Some(
+                "The IEC BN16 Pattern is used as analternative to the TG18-LN-16 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109920 => Some(
+                "The IEC BN17 Pattern is used as analternative to the TG18-LN-17 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109921 => Some(
+                "The IEC BN18 Pattern is used as analternative to the TG18-LN-18 Pattern, to avoid the use of a cone or baffle with LCDs. See [IEC 62563-1]",
+            ),
+            Self::_109931 => Some(
+                "Test image \"Bild 2\" for the gray-scale reproduction of imaging devices. See [DIN 6868-57]",
+            ),
+            Self::_109932 => Some(
+                "Test image \"Bild 3\" for the geometrical imaging properties of imaging devices. See [DIN 6868-57]",
+            ),
+            Self::_109933 => Some(
+                "Test image \"Bild 5\" for displaying the spatial and contrast resolution as well as the line structure of imaging devices. See [DIN 6868-57]",
+            ),
+            Self::_109941 => {
+                Some("An alternative to AAPM TG18-UN80, specified at 100% of maximum pixel value")
+            }
+            Self::_109943 => Some(
+                "A standard display test pattern. See [SMPTE RP133]. A pattern is available at http://www.dclunie.com/images/smpte.512.512.8.gif",
+            ),
             Self::_109991 => Some("A Display Device that displays images on a Cathode Ray Tube"),
-            Self::_109992 => Some("A Display Device that displays images on a Liquid Crystal Display"),
+            Self::_109992 => {
+                Some("A Display Device that displays images on a Liquid Crystal Display")
+            }
             Self::_109993 => Some("A Display Device that displays images on a Plasma Display"),
-            Self::_109994 => Some("A Display Device that displays images on an Organic Light Emitting Diode based display"),
-            Self::_109995 => Some("A Display Device that projects images on a surface from behind using a Digital Light Processing Projector"),
-            Self::_109996 => Some("A Display Device that projects images on a surface from in front using a Digital Light Processing Projector"),
-            Self::_109997 => Some("A Display Device that projects images on a surface from behind using a Cathode Ray Tube"),
-            Self::_109998 => Some("A Display Device that projects images on a surface from in front using a Cathode Ray Tube"),
-            Self::_109999 => Some("A Display Device that projects images on a surface from an unspecified direction using an unspecified means"),
+            Self::_109994 => Some(
+                "A Display Device that displays images on an Organic Light Emitting Diode based display",
+            ),
+            Self::_109995 => Some(
+                "A Display Device that projects images on a surface from behind using a Digital Light Processing Projector",
+            ),
+            Self::_109996 => Some(
+                "A Display Device that projects images on a surface from in front using a Digital Light Processing Projector",
+            ),
+            Self::_109997 => Some(
+                "A Display Device that projects images on a surface from behind using a Cathode Ray Tube",
+            ),
+            Self::_109998 => Some(
+                "A Display Device that projects images on a surface from in front using a Cathode Ray Tube",
+            ),
+            Self::_109999 => Some(
+                "A Display Device that projects images on a surface from an unspecified direction using an unspecified means",
+            ),
             Self::_110001 => Some("Image processing work item"),
             Self::_110002 => Some("Quality control work item"),
             Self::_110003 => Some("Computer aided diagnosis work item"),
@@ -13022,20 +13416,28 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_110010 => Some("Film type of output"),
             Self::_110011 => Some("Dictation type of output"),
             Self::_110012 => Some("Transcription type of output"),
-            Self::_110013 => Some("The procedure to read DICOM instances from DICOM interchange media, coerce identifying attributes into the local namespace if necessary, and make the instances available"),
+            Self::_110013 => Some(
+                "The procedure to read DICOM instances from DICOM interchange media, coerce identifying attributes into the local namespace if necessary, and make the instances available",
+            ),
             Self::_110020 => Some("Digitization of Sheet Film"),
             Self::_110021 => Some("Digitization of Cine Film"),
             Self::_110022 => Some("Digitization of Video Tape"),
-            Self::_110023 => Some("Digitization of pages of a paper document (Units may be specified as Pages, Documents)"),
+            Self::_110023 => Some(
+                "Digitization of pages of a paper document (Units may be specified as Pages, Documents)",
+            ),
             Self::_110024 => Some("Importation of CD"),
             Self::_110025 => Some("Importation of DVD"),
             Self::_110026 => Some("Importation of MOD"),
             Self::_110027 => Some("Importation of DICOM Studies"),
             Self::_110028 => Some("Importation of DICOM Composite Instances"),
-            Self::_110030 => Some("A device that connects using the USB hard drive interface. These may be USB-Sticks, portable hard drives, and other technologies"),
+            Self::_110030 => Some(
+                "A device that connects using the USB hard drive interface. These may be USB-Sticks, portable hard drives, and other technologies",
+            ),
             Self::_110031 => Some("Email and email attachments used as a media for data transport"),
             Self::_110032 => Some("CD-R, CD-ROM, and CD-RW media used for data transport"),
-            Self::_110033 => Some("DVD, DVD-RAM, and other DVD formatted media used for data transport"),
+            Self::_110033 => {
+                Some("DVD, DVD-RAM, and other DVD formatted media used for data transport")
+            }
             Self::_110034 => Some("Media that comply with the Compact Flash standard"),
             Self::_110035 => Some("Media that comply with the Multi-media Card standard"),
             Self::_110036 => Some("Media that comply with the Secure Digital Card standard"),
@@ -13044,15 +13446,21 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_110100 => Some("Audit event: Application Activity has taken place"),
             Self::_110101 => Some("Audit event: Audit Log has been used"),
             Self::_110102 => Some("Audit event: Storage of DICOM Instances has begun"),
-            Self::_110103 => Some("Audit event: DICOM Instances have been created, read, updated, or deleted"),
+            Self::_110103 => {
+                Some("Audit event: DICOM Instances have been created, read, updated, or deleted")
+            }
             Self::_110104 => Some("Audit event: Storage of DICOM Instances has been completed"),
             Self::_110105 => Some("Audit event: Entire Study has been deleted"),
             Self::_110106 => Some("Audit event: Data has been exported out of the system"),
             Self::_110107 => Some("Audit event: Data has been imported into the system"),
             Self::_110108 => Some("Audit event: System has joined or left network"),
             Self::_110109 => Some("Audit event: Order has been created, read, updated or deleted"),
-            Self::_110110 => Some("Audit event: Patient Record has been created, read, updated, or deleted"),
-            Self::_110111 => Some("Audit event: Procedure Record has been created, read, updated, or deleted"),
+            Self::_110110 => {
+                Some("Audit event: Patient Record has been created, read, updated, or deleted")
+            }
+            Self::_110111 => {
+                Some("Audit event: Procedure Record has been created, read, updated, or deleted")
+            }
             Self::_110112 => Some("Audit event: Query has been made"),
             Self::_110113 => Some("Audit event: Security Alert has been raised"),
             Self::_110114 => Some("Audit event: User Authentication has been attempted"),
@@ -13071,7 +13479,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_110132 => Some("Audit event: A use of a restricted function has been attempted"),
             Self::_110133 => Some("Audit event: Audit recording has been stopped"),
             Self::_110134 => Some("Audit event: Audit recording has been started"),
-            Self::_110135 => Some("Audit event: Security attributes of an object have been changed"),
+            Self::_110135 => {
+                Some("Audit event: Security attributes of an object have been changed")
+            }
             Self::_110136 => Some("Audit event: Security roles have been changed"),
             Self::_110137 => Some("Audit event: Security attributes of a user have been changed"),
             Self::_110138 => Some("Audit event: Emergency Override has Stopped"),
@@ -13080,268 +13490,668 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_110141 => Some("Audit event: Local Service Operation has Begun"),
             Self::_110142 => Some("Audit event: Local Service Operation Stopped"),
             Self::_110150 => Some("Audit participant role ID of software application"),
-            Self::_110151 => Some("Audit participant role ID of software application launcher, i.e., the entity that started or stopped an application"),
+            Self::_110151 => Some(
+                "Audit participant role ID of software application launcher, i.e., the entity that started or stopped an application",
+            ),
             Self::_110152 => Some("Audit participant role ID of the receiver of data"),
             Self::_110153 => Some("Audit participant role ID of the sender of data"),
-            Self::_110154 => Some("Audit participant role ID of media receiving data during an export"),
-            Self::_110155 => Some("Audit participant role ID of media providing data during an import"),
+            Self::_110154 => {
+                Some("Audit participant role ID of media receiving data during an export")
+            }
+            Self::_110155 => {
+                Some("Audit participant role ID of media providing data during an import")
+            }
             Self::_110180 => Some("ParticipantObjectID type: Study Instance UID"),
             Self::_110181 => Some("ParticipantObjectID type: SOP Class UID"),
             Self::_110182 => Some("ID of a node that is a participant object of an audit message"),
-            Self::_110190 => Some("System, organization, agency, or department that has assigned an instance identifier (such as placer or filler number, patient or provider identifier, etc.)"),
-            Self::_110500 => Some("Procedure order canceled by requesting physician or other authorized physician"),
+            Self::_110190 => Some(
+                "System, organization, agency, or department that has assigned an instance identifier (such as placer or filler number, patient or provider identifier, etc.)",
+            ),
+            Self::_110500 => Some(
+                "Procedure order canceled by requesting physician or other authorized physician",
+            ),
             Self::_110501 => Some("Equipment failure prevented completion of procedure"),
-            Self::_110502 => Some("Procedure discontinued due to incorrect procedure being ordered"),
-            Self::_110503 => Some("Procedure discontinued due to patient allergy to media/contrast (reported or reaction)"),
+            Self::_110502 => {
+                Some("Procedure discontinued due to incorrect procedure being ordered")
+            }
+            Self::_110503 => Some(
+                "Procedure discontinued due to patient allergy to media/contrast (reported or reaction)",
+            ),
             Self::_110504 => Some("Procedure discontinued due to death of Patient"),
-            Self::_110505 => Some("Procedure discontinued due to patient refusal to continue procedure"),
-            Self::_110506 => Some("Procedure discontinued due to patient being taken for treatment or surgery"),
+            Self::_110505 => {
+                Some("Procedure discontinued due to patient refusal to continue procedure")
+            }
+            Self::_110506 => {
+                Some("Procedure discontinued due to patient being taken for treatment or surgery")
+            }
             Self::_110507 => Some("Patient did not arrive for procedure"),
-            Self::_110508 => Some("Procedure discontinued due to patient pregnancy (reported or determined)"),
-            Self::_110509 => Some("Procedure discontinued to restart with new procedure code for correct charging"),
-            Self::_110510 => Some("Procedure discontinued due to duplicate orders received for same procedure"),
+            Self::_110508 => {
+                Some("Procedure discontinued due to patient pregnancy (reported or determined)")
+            }
+            Self::_110509 => Some(
+                "Procedure discontinued to restart with new procedure code for correct charging",
+            ),
+            Self::_110510 => {
+                Some("Procedure discontinued due to duplicate orders received for same procedure")
+            }
             Self::_110511 => Some("Procedure order canceled by nursing unit"),
-            Self::_110512 => Some("Procedure discontinued due to incorrect side (laterality) being ordered"),
+            Self::_110512 => {
+                Some("Procedure discontinued due to incorrect side (laterality) being ordered")
+            }
             Self::_110513 => Some("Procedure discontinued for unspecified reason"),
-            Self::_110514 => Some("Procedure discontinued due to incorrect patient or procedure step selected from modality worklist"),
+            Self::_110514 => Some(
+                "Procedure discontinued due to incorrect patient or procedure step selected from modality worklist",
+            ),
             Self::_110515 => Some("Patient condition prevented continuation of procedure"),
-            Self::_110516 => Some("Procedure step is discontinued to change to other equipment or modality"),
+            Self::_110516 => {
+                Some("Procedure step is discontinued to change to other equipment or modality")
+            }
             Self::_110518 => Some("A movement of the patient affecting test quality"),
             Self::_110519 => Some("An error of the operator affecting test quality"),
             Self::_110521 => Some("One or more of the objects is malformed"),
             Self::_110522 => Some("Receiving System is unable to accept the object type"),
             Self::_110523 => Some("One or more objects associated with the object set is missing"),
             Self::_110524 => Some("The contents of the Media could not be accessed properly"),
-            Self::_110526 => Some("Procedure discontinued due to necessary equipment, staff or other resource becoming (temporarily) unavailable to the procedure"),
-            Self::_110527 => Some("Procedure discontinued due to necessary equipment, staff or other resource being inadequate to complete the procedure"),
-            Self::_110528 => Some("A new Procedure Step has been scheduled to replace the Discontinued Procedure Step"),
-            Self::_110529 => Some("It is recommended that a new Procedure Step be scheduled to replace the Discontinued Procedure Step"),
-            Self::_110700 => Some("Ventral structures of the diencephalon that cannot readily be distinguished on MR imaging, including the hypothalamus, mammillary body, subthalamic nuclei, substantia nigra, red nucleus, lateral geniculate nucleus, medial geniculate nucleus, zona incerta, cerebral peduncle, lenticular fasciculus, medial lemniscus, and optic tract. See http://neuromorphometrics.org:8080/Seg/html/segmentation/ventral%20diencephalon.html"),
-            Self::_110701 => Some("Area(s) of reduced intensity on T1 weighted images relative to the surrounding white matter. These may be indicative of age-related or neurodegenerative white matter lesions, and may be co-located with areas of white matter T2 hyperintensity, but the concept is specifically confined to the MR appearance on T1 weighted images"),
-            Self::_110702 => Some("Area(s) of increased intensity on T2 weighted images relative to the surrounding white matter. These may be indicative of age-related or neurodegenerative white matter lesions, and may be co-located with areas of white matter T1 hypointensity, but the concept is specifically confined to the MR appearance on T2 weighted images"),
-            Self::_110703 => Some("The dorsal component of the SLF originating from the medial and dorsal parietal cortex and ending in the dorsal and medial part of the frontal lobe. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186"),
-            Self::_110704 => Some("The major component of the SLF, derived from the caudal-inferior parietal region corresponding to the angular gyrus in the human and terminating within the dorsolateral frontal region. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186"),
-            Self::_110705 => Some("The ventral component of the SLF, originating from the supramarginal gyrus and terminating predominantly in the ventral premotor and prefrontal areas. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186"),
-            Self::_110706 => Some("White matter that surrounds a lesion of interest; e.g. to identify the otherwise unclassified white matter that surrounds a tumor to be surgically resected"),
-            Self::_110800 => Some("Signal intensity of a Spin tagging Perfusion MR image. Spin tagging is a technique for the measurement of blood perfusion, based on magnetically labeled arterial blood water as an endogenous tracer"),
+            Self::_110526 => Some(
+                "Procedure discontinued due to necessary equipment, staff or other resource becoming (temporarily) unavailable to the procedure",
+            ),
+            Self::_110527 => Some(
+                "Procedure discontinued due to necessary equipment, staff or other resource being inadequate to complete the procedure",
+            ),
+            Self::_110528 => Some(
+                "A new Procedure Step has been scheduled to replace the Discontinued Procedure Step",
+            ),
+            Self::_110529 => Some(
+                "It is recommended that a new Procedure Step be scheduled to replace the Discontinued Procedure Step",
+            ),
+            Self::_110700 => Some(
+                "Ventral structures of the diencephalon that cannot readily be distinguished on MR imaging, including the hypothalamus, mammillary body, subthalamic nuclei, substantia nigra, red nucleus, lateral geniculate nucleus, medial geniculate nucleus, zona incerta, cerebral peduncle, lenticular fasciculus, medial lemniscus, and optic tract. See http://neuromorphometrics.org:8080/Seg/html/segmentation/ventral%20diencephalon.html",
+            ),
+            Self::_110701 => Some(
+                "Area(s) of reduced intensity on T1 weighted images relative to the surrounding white matter. These may be indicative of age-related or neurodegenerative white matter lesions, and may be co-located with areas of white matter T2 hyperintensity, but the concept is specifically confined to the MR appearance on T1 weighted images",
+            ),
+            Self::_110702 => Some(
+                "Area(s) of increased intensity on T2 weighted images relative to the surrounding white matter. These may be indicative of age-related or neurodegenerative white matter lesions, and may be co-located with areas of white matter T1 hypointensity, but the concept is specifically confined to the MR appearance on T2 weighted images",
+            ),
+            Self::_110703 => Some(
+                "The dorsal component of the SLF originating from the medial and dorsal parietal cortex and ending in the dorsal and medial part of the frontal lobe. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186",
+            ),
+            Self::_110704 => Some(
+                "The major component of the SLF, derived from the caudal-inferior parietal region corresponding to the angular gyrus in the human and terminating within the dorsolateral frontal region. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186",
+            ),
+            Self::_110705 => Some(
+                "The ventral component of the SLF, originating from the supramarginal gyrus and terminating predominantly in the ventral premotor and prefrontal areas. See Makris N, et al. \"Segmentation of Subcomponents within the Superior Longitudinal Fascicle in Humans: A Quantitative, In Vivo, DT-MRI Study.\" Cerebral Cortex 15, no. 6 (June 1, 2005): 854-69. doi:10.1093/cercor/bhh186",
+            ),
+            Self::_110706 => Some(
+                "White matter that surrounds a lesion of interest; e.g. to identify the otherwise unclassified white matter that surrounds a tumor to be surgically resected",
+            ),
+            Self::_110800 => Some(
+                "Signal intensity of a Spin tagging Perfusion MR image. Spin tagging is a technique for the measurement of blood perfusion, based on magnetically labeled arterial blood water as an endogenous tracer",
+            ),
             Self::_110801 => Some("Signal intensity of a Contrast Agent Angio MR image"),
-            Self::_110802 => Some("Signal intensity of a Time-of-flight (TOF) MR image. Time-of-flight (TOF) is based on the phenomenon of flow-related enhancement of spins entering into an imaging slice. As a result of being unsaturated, these spins give more signal that surrounding stationary spins"),
-            Self::_110803 => Some("Signal intensity of a Proton Density Weighted MR image. All MR images have intensity proportional to proton density. Images with very little T1 or T2 weighting are called \'PD-weighted\'"),
-            Self::_110804 => Some("Signal intensity of T1 Weighted MR image. A T1 Weighted MR image is created typically by using short TE and TR times"),
-            Self::_110805 => Some("Signal intensity of a T2 Weighted MR image. T2 Weighted image contrast state is approached by imaging with a TR long compared to tissue T1 (to reduce T1 contribution to image contrast) and a TE between the longest and shortest tissue T2s of interest"),
-            Self::_110806 => Some("Signal intensity of a T2* Weighted MR image. The T2* phenomenon results from molecular interactions (spin spin relaxation) and local magnetic field non-uniformities, which cause the protons to precess at slightly different frequencies"),
-            Self::_110807 => Some("Signal intensity of a Field Map MR image. A Field Map MR image provides a direct measure of the B 0 inhomogeneity at each point in the image"),
-            Self::_110808 => Some("Coefficient reflecting the fractional anisotropy of the tissues, derived from a diffusion weighted MR image. Fractional anisotropy is proportional to the square root of the variance of the Eigen values divided by the square root of the sum of the squares of the Eigen values"),
-            Self::_110809 => Some("Coefficient reflecting the relative anisotropy of the tissues, derived from a diffusion weighted MR image"),
-            Self::_110810 => Some("Dxx Component of the diffusion tensor, quantifying the molecular mobility along the X axis"),
-            Self::_110811 => Some("Dxy Component of the diffusion tensor, quantifying the correlation of molecular displacements in the X and Y directions"),
-            Self::_110812 => Some("Dxz Component of the diffusion tensor, quantifying the correlation of molecular displacements in the X and Z directions"),
-            Self::_110813 => Some("Dyy Component of the diffusion tensor, quantifying the molecular mobility along the Y axis"),
-            Self::_110814 => Some("Dyz Component of the diffusion tensor, quantifying the correlation of molecular displacements in the Y and Z directions"),
-            Self::_110815 => Some("Dzz Component of the diffusion tensor, quantifying the molecular mobility along the Z axis"),
-            Self::_110816 => Some("Signal intensity of a T1 Weighted Dynamic Contrast Enhanced MR image. A T1 Weighted Dynamic Contrast Enhanced MR image reflects the dynamics of diffusion of the exogenous contrast media from the blood pool into the extra vascular extracellular space (EES) of the brain at a rate determined by the blood flow to the tissue, the permeability of the Brain Blood Barrier (BBB), and the surface area of the perfusing vessels"),
-            Self::_110817 => Some("Signal intensity of a T2 Weighted Dynamic Contrast Enhanced MR image. A T2 Weighted Dynamic Contrast Enhanced MR image reflects the T2 of tissue decrease as the Gd contrast agent bolus passes through the brain"),
-            Self::_110818 => Some("Signal intensity of a T2* Weighted Dynamic Contrast Enhanced MR image. A T2* Weighted Dynamic Contrast Enhanced MR image reflects the T2* of tissue decrease as the Gd contrast agent bolus passes through the brain"),
-            Self::_110819 => Some("Signal intensity of a Blood Oxygenation Level image. BOLD imaging is sensitive to blood oxygenation (but also to cerebral blood flow and volume). This modality is essentially used for detecting brain activation (functional MR)"),
-            Self::_110820 => Some("Accumulated decay event counts in a nuclear medicine projection image"),
-            Self::_110821 => Some("Accumulated decay event counts in a Nuclear Medicine Tomographic image (including PET)"),
-            Self::_110822 => Some("Spatial Displacement along axis X of a non-linear deformable spatial registration image. The X axis is defined in reference to the patient\'s orientation, and is increasing to the left hand side of the patient"),
-            Self::_110823 => Some("Spatial Displacement along axis Y of a non-linear deformable spatial registration image. The Y axis is defined in reference to the patient\'s orientation, and is increasing to the posterior side of the patient"),
-            Self::_110824 => Some("Spatial Displacement along axis Z of a non-linear deformable spatial registration image. The Z axis is defined in reference to the patient\'s orientation, and is increasing toward the head of the patient"),
-            Self::_110825 => Some("Measured resistance to the flow of blood; e.g. through the vasculature or through a heart value"),
-            Self::_110826 => Some("Measured resistance to the flow of blood; e.g. through the vasculature or through a heart value, normalized to a particular indexed scale"),
+            Self::_110802 => Some(
+                "Signal intensity of a Time-of-flight (TOF) MR image. Time-of-flight (TOF) is based on the phenomenon of flow-related enhancement of spins entering into an imaging slice. As a result of being unsaturated, these spins give more signal that surrounding stationary spins",
+            ),
+            Self::_110803 => Some(
+                "Signal intensity of a Proton Density Weighted MR image. All MR images have intensity proportional to proton density. Images with very little T1 or T2 weighting are called \'PD-weighted\'",
+            ),
+            Self::_110804 => Some(
+                "Signal intensity of T1 Weighted MR image. A T1 Weighted MR image is created typically by using short TE and TR times",
+            ),
+            Self::_110805 => Some(
+                "Signal intensity of a T2 Weighted MR image. T2 Weighted image contrast state is approached by imaging with a TR long compared to tissue T1 (to reduce T1 contribution to image contrast) and a TE between the longest and shortest tissue T2s of interest",
+            ),
+            Self::_110806 => Some(
+                "Signal intensity of a T2* Weighted MR image. The T2* phenomenon results from molecular interactions (spin spin relaxation) and local magnetic field non-uniformities, which cause the protons to precess at slightly different frequencies",
+            ),
+            Self::_110807 => Some(
+                "Signal intensity of a Field Map MR image. A Field Map MR image provides a direct measure of the B 0 inhomogeneity at each point in the image",
+            ),
+            Self::_110808 => Some(
+                "Coefficient reflecting the fractional anisotropy of the tissues, derived from a diffusion weighted MR image. Fractional anisotropy is proportional to the square root of the variance of the Eigen values divided by the square root of the sum of the squares of the Eigen values",
+            ),
+            Self::_110809 => Some(
+                "Coefficient reflecting the relative anisotropy of the tissues, derived from a diffusion weighted MR image",
+            ),
+            Self::_110810 => Some(
+                "Dxx Component of the diffusion tensor, quantifying the molecular mobility along the X axis",
+            ),
+            Self::_110811 => Some(
+                "Dxy Component of the diffusion tensor, quantifying the correlation of molecular displacements in the X and Y directions",
+            ),
+            Self::_110812 => Some(
+                "Dxz Component of the diffusion tensor, quantifying the correlation of molecular displacements in the X and Z directions",
+            ),
+            Self::_110813 => Some(
+                "Dyy Component of the diffusion tensor, quantifying the molecular mobility along the Y axis",
+            ),
+            Self::_110814 => Some(
+                "Dyz Component of the diffusion tensor, quantifying the correlation of molecular displacements in the Y and Z directions",
+            ),
+            Self::_110815 => Some(
+                "Dzz Component of the diffusion tensor, quantifying the molecular mobility along the Z axis",
+            ),
+            Self::_110816 => Some(
+                "Signal intensity of a T1 Weighted Dynamic Contrast Enhanced MR image. A T1 Weighted Dynamic Contrast Enhanced MR image reflects the dynamics of diffusion of the exogenous contrast media from the blood pool into the extra vascular extracellular space (EES) of the brain at a rate determined by the blood flow to the tissue, the permeability of the Brain Blood Barrier (BBB), and the surface area of the perfusing vessels",
+            ),
+            Self::_110817 => Some(
+                "Signal intensity of a T2 Weighted Dynamic Contrast Enhanced MR image. A T2 Weighted Dynamic Contrast Enhanced MR image reflects the T2 of tissue decrease as the Gd contrast agent bolus passes through the brain",
+            ),
+            Self::_110818 => Some(
+                "Signal intensity of a T2* Weighted Dynamic Contrast Enhanced MR image. A T2* Weighted Dynamic Contrast Enhanced MR image reflects the T2* of tissue decrease as the Gd contrast agent bolus passes through the brain",
+            ),
+            Self::_110819 => Some(
+                "Signal intensity of a Blood Oxygenation Level image. BOLD imaging is sensitive to blood oxygenation (but also to cerebral blood flow and volume). This modality is essentially used for detecting brain activation (functional MR)",
+            ),
+            Self::_110820 => {
+                Some("Accumulated decay event counts in a nuclear medicine projection image")
+            }
+            Self::_110821 => Some(
+                "Accumulated decay event counts in a Nuclear Medicine Tomographic image (including PET)",
+            ),
+            Self::_110822 => Some(
+                "Spatial Displacement along axis X of a non-linear deformable spatial registration image. The X axis is defined in reference to the patient\'s orientation, and is increasing to the left hand side of the patient",
+            ),
+            Self::_110823 => Some(
+                "Spatial Displacement along axis Y of a non-linear deformable spatial registration image. The Y axis is defined in reference to the patient\'s orientation, and is increasing to the posterior side of the patient",
+            ),
+            Self::_110824 => Some(
+                "Spatial Displacement along axis Z of a non-linear deformable spatial registration image. The Z axis is defined in reference to the patient\'s orientation, and is increasing toward the head of the patient",
+            ),
+            Self::_110825 => Some(
+                "Measured resistance to the flow of blood; e.g. through the vasculature or through a heart value",
+            ),
+            Self::_110826 => Some(
+                "Measured resistance to the flow of blood; e.g. through the vasculature or through a heart value, normalized to a particular indexed scale",
+            ),
             Self::_110827 => Some("Velocity of tissue based on Doppler measurements"),
             Self::_110828 => Some("Velocity of blood flow based on Doppler measurements"),
             Self::_110829 => Some("Statistical variance of blood velocity relative to mean"),
             Self::_110830 => Some("Scalar value related to the elastic properties of the tissue"),
-            Self::_110831 => Some("Scalar value related to the volume of blood perfusing into tissue"),
+            Self::_110831 => {
+                Some("Scalar value related to the volume of blood perfusing into tissue")
+            }
             Self::_110832 => Some("Speed of sound in tissue"),
             Self::_110833 => Some("Reduction in strength of ultrasound signal as the wave"),
             Self::_110834 => Some("Red component of a true color image (RGB)"),
             Self::_110835 => Some("Green component of a true color image (RGB)"),
             Self::_110836 => Some("Blue component of a true color image (RGB)"),
-            Self::_110837 => Some("Y (Luminance) component of a YBR FULL image, as defined in JPEG 2000"),
-            Self::_110838 => Some("CB (Blue chrominance) component of a YBR FULL image, as defined in JPEG 2000"),
-            Self::_110839 => Some("CR (Red chrominance) component of a YBR FULL image, as defined in JPEG 2000"),
-            Self::_110840 => Some("Y (Luminance) component of a YBR PARTIAL image, as defined in JPEG 2000"),
-            Self::_110841 => Some("CB (Blue chrominance) component of a YBR PARTIAL image, as defined in JPEG 2000"),
-            Self::_110842 => Some("CR (Red chrominance) component of a YBR PARTIAL image, as defined in JPEG 2000"),
-            Self::_110843 => Some("Y (Luminance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000"),
-            Self::_110844 => Some("CB (Blue chrominance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000"),
-            Self::_110845 => Some("CR (Red chrominance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000"),
-            Self::_110846 => Some("Y (Luminance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000"),
-            Self::_110847 => Some("CB (Blue chrominance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000"),
-            Self::_110848 => Some("CR (Red chrominance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000"),
+            Self::_110837 => {
+                Some("Y (Luminance) component of a YBR FULL image, as defined in JPEG 2000")
+            }
+            Self::_110838 => {
+                Some("CB (Blue chrominance) component of a YBR FULL image, as defined in JPEG 2000")
+            }
+            Self::_110839 => {
+                Some("CR (Red chrominance) component of a YBR FULL image, as defined in JPEG 2000")
+            }
+            Self::_110840 => {
+                Some("Y (Luminance) component of a YBR PARTIAL image, as defined in JPEG 2000")
+            }
+            Self::_110841 => Some(
+                "CB (Blue chrominance) component of a YBR PARTIAL image, as defined in JPEG 2000",
+            ),
+            Self::_110842 => Some(
+                "CR (Red chrominance) component of a YBR PARTIAL image, as defined in JPEG 2000",
+            ),
+            Self::_110843 => Some(
+                "Y (Luminance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000",
+            ),
+            Self::_110844 => Some(
+                "CB (Blue chrominance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000",
+            ),
+            Self::_110845 => Some(
+                "CR (Red chrominance) component of a YBR ICT image (Irreversible Color Transform), as defined in JPEG 2000",
+            ),
+            Self::_110846 => Some(
+                "Y (Luminance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000",
+            ),
+            Self::_110847 => Some(
+                "CB (Blue chrominance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000",
+            ),
+            Self::_110848 => Some(
+                "CR (Red chrominance) component of a YBR RCT image (Reversible Color Transform), as defined in JPEG 2000",
+            ),
             Self::_110849 => Some("The ability of a material to create an ultrasound return echo"),
-            Self::_110850 => Some("Decrease in the number of photons in an X-Ray beam due to interactions with the atoms of a material substance. Attenuation is due primarily to two processes, absorption and scattering"),
-            Self::_110851 => Some("Coefficient that describes the fraction of a beam of X-Rays or gamma rays that is absorbed or scattered per unit thickness of the absorber. This value basically accounts for the number of atoms in a cubic cm volume of material and the probability of a photon being scattered or absorbed from the nucleus or an electron of one of these atoms"),
+            Self::_110850 => Some(
+                "Decrease in the number of photons in an X-Ray beam due to interactions with the atoms of a material substance. Attenuation is due primarily to two processes, absorption and scattering",
+            ),
+            Self::_110851 => Some(
+                "Coefficient that describes the fraction of a beam of X-Rays or gamma rays that is absorbed or scattered per unit thickness of the absorber. This value basically accounts for the number of atoms in a cubic cm volume of material and the probability of a photon being scattered or absorbed from the nucleus or an electron of one of these atoms",
+            ),
             Self::_110852 => Some("Signal intensity of an MR image, not otherwise specified"),
             Self::_110853 => Some("Binary value denoting that the segmented property is present"),
-            Self::_110854 => Some("Probability, defined as a percentage, that the segmented property occupies the spatial area defined by the voxel"),
-            Self::_110855 => Some("Percentage of the voxel area occupied by the segmented property"),
+            Self::_110854 => Some(
+                "Probability, defined as a percentage, that the segmented property occupies the spatial area defined by the voxel",
+            ),
+            Self::_110855 => {
+                Some("Percentage of the voxel area occupied by the segmented property")
+            }
             Self::_110856 => Some("Spatial dimension, denoting a linear displacement"),
-            Self::_110857 => Some("Dimension denoting the energy (frequency or wavelength) of photons"),
-            Self::_110858 => Some("Dimension used to sequence events, to compare the duration of events and the intervals between events"),
+            Self::_110857 => {
+                Some("Dimension denoting the energy (frequency or wavelength) of photons")
+            }
+            Self::_110858 => Some(
+                "Dimension used to sequence events, to compare the duration of events and the intervals between events",
+            ),
             Self::_110859 => Some("Spatial dimension, denoting an angle"),
-            Self::_110860 => Some("A spatial dimension axis running along a line between the patient\'s left and right side"),
-            Self::_110861 => Some("A spatial dimension axis running along a line between the patient\'s head and foot"),
-            Self::_110862 => Some("A spatial dimension axis running along a line between the patient\'s anterior and posterior sides"),
-            Self::_110863 => Some("A spatial dimension axis running along a line between the apex and base of an organ, object, or chamber"),
-            Self::_110864 => Some("A spatial dimension axis running along a line between the anterior and inferior sides of an organ, object, or chamber"),
-            Self::_110865 => Some("A spatial dimension axis running along a line between the septum and wall of a chamber"),
-            Self::_110866 => Some("Orientation of a spatial dimension where increasing values run from the right to the left side of the patient"),
-            Self::_110867 => Some("Orientation of a spatial dimension where increasing values run from the left to the right side of the patient"),
-            Self::_110868 => Some("Orientation of a spatial dimension where increasing values run from the head to the foot of the patient"),
-            Self::_110869 => Some("Orientation of a spatial dimension where increasing values run from the foot to the head of the patient"),
-            Self::_110870 => Some("Orientation of a spatial dimension where increasing values run from the anterior to the posterior side of the patient"),
-            Self::_110871 => Some("Orientation of a spatial dimension where increasing values run from the posterior to the anterior side of the patient"),
-            Self::_110872 => Some("Orientation of a spatial dimension where increasing values run from the apex to the base"),
-            Self::_110873 => Some("Orientation of a spatial dimension where increasing values run from the base to the apex"),
-            Self::_110874 => Some("Orientation of a spatial dimension where increasing values run from the anterior to the inferior"),
-            Self::_110875 => Some("Orientation of a spatial dimension where increasing values run from the inferior to the anterior"),
-            Self::_110876 => Some("Orientation of a spatial dimension where increasing values run from the septum of a chamber to the opposite wall"),
-            Self::_110877 => Some("Orientation of a spatial dimension where increasing values run from the opposite wall to the septum of a chamber"),
-            Self::_110901 => Some("The x coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system"),
-            Self::_110902 => Some("The y coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system"),
-            Self::_110903 => Some("The z coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system"),
-            Self::_110904 => Some("The x value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
-            Self::_110905 => Some("The y value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
-            Self::_110906 => Some("The z value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
-            Self::_110907 => Some("The x value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
-            Self::_110908 => Some("The y value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
-            Self::_110909 => Some("The z value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system"),
+            Self::_110860 => Some(
+                "A spatial dimension axis running along a line between the patient\'s left and right side",
+            ),
+            Self::_110861 => Some(
+                "A spatial dimension axis running along a line between the patient\'s head and foot",
+            ),
+            Self::_110862 => Some(
+                "A spatial dimension axis running along a line between the patient\'s anterior and posterior sides",
+            ),
+            Self::_110863 => Some(
+                "A spatial dimension axis running along a line between the apex and base of an organ, object, or chamber",
+            ),
+            Self::_110864 => Some(
+                "A spatial dimension axis running along a line between the anterior and inferior sides of an organ, object, or chamber",
+            ),
+            Self::_110865 => Some(
+                "A spatial dimension axis running along a line between the septum and wall of a chamber",
+            ),
+            Self::_110866 => Some(
+                "Orientation of a spatial dimension where increasing values run from the right to the left side of the patient",
+            ),
+            Self::_110867 => Some(
+                "Orientation of a spatial dimension where increasing values run from the left to the right side of the patient",
+            ),
+            Self::_110868 => Some(
+                "Orientation of a spatial dimension where increasing values run from the head to the foot of the patient",
+            ),
+            Self::_110869 => Some(
+                "Orientation of a spatial dimension where increasing values run from the foot to the head of the patient",
+            ),
+            Self::_110870 => Some(
+                "Orientation of a spatial dimension where increasing values run from the anterior to the posterior side of the patient",
+            ),
+            Self::_110871 => Some(
+                "Orientation of a spatial dimension where increasing values run from the posterior to the anterior side of the patient",
+            ),
+            Self::_110872 => Some(
+                "Orientation of a spatial dimension where increasing values run from the apex to the base",
+            ),
+            Self::_110873 => Some(
+                "Orientation of a spatial dimension where increasing values run from the base to the apex",
+            ),
+            Self::_110874 => Some(
+                "Orientation of a spatial dimension where increasing values run from the anterior to the inferior",
+            ),
+            Self::_110875 => Some(
+                "Orientation of a spatial dimension where increasing values run from the inferior to the anterior",
+            ),
+            Self::_110876 => Some(
+                "Orientation of a spatial dimension where increasing values run from the septum of a chamber to the opposite wall",
+            ),
+            Self::_110877 => Some(
+                "Orientation of a spatial dimension where increasing values run from the opposite wall to the septum of a chamber",
+            ),
+            Self::_110901 => Some(
+                "The x coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system",
+            ),
+            Self::_110902 => Some(
+                "The y coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system",
+            ),
+            Self::_110903 => Some(
+                "The z coordinate of the upper left hand corner (center of the first voxel transmitted) of the image, with respect to the patient-based coordinate system",
+            ),
+            Self::_110904 => Some(
+                "The x value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
+            Self::_110905 => Some(
+                "The y value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
+            Self::_110906 => Some(
+                "The z value of the first row direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
+            Self::_110907 => Some(
+                "The x value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
+            Self::_110908 => Some(
+                "The y value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
+            Self::_110909 => Some(
+                "The z value of the first column direction cosine with respect to the patient, with respect to the patient-based coordinate system",
+            ),
             Self::_110910 => Some("Number of rows in the pixel data of the image"),
             Self::_110911 => Some("Number of columns in the pixel data of the image"),
-            Self::_111001 => Some("The name assigned by a manufacturer to a specific software algorithm"),
-            Self::_111002 => Some("The input parameters used by a manufacturer to configure the behavior of a specific software algorithm"),
-            Self::_111003 => Some("The software version identifier assigned by a manufacturer to a specific software algorithm"),
-            Self::_111004 => Some("The type of correlation applied to detection results; e.g. temporal, spatial"),
-            Self::_111005 => Some("Assignment of intermediate or overall interpretation results to a general category"),
-            Self::_111006 => Some("Assessment of annotating tissues in breast; generally including fatty, mixed or dense"),
-            Self::_111007 => Some("Purpose of reference for an SCOORD content item that is an outline of the breast that includes the pectoral muscle tissue"),
-            Self::_111008 => Some("The type of distribution associated with detected calcifications"),
+            Self::_111001 => {
+                Some("The name assigned by a manufacturer to a specific software algorithm")
+            }
+            Self::_111002 => Some(
+                "The input parameters used by a manufacturer to configure the behavior of a specific software algorithm",
+            ),
+            Self::_111003 => Some(
+                "The software version identifier assigned by a manufacturer to a specific software algorithm",
+            ),
+            Self::_111004 => {
+                Some("The type of correlation applied to detection results; e.g. temporal, spatial")
+            }
+            Self::_111005 => Some(
+                "Assignment of intermediate or overall interpretation results to a general category",
+            ),
+            Self::_111006 => Some(
+                "Assessment of annotating tissues in breast; generally including fatty, mixed or dense",
+            ),
+            Self::_111007 => Some(
+                "Purpose of reference for an SCOORD content item that is an outline of the breast that includes the pectoral muscle tissue",
+            ),
+            Self::_111008 => {
+                Some("The type of distribution associated with detected calcifications")
+            }
             Self::_111009 => Some("Identification of the morphology of detected calcifications"),
-            Self::_111010 => Some("Purpose of reference for an SCOORD content item that identifies the central point of a finding or feature"),
-            Self::_111011 => Some("The likelihood that the feature analyzed is in fact the type of feature identified"),
-            Self::_111012 => Some("The likelihood that the finding detected is in fact the type of finding identified"),
-            Self::_111013 => Some("The certainty that a device places on an impression, where 0 equals no certainty and 100 equals certainty"),
-            Self::_111014 => Some("A location identifier based on clock-face numbering or anatomic sub-region"),
-            Self::_111015 => Some("An item that is an inferred correlation relating two or more individual findings or features"),
-            Self::_111016 => Some("The inferred relationship between the findings or features making up a composite feature"),
-            Self::_111017 => Some("General assessment of whether or not CAD processing was successful, and whether any findings resulted"),
+            Self::_111010 => Some(
+                "Purpose of reference for an SCOORD content item that identifies the central point of a finding or feature",
+            ),
+            Self::_111011 => Some(
+                "The likelihood that the feature analyzed is in fact the type of feature identified",
+            ),
+            Self::_111012 => Some(
+                "The likelihood that the finding detected is in fact the type of finding identified",
+            ),
+            Self::_111013 => Some(
+                "The certainty that a device places on an impression, where 0 equals no certainty and 100 equals certainty",
+            ),
+            Self::_111014 => {
+                Some("A location identifier based on clock-face numbering or anatomic sub-region")
+            }
+            Self::_111015 => Some(
+                "An item that is an inferred correlation relating two or more individual findings or features",
+            ),
+            Self::_111016 => Some(
+                "The inferred relationship between the findings or features making up a composite feature",
+            ),
+            Self::_111017 => Some(
+                "General assessment of whether or not CAD processing was successful, and whether any findings resulted",
+            ),
             Self::_111018 => Some("The date the data creation started"),
             Self::_111019 => Some("The time the data creation started"),
-            Self::_111020 => Some("A location identifier based on a feature\'s inferred distance from the surface of the associated anatomy"),
-            Self::_111021 => Some("A textual description of the change that occurred over time in a qualitative characteristic of a feature"),
-            Self::_111022 => Some("The type of finding sought after by a specific algorithm applied to one image"),
-            Self::_111023 => Some("A general change that occurred within an imaged area between a prior imaging procedure and the current imaging procedure"),
+            Self::_111020 => Some(
+                "A location identifier based on a feature\'s inferred distance from the surface of the associated anatomy",
+            ),
+            Self::_111021 => Some(
+                "A textual description of the change that occurred over time in a qualitative characteristic of a feature",
+            ),
+            Self::_111022 => Some(
+                "The type of finding sought after by a specific algorithm applied to one image",
+            ),
+            Self::_111023 => Some(
+                "A general change that occurred within an imaged area between a prior imaging procedure and the current imaging procedure",
+            ),
             Self::_111024 => Some("A group of analysis algorithms that were attempted, but failed"),
-            Self::_111025 => Some("A group of detection algorithms that were attempted, but failed"),
-            Self::_111026 => Some("For projection radiography, the horizontal physical distance measured at the front plane of an Image Receptor housing between the center of each pixel. For tomographic images, the horizontal physical distance in the patient between the center of each pixel"),
-            Self::_111027 => Some("Laterality of (possibly paired) body part contained in an image"),
-            Self::_111028 => Some("A container that references all image data used as evidence to produce a report"),
-            Self::_111029 => Some("A numeric value in the range 0 to 100, inclusive, where 0 is worst quality and 100 is best quality"),
-            Self::_111030 => Some("Purpose of reference for an SCOORD content item that identifies a specific region of interest within an image"),
-            Self::_111031 => Some("The projection of the anatomic region of interest on an image receptor"),
+            Self::_111025 => {
+                Some("A group of detection algorithms that were attempted, but failed")
+            }
+            Self::_111026 => Some(
+                "For projection radiography, the horizontal physical distance measured at the front plane of an Image Receptor housing between the center of each pixel. For tomographic images, the horizontal physical distance in the patient between the center of each pixel",
+            ),
+            Self::_111027 => {
+                Some("Laterality of (possibly paired) body part contained in an image")
+            }
+            Self::_111028 => Some(
+                "A container that references all image data used as evidence to produce a report",
+            ),
+            Self::_111029 => Some(
+                "A numeric value in the range 0 to 100, inclusive, where 0 is worst quality and 100 is best quality",
+            ),
+            Self::_111030 => Some(
+                "Purpose of reference for an SCOORD content item that identifies a specific region of interest within an image",
+            ),
+            Self::_111031 => {
+                Some("The projection of the anatomic region of interest on an image receptor")
+            }
             Self::_111032 => Some("Modifier for Image View"),
-            Self::_111033 => Some("Free-form text describing the overall or an individual impression"),
-            Self::_111034 => Some("A container for a group of related results from interpretation of one or more images and associated clinical information"),
-            Self::_111035 => Some("The X-Ray attenuation of a lesion relative to the expected attenuation of an equal volume of fibroglandular breast tissue"),
-            Self::_111036 => Some("A structured report containing the results of computer-aided detection or diagnosis applied to breast imaging and associated clinical information"),
-            Self::_111037 => Some("The characteristic of the boundary, edges or border of a detected lesion"),
-            Self::_111038 => Some("The quantity of calcifications detected within an identified group or cluster"),
+            Self::_111033 => {
+                Some("Free-form text describing the overall or an individual impression")
+            }
+            Self::_111034 => Some(
+                "A container for a group of related results from interpretation of one or more images and associated clinical information",
+            ),
+            Self::_111035 => Some(
+                "The X-Ray attenuation of a lesion relative to the expected attenuation of an equal volume of fibroglandular breast tissue",
+            ),
+            Self::_111036 => Some(
+                "A structured report containing the results of computer-aided detection or diagnosis applied to breast imaging and associated clinical information",
+            ),
+            Self::_111037 => {
+                Some("The characteristic of the boundary, edges or border of a detected lesion")
+            }
+            Self::_111038 => Some(
+                "The quantity of calcifications detected within an identified group or cluster",
+            ),
             Self::_111039 => Some("A non-lesion object identified within one or more images"),
-            Self::_111040 => Some("Purpose of reference for a COMPOSITE content item that identifies it as the original source of evidence for another content item in the report"),
-            Self::_111041 => Some("Purpose of reference for an SCOORD content item that identifies the outline or bounding region of a finding or feature"),
-            Self::_111042 => Some("The inferred type of disease associated with an identified feature"),
-            Self::_111043 => Some("The patient orientation relative to the image plane, specified by a value that designates the anatomical direction of the positive column axis (top to bottom)"),
-            Self::_111044 => Some("The patient orientation relative to the image plane, specified by a value that designates the anatomical direction of the positive row axis (left to right)"),
-            Self::_111045 => Some("Purpose of reference for an SCOORD content item that is an outline of the pectoral muscle tissue only"),
-            Self::_111046 => Some("Percent of breast area that is mammographically dense, excluding pectoralis muscle"),
-            Self::_111047 => Some("The likelihood that an identified finding or feature is cancerous"),
-            Self::_111048 => Some("A location identifier based on the division of an area into four regions"),
-            Self::_111049 => Some("A qualitative characteristic of a feature that has changed over time"),
+            Self::_111040 => Some(
+                "Purpose of reference for a COMPOSITE content item that identifies it as the original source of evidence for another content item in the report",
+            ),
+            Self::_111041 => Some(
+                "Purpose of reference for an SCOORD content item that identifies the outline or bounding region of a finding or feature",
+            ),
+            Self::_111042 => {
+                Some("The inferred type of disease associated with an identified feature")
+            }
+            Self::_111043 => Some(
+                "The patient orientation relative to the image plane, specified by a value that designates the anatomical direction of the positive column axis (top to bottom)",
+            ),
+            Self::_111044 => Some(
+                "The patient orientation relative to the image plane, specified by a value that designates the anatomical direction of the positive row axis (left to right)",
+            ),
+            Self::_111045 => Some(
+                "Purpose of reference for an SCOORD content item that is an outline of the pectoral muscle tissue only",
+            ),
+            Self::_111046 => Some(
+                "Percent of breast area that is mammographically dense, excluding pectoralis muscle",
+            ),
+            Self::_111047 => {
+                Some("The likelihood that an identified finding or feature is cancerous")
+            }
+            Self::_111048 => {
+                Some("A location identifier based on the division of an area into four regions")
+            }
+            Self::_111049 => {
+                Some("A qualitative characteristic of a feature that has changed over time")
+            }
             Self::_111050 => Some("The effect of the quality of an image on its usability"),
             Self::_111051 => Some("The quality control standard used to make a quality assessment"),
             Self::_111052 => Some("A specific quality related deficiency detected within an image"),
-            Self::_111053 => Some("Recommended type of follow-up to an imaging procedure, based on interpreted results"),
-            Self::_111054 => Some("Recommended follow-up date to an imaging procedure, based on interpreted results"),
-            Self::_111055 => Some("Recommended follow-up interval to an imaging procedure, based on interpreted results"),
-            Self::_111056 => Some("The recommendation of the producer of a content item regarding presentation of the content item by recipients of the report"),
-            Self::_111057 => Some("An indication of how widespread the detection of a feature is within the analyzed image data set"),
-            Self::_111058 => Some("A textual description of the contents of a selected region identified within an image"),
+            Self::_111053 => Some(
+                "Recommended type of follow-up to an imaging procedure, based on interpreted results",
+            ),
+            Self::_111054 => Some(
+                "Recommended follow-up date to an imaging procedure, based on interpreted results",
+            ),
+            Self::_111055 => Some(
+                "Recommended follow-up interval to an imaging procedure, based on interpreted results",
+            ),
+            Self::_111056 => Some(
+                "The recommendation of the producer of a content item regarding presentation of the content item by recipients of the report",
+            ),
+            Self::_111057 => Some(
+                "An indication of how widespread the detection of a feature is within the analyzed image data set",
+            ),
+            Self::_111058 => Some(
+                "A textual description of the contents of a selected region identified within an image",
+            ),
             Self::_111059 => Some("An item that was detected on one image"),
-            Self::_111060 => Some("Date on which the acquisition of the study information was started"),
-            Self::_111061 => Some("Time at which the acquisition of the study information was started"),
-            Self::_111062 => Some("A group of analysis algorithms that were attempted and completed successfully"),
-            Self::_111063 => Some("A group of detection algorithms that were attempted and completed successfully"),
-            Self::_111064 => Some("An overall indication of whether the CAD detection algorithms applied were completed successfully"),
-            Self::_111065 => Some("An overall indication of whether the CAD analysis algorithms applied were completed successfully"),
-            Self::_111066 => Some("For projection radiography, the vertical physical distance measured at the front plane of an Image Receptor housing between the center of each pixel. For tomographic images, the vertical physical distance in the patient between the center of each pixel"),
-            Self::_111069 => Some("A radiographic projection that has been with the patient lying on a table with the X-Ray source on one side of the table and the detector on the other; e.g. may describe a cross-table cervical spine, chest or pelvis X-Ray image"),
-            Self::_111071 => Some("One of a number of discrete points on the Receiver-Operator Characteristics (ROC) curve that reflects the expected sensitivity and specificity of a CAD algorithm, where zero indicates the highest specificity, lowest sensitivity operating point. The value should not exceed the Maximum CAD Operating Point"),
-            Self::_111072 => Some("The maximum value of CAD Operating Point for the specific CAD algorithm used"),
+            Self::_111060 => {
+                Some("Date on which the acquisition of the study information was started")
+            }
+            Self::_111061 => {
+                Some("Time at which the acquisition of the study information was started")
+            }
+            Self::_111062 => Some(
+                "A group of analysis algorithms that were attempted and completed successfully",
+            ),
+            Self::_111063 => Some(
+                "A group of detection algorithms that were attempted and completed successfully",
+            ),
+            Self::_111064 => Some(
+                "An overall indication of whether the CAD detection algorithms applied were completed successfully",
+            ),
+            Self::_111065 => Some(
+                "An overall indication of whether the CAD analysis algorithms applied were completed successfully",
+            ),
+            Self::_111066 => Some(
+                "For projection radiography, the vertical physical distance measured at the front plane of an Image Receptor housing between the center of each pixel. For tomographic images, the vertical physical distance in the patient between the center of each pixel",
+            ),
+            Self::_111069 => Some(
+                "A radiographic projection that has been with the patient lying on a table with the X-Ray source on one side of the table and the detector on the other; e.g. may describe a cross-table cervical spine, chest or pelvis X-Ray image",
+            ),
+            Self::_111071 => Some(
+                "One of a number of discrete points on the Receiver-Operator Characteristics (ROC) curve that reflects the expected sensitivity and specificity of a CAD algorithm, where zero indicates the highest specificity, lowest sensitivity operating point. The value should not exceed the Maximum CAD Operating Point",
+            ),
+            Self::_111072 => {
+                Some("The maximum value of CAD Operating Point for the specific CAD algorithm used")
+            }
             Self::_111081 => Some("The intended interpretation of a CAD Operating Point"),
-            Self::_111086 => Some("The number of false CAD markers per image. Correlates to inverse of Image Specificity"),
-            Self::_111087 => Some("The number of false markers per collection of images that are CAD processed as a group. Correlates to inverse of Case Specificity"),
-            Self::_111088 => Some("The percentage of cancers that should be detected by a CAD algorithm where CAD marks the cancers in at least one view"),
-            Self::_111089 => Some("The percentage of cancers that should be detected by a CAD algorithm where CAD marks the cancers in each view"),
-            Self::_111090 => Some("The percentage of cases (collections of images CAD processed as a group) without cancer that have no CAD findings whatsoever. Correlates to inverse of False Markers per Case"),
-            Self::_111091 => Some("The percentage of images without cancer that have no CAD findings whatsoever. Correlates to inverse of False Markers per Image"),
-            Self::_111092 => Some("The CAD operating point that is recommended for initial display by the creator of the structured report"),
-            Self::_111093 => Some("A list of CAD operating points including their corresponding characteristics"),
+            Self::_111086 => Some(
+                "The number of false CAD markers per image. Correlates to inverse of Image Specificity",
+            ),
+            Self::_111087 => Some(
+                "The number of false markers per collection of images that are CAD processed as a group. Correlates to inverse of Case Specificity",
+            ),
+            Self::_111088 => Some(
+                "The percentage of cancers that should be detected by a CAD algorithm where CAD marks the cancers in at least one view",
+            ),
+            Self::_111089 => Some(
+                "The percentage of cancers that should be detected by a CAD algorithm where CAD marks the cancers in each view",
+            ),
+            Self::_111090 => Some(
+                "The percentage of cases (collections of images CAD processed as a group) without cancer that have no CAD findings whatsoever. Correlates to inverse of False Markers per Case",
+            ),
+            Self::_111091 => Some(
+                "The percentage of images without cancer that have no CAD findings whatsoever. Correlates to inverse of False Markers per Image",
+            ),
+            Self::_111092 => Some(
+                "The CAD operating point that is recommended for initial display by the creator of the structured report",
+            ),
+            Self::_111093 => {
+                Some("A list of CAD operating points including their corresponding characteristics")
+            }
             Self::_111099 => Some("A specific area of interest noted within an image"),
-            Self::_111100 => Some("The surface shape of all or a portion of breast related anatomy"),
-            Self::_111101 => Some("Image quality incorporates the following clinical image evaluation parameters: assessment of positioning, compression, artifacts, exposure, contrast, sharpness, and labeling"),
-            Self::_111102 => Some("A finding or feature that is identified as a non-anatomic foreign object"),
-            Self::_111103 => Some("A space-occupying lesion identified in a single image or projection"),
+            Self::_111100 => {
+                Some("The surface shape of all or a portion of breast related anatomy")
+            }
+            Self::_111101 => Some(
+                "Image quality incorporates the following clinical image evaluation parameters: assessment of positioning, compression, artifacts, exposure, contrast, sharpness, and labeling",
+            ),
+            Self::_111102 => {
+                Some("A finding or feature that is identified as a non-anatomic foreign object")
+            }
+            Self::_111103 => {
+                Some("A space-occupying lesion identified in a single image or projection")
+            }
             Self::_111104 => Some("A single identified calcification"),
-            Self::_111105 => Some("Multiple calcifications identified as occupying a small area of tissue (less than 2 cc)"),
+            Self::_111105 => Some(
+                "Multiple calcifications identified as occupying a small area of tissue (less than 2 cc)",
+            ),
             Self::_111111 => Some("Straightening or thickening of Cooper\'s ligaments"),
-            Self::_111112 => Some("An abnormality noted at imaging within the dermis of the breast"),
+            Self::_111112 => {
+                Some("An abnormality noted at imaging within the dermis of the breast")
+            }
             Self::_111113 => Some("An abnormality noted at imaging on the epidermis of the breast"),
-            Self::_111120 => Some("An assessment category to indicate that images have been acquired to assess marker placement following a breast interventional procedure"),
-            Self::_111121 => Some("An indication that the patient should seek post procedural follow-up directives from a clinical health care provider"),
-            Self::_111122 => Some("A recommendation on a patient with known cancer to take steps appropriate to the diagnosis"),
+            Self::_111120 => Some(
+                "An assessment category to indicate that images have been acquired to assess marker placement following a breast interventional procedure",
+            ),
+            Self::_111121 => Some(
+                "An indication that the patient should seek post procedural follow-up directives from a clinical health care provider",
+            ),
+            Self::_111122 => Some(
+                "A recommendation on a patient with known cancer to take steps appropriate to the diagnosis",
+            ),
             Self::_111123 => Some("Positioning of a radiopaque marker"),
-            Self::_111124 => Some("Patient has previous diagnosis of breast cancer resulting in mastectomy"),
+            Self::_111124 => {
+                Some("Patient has previous diagnosis of breast cancer resulting in mastectomy")
+            }
             Self::_111125 => Some("Patient has had biopsy containing proven malignancy"),
             Self::_111126 => Some("Patient has a finding of mass reported on a prior imaging exam"),
-            Self::_111127 => Some("A breast imaging procedure performed on a specific area of the breast"),
+            Self::_111127 => {
+                Some("A breast imaging procedure performed on a specific area of the breast")
+            }
             Self::_111128 => Some("A breast imaging procedure performed on the entire breast"),
-            Self::_111129 => Some("A cluster of tiny anechoic foci each smaller than 2-3 mm in diameter with thin (less than 0.5 mm) intervening septations and no discrete solid components"),
-            Self::_111130 => Some("A fluid filled mass most commonly characterized by homogeneous low-level internal echoes on ultrasound"),
+            Self::_111129 => Some(
+                "A cluster of tiny anechoic foci each smaller than 2-3 mm in diameter with thin (less than 0.5 mm) intervening septations and no discrete solid components",
+            ),
+            Self::_111130 => Some(
+                "A fluid filled mass most commonly characterized by homogeneous low-level internal echoes on ultrasound",
+            ),
             Self::_111135 => Some("Views not inclusive of MLO and CC (BI-RADS\u{ae})"),
-            Self::_111136 => Some("A spot or coned down compression of the breast providing a reduction in the thickness and a magnification of the localized area of interest and improved separation of breast tissue"),
-            Self::_111137 => Some("Use of sound waves to visualize muscles, tendons, and many internal organs, to capture their size, structure and any pathological lesions with real time tomographic images."),
-            Self::_111138 => Some("Obtain previous mammography studies to compare to present study"),
-            Self::_111139 => Some("A medical procedure used for the sampling of mammary duct tissue"),
-            Self::_111140 => Some("Follow up study at 12 months for women 40 years of age having a prior negative study and no mitigating risk factors for breast cancer"),
-            Self::_111141 => Some("Any decision to perform tissue acquisition should be based on clinical assessment"),
+            Self::_111136 => Some(
+                "A spot or coned down compression of the breast providing a reduction in the thickness and a magnification of the localized area of interest and improved separation of breast tissue",
+            ),
+            Self::_111137 => Some(
+                "Use of sound waves to visualize muscles, tendons, and many internal organs, to capture their size, structure and any pathological lesions with real time tomographic images.",
+            ),
+            Self::_111138 => {
+                Some("Obtain previous mammography studies to compare to present study")
+            }
+            Self::_111139 => {
+                Some("A medical procedure used for the sampling of mammary duct tissue")
+            }
+            Self::_111140 => Some(
+                "Follow up study at 12 months for women 40 years of age having a prior negative study and no mitigating risk factors for breast cancer",
+            ),
+            Self::_111141 => Some(
+                "Any decision to perform tissue acquisition should be based on clinical assessment",
+            ),
             Self::_111142 => Some("Follow-up at short interval (1-11 months)"),
             Self::_111143 => Some("Tissue acquisition should be considered"),
-            Self::_111144 => Some("Breast tissue acquisition following the identification of an area of concern with the placement of a needle or needle-wire assembly"),
-            Self::_111145 => Some("Pathologic analysis of breast tissue and lesions using core tissue samples"),
-            Self::_111146 => Some("Lesions that do not have the characteristic morphologies of breast cancer but have a definite probability of being malignant. There is a sufficient concern to urge a biopsy"),
+            Self::_111144 => Some(
+                "Breast tissue acquisition following the identification of an area of concern with the placement of a needle or needle-wire assembly",
+            ),
+            Self::_111145 => {
+                Some("Pathologic analysis of breast tissue and lesions using core tissue samples")
+            }
+            Self::_111146 => Some(
+                "Lesions that do not have the characteristic morphologies of breast cancer but have a definite probability of being malignant. There is a sufficient concern to urge a biopsy",
+            ),
             Self::_111147 => Some("Cellular analysis of specimen"),
             Self::_111148 => Some("Tissue acquisition should be strongly considered"),
-            Self::_111149 => Some("Lesions have a high probability of being cancer, which require additional action"),
-            Self::_111150 => Some("The producer of a report intends for a recipient of the report to present or display the associated content item"),
-            Self::_111151 => Some("The producer of a report considers the presentation or display of the associated content item by a recipient to be optional"),
-            Self::_111152 => Some("The producer of a report intends for a recipient of the report NOT to present or display the associated content item"),
-            Self::_111153 => Some("The associated content items are identified as being the same finding or feature at different points in time"),
-            Self::_111154 => Some("The associated content items are identified as being the same finding or feature on different projections taken at the same point in time"),
-            Self::_111155 => Some("The associated content items are identified as being related side-to-side"),
+            Self::_111149 => Some(
+                "Lesions have a high probability of being cancer, which require additional action",
+            ),
+            Self::_111150 => Some(
+                "The producer of a report intends for a recipient of the report to present or display the associated content item",
+            ),
+            Self::_111151 => Some(
+                "The producer of a report considers the presentation or display of the associated content item by a recipient to be optional",
+            ),
+            Self::_111152 => Some(
+                "The producer of a report intends for a recipient of the report NOT to present or display the associated content item",
+            ),
+            Self::_111153 => Some(
+                "The associated content items are identified as being the same finding or feature at different points in time",
+            ),
+            Self::_111154 => Some(
+                "The associated content items are identified as being the same finding or feature on different projections taken at the same point in time",
+            ),
+            Self::_111155 => {
+                Some("The associated content items are identified as being related side-to-side")
+            }
             Self::_111156 => Some("There is one image in the interpreted data set"),
-            Self::_111157 => Some("There is more than one image of the same modality in the interpreted data set"),
-            Self::_111158 => Some("There is more than one image of the same modality in the interpreted data set"),
-            Self::_111159 => Some("The interpreted data set contains images from multiple modalities"),
-            Self::_111168 => Some("The fibrous tissue replacing normal tissues destroyed by disease or injury"),
-            Self::_111170 => Some("A medical appliance used for localization of non palpable breast lesions to insure that the proper area is removed in a surgical biopsy"),
+            Self::_111157 => Some(
+                "There is more than one image of the same modality in the interpreted data set",
+            ),
+            Self::_111158 => Some(
+                "There is more than one image of the same modality in the interpreted data set",
+            ),
+            Self::_111159 => {
+                Some("The interpreted data set contains images from multiple modalities")
+            }
+            Self::_111168 => {
+                Some("The fibrous tissue replacing normal tissues destroyed by disease or injury")
+            }
+            Self::_111170 => Some(
+                "A medical appliance used for localization of non palpable breast lesions to insure that the proper area is removed in a surgical biopsy",
+            ),
             Self::_111171 => Some("A medical appliance used for regulating cardiac rhythms"),
             Self::_111172 => Some("A compression device used for obtaining mammographic images"),
             Self::_111173 => Some("A device used for restricting an X-Ray beam"),
-            Self::_111174 => Some("An area designated on a radiographic film for facility and patient ID information"),
+            Self::_111174 => Some(
+                "An area designated on a radiographic film for facility and patient ID information",
+            ),
             Self::_111175 => Some("Site specific markers"),
             Self::_111176 => Some("The value of the concept is not specified"),
             Self::_111177 => Some("Image quality deficiency according to MQSA"),
@@ -13374,437 +14184,1093 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_111204 => Some("Image quality deficiency according to MQCM"),
             Self::_111205 => Some("Image quality deficiency"),
             Self::_111206 => Some("Image quality deficiency according to MQCM"),
-            Self::_111207 => Some("Signals that do not faithfully reproduce actual anatomic structures because of distortion or of addition or deletion of information"),
-            Self::_111208 => Some("Feature(s) arising from the acquisition unit\'s anti-scatter grid mechanism. For two-dimensional systems, such features include those of mechanically damaged or incorrectly positioned grids. For moving or Bucky grids, artifacts may result from intentional grid motion that is inadequate in duration or velocity uniformity"),
-            Self::_111209 => Some("Inadequate arrangement of the anatomy of interest with respect to the X-Ray field and image detector sensitive area. Examples: 1) positioning is \"cutoff\" when the projection of anatomy of interest falls outside the sensitive area of the detector; 2) \"cone cut\", in which the X-Ray field does not adequately cover the anatomy of interest; 3) detector\'s sensitive surface is too small to cover the projection of the anatomy of interest; 4) improper angular orientation or \"rotation\" of anatomy of interest with respect to the X-Ray source, or detector; 5) projection of other anatomy or clothing over the anatomy of interest in the image"),
-            Self::_111210 => Some("Unacceptable image blur resulting from motion of the anatomy of interest during exposure or the inadequately compensated motion of X-Ray source with respect to the image detector during exposure"),
-            Self::_111211 => Some("Inadequate number of quanta reached the detector during exposure. Reasons for under exposed images include low kVp, low mAs product, excess Source Image Distance. Under exposed images have inadequate signal and higher noise in the areas of interest"),
-            Self::_111212 => Some("An excess number of quanta reached the detector during exposure. Reasons for over exposed images include high kVp, high mAs product, short Source Image Distance. Over exposed images have high signal and lower noise in the areas of interest. Over exposed area may demonstrate lack of contrast from over saturation of the detector"),
+            Self::_111207 => Some(
+                "Signals that do not faithfully reproduce actual anatomic structures because of distortion or of addition or deletion of information",
+            ),
+            Self::_111208 => Some(
+                "Feature(s) arising from the acquisition unit\'s anti-scatter grid mechanism. For two-dimensional systems, such features include those of mechanically damaged or incorrectly positioned grids. For moving or Bucky grids, artifacts may result from intentional grid motion that is inadequate in duration or velocity uniformity",
+            ),
+            Self::_111209 => Some(
+                "Inadequate arrangement of the anatomy of interest with respect to the X-Ray field and image detector sensitive area. Examples: 1) positioning is \"cutoff\" when the projection of anatomy of interest falls outside the sensitive area of the detector; 2) \"cone cut\", in which the X-Ray field does not adequately cover the anatomy of interest; 3) detector\'s sensitive surface is too small to cover the projection of the anatomy of interest; 4) improper angular orientation or \"rotation\" of anatomy of interest with respect to the X-Ray source, or detector; 5) projection of other anatomy or clothing over the anatomy of interest in the image",
+            ),
+            Self::_111210 => Some(
+                "Unacceptable image blur resulting from motion of the anatomy of interest during exposure or the inadequately compensated motion of X-Ray source with respect to the image detector during exposure",
+            ),
+            Self::_111211 => Some(
+                "Inadequate number of quanta reached the detector during exposure. Reasons for under exposed images include low kVp, low mAs product, excess Source Image Distance. Under exposed images have inadequate signal and higher noise in the areas of interest",
+            ),
+            Self::_111212 => Some(
+                "An excess number of quanta reached the detector during exposure. Reasons for over exposed images include high kVp, high mAs product, short Source Image Distance. Over exposed images have high signal and lower noise in the areas of interest. Over exposed area may demonstrate lack of contrast from over saturation of the detector",
+            ),
             Self::_111213 => Some("No evidence of a patient exposure"),
             Self::_111214 => Some("Superposed features or flaws of the detector"),
-            Self::_111215 => Some("Features or discontinuities arising from causes other than the anti-scatter grid and image detector"),
-            Self::_111216 => Some("Failure of the device to operate according to mechanical design specifications"),
-            Self::_111217 => Some("Failure of a device to operate according to electrical design specifications"),
-            Self::_111218 => Some("Attributable to software used in generation or handling of image"),
-            Self::_111219 => Some("Images processed inappropriately, not following appropriate protocol"),
-            Self::_111220 => Some("Failure that is not mechanical or electrical or otherwise described"),
+            Self::_111215 => Some(
+                "Features or discontinuities arising from causes other than the anti-scatter grid and image detector",
+            ),
+            Self::_111216 => Some(
+                "Failure of the device to operate according to mechanical design specifications",
+            ),
+            Self::_111217 => {
+                Some("Failure of a device to operate according to electrical design specifications")
+            }
+            Self::_111218 => {
+                Some("Attributable to software used in generation or handling of image")
+            }
+            Self::_111219 => {
+                Some("Images processed inappropriately, not following appropriate protocol")
+            }
+            Self::_111220 => {
+                Some("Failure that is not mechanical or electrical or otherwise described")
+            }
             Self::_111221 => Some("Unidentified or unknown cause of failure"),
             Self::_111222 => Some("The attempted process was completely successful"),
-            Self::_111223 => Some("The attempted process succeeded in some ways, but failed in others"),
+            Self::_111223 => {
+                Some("The attempted process succeeded in some ways, but failed in others")
+            }
             Self::_111224 => Some("The attempted process completely failed"),
             Self::_111225 => Some("No process was performed"),
-            Self::_111233 => Some("Analysis of a related group of findings or features detected during image data inspection, to produce a summary impression and/or recommendation"),
-            Self::_111234 => Some("Analysis of all groups of findings or features, to produce a single impression and/or recommendation"),
-            Self::_111235 => Some("The usability of an image for diagnostic interpretation or CAD, based on a quality control standard"),
-            Self::_111236 => Some("The usability of an image for diagnostic interpretation or CAD, based on a quality control standard"),
-            Self::_111237 => Some("The usability of an image for diagnostic interpretation or CAD, based on a quality control standard"),
-            Self::_111238 => Some("An image quality control standard specified by the American College of Radiology"),
-            Self::_111239 => Some("An image quality control standard in the US Code of Federal Regulations"),
-            Self::_111240 => Some("An image quality control standard specified or adopted by the institution responsible for the document"),
-            Self::_111241 => Some("No findings resulted upon successful completion of all attempted computer-aided detection and/or analysis"),
-            Self::_111242 => Some("One or more findings resulted upon successful completion of all attempted computer-aided detection and/or analysis"),
-            Self::_111243 => Some("No findings resulted from the attempted computer-aided detection and/or analysis, but one or more failures occurred in the process"),
-            Self::_111244 => Some("One or more findings resulted from the attempted computer-aided detection and/or analysis, but one or more failures occurred in the process"),
-            Self::_111245 => Some("All of the attempted computer-aided detection and/or analysis failed, so there could be no findings"),
-            Self::_111248 => Some("A benign tumor having glandular characteristics but composed of fat, with the presence of normal mammary ducts"),
-            Self::_111249 => Some("Hyperplasia is also known as epithelial hyperplasia or proliferative breast disease. It\'s an overgrowth of the cells that line the ducts or the lobules. Based on how the cells look under a microscope, the hyperplasia is called either ductal hyperplasia (also called duct epithelial hyperplasia) or lobular hyperplasia. Based on the pattern of the cells, hyperplasia may be called usual or atypical. In usual hyperplasia, the pattern of cells is very close to normal. Atypical hyperplasia (or hyperplasia with atypia) is a term used when the cells are more distorted. FROM: http://www.cancer.org/healthy/findcancerearly/womenshealth/non-cancerousbreastconditions/non-cancerous-breast-conditions-hyperplasia"),
+            Self::_111233 => Some(
+                "Analysis of a related group of findings or features detected during image data inspection, to produce a summary impression and/or recommendation",
+            ),
+            Self::_111234 => Some(
+                "Analysis of all groups of findings or features, to produce a single impression and/or recommendation",
+            ),
+            Self::_111235 => Some(
+                "The usability of an image for diagnostic interpretation or CAD, based on a quality control standard",
+            ),
+            Self::_111236 => Some(
+                "The usability of an image for diagnostic interpretation or CAD, based on a quality control standard",
+            ),
+            Self::_111237 => Some(
+                "The usability of an image for diagnostic interpretation or CAD, based on a quality control standard",
+            ),
+            Self::_111238 => Some(
+                "An image quality control standard specified by the American College of Radiology",
+            ),
+            Self::_111239 => {
+                Some("An image quality control standard in the US Code of Federal Regulations")
+            }
+            Self::_111240 => Some(
+                "An image quality control standard specified or adopted by the institution responsible for the document",
+            ),
+            Self::_111241 => Some(
+                "No findings resulted upon successful completion of all attempted computer-aided detection and/or analysis",
+            ),
+            Self::_111242 => Some(
+                "One or more findings resulted upon successful completion of all attempted computer-aided detection and/or analysis",
+            ),
+            Self::_111243 => Some(
+                "No findings resulted from the attempted computer-aided detection and/or analysis, but one or more failures occurred in the process",
+            ),
+            Self::_111244 => Some(
+                "One or more findings resulted from the attempted computer-aided detection and/or analysis, but one or more failures occurred in the process",
+            ),
+            Self::_111245 => Some(
+                "All of the attempted computer-aided detection and/or analysis failed, so there could be no findings",
+            ),
+            Self::_111248 => Some(
+                "A benign tumor having glandular characteristics but composed of fat, with the presence of normal mammary ducts",
+            ),
+            Self::_111249 => Some(
+                "Hyperplasia is also known as epithelial hyperplasia or proliferative breast disease. It\'s an overgrowth of the cells that line the ducts or the lobules. Based on how the cells look under a microscope, the hyperplasia is called either ductal hyperplasia (also called duct epithelial hyperplasia) or lobular hyperplasia. Based on the pattern of the cells, hyperplasia may be called usual or atypical. In usual hyperplasia, the pattern of cells is very close to normal. Atypical hyperplasia (or hyperplasia with atypia) is a term used when the cells are more distorted. FROM: http://www.cancer.org/healthy/findcancerearly/womenshealth/non-cancerousbreastconditions/non-cancerous-breast-conditions-hyperplasia",
+            ),
             Self::_111250 => Some("Neoplasms composed of myoepithelial cells"),
-            Self::_111251 => Some("Axillary node that is normal in appearance with no associated pathology"),
+            Self::_111251 => {
+                Some("Axillary node that is normal in appearance with no associated pathology")
+            }
             Self::_111252 => Some("Axillary node containing calcifications"),
-            Self::_111253 => Some("Excessive proliferation of normal tissue arrangement of the axillary node"),
+            Self::_111253 => {
+                Some("Excessive proliferation of normal tissue arrangement of the axillary node")
+            }
             Self::_111254 => None,
             Self::_111255 => Some("Cyst with benign morphology containing blood"),
-            Self::_111256 => Some("Calcifications having typically benign morphology. They are not of intermediate or high probability of concern for malignancy"),
-            Self::_111257 => Some("Growing within a cystic adenoma, filling the cavity with a mass of branching epithelial processes"),
-            Self::_111258 => Some("Adenoma located in mammary duct, present as discrete sclerotic nodules, solitary or multiple"),
-            Self::_111259 => Some("The occurrence of fibrous tumor-forming stromal proliferation in patients with diabetes mellitus"),
-            Self::_111260 => Some("A deep seated firm tumor frequently occurring on the chest consisting of collagenous tissue that infiltrates surround muscle; frequently recurs but does not metastasize"),
-            Self::_111262 => Some("A cyst formed of a mass of epithelial cells, as a result of trauma has been pushed beneath the epidermis. The cyst is lined with squamous epithelium and contains concentric layers or keratin"),
+            Self::_111256 => Some(
+                "Calcifications having typically benign morphology. They are not of intermediate or high probability of concern for malignancy",
+            ),
+            Self::_111257 => Some(
+                "Growing within a cystic adenoma, filling the cavity with a mass of branching epithelial processes",
+            ),
+            Self::_111258 => Some(
+                "Adenoma located in mammary duct, present as discrete sclerotic nodules, solitary or multiple",
+            ),
+            Self::_111259 => Some(
+                "The occurrence of fibrous tumor-forming stromal proliferation in patients with diabetes mellitus",
+            ),
+            Self::_111260 => Some(
+                "A deep seated firm tumor frequently occurring on the chest consisting of collagenous tissue that infiltrates surround muscle; frequently recurs but does not metastasize",
+            ),
+            Self::_111262 => Some(
+                "A cyst formed of a mass of epithelial cells, as a result of trauma has been pushed beneath the epidermis. The cyst is lined with squamous epithelium and contains concentric layers or keratin",
+            ),
             Self::_111263 => Some("Excessive proliferation of fibroadenoma tissue"),
             Self::_111264 => Some("A lipoma with an abundant stroma of fibrous tissue"),
             Self::_111265 => None,
             Self::_111269 => Some("Retention cyst caused by occlusion of a lactiferous duct"),
-            Self::_111271 => Some("A congenital anomaly that leads to a proliferation of blood vessels leading to a mass that resembles a neoplasm, not located in parenchymal areas but subcutaneous"),
-            Self::_111273 => Some("Hyperplasia is also known as epithelial hyperplasia or proliferative breast disease. It\'s an overgrowth of the cells that line the ducts or the lobules. Based on how the cells look under a microscope, the hyperplasia is called either ductal hyperplasia (also called duct epithelial hyperplasia) or lobular hyperplasia. FROM: http://www.cancer.org/healthy/findcancerearly/womenshealth/non-cancerousbreastconditions/non-cancerous-breast-conditions-hyperplasia"),
-            Self::_111277 => Some("A form of fibrocystic disease in young woman with florid and sclerosing adenosis that microscopically may suggest carcinoma"),
-            Self::_111278 => Some("Enlarging masses during lactation. A circumscribed benign tumor composed primarily of glandular structures with scanty stroma, with prominent secretory changes in the duct"),
+            Self::_111271 => Some(
+                "A congenital anomaly that leads to a proliferation of blood vessels leading to a mass that resembles a neoplasm, not located in parenchymal areas but subcutaneous",
+            ),
+            Self::_111273 => Some(
+                "Hyperplasia is also known as epithelial hyperplasia or proliferative breast disease. It\'s an overgrowth of the cells that line the ducts or the lobules. Based on how the cells look under a microscope, the hyperplasia is called either ductal hyperplasia (also called duct epithelial hyperplasia) or lobular hyperplasia. FROM: http://www.cancer.org/healthy/findcancerearly/womenshealth/non-cancerousbreastconditions/non-cancerous-breast-conditions-hyperplasia",
+            ),
+            Self::_111277 => Some(
+                "A form of fibrocystic disease in young woman with florid and sclerosing adenosis that microscopically may suggest carcinoma",
+            ),
+            Self::_111278 => Some(
+                "Enlarging masses during lactation. A circumscribed benign tumor composed primarily of glandular structures with scanty stroma, with prominent secretory changes in the duct",
+            ),
             Self::_111279 => Some("Changes related to the process of lactation"),
             Self::_111281 => Some("A papilloma pertaining to large mammary duct"),
-            Self::_111283 => Some("Solitary or multiple tumors of muscles and fibrous tissues, or tumors composed of myofibroblasts"),
-            Self::_111284 => Some("Irregular clusters of small tubules are present in adipose or fibrous tissue, resembling tubular carcinoma but lacking stromal fibroblastic proliferation"),
-            Self::_111285 => Some("Papilloma typically involving an aggregate of adjacent ducts in the periphery of the breast, likely representing involvement of several foci of one or two duct systems"),
+            Self::_111283 => Some(
+                "Solitary or multiple tumors of muscles and fibrous tissues, or tumors composed of myofibroblasts",
+            ),
+            Self::_111284 => Some(
+                "Irregular clusters of small tubules are present in adipose or fibrous tissue, resembling tubular carcinoma but lacking stromal fibroblastic proliferation",
+            ),
+            Self::_111285 => Some(
+                "Papilloma typically involving an aggregate of adjacent ducts in the periphery of the breast, likely representing involvement of several foci of one or two duct systems",
+            ),
             Self::_111286 => Some("No abnormality"),
             Self::_111287 => Some("Normal breast tissue"),
-            Self::_111288 => Some("Condition in which there are tumors of various sizes on peripheral nerves. They may be neuromas or fibromas"),
-            Self::_111290 => Some("A cyst resulting from the loss of the epithelial lining of a sebaceous dermoid or lacteal cyst"),
-            Self::_111291 => Some("Breast tissue with characteristics of a benign nature, following breast reduction surgery"),
-            Self::_111292 => Some("A benign stromal lesion composed of intermixed stromal and epithelial elements. The lobular and duct structures of the breast parenchyma are separated by an increased amount of stroma, non specific proliferative epithelial changes include hyperplasia of duct and lobular epithelium often with accentuation of myoepithelial cells and aprocine metaplasia with or without cyst formation"),
-            Self::_111293 => Some("An nonencapsulated stellate lesion consisting of a fibroelastic core and radiating bands of fibrous connective tissue containing lobules manifesting adenosis and ducts with papillary or diffuse intraductal hyperplasia"),
+            Self::_111288 => Some(
+                "Condition in which there are tumors of various sizes on peripheral nerves. They may be neuromas or fibromas",
+            ),
+            Self::_111290 => Some(
+                "A cyst resulting from the loss of the epithelial lining of a sebaceous dermoid or lacteal cyst",
+            ),
+            Self::_111291 => Some(
+                "Breast tissue with characteristics of a benign nature, following breast reduction surgery",
+            ),
+            Self::_111292 => Some(
+                "A benign stromal lesion composed of intermixed stromal and epithelial elements. The lobular and duct structures of the breast parenchyma are separated by an increased amount of stroma, non specific proliferative epithelial changes include hyperplasia of duct and lobular epithelium often with accentuation of myoepithelial cells and aprocine metaplasia with or without cyst formation",
+            ),
+            Self::_111293 => Some(
+                "An nonencapsulated stellate lesion consisting of a fibroelastic core and radiating bands of fibrous connective tissue containing lobules manifesting adenosis and ducts with papillary or diffuse intraductal hyperplasia",
+            ),
             Self::_111294 => Some("Prominent interductal fibrosis of the terminal ductules"),
-            Self::_111296 => Some("Nodular inflammatory lesions due to the presence of silicone in the breast tissue"),
+            Self::_111296 => Some(
+                "Nodular inflammatory lesions due to the presence of silicone in the breast tissue",
+            ),
             Self::_111297 => Some("The morphologic status of the nipple"),
-            Self::_111298 => Some("Spontaneous excessive proliferation of breast tissue, usually found in younger women"),
+            Self::_111298 => Some(
+                "Spontaneous excessive proliferation of breast tissue, usually found in younger women",
+            ),
             Self::_111299 => Some("Papilloma(s) pertaining the peripheral ducts"),
             Self::_111300 => Some("Axillary node with lymphoid tissue neoplasm"),
             Self::_111301 => Some("Metastatic disease to the axillary node"),
-            Self::_111302 => Some("A malignant neoplasm occurring most often in breast and skin, believed to originate from endothelial cells of blood vessels, microscopically composed of closely packed round or spindle shaped cells, some of which line small spaces resembling vascular clefts"),
-            Self::_111303 => Some("Histological changes to the vascular system related to an invasive process"),
-            Self::_111304 => Some("Carcinoma of the breast found in patients less than 20 years of age"),
-            Self::_111305 => Some("A carcinoma found in supernumerary breasts and aberrant breast tissue"),
-            Self::_111306 => Some("A carcinoma that synthesizes substances, including hormones, not considered to be normal products of the breast"),
+            Self::_111302 => Some(
+                "A malignant neoplasm occurring most often in breast and skin, believed to originate from endothelial cells of blood vessels, microscopically composed of closely packed round or spindle shaped cells, some of which line small spaces resembling vascular clefts",
+            ),
+            Self::_111303 => {
+                Some("Histological changes to the vascular system related to an invasive process")
+            }
+            Self::_111304 => {
+                Some("Carcinoma of the breast found in patients less than 20 years of age")
+            }
+            Self::_111305 => {
+                Some("A carcinoma found in supernumerary breasts and aberrant breast tissue")
+            }
+            Self::_111306 => Some(
+                "A carcinoma that synthesizes substances, including hormones, not considered to be normal products of the breast",
+            ),
             Self::_111307 => Some("A basal cell carcinoma that arises in the nipple of the breast"),
-            Self::_111308 => Some("Metaplastic carcinoma is cancer that begins in cells that have changed into another cell type (for example, a squamous cell of the esophagus changing to resemble a cell of the stomach). In some cases, metaplastic changes alone may mean there is an increased chance of cancer developing at the site. Metaplastic carcinoma is a relatively uncommon type of cancer with treatment generally similar to that of invasive ductal carcinoma of no special type.[1] FROM: https://en.wikipedia.org/wiki/Metaplastic_carcinoma"),
+            Self::_111308 => Some(
+                "Metaplastic carcinoma is cancer that begins in cells that have changed into another cell type (for example, a squamous cell of the esophagus changing to resemble a cell of the stomach). In some cases, metaplastic changes alone may mean there is an increased chance of cancer developing at the site. Metaplastic carcinoma is a relatively uncommon type of cancer with treatment generally similar to that of invasive ductal carcinoma of no special type.[1] FROM: https://en.wikipedia.org/wiki/Metaplastic_carcinoma",
+            ),
             Self::_111309 => Some("Tissue changes to bones and cartilage"),
-            Self::_111310 => Some("Carcinoma of the breast presenting during pregnancy or lactation"),
-            Self::_111311 => Some("A malignant neoplasm that contains elements of carcinoma and sarcoma, so extensively intermixed as to indicate neoplasia of epithelial and mesenchymal tissue"),
+            Self::_111310 => {
+                Some("Carcinoma of the breast presenting during pregnancy or lactation")
+            }
+            Self::_111311 => Some(
+                "A malignant neoplasm that contains elements of carcinoma and sarcoma, so extensively intermixed as to indicate neoplasia of epithelial and mesenchymal tissue",
+            ),
             Self::_111312 => Some("Comedocarcinoma of a duct with areas of necrotic tissue"),
-            Self::_111313 => Some("A non-invasive carcinoma restricted to the glandular lumen characterized by less aggressive malignant cytologic features and behavior"),
-            Self::_111314 => Some("Papillary and micropapillary Ductal Carcinoma In Situ (DCIS): the cancer cells arrange themselves in a fern-like pattern within the affected breast ducts; micropapillary DCIS cells are smaller than papillary DCIS cells. FROM: http://www.imaginis.com/breast-cancer-diagnosis/ductal-carcinoma-in-situ-dcis-3"),
-            Self::_111315 => Some("A malignant neoplasm characterized by the formation of numerous, irregular, finger-like projections of fibrous stroma that is covered with a surface layer of neoplastic epithelial cells found in a cyst"),
-            Self::_111316 => Some("Carcinoma with both characteristics of localized and spreading disease"),
-            Self::_111317 => Some("Invasive lobular carcinoma is a type of breast cancer that begins in the milk-producing glands (lobules) of the breast. Invasive cancer means the cancer cells have broken out of the lobule where they began and have the potential to spread to the lymph nodes and other areas of the body. Invasive lobular carcinoma typically doesn\'t form a lump, which is common in breast cancer. Instead, there is a change in the breast that feels like a thickening or fullness in one part of the breast and is different from the surrounding breast tissue. FROM: http://www.mayoclinic.org/diseases-conditions/invasive-lobular-carcinoma/basics/definition/con-20033968"),
-            Self::_111318 => Some("Mammary infiltrates as a secondary manifestation in patients with established leukemia"),
-            Self::_111320 => Some("Histological changes to the lymphatic system related to an invasive process"),
-            Self::_111321 => Some("A heterogeneous group of neoplasms arising in the reticuloendoethelial and lymphatic systems"),
-            Self::_111322 => Some("A small carcinoma, either asymptomatic or giving rise to metastases without symptoms due to the primary carcinoma presenting with metastatic disease in the axillary lymph nodes"),
-            Self::_111323 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a non-mammary malignant neoplasm"),
-            Self::_111324 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the colon"),
-            Self::_111325 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the lung"),
-            Self::_111326 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a melanoma"),
-            Self::_111327 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the ovary"),
-            Self::_111328 => Some("A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a sarcoma"),
-            Self::_111329 => Some("Multiple foci of non-invasive carcinoma restricted to the glandular lumen"),
-            Self::_111330 => Some("A malignant lesion in an axillary node arising from a non-axillary neoplasm"),
-            Self::_111331 => Some("Pleomorphic undifferentiated sarcoma (abbreviated PUS), also undifferentiated pleomorphic sarcoma and previously malignant fibrous histiocytoma (abbreviated MFH), is a type of soft tissue sarcoma. FROM: https://en.wikipedia.org/wiki/Pleomorphic_undifferentiated_sarcoma"),
+            Self::_111313 => Some(
+                "A non-invasive carcinoma restricted to the glandular lumen characterized by less aggressive malignant cytologic features and behavior",
+            ),
+            Self::_111314 => Some(
+                "Papillary and micropapillary Ductal Carcinoma In Situ (DCIS): the cancer cells arrange themselves in a fern-like pattern within the affected breast ducts; micropapillary DCIS cells are smaller than papillary DCIS cells. FROM: http://www.imaginis.com/breast-cancer-diagnosis/ductal-carcinoma-in-situ-dcis-3",
+            ),
+            Self::_111315 => Some(
+                "A malignant neoplasm characterized by the formation of numerous, irregular, finger-like projections of fibrous stroma that is covered with a surface layer of neoplastic epithelial cells found in a cyst",
+            ),
+            Self::_111316 => {
+                Some("Carcinoma with both characteristics of localized and spreading disease")
+            }
+            Self::_111317 => Some(
+                "Invasive lobular carcinoma is a type of breast cancer that begins in the milk-producing glands (lobules) of the breast. Invasive cancer means the cancer cells have broken out of the lobule where they began and have the potential to spread to the lymph nodes and other areas of the body. Invasive lobular carcinoma typically doesn\'t form a lump, which is common in breast cancer. Instead, there is a change in the breast that feels like a thickening or fullness in one part of the breast and is different from the surrounding breast tissue. FROM: http://www.mayoclinic.org/diseases-conditions/invasive-lobular-carcinoma/basics/definition/con-20033968",
+            ),
+            Self::_111318 => Some(
+                "Mammary infiltrates as a secondary manifestation in patients with established leukemia",
+            ),
+            Self::_111320 => {
+                Some("Histological changes to the lymphatic system related to an invasive process")
+            }
+            Self::_111321 => Some(
+                "A heterogeneous group of neoplasms arising in the reticuloendoethelial and lymphatic systems",
+            ),
+            Self::_111322 => Some(
+                "A small carcinoma, either asymptomatic or giving rise to metastases without symptoms due to the primary carcinoma presenting with metastatic disease in the axillary lymph nodes",
+            ),
+            Self::_111323 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a non-mammary malignant neoplasm",
+            ),
+            Self::_111324 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the colon",
+            ),
+            Self::_111325 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the lung",
+            ),
+            Self::_111326 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a melanoma",
+            ),
+            Self::_111327 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a neoplasm in the ovary",
+            ),
+            Self::_111328 => Some(
+                "A malignant lesion in the breast with morphologic patterns not typical of breast carcinoma arising from a sarcoma",
+            ),
+            Self::_111329 => {
+                Some("Multiple foci of non-invasive carcinoma restricted to the glandular lumen")
+            }
+            Self::_111330 => {
+                Some("A malignant lesion in an axillary node arising from a non-axillary neoplasm")
+            }
+            Self::_111331 => Some(
+                "Pleomorphic undifferentiated sarcoma (abbreviated PUS), also undifferentiated pleomorphic sarcoma and previously malignant fibrous histiocytoma (abbreviated MFH), is a type of soft tissue sarcoma. FROM: https://en.wikipedia.org/wiki/Pleomorphic_undifferentiated_sarcoma",
+            ),
             Self::_111332 => Some("Multiple sites of ductal carcinoma"),
-            Self::_111333 => Some("A malignant lesion in a intramammary lymph node arising from a non-intramammary lymph node neoplasm"),
-            Self::_111334 => Some("A malignant melanoma of the skin that arises in the nipple of the breast"),
+            Self::_111333 => Some(
+                "A malignant lesion in a intramammary lymph node arising from a non-intramammary lymph node neoplasm",
+            ),
+            Self::_111334 => {
+                Some("A malignant melanoma of the skin that arises in the nipple of the breast")
+            }
             Self::_111335 => None,
-            Self::_111336 => Some("Papillary and micropapillary Ductal Carcinoma In Situ (DCIS): the cancer cells arrange themselves in a fern-like pattern within the affected breast ducts; micropapillary DCIS cells are smaller than papillary DCIS cells. FROM: http://www.imaginis.com/breast-cancer-diagnosis/ductal-carcinoma-in-situ-dcis-3"),
+            Self::_111336 => Some(
+                "Papillary and micropapillary Ductal Carcinoma In Situ (DCIS): the cancer cells arrange themselves in a fern-like pattern within the affected breast ducts; micropapillary DCIS cells are smaller than papillary DCIS cells. FROM: http://www.imaginis.com/breast-cancer-diagnosis/ductal-carcinoma-in-situ-dcis-3",
+            ),
             Self::_111338 => Some("Recurrent malignancy"),
-            Self::_111340 => Some("Squamous cell carcinoma to the terminal portion of the alveolar"),
-            Self::_111341 => Some("A non-invasive carcinoma restricted to the glandular lumen characterized by more aggressive malignant cytologic features and behavior"),
-            Self::_111342 => Some("Invasive tumor with cribriform pattern similar to cribriform DCIS. Low grade, cribriform appearance (well defined spaces formed by arches of cells) similar to cribriform DCIS but with larger cells, more cytoplasm and more vesicular nuclei: Tumor cells are small, often have apical snouts, mild/moderate nuclear pleomorphism; Also stromal invasion by islands of cells, often angulated; May have predominantly solid appearance; Associated with cribriform DCIS; Often mixed with tubular carcinoma. FROM: http://www.pathologyoutlines.com/topic/breastmalignantcribriform.html"),
-            Self::_111343 => Some("An indication that some or all of the margin of a lesion has sharp corners, often forming acute angles"),
-            Self::_111344 => Some("Calcifications that vary in sizes and shapes and are usually smaller than0.5 mm in diameter"),
+            Self::_111340 => {
+                Some("Squamous cell carcinoma to the terminal portion of the alveolar")
+            }
+            Self::_111341 => Some(
+                "A non-invasive carcinoma restricted to the glandular lumen characterized by more aggressive malignant cytologic features and behavior",
+            ),
+            Self::_111342 => Some(
+                "Invasive tumor with cribriform pattern similar to cribriform DCIS. Low grade, cribriform appearance (well defined spaces formed by arches of cells) similar to cribriform DCIS but with larger cells, more cytoplasm and more vesicular nuclei: Tumor cells are small, often have apical snouts, mild/moderate nuclear pleomorphism; Also stromal invasion by islands of cells, often angulated; May have predominantly solid appearance; Associated with cribriform DCIS; Often mixed with tubular carcinoma. FROM: http://www.pathologyoutlines.com/topic/breastmalignantcribriform.html",
+            ),
+            Self::_111343 => Some(
+                "An indication that some or all of the margin of a lesion has sharp corners, often forming acute angles",
+            ),
+            Self::_111344 => Some(
+                "Calcifications that vary in sizes and shapes and are usually smaller than0.5 mm in diameter",
+            ),
             Self::_111345 => Some("Coarse calcifications that are 0.5 mm or greater in size"),
             Self::_111346 => Some("An indicator that calcifications are imbedded within a mass"),
-            Self::_111347 => Some("An indicator that calcifications are imaged outside of a mass finding"),
+            Self::_111347 => {
+                Some("An indicator that calcifications are imaged outside of a mass finding")
+            }
             Self::_111350 => Some("Tissue composition of the breast noted on sonography"),
-            Self::_111351 => Some("Fat lobules and uniformly echogenic bands of supporting structures comprise the bulk of breast tissue"),
-            Self::_111352 => Some("A uniformly echogenic layer of fibroglandular tissue is seen beneath a thin layer of subcutaneous fat"),
-            Self::_111353 => Some("The breast texture is characterized by multiple small areas of increased and decreased echogenicity"),
-            Self::_111354 => Some("Referential relationship of the finding to the imaging device as noted on sonography"),
-            Self::_111355 => Some("The long axis of a lesion parallels the skin line (\"wider-than-tall\" or in a horizontal orientation)"),
-            Self::_111356 => Some("The anterior-posterior or vertical dimension is greater than the transverse or horizontal dimension"),
-            Self::_111357 => Some("The lesion boundary describes the transition zone between themas and the surrounding tissue"),
-            Self::_111358 => Some("The sharp demarcation between the lesion and surrounding tissue can be imperceptible or a distinct well-defined echogenic rim of any thickness"),
-            Self::_111359 => Some("There is no sharp demarcation between the mass and the surrounding tissue, which is bridged by an echogenic transition zone"),
+            Self::_111351 => Some(
+                "Fat lobules and uniformly echogenic bands of supporting structures comprise the bulk of breast tissue",
+            ),
+            Self::_111352 => Some(
+                "A uniformly echogenic layer of fibroglandular tissue is seen beneath a thin layer of subcutaneous fat",
+            ),
+            Self::_111353 => Some(
+                "The breast texture is characterized by multiple small areas of increased and decreased echogenicity",
+            ),
+            Self::_111354 => Some(
+                "Referential relationship of the finding to the imaging device as noted on sonography",
+            ),
+            Self::_111355 => Some(
+                "The long axis of a lesion parallels the skin line (\"wider-than-tall\" or in a horizontal orientation)",
+            ),
+            Self::_111356 => Some(
+                "The anterior-posterior or vertical dimension is greater than the transverse or horizontal dimension",
+            ),
+            Self::_111357 => Some(
+                "The lesion boundary describes the transition zone between themas and the surrounding tissue",
+            ),
+            Self::_111358 => Some(
+                "The sharp demarcation between the lesion and surrounding tissue can be imperceptible or a distinct well-defined echogenic rim of any thickness",
+            ),
+            Self::_111359 => Some(
+                "There is no sharp demarcation between the mass and the surrounding tissue, which is bridged by an echogenic transition zone",
+            ),
             Self::_111360 => Some("An imaging characteristic of resonance noted during sonography"),
             Self::_111361 => Some("Without internal echoes"),
-            Self::_111362 => Some("Having increased echogenicity relative to fat or equal to fibroglandular tissue"),
+            Self::_111362 => Some(
+                "Having increased echogenicity relative to fat or equal to fibroglandular tissue",
+            ),
             Self::_111363 => Some("Mass contains both anechoic and echogenic components"),
-            Self::_111364 => Some("Defined relative to fat; masses are characterized by low-level echoes throughout; e.g. appearance of a complicated cyst or fibroadenoma"),
-            Self::_111365 => Some("Having the same echogenicity as fat (a complicated cyst or fibroadenoma may be isoechoic or hypoechoic)"),
-            Self::_111366 => Some("The attenuation characteristics of a mass with respect to its acoustic transmission"),
+            Self::_111364 => Some(
+                "Defined relative to fat; masses are characterized by low-level echoes throughout; e.g. appearance of a complicated cyst or fibroadenoma",
+            ),
+            Self::_111365 => Some(
+                "Having the same echogenicity as fat (a complicated cyst or fibroadenoma may be isoechoic or hypoechoic)",
+            ),
+            Self::_111366 => Some(
+                "The attenuation characteristics of a mass with respect to its acoustic transmission",
+            ),
             Self::_111367 => Some("No posterior shadowing or enhancement"),
             Self::_111368 => Some("Increased posterior echoes"),
             Self::_111369 => Some("Decreased posterior echoes; edge shadows are excluded"),
-            Self::_111370 => Some("More than one pattern of posterior attenuation, both shadowing and enhancement"),
-            Self::_111371 => Some("Sonographic appearance of adjacent structures relative to a mass finding"),
+            Self::_111370 => Some(
+                "More than one pattern of posterior attenuation, both shadowing and enhancement",
+            ),
+            Self::_111371 => {
+                Some("Sonographic appearance of adjacent structures relative to a mass finding")
+            }
             Self::_111372 => Some("Characterization of vascularization in region of interest"),
             Self::_111373 => Some("Vascularity not evident, such as on ultrasound"),
             Self::_111374 => Some("Vascularity not evaluated"),
             Self::_111375 => Some("Vascularity on imaging is seen within a lesion"),
-            Self::_111376 => Some("Vascularity on imaging is seen immediately adjacent to a lesion"),
-            Self::_111377 => Some("Vascularity on imaging is considered diffusely elevated within the surrounding breast tissue"),
-            Self::_111380 => Some("Relationship of the new anomaly to other clinical or imaging anomalies"),
-            Self::_111381 => Some("An indication that the current imaging finding relates to a finding from a clinical breast exam"),
-            Self::_111382 => Some("An indication that the current imaging finding relates to a finding from a mammography exam"),
-            Self::_111383 => Some("An indication that the current imaging finding relates to a finding from a breast MRI exam"),
-            Self::_111384 => Some("An indication that the current imaging finding relates to a finding from a breast ultrasound exam"),
-            Self::_111385 => Some("An indication that the current imaging finding relates to a finding from an imaging exam"),
-            Self::_111386 => Some("An indication that the current imaging finding has no relation to findings from any other imaging exam"),
-            Self::_111387 => Some("An indication that the current imaging finding has no relation to any other clinical findings"),
+            Self::_111376 => {
+                Some("Vascularity on imaging is seen immediately adjacent to a lesion")
+            }
+            Self::_111377 => Some(
+                "Vascularity on imaging is considered diffusely elevated within the surrounding breast tissue",
+            ),
+            Self::_111380 => {
+                Some("Relationship of the new anomaly to other clinical or imaging anomalies")
+            }
+            Self::_111381 => Some(
+                "An indication that the current imaging finding relates to a finding from a clinical breast exam",
+            ),
+            Self::_111382 => Some(
+                "An indication that the current imaging finding relates to a finding from a mammography exam",
+            ),
+            Self::_111383 => Some(
+                "An indication that the current imaging finding relates to a finding from a breast MRI exam",
+            ),
+            Self::_111384 => Some(
+                "An indication that the current imaging finding relates to a finding from a breast ultrasound exam",
+            ),
+            Self::_111385 => Some(
+                "An indication that the current imaging finding relates to a finding from an imaging exam",
+            ),
+            Self::_111386 => Some(
+                "An indication that the current imaging finding has no relation to findings from any other imaging exam",
+            ),
+            Self::_111387 => Some(
+                "An indication that the current imaging finding has no relation to any other clinical findings",
+            ),
             Self::_111388 => Some("Classification of the cancer as invasive, DCIS, or other"),
             Self::_111389 => Some("A malignancy that has spread beyond an area of focus"),
-            Self::_111390 => Some("A breast cancer with malignant pathology findings that are not classified as invasive or in situ"),
+            Self::_111390 => Some(
+                "A breast cancer with malignant pathology findings that are not classified as invasive or in situ",
+            ),
             Self::_111391 => Some("A specific timeframe during menses"),
-            Self::_111392 => Some("In the first week of the menstrual cycle phase, that is, one week following menses"),
-            Self::_111393 => Some("In the second week of the menstrual cycle phase, that is, two weeks following menses"),
-            Self::_111394 => Some("In the third week of the menstrual cycle phase, that is, three weeks following menses"),
+            Self::_111392 => Some(
+                "In the first week of the menstrual cycle phase, that is, one week following menses",
+            ),
+            Self::_111393 => Some(
+                "In the second week of the menstrual cycle phase, that is, two weeks following menses",
+            ),
+            Self::_111394 => Some(
+                "In the third week of the menstrual cycle phase, that is, three weeks following menses",
+            ),
             Self::_111395 => Some("An estimated period of time"),
             Self::_111396 => Some("An event occurred less than 3 months ago"),
             Self::_111397 => Some("An event occurred between 4 months and 1 year ago"),
             Self::_111398 => Some("An event occurred longer than 1 year ago"),
             Self::_111399 => Some("The timing of an event is not recalled"),
-            Self::_111400 => Some("Report title for the diagnostic report for one or more breast imaging or intervention procedures"),
-            Self::_111401 => Some("Concept name for the description of why a procedure has been performed"),
-            Self::_111402 => Some("A finding during clinical examination (i.e., history and physical examination) such as pain, palpable mass or discharge"),
-            Self::_111403 => Some("First screening mammogram taken for patient that is used as a comparison baseline for further examinations"),
-            Self::_111404 => Some("First mammogram taken for a patient without regard to whether it was for screening or a diagnostic procedure"),
-            Self::_111405 => Some("Concept name for the material of which a breast prosthetic device is constructed"),
+            Self::_111400 => Some(
+                "Report title for the diagnostic report for one or more breast imaging or intervention procedures",
+            ),
+            Self::_111401 => {
+                Some("Concept name for the description of why a procedure has been performed")
+            }
+            Self::_111402 => Some(
+                "A finding during clinical examination (i.e., history and physical examination) such as pain, palpable mass or discharge",
+            ),
+            Self::_111403 => Some(
+                "First screening mammogram taken for patient that is used as a comparison baseline for further examinations",
+            ),
+            Self::_111404 => Some(
+                "First mammogram taken for a patient without regard to whether it was for screening or a diagnostic procedure",
+            ),
+            Self::_111405 => Some(
+                "Concept name for the material of which a breast prosthetic device is constructed",
+            ),
             Self::_111406 => Some("A numeric count of findings classified as similar in nature"),
-            Self::_111407 => Some("Concept name for the status of a breast prosthetic device as noted by imaging"),
+            Self::_111407 => Some(
+                "Concept name for the status of a breast prosthetic device as noted by imaging",
+            ),
             Self::_111408 => Some("Mammogram using traditional X-Ray film"),
             Self::_111409 => Some("Mammogram using a digital image acquisition system"),
             Self::_111410 => Some("Referred for evaluation by a surgeon"),
-            Self::_111411 => Some("Computer aided detection and/or computer aided diagnosis for mammography"),
+            Self::_111411 => {
+                Some("Computer aided detection and/or computer aided diagnosis for mammography")
+            }
             Self::_111412 => Some("Concept name for a text-based section of a report"),
-            Self::_111413 => Some("A title for a report section that summarizes all interpretation results for a report with one overriding assessment; e.g. benign or negative"),
-            Self::_111414 => Some("Concept name for a collection of supporting evidence for a report"),
-            Self::_111415 => Some("Prior study indicates that additional imaging be performed to further evaluate a suspicious or questionable anatomic region"),
-            Self::_111416 => Some("The prior study recommended a follow-up breast imaging exam in 1 to 11 months (generally in 6 months)"),
-            Self::_111417 => Some("Prior breast augmentation (breast enlargement) and is not presenting with any symptoms"),
-            Self::_111418 => Some("Review or second opinion made on an image performed outside of the facility"),
-            Self::_111419 => Some("Additional breast imaging performed at the time of the patient\'s screening mammogram"),
+            Self::_111413 => Some(
+                "A title for a report section that summarizes all interpretation results for a report with one overriding assessment; e.g. benign or negative",
+            ),
+            Self::_111414 => {
+                Some("Concept name for a collection of supporting evidence for a report")
+            }
+            Self::_111415 => Some(
+                "Prior study indicates that additional imaging be performed to further evaluate a suspicious or questionable anatomic region",
+            ),
+            Self::_111416 => Some(
+                "The prior study recommended a follow-up breast imaging exam in 1 to 11 months (generally in 6 months)",
+            ),
+            Self::_111417 => Some(
+                "Prior breast augmentation (breast enlargement) and is not presenting with any symptoms",
+            ),
+            Self::_111418 => {
+                Some("Review or second opinion made on an image performed outside of the facility")
+            }
+            Self::_111419 => Some(
+                "Additional breast imaging performed at the time of the patient\'s screening mammogram",
+            ),
             Self::_111420 => Some("Patient has had previous benign breast biopsies"),
-            Self::_111421 => Some("Patient has had a prior surgery such as a lumpectomy or quadrantectomy to remove malignant breast tissue, but breast tissue remains"),
-            Self::_111423 => Some("The results of a physical examination performed on the patient, possibly including the results of inspection, palpation, auscultation, or percussion"),
-            Self::_111424 => Some("The result of assessing the current imaging exam in comparison to previous imaging exams"),
-            Self::_111425 => Some("An abnormality observed during ductography where the ductal system within the breast fills in an abnormal pattern. Ductography is an imaging exam in which a radio opaque contrast media is introduced into the ductal system of the breast through the nipple and images of the ductal system are obtained"),
-            Self::_111426 => Some("During ductography an observation of more than one filling abnormality within the breast ductal system"),
-            Self::_111427 => Some("An abnormality observed during ductography where the ductal system within the breast terminates in an unusual fashion"),
-            Self::_111428 => Some("Abnormal flowage of contrast media within the breast noted on ductography"),
-            Self::_111429 => Some("An abnormality observed during ductography where the ductal system within the breast appears narrow"),
-            Self::_111430 => Some("During ductography an observation of the contrast media filling a cyst within the breast"),
-            Self::_111431 => Some("The area and line within the anatomy through which a needle or instrument passes during an interventional procedure"),
-            Self::_111432 => Some("The line within the anatomy from the lower outer to the upper inner aspect; e.g. through which a needle or instrument passes in an interventional procedure"),
-            Self::_111433 => Some("The line within the anatomy from the lower inner to the upper outer aspect; e.g. through which a needle or instrument passes in an interventional procedure"),
-            Self::_111434 => Some("The line within the anatomy from the upper outer to the lower inner aspect; e.g. through which a needle or instrument passes in an interventional procedure"),
-            Self::_111435 => Some("The line within the anatomy from the upper inner to the lower outer aspect; e.g. through which a needle or instrument passes in an interventional procedure"),
-            Self::_111436 => Some("The number of times a biopsy instrument is passed through an area of interest"),
-            Self::_111437 => Some("The number of biopsy specimens obtained from an interventional procedure"),
-            Self::_111438 => Some("An indicator of whether or not a biopsy or localizing needle in an interventional procedure is seen to be in the area of interest"),
-            Self::_111439 => Some("The number of localizing needles placed around the area of interest in an interventional procedure"),
-            Self::_111440 => Some("An indicator of whether or not an incision was made in the anatomy during an interventional procedure"),
-            Self::_111441 => Some("An indicator of whether or not a radio opaque microclip was placed in the anatomy during an interventional procedure"),
-            Self::_111442 => Some("An indicator of the degree of success of an interventional procedure"),
-            Self::_111443 => Some("An indicator that during an interventional procedure the area of interest was fully excised and is noted in the resultant biopsy specimen"),
-            Self::_111444 => Some("An indicator that during an interventional procedure the area of interest was partially excised and is noted in the resultant biopsy specimen"),
-            Self::_111445 => Some("An indicator that following an interventional procedure the area of interest is not seen in the resultant biopsy specimen"),
-            Self::_111446 => Some("An indicator that following an interventional procedure the targeted calcifications are noted in the resultant biopsy specimen"),
-            Self::_111447 => Some("An indicator that during an interventional procedure the area of interest was fully excised and is noted in the resultant biopsy specimen"),
-            Self::_111448 => Some("An indicator that during an interventional procedure the area of interest was partially excised and is noted in the resultant biopsy specimen"),
-            Self::_111449 => Some("An indicator that during an interventional procedure fluid was successfully aspirated"),
+            Self::_111421 => Some(
+                "Patient has had a prior surgery such as a lumpectomy or quadrantectomy to remove malignant breast tissue, but breast tissue remains",
+            ),
+            Self::_111423 => Some(
+                "The results of a physical examination performed on the patient, possibly including the results of inspection, palpation, auscultation, or percussion",
+            ),
+            Self::_111424 => Some(
+                "The result of assessing the current imaging exam in comparison to previous imaging exams",
+            ),
+            Self::_111425 => Some(
+                "An abnormality observed during ductography where the ductal system within the breast fills in an abnormal pattern. Ductography is an imaging exam in which a radio opaque contrast media is introduced into the ductal system of the breast through the nipple and images of the ductal system are obtained",
+            ),
+            Self::_111426 => Some(
+                "During ductography an observation of more than one filling abnormality within the breast ductal system",
+            ),
+            Self::_111427 => Some(
+                "An abnormality observed during ductography where the ductal system within the breast terminates in an unusual fashion",
+            ),
+            Self::_111428 => {
+                Some("Abnormal flowage of contrast media within the breast noted on ductography")
+            }
+            Self::_111429 => Some(
+                "An abnormality observed during ductography where the ductal system within the breast appears narrow",
+            ),
+            Self::_111430 => Some(
+                "During ductography an observation of the contrast media filling a cyst within the breast",
+            ),
+            Self::_111431 => Some(
+                "The area and line within the anatomy through which a needle or instrument passes during an interventional procedure",
+            ),
+            Self::_111432 => Some(
+                "The line within the anatomy from the lower outer to the upper inner aspect; e.g. through which a needle or instrument passes in an interventional procedure",
+            ),
+            Self::_111433 => Some(
+                "The line within the anatomy from the lower inner to the upper outer aspect; e.g. through which a needle or instrument passes in an interventional procedure",
+            ),
+            Self::_111434 => Some(
+                "The line within the anatomy from the upper outer to the lower inner aspect; e.g. through which a needle or instrument passes in an interventional procedure",
+            ),
+            Self::_111435 => Some(
+                "The line within the anatomy from the upper inner to the lower outer aspect; e.g. through which a needle or instrument passes in an interventional procedure",
+            ),
+            Self::_111436 => Some(
+                "The number of times a biopsy instrument is passed through an area of interest",
+            ),
+            Self::_111437 => {
+                Some("The number of biopsy specimens obtained from an interventional procedure")
+            }
+            Self::_111438 => Some(
+                "An indicator of whether or not a biopsy or localizing needle in an interventional procedure is seen to be in the area of interest",
+            ),
+            Self::_111439 => Some(
+                "The number of localizing needles placed around the area of interest in an interventional procedure",
+            ),
+            Self::_111440 => Some(
+                "An indicator of whether or not an incision was made in the anatomy during an interventional procedure",
+            ),
+            Self::_111441 => Some(
+                "An indicator of whether or not a radio opaque microclip was placed in the anatomy during an interventional procedure",
+            ),
+            Self::_111442 => {
+                Some("An indicator of the degree of success of an interventional procedure")
+            }
+            Self::_111443 => Some(
+                "An indicator that during an interventional procedure the area of interest was fully excised and is noted in the resultant biopsy specimen",
+            ),
+            Self::_111444 => Some(
+                "An indicator that during an interventional procedure the area of interest was partially excised and is noted in the resultant biopsy specimen",
+            ),
+            Self::_111445 => Some(
+                "An indicator that following an interventional procedure the area of interest is not seen in the resultant biopsy specimen",
+            ),
+            Self::_111446 => Some(
+                "An indicator that following an interventional procedure the targeted calcifications are noted in the resultant biopsy specimen",
+            ),
+            Self::_111447 => Some(
+                "An indicator that during an interventional procedure the area of interest was fully excised and is noted in the resultant biopsy specimen",
+            ),
+            Self::_111448 => Some(
+                "An indicator that during an interventional procedure the area of interest was partially excised and is noted in the resultant biopsy specimen",
+            ),
+            Self::_111449 => Some(
+                "An indicator that during an interventional procedure fluid was successfully aspirated",
+            ),
             Self::_111450 => Some("Color that is a light shade of brown"),
             Self::_111451 => Some("Color that is a dark shade of red"),
             Self::_111452 => Some("Color that is a dark shade of brown"),
             Self::_111453 => Some("Color that is a bright shade of red"),
             Self::_111454 => Some("Color that is tinged with the color of blood"),
-            Self::_111455 => Some("An indicator of whether or not the fluid obtained during an interventional procedure contains red blood cells"),
-            Self::_111456 => Some("An indicator of whether or not fluid during an interventional procedure was sent for cytological analysis or simply discarded"),
-            Self::_111457 => Some("An indicator that fluid obtained during an interventional procedure was sent to a laboratory for analysis"),
-            Self::_111458 => Some("An indicator that fluid obtained during an interventional procedure was discarded"),
-            Self::_111459 => Some("A radiopaque density noted during diagnostic imaging that has associated calcific densities"),
+            Self::_111455 => Some(
+                "An indicator of whether or not the fluid obtained during an interventional procedure contains red blood cells",
+            ),
+            Self::_111456 => Some(
+                "An indicator of whether or not fluid during an interventional procedure was sent for cytological analysis or simply discarded",
+            ),
+            Self::_111457 => Some(
+                "An indicator that fluid obtained during an interventional procedure was sent to a laboratory for analysis",
+            ),
+            Self::_111458 => Some(
+                "An indicator that fluid obtained during an interventional procedure was discarded",
+            ),
+            Self::_111459 => Some(
+                "A radiopaque density noted during diagnostic imaging that has associated calcific densities",
+            ),
             Self::_111460 => Some("A fluid-filled sac with greater than normal characteristics"),
             Self::_111461 => Some("A tumor within a cyst"),
             Self::_111462 => Some("A tumor or lesion"),
-            Self::_111463 => Some("Supporting evidence for interpretation results of an interventional procedure"),
-            Self::_111464 => Some("A descriptor that further qualifies or characterizes a type of procedure"),
-            Self::_111465 => Some("Needle size (diameter) characterization; e.g. of a biopsy needle"),
-            Self::_111466 => Some("An indicator of the gravity of a problem experienced by a patient, related to a procedure that was performed"),
+            Self::_111463 => Some(
+                "Supporting evidence for interpretation results of an interventional procedure",
+            ),
+            Self::_111464 => {
+                Some("A descriptor that further qualifies or characterizes a type of procedure")
+            }
+            Self::_111465 => {
+                Some("Needle size (diameter) characterization; e.g. of a biopsy needle")
+            }
+            Self::_111466 => Some(
+                "An indicator of the gravity of a problem experienced by a patient, related to a procedure that was performed",
+            ),
             Self::_111467 => Some("Distance from the hub or bushing to the tip of the needle"),
-            Self::_111468 => Some("The collection of observations and findings from pathologic analysis"),
-            Self::_111469 => Some("The date and time that the sample was collected from the patient"),
-            Self::_111470 => Some("Indicates that the margin of the biopsy specimen was not involved with the tumor"),
-            Self::_111471 => Some("Indicates that the margin of the biopsy specimen was involved with the tumor"),
-            Self::_111472 => Some("Indicates whether the nipple was involved in an interventional procedure or pathologic analysis"),
+            Self::_111468 => {
+                Some("The collection of observations and findings from pathologic analysis")
+            }
+            Self::_111469 => {
+                Some("The date and time that the sample was collected from the patient")
+            }
+            Self::_111470 => Some(
+                "Indicates that the margin of the biopsy specimen was not involved with the tumor",
+            ),
+            Self::_111471 => {
+                Some("Indicates that the margin of the biopsy specimen was involved with the tumor")
+            }
+            Self::_111472 => Some(
+                "Indicates whether the nipple was involved in an interventional procedure or pathologic analysis",
+            ),
             Self::_111473 => Some("Indicates the number of lymph nodes removed"),
-            Self::_111474 => Some("Indicates the number of lymph nodes removed that contain cancer cells"),
-            Self::_111475 => Some("The result of a test for the presence of a protein that binds with estrogen"),
-            Self::_111476 => Some("The result of a test for the presence of a protein that binds with progesterone"),
-            Self::_111477 => Some("Indicates the percentage of cells in S phase. Cell division is defined by phases; the S phase is the stage during which DNA replicates"),
+            Self::_111474 => {
+                Some("Indicates the number of lymph nodes removed that contain cancer cells")
+            }
+            Self::_111475 => {
+                Some("The result of a test for the presence of a protein that binds with estrogen")
+            }
+            Self::_111476 => Some(
+                "The result of a test for the presence of a protein that binds with progesterone",
+            ),
+            Self::_111477 => Some(
+                "Indicates the percentage of cells in S phase. Cell division is defined by phases; the S phase is the stage during which DNA replicates",
+            ),
             Self::_111478 => Some("The visible emission of non-bloody fluid from the nipple"),
-            Self::_111479 => Some("The inability to discern normal versus abnormal breast tissue during palpation"),
-            Self::_111480 => Some("An indication that a patient has or had a malignant occurrence in an area of the body other than the breast"),
+            Self::_111479 => Some(
+                "The inability to discern normal versus abnormal breast tissue during palpation",
+            ),
+            Self::_111480 => Some(
+                "An indication that a patient has or had a malignant occurrence in an area of the body other than the breast",
+            ),
             Self::_111481 => Some("A salt water filled prosthetic device implanted in the breast"),
-            Self::_111482 => Some("A polymer based (plastic) prosthetic device implanted in the breast"),
-            Self::_111483 => Some("The introduction of polymeric organic silicon based material through the skin, as for breast augmentation or reconstruction"),
-            Self::_111484 => Some("A prosthetic device that contains more than one material implanted in the breast"),
-            Self::_111485 => Some("A breast implant placed in front of the pectoralis major muscle"),
+            Self::_111482 => {
+                Some("A polymer based (plastic) prosthetic device implanted in the breast")
+            }
+            Self::_111483 => Some(
+                "The introduction of polymeric organic silicon based material through the skin, as for breast augmentation or reconstruction",
+            ),
+            Self::_111484 => Some(
+                "A prosthetic device that contains more than one material implanted in the breast",
+            ),
+            Self::_111485 => {
+                Some("A breast implant placed in front of the pectoralis major muscle")
+            }
             Self::_111486 => Some("A breast implant placed behind the pectoralis major muscle"),
-            Self::_111487 => Some("Using X-Ray technique and a superimposed set of crossed lines for detection or placement"),
-            Self::_111488 => Some("Using X-Ray technique and a superimposed aperture for detection or placement"),
+            Self::_111487 => Some(
+                "Using X-Ray technique and a superimposed set of crossed lines for detection or placement",
+            ),
+            Self::_111488 => {
+                Some("Using X-Ray technique and a superimposed aperture for detection or placement")
+            }
             Self::_111489 => Some("Using physical touch for detection or placement"),
-            Self::_111490 => Some("The performance of a biopsy procedure using a vacuum device attached to the biopsy needle"),
+            Self::_111490 => Some(
+                "The performance of a biopsy procedure using a vacuum device attached to the biopsy needle",
+            ),
             Self::_111491 => Some("Unusual or unexpected emission of fluid"),
-            Self::_111492 => Some("Having experienced no adverse medical conditions related to or resulting from an interventional procedure"),
-            Self::_111494 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is Tis, regional lymph node is N0, and distant metastasis is M0"),
-            Self::_111495 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is T1, regional lymph node is N0, and distant metastasis is M0"),
-            Self::_111496 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is T0 or T1, with regional lymph node N1 and distant metastasis is M0, or T2 with N0 and M0"),
-            Self::_111497 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is T2, with regional lymph node N1 and distant metastasis is M0, or T3 with N0 and M0"),
-            Self::_111498 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is T0, T1 or T2, with regional lymph node N2 and distant metastasis is M0, or T3 with N1 or N2 and M0"),
-            Self::_111499 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is T4, regional lymph node is N0, N1 or N2, and distant metastasis is M0"),
-            Self::_111500 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is any T value, regional lymph node is N3, and distant metastasis is M0"),
-            Self::_111501 => Some("TNM grouping of tumor stage, from AJCC, where primary tumor is any T value, regional lymph node is any N value, and distant metastasis is M1"),
-            Self::_111502 => Some("Histologic tumor grade (sometimes called Scarff-Bloom-Richardson grade) is based on the arrangement of the cells in relation to each other -- whether they form tubules, how closely they resemble normal breast cells (nuclear grade) and how many of the cancer cells are in the process of dividing (mitotic count)"),
-            Self::_111503 => Some("Breast prosthetic devices are intact, not leaking, and are in a normal shape and form"),
-            Self::_111504 => Some("Breast prosthetic devices are not symmetric, equal, corresponding in form, or are in one breast (unilateral)"),
-            Self::_111505 => Some("Fibrous or calcific contracture of the tissue capsule that forms around a breast prosthetic device"),
-            Self::_111506 => Some("Breast prosthetic device is twisted out of normal shape or form"),
-            Self::_111507 => Some("Silicone from breast prosthetic device found in lymphatic tissue"),
-            Self::_111508 => Some("Silicone found in breast tissue outside of the prosthetic capsule or implant membrane"),
-            Self::_111509 => Some("Protrusion of part of the structure normally encapsulating the content of the breast prosthetic device"),
+            Self::_111492 => Some(
+                "Having experienced no adverse medical conditions related to or resulting from an interventional procedure",
+            ),
+            Self::_111494 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is Tis, regional lymph node is N0, and distant metastasis is M0",
+            ),
+            Self::_111495 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is T1, regional lymph node is N0, and distant metastasis is M0",
+            ),
+            Self::_111496 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is T0 or T1, with regional lymph node N1 and distant metastasis is M0, or T2 with N0 and M0",
+            ),
+            Self::_111497 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is T2, with regional lymph node N1 and distant metastasis is M0, or T3 with N0 and M0",
+            ),
+            Self::_111498 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is T0, T1 or T2, with regional lymph node N2 and distant metastasis is M0, or T3 with N1 or N2 and M0",
+            ),
+            Self::_111499 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is T4, regional lymph node is N0, N1 or N2, and distant metastasis is M0",
+            ),
+            Self::_111500 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is any T value, regional lymph node is N3, and distant metastasis is M0",
+            ),
+            Self::_111501 => Some(
+                "TNM grouping of tumor stage, from AJCC, where primary tumor is any T value, regional lymph node is any N value, and distant metastasis is M1",
+            ),
+            Self::_111502 => Some(
+                "Histologic tumor grade (sometimes called Scarff-Bloom-Richardson grade) is based on the arrangement of the cells in relation to each other -- whether they form tubules, how closely they resemble normal breast cells (nuclear grade) and how many of the cancer cells are in the process of dividing (mitotic count)",
+            ),
+            Self::_111503 => Some(
+                "Breast prosthetic devices are intact, not leaking, and are in a normal shape and form",
+            ),
+            Self::_111504 => Some(
+                "Breast prosthetic devices are not symmetric, equal, corresponding in form, or are in one breast (unilateral)",
+            ),
+            Self::_111505 => Some(
+                "Fibrous or calcific contracture of the tissue capsule that forms around a breast prosthetic device",
+            ),
+            Self::_111506 => {
+                Some("Breast prosthetic device is twisted out of normal shape or form")
+            }
+            Self::_111507 => {
+                Some("Silicone from breast prosthetic device found in lymphatic tissue")
+            }
+            Self::_111508 => Some(
+                "Silicone found in breast tissue outside of the prosthetic capsule or implant membrane",
+            ),
+            Self::_111509 => Some(
+                "Protrusion of part of the structure normally encapsulating the content of the breast prosthetic device",
+            ),
             Self::_111510 => Some("Evidence of removal of a breast prosthetic device"),
-            Self::_111511 => Some("Historical patient health information of interest to the breast health clinician"),
-            Self::_111512 => Some("Information regarding usage by the patient of certain medications, such as hormones"),
-            Self::_111513 => Some("Interventional or non-interventional procedures previously performed on the patient, such as breast biopsies"),
-            Self::_111514 => Some("Abnormal conditions experienced by the patient that serve as the reason for performing a procedure, such as a breast exam"),
-            Self::_111515 => Some("Personal, familial, and other health factors that may indicate an increase in the patient\'s chances of developing a health condition or disease, such as breast cancer"),
-            Self::_111516 => Some("A classification of a medicinal substance, such as hormonal contraceptive or antibiotic"),
+            Self::_111511 => Some(
+                "Historical patient health information of interest to the breast health clinician",
+            ),
+            Self::_111512 => Some(
+                "Information regarding usage by the patient of certain medications, such as hormones",
+            ),
+            Self::_111513 => Some(
+                "Interventional or non-interventional procedures previously performed on the patient, such as breast biopsies",
+            ),
+            Self::_111514 => Some(
+                "Abnormal conditions experienced by the patient that serve as the reason for performing a procedure, such as a breast exam",
+            ),
+            Self::_111515 => Some(
+                "Personal, familial, and other health factors that may indicate an increase in the patient\'s chances of developing a health condition or disease, such as breast cancer",
+            ),
+            Self::_111516 => Some(
+                "A classification of a medicinal substance, such as hormonal contraceptive or antibiotic",
+            ),
             Self::_111517 => Some("Historical patient health information for general purpose use"),
             Self::_111518 => Some("The age of the patient at the first occurrence of menses"),
-            Self::_111519 => Some("The age of the patient at the time of her first full term pregnancy"),
+            Self::_111519 => {
+                Some("The age of the patient at the time of her first full term pregnancy")
+            }
             Self::_111520 => Some("The age of the patient at the cessation of menses"),
             Self::_111521 => Some("The age of the patient at the time her uterus was removed"),
-            Self::_111522 => Some("The age of the patient at the time she had her left ovary removed"),
-            Self::_111523 => Some("The age of the patient at the time she had her right ovary removed"),
-            Self::_111524 => Some("The age of a patient on the first occurrence of an event, such as the first use of a medication"),
-            Self::_111525 => Some("The age of a patient on the last occurrence of an event, such as the last use of a medication"),
-            Self::_111526 => Some("The date and time of the first occurrence of an event, such as the first use of a medication"),
-            Self::_111527 => Some("The date and time of the last occurrence of an event, such as the last use of a medication"),
-            Self::_111528 => Some("An indicator of whether an event is still in progress, such as the use of a medication or substance, or environmental exposure"),
-            Self::_111529 => Some("Product name of a device or substance, such as medication, to identify it as the product of a single firm or manufacturer"),
-            Self::_111530 => Some("A descriptor that further qualifies or characterizes a risk factor"),
-            Self::_111531 => Some("A prior non-interventional exam or interventional procedure performed on a patient"),
+            Self::_111522 => {
+                Some("The age of the patient at the time she had her left ovary removed")
+            }
+            Self::_111523 => {
+                Some("The age of the patient at the time she had her right ovary removed")
+            }
+            Self::_111524 => Some(
+                "The age of a patient on the first occurrence of an event, such as the first use of a medication",
+            ),
+            Self::_111525 => Some(
+                "The age of a patient on the last occurrence of an event, such as the last use of a medication",
+            ),
+            Self::_111526 => Some(
+                "The date and time of the first occurrence of an event, such as the first use of a medication",
+            ),
+            Self::_111527 => Some(
+                "The date and time of the last occurrence of an event, such as the last use of a medication",
+            ),
+            Self::_111528 => Some(
+                "An indicator of whether an event is still in progress, such as the use of a medication or substance, or environmental exposure",
+            ),
+            Self::_111529 => Some(
+                "Product name of a device or substance, such as medication, to identify it as the product of a single firm or manufacturer",
+            ),
+            Self::_111530 => {
+                Some("A descriptor that further qualifies or characterizes a risk factor")
+            }
+            Self::_111531 => Some(
+                "A prior non-interventional exam or interventional procedure performed on a patient",
+            ),
             Self::_111532 => Some("Describes the pregnancy state of a referenced subject"),
-            Self::_111533 => Some("A symptom experienced by a patient that is used as the reason for performing an exam or procedure"),
-            Self::_111534 => Some("The function of the individual who is reporting information on a patient, which could be a specific health care related profession, the patient him/herself, or a relative or friend"),
+            Self::_111533 => Some(
+                "A symptom experienced by a patient that is used as the reason for performing an exam or procedure",
+            ),
+            Self::_111534 => Some(
+                "The function of the individual who is reporting information on a patient, which could be a specific health care related profession, the patient him/herself, or a relative or friend",
+            ),
             Self::_111535 => Some("The date and time that a symptom was noted"),
-            Self::_111536 => Some("The date and time of the most recent evaluation of an indicated problem"),
-            Self::_111537 => Some("A patient\'s biological relative who exhibits a health factor that may indicate an increase in the patient\'s chances of developing a particular disease or medical problem"),
-            Self::_111538 => Some("The age at which an individual experienced a specific event, such as breast cancer"),
-            Self::_111539 => Some("The current stage of an individual in her gynecological development"),
+            Self::_111536 => {
+                Some("The date and time of the most recent evaluation of an indicated problem")
+            }
+            Self::_111537 => Some(
+                "A patient\'s biological relative who exhibits a health factor that may indicate an increase in the patient\'s chances of developing a particular disease or medical problem",
+            ),
+            Self::_111538 => Some(
+                "The age at which an individual experienced a specific event, such as breast cancer",
+            ),
+            Self::_111539 => {
+                Some("The current stage of an individual in her gynecological development")
+            }
             Self::_111540 => Some("An indicator of paternal or maternal relationship"),
             Self::_111541 => Some("Relating to biological female parentage"),
-            Self::_111542 => Some("A gynecological hormone for which the specific type is not specified; e.g. contraceptive, estrogen, Tamoxifen"),
-            Self::_111543 => Some("An indicator of whether or not a patient ever provided breast milk to her offspring"),
-            Self::_111544 => Some("The average length of time that a patient provided breast milk to her offspring"),
-            Self::_111545 => Some("Information regarding usage by the patient of certain legal or illicit substances"),
-            Self::_111546 => Some("A classification of a substance, such as alcohol or a legal or illicit drug"),
-            Self::_111547 => Some("Information regarding exposure of the patient to potentially harmful environmental factors"),
-            Self::_111548 => Some("A classification of a potentially harmful substance or gas in a subject\'s environment, such as asbestos, lead, or carcinogens"),
-            Self::_111549 => Some("Previous Structured Reports that could have relevant information for a current imaging service request"),
-            Self::_111550 => Some("An indication that a patient has had a previous malignancy of the breast"),
-            Self::_111551 => Some("Indicates a previous occurrence of cancer of the lining of the uterus"),
-            Self::_111552 => Some("Indicates a previous occurrence of cancer of the lining of the ovary"),
-            Self::_111553 => Some("Indicates a prior diagnosis of pre-cancerous cells or tissue removed for pathologic evaluation"),
+            Self::_111542 => Some(
+                "A gynecological hormone for which the specific type is not specified; e.g. contraceptive, estrogen, Tamoxifen",
+            ),
+            Self::_111543 => Some(
+                "An indicator of whether or not a patient ever provided breast milk to her offspring",
+            ),
+            Self::_111544 => Some(
+                "The average length of time that a patient provided breast milk to her offspring",
+            ),
+            Self::_111545 => Some(
+                "Information regarding usage by the patient of certain legal or illicit substances",
+            ),
+            Self::_111546 => {
+                Some("A classification of a substance, such as alcohol or a legal or illicit drug")
+            }
+            Self::_111547 => Some(
+                "Information regarding exposure of the patient to potentially harmful environmental factors",
+            ),
+            Self::_111548 => Some(
+                "A classification of a potentially harmful substance or gas in a subject\'s environment, such as asbestos, lead, or carcinogens",
+            ),
+            Self::_111549 => Some(
+                "Previous Structured Reports that could have relevant information for a current imaging service request",
+            ),
+            Self::_111550 => {
+                Some("An indication that a patient has had a previous malignancy of the breast")
+            }
+            Self::_111551 => {
+                Some("Indicates a previous occurrence of cancer of the lining of the uterus")
+            }
+            Self::_111552 => {
+                Some("Indicates a previous occurrence of cancer of the lining of the ovary")
+            }
+            Self::_111553 => Some(
+                "Indicates a prior diagnosis of pre-cancerous cells or tissue removed for pathologic evaluation",
+            ),
             Self::_111554 => Some("A female patient whose menstrual periods have ceased"),
-            Self::_111555 => Some("A female patient whose first child was born after the patient was 30 years old"),
-            Self::_111556 => Some("The first level genetic marker indicating risk for breast cancer"),
-            Self::_111557 => Some("The second level genetic marker indicating risk for breast cancer"),
-            Self::_111558 => Some("The third level genetic marker indicating risk for breast cancer"),
-            Self::_111559 => Some("A patient\'s biological aunt, grandmother, or female cousin was diagnosed with breast cancer. Definition from BI-RADS\u{ae}"),
-            Self::_111560 => Some("A patient\'s biological mother or sister was diagnosed with breast cancer after they had gone through menopause. Definition from BI-RADS\u{ae}"),
-            Self::_111561 => Some("A patient\'s biological mother or sister was diagnosed with breast cancer before they had gone through menopause, or more than one of the patient\'s first-degree relatives (biological mother or sister) were diagnosed with breast cancer after they had gone through menopause. Definition from BI-RADS\u{ae}"),
-            Self::_111562 => Some("Previous diagnosis of a malignancy of the prostate gland in a biological relative"),
-            Self::_111563 => Some("The health record of a patient\'s biological relatives is not known"),
+            Self::_111555 => Some(
+                "A female patient whose first child was born after the patient was 30 years old",
+            ),
+            Self::_111556 => {
+                Some("The first level genetic marker indicating risk for breast cancer")
+            }
+            Self::_111557 => {
+                Some("The second level genetic marker indicating risk for breast cancer")
+            }
+            Self::_111558 => {
+                Some("The third level genetic marker indicating risk for breast cancer")
+            }
+            Self::_111559 => Some(
+                "A patient\'s biological aunt, grandmother, or female cousin was diagnosed with breast cancer. Definition from BI-RADS\u{ae}",
+            ),
+            Self::_111560 => Some(
+                "A patient\'s biological mother or sister was diagnosed with breast cancer after they had gone through menopause. Definition from BI-RADS\u{ae}",
+            ),
+            Self::_111561 => Some(
+                "A patient\'s biological mother or sister was diagnosed with breast cancer before they had gone through menopause, or more than one of the patient\'s first-degree relatives (biological mother or sister) were diagnosed with breast cancer after they had gone through menopause. Definition from BI-RADS\u{ae}",
+            ),
+            Self::_111562 => Some(
+                "Previous diagnosis of a malignancy of the prostate gland in a biological relative",
+            ),
+            Self::_111563 => {
+                Some("The health record of a patient\'s biological relatives is not known")
+            }
             Self::_111564 => Some("The study of cells obtained from fluid emitted from the breast"),
-            Self::_111565 => Some("A developmental abnormality resulting in an abnormal shape of the uterus"),
-            Self::_111566 => Some("A naturally occurring premature expulsion from the uterus of the products of conception - the embryo or a nonviable fetus"),
-            Self::_111567 => Some("An ailment/abnormality or state of the female reproductive tract"),
-            Self::_111568 => Some("A surgical operation performed on any portion of the female reproductive tract"),
-            Self::_111569 => Some("Prior pregnancy with a low birth weight baby or a fetus with Intrauterine Growth Restriction or Retardation"),
-            Self::_111570 => Some("History of at least one prior pregnancy with fetal anatomic abnormality(s)"),
-            Self::_111571 => Some("History of delivering a Rhesis Isoimmunization affected child(ren) or a child(ren) with another blood disorder"),
-            Self::_111572 => Some("History of at least one pregnancy that contained more than one fetus; e.g. twins, triplets, etc."),
-            Self::_111573 => Some("At least one fetus of this pregnancy has an anatomic abnormality(s) that is known to exist, or a \"marker\" is present that suggests the abnormality(s) may be present"),
-            Self::_111574 => Some("Biological relatives have previously conceived a fetus with an anatomic abnormality(s)"),
-            Self::_111575 => Some("A subjective descriptor for an elevated amount of exposure, use, or dosage, incurring high risk of adverse effects"),
-            Self::_111576 => Some("A subjective descriptor for a moderate amount of exposure, use, or dosage, incurring medium risk of adverse effects"),
-            Self::_111577 => Some("A subjective descriptor for a limited amount of exposure, use, or dosage, incurring low risk of adverse effects"),
-            Self::_111578 => Some("A measurement of the rate of occurrence of which a patient takes a certain medication"),
-            Self::_111579 => Some("The quantity per unit of time that a patient was or is being exposed to an environmental irritant"),
-            Self::_111580 => Some("The quantity per unit of time that a medication or substance was or is being used"),
-            Self::_111581 => Some("A qualitative descriptor for the amount of a medication that was or is being taken"),
-            Self::_111582 => Some("A qualitative descriptor for the amount of present or past exposure to an environmental irritant"),
-            Self::_111583 => Some("A qualitative descriptor for the amount of a medication or substance that was or is being used"),
-            Self::_111584 => Some("A qualitative descriptor for the frequency with which a medication was or is being taken"),
-            Self::_111585 => Some("A qualitative descriptor for the frequency of present or past exposure to an environmental irritant"),
-            Self::_111586 => Some("A qualitative descriptor for the frequency with which a medication or substance was or is being used"),
-            Self::_111587 => Some("Patient is not known to have been exposed to or used the substance or medication"),
-            Self::_111590 => Some("Patient returns for additional images to improve the quality of the most recent exam"),
-            Self::_111591 => Some("Patient returns for additional images to clarify findings from the most recent exam"),
-            Self::_111592 => Some("Patient returns for additional images to clarify symptoms or signs reported by the patient or a healthcare professional at the time of the most recent exam"),
-            Self::_111593 => Some("Number of births with low birth weight or intrauterine growth restriction"),
-            Self::_111601 => Some("Filter that transmits green light while blocking the other colors, typically centered at 510-540 nm"),
-            Self::_111602 => Some("Filter that transmits red light while blocking the other colors, typically centered at 630-680 nm"),
-            Self::_111603 => Some("Filter that transmits blue while blocking the other colors, typically centered at 460-480 nm"),
-            Self::_111604 => Some("A filter of 560nm that is used for retinal imaging and can provide good contrast and good visibility of the retinal vasculature"),
-            Self::_111605 => Some("A filter of 490nm that is used for retinal imaging because of excessive scattering of some retinal structures at very short wavelengths"),
-            Self::_111606 => Some("Filter that transmits the infrared spectrum, which is light that lies outside of the visible spectrum, with wavelengths longer than those of red light, while blocking visible light"),
-            Self::_111607 => Some("A filter that reduces reflections from non-metallic surfaces such as glass or water by blocking light waves that are vibrating at selected angles to the filter"),
+            Self::_111565 => {
+                Some("A developmental abnormality resulting in an abnormal shape of the uterus")
+            }
+            Self::_111566 => Some(
+                "A naturally occurring premature expulsion from the uterus of the products of conception - the embryo or a nonviable fetus",
+            ),
+            Self::_111567 => {
+                Some("An ailment/abnormality or state of the female reproductive tract")
+            }
+            Self::_111568 => Some(
+                "A surgical operation performed on any portion of the female reproductive tract",
+            ),
+            Self::_111569 => Some(
+                "Prior pregnancy with a low birth weight baby or a fetus with Intrauterine Growth Restriction or Retardation",
+            ),
+            Self::_111570 => {
+                Some("History of at least one prior pregnancy with fetal anatomic abnormality(s)")
+            }
+            Self::_111571 => Some(
+                "History of delivering a Rhesis Isoimmunization affected child(ren) or a child(ren) with another blood disorder",
+            ),
+            Self::_111572 => Some(
+                "History of at least one pregnancy that contained more than one fetus; e.g. twins, triplets, etc.",
+            ),
+            Self::_111573 => Some(
+                "At least one fetus of this pregnancy has an anatomic abnormality(s) that is known to exist, or a \"marker\" is present that suggests the abnormality(s) may be present",
+            ),
+            Self::_111574 => Some(
+                "Biological relatives have previously conceived a fetus with an anatomic abnormality(s)",
+            ),
+            Self::_111575 => Some(
+                "A subjective descriptor for an elevated amount of exposure, use, or dosage, incurring high risk of adverse effects",
+            ),
+            Self::_111576 => Some(
+                "A subjective descriptor for a moderate amount of exposure, use, or dosage, incurring medium risk of adverse effects",
+            ),
+            Self::_111577 => Some(
+                "A subjective descriptor for a limited amount of exposure, use, or dosage, incurring low risk of adverse effects",
+            ),
+            Self::_111578 => Some(
+                "A measurement of the rate of occurrence of which a patient takes a certain medication",
+            ),
+            Self::_111579 => Some(
+                "The quantity per unit of time that a patient was or is being exposed to an environmental irritant",
+            ),
+            Self::_111580 => Some(
+                "The quantity per unit of time that a medication or substance was or is being used",
+            ),
+            Self::_111581 => Some(
+                "A qualitative descriptor for the amount of a medication that was or is being taken",
+            ),
+            Self::_111582 => Some(
+                "A qualitative descriptor for the amount of present or past exposure to an environmental irritant",
+            ),
+            Self::_111583 => Some(
+                "A qualitative descriptor for the amount of a medication or substance that was or is being used",
+            ),
+            Self::_111584 => Some(
+                "A qualitative descriptor for the frequency with which a medication was or is being taken",
+            ),
+            Self::_111585 => Some(
+                "A qualitative descriptor for the frequency of present or past exposure to an environmental irritant",
+            ),
+            Self::_111586 => Some(
+                "A qualitative descriptor for the frequency with which a medication or substance was or is being used",
+            ),
+            Self::_111587 => Some(
+                "Patient is not known to have been exposed to or used the substance or medication",
+            ),
+            Self::_111590 => Some(
+                "Patient returns for additional images to improve the quality of the most recent exam",
+            ),
+            Self::_111591 => Some(
+                "Patient returns for additional images to clarify findings from the most recent exam",
+            ),
+            Self::_111592 => Some(
+                "Patient returns for additional images to clarify symptoms or signs reported by the patient or a healthcare professional at the time of the most recent exam",
+            ),
+            Self::_111593 => {
+                Some("Number of births with low birth weight or intrauterine growth restriction")
+            }
+            Self::_111601 => Some(
+                "Filter that transmits green light while blocking the other colors, typically centered at 510-540 nm",
+            ),
+            Self::_111602 => Some(
+                "Filter that transmits red light while blocking the other colors, typically centered at 630-680 nm",
+            ),
+            Self::_111603 => Some(
+                "Filter that transmits blue while blocking the other colors, typically centered at 460-480 nm",
+            ),
+            Self::_111604 => Some(
+                "A filter of 560nm that is used for retinal imaging and can provide good contrast and good visibility of the retinal vasculature",
+            ),
+            Self::_111605 => Some(
+                "A filter of 490nm that is used for retinal imaging because of excessive scattering of some retinal structures at very short wavelengths",
+            ),
+            Self::_111606 => Some(
+                "Filter that transmits the infrared spectrum, which is light that lies outside of the visible spectrum, with wavelengths longer than those of red light, while blocking visible light",
+            ),
+            Self::_111607 => Some(
+                "A filter that reduces reflections from non-metallic surfaces such as glass or water by blocking light waves that are vibrating at selected angles to the filter",
+            ),
             Self::_111609 => Some("No filter used"),
-            Self::_111621 => Some("Joslin NM-1 is a 45 degree field focused centrally between the temporal margin of optic disc and the center of the macula: Center the camera on the papillomacular bundle midway between the temporal margin of the optic disc and the center of the macula. The horizontal centerline of the image should pass directly through the center of the disc"),
-            Self::_111622 => Some("Joslin NM-2 is a 45 degree field focused superior temporal to the optic disc: Center the camera laterally approximately one-half disc diameter temporal to the center of the macula. The lower edge of the field is tangent to a horizontal line passing through the upper edge of the optic disc. The image is taken temporal to the macula but includes more retinal nasal and superior to the macula than standard field 2"),
-            Self::_111623 => Some("Joslin NM-3 is a 45 degree field focused nasal to the optic disc: This field is nasal to the optic disc and may include part of the optic disc. The horizontal centerline of the image should pass tangent to the lower edge of the optic disc"),
+            Self::_111621 => Some(
+                "Joslin NM-1 is a 45 degree field focused centrally between the temporal margin of optic disc and the center of the macula: Center the camera on the papillomacular bundle midway between the temporal margin of the optic disc and the center of the macula. The horizontal centerline of the image should pass directly through the center of the disc",
+            ),
+            Self::_111622 => Some(
+                "Joslin NM-2 is a 45 degree field focused superior temporal to the optic disc: Center the camera laterally approximately one-half disc diameter temporal to the center of the macula. The lower edge of the field is tangent to a horizontal line passing through the upper edge of the optic disc. The image is taken temporal to the macula but includes more retinal nasal and superior to the macula than standard field 2",
+            ),
+            Self::_111623 => Some(
+                "Joslin NM-3 is a 45 degree field focused nasal to the optic disc: This field is nasal to the optic disc and may include part of the optic disc. The horizontal centerline of the image should pass tangent to the lower edge of the optic disc",
+            ),
             Self::_111625 => Some("A broad or \"soft\" light supplied from a single source"),
-            Self::_111626 => Some("A slit reflected light microscope, which has the ability to form an image of the back scattered light from the eye in a sagittal plane. Scheimpflug cameras are able to achieve a wide depth of focus by employing the \"Sheimpflug principle\" where the lens and image planes are not parallel with each other. Rotating Sheimplug cameras are able to generate three-dimensional images and calculate measurements of the anterior chamber of the eye"),
+            Self::_111626 => Some(
+                "A slit reflected light microscope, which has the ability to form an image of the back scattered light from the eye in a sagittal plane. Scheimpflug cameras are able to achieve a wide depth of focus by employing the \"Sheimpflug principle\" where the lens and image planes are not parallel with each other. Rotating Sheimplug cameras are able to generate three-dimensional images and calculate measurements of the anterior chamber of the eye",
+            ),
             Self::_111627 => Some("Lighting condition approximately 0.04 lux"),
             Self::_111628 => Some("Lighting condition approximately 4 lux"),
             Self::_111629 => Some("Lighting condition approximately 40 lux"),
             Self::_111630 => Some("Acquisition preceded by intense light"),
-            Self::_111631 => Some("Calculated from values of entrance exposure in air, the X-Ray beam quality (half-value layer), and compressed breast thickness, is the energy deposited per unit mass of glandular tissue averaged over all the glandular tissue in the breast"),
+            Self::_111631 => Some(
+                "Calculated from values of entrance exposure in air, the X-Ray beam quality (half-value layer), and compressed breast thickness, is the energy deposited per unit mass of glandular tissue averaged over all the glandular tissue in the breast",
+            ),
             Self::_111632 => Some("The primary material in the anode of an X-Ray source"),
-            Self::_111633 => Some("The average thickness of the body part examined when compressed, if compression has been applied during X-Ray exposure"),
-            Self::_111634 => Some("Thickness of Aluminum required to reduce the X-Ray output at the patient entrance surface by a factor of two"),
-            Self::_111635 => Some("An anti-scatter device based on radiation absorbing strips above the detector; e.g. in the patient support"),
-            Self::_111636 => Some("Exposure measurement in air at the reference point that does not include back scatter, according to MQCM 1999"),
-            Self::_111637 => Some("Average Glandular Dose to a single breast accumulated over multiple images"),
-            Self::_111638 => Some("Value of the control variable used to parametrize the Automatic Exposure Control (AEC) closed loop; e.g. \"Water Value\""),
+            Self::_111633 => Some(
+                "The average thickness of the body part examined when compressed, if compression has been applied during X-Ray exposure",
+            ),
+            Self::_111634 => Some(
+                "Thickness of Aluminum required to reduce the X-Ray output at the patient entrance surface by a factor of two",
+            ),
+            Self::_111635 => Some(
+                "An anti-scatter device based on radiation absorbing strips above the detector; e.g. in the patient support",
+            ),
+            Self::_111636 => Some(
+                "Exposure measurement in air at the reference point that does not include back scatter, according to MQCM 1999",
+            ),
+            Self::_111637 => {
+                Some("Average Glandular Dose to a single breast accumulated over multiple images")
+            }
+            Self::_111638 => Some(
+                "Value of the control variable used to parametrize the Automatic Exposure Control (AEC) closed loop; e.g. \"Water Value\"",
+            ),
             Self::_111641 => Some("An X-Ray Grid that does not move during exposure"),
-            Self::_111642 => Some("An X-Ray Grid with radiation absorbing strips that are focused toward the focal spot, to eliminate grid cutoff"),
-            Self::_111643 => Some("An X-Ray Grid that is designed to move during exposure, to eliminate the appearance of grid lines on the image"),
-            Self::_111644 => Some("An X-Ray Grid with radiation absorbing strips that are parallel to each other and that is used only with long source to image distances"),
-            Self::_111645 => Some("An X-Ray Grid with crossed radiation absorbing strips used for more complete cleanup of scatter radiation"),
+            Self::_111642 => Some(
+                "An X-Ray Grid with radiation absorbing strips that are focused toward the focal spot, to eliminate grid cutoff",
+            ),
+            Self::_111643 => Some(
+                "An X-Ray Grid that is designed to move during exposure, to eliminate the appearance of grid lines on the image",
+            ),
+            Self::_111644 => Some(
+                "An X-Ray Grid with radiation absorbing strips that are parallel to each other and that is used only with long source to image distances",
+            ),
+            Self::_111645 => Some(
+                "An X-Ray Grid with crossed radiation absorbing strips used for more complete cleanup of scatter radiation",
+            ),
             Self::_111646 => Some("No X-Ray Grid was used due to low scatter conditions"),
             Self::_111671 => Some("The spectacle prescription for a patient"),
-            Self::_111672 => Some("Refractive measurements of the eye to correct for inability to focus at near while wearing the distance prescription"),
-            Self::_111673 => Some("Refractive measurements of the eye to correct for inability to focus at intermediate distance while wearing the distance prescription"),
-            Self::_111674 => Some("Refractive measurements of the eye to correct for inability to focus at the specified distance while wearing the distance prescription"),
-            Self::_111675 => Some("The power of a prism to bend light in the horizontal direction, in prism diopters"),
-            Self::_111676 => Some("Direction of the base of a horizontal prism -- either in (toward the nose), or out (away from the nose)"),
-            Self::_111677 => Some("The power of a prism to bend light in the vertical direction, in prism diopters"),
-            Self::_111678 => Some("Direction of the base of a vertical prism -- either up, or down"),
-            Self::_111679 => Some("Distance in mm between the pupils when the patient\'s object of regard is in the distance"),
-            Self::_111680 => Some("Distance in mm between the pupils when the patient\'s object of regard is at near"),
-            Self::_111685 => Some("A patient\'s vision with the correction measured by an autorefractor in place"),
-            Self::_111686 => Some("A patient\'s vision with whichever vision correction the patient customarily wears"),
-            Self::_111687 => Some("A patient\'s vision with the final spectacle prescription in place"),
+            Self::_111672 => Some(
+                "Refractive measurements of the eye to correct for inability to focus at near while wearing the distance prescription",
+            ),
+            Self::_111673 => Some(
+                "Refractive measurements of the eye to correct for inability to focus at intermediate distance while wearing the distance prescription",
+            ),
+            Self::_111674 => Some(
+                "Refractive measurements of the eye to correct for inability to focus at the specified distance while wearing the distance prescription",
+            ),
+            Self::_111675 => Some(
+                "The power of a prism to bend light in the horizontal direction, in prism diopters",
+            ),
+            Self::_111676 => Some(
+                "Direction of the base of a horizontal prism -- either in (toward the nose), or out (away from the nose)",
+            ),
+            Self::_111677 => Some(
+                "The power of a prism to bend light in the vertical direction, in prism diopters",
+            ),
+            Self::_111678 => {
+                Some("Direction of the base of a vertical prism -- either up, or down")
+            }
+            Self::_111679 => Some(
+                "Distance in mm between the pupils when the patient\'s object of regard is in the distance",
+            ),
+            Self::_111680 => Some(
+                "Distance in mm between the pupils when the patient\'s object of regard is at near",
+            ),
+            Self::_111685 => Some(
+                "A patient\'s vision with the correction measured by an autorefractor in place",
+            ),
+            Self::_111686 => Some(
+                "A patient\'s vision with whichever vision correction the patient customarily wears",
+            ),
+            Self::_111687 => {
+                Some("A patient\'s vision with the final spectacle prescription in place")
+            }
             Self::_111688 => Some("The spectacle prescription for the right eye"),
             Self::_111689 => Some("The spectacle prescription for the left eye"),
-            Self::_111690 => Some("A macular grid thickness and volume report for a patient. The macular grid is an analytic tool described in PS3.1"),
+            Self::_111690 => Some(
+                "A macular grid thickness and volume report for a patient. The macular grid is an analytic tool described in PS3.1",
+            ),
             Self::_111691 => Some("Number of images used for the macular grid measurement"),
             Self::_111692 => Some("Number of samples used per Image for analysis"),
-            Self::_111693 => Some("A numeric rating of the quality of the entire analysis with respect to grading and diagnostic purposes. Higher numbers indicate greater quality"),
-            Self::_111694 => Some("A numeric rating of the quality of an entire image set with respect to grading and diagnostic purposes. Higher numbers indicate greater quality"),
+            Self::_111693 => Some(
+                "A numeric rating of the quality of the entire analysis with respect to grading and diagnostic purposes. Higher numbers indicate greater quality",
+            ),
+            Self::_111694 => Some(
+                "A numeric rating of the quality of an entire image set with respect to grading and diagnostic purposes. Higher numbers indicate greater quality",
+            ),
             Self::_111695 => Some("Tear film or drops affecting test quality"),
-            Self::_111696 => Some("The assessment of the centricity and persistence of the visual fixation (direction of gaze) during the acquisition"),
-            Self::_111697 => Some("The reason why the patient\'s visual fixation was not steady or was indeterminate"),
-            Self::_111698 => Some("The reason why the macular grid measurements may be questionable"),
-            Self::_111700 => Some("Identifier of container (box, block, microscope slide, etc.) for the specimen under observation"),
+            Self::_111696 => Some(
+                "The assessment of the centricity and persistence of the visual fixation (direction of gaze) during the acquisition",
+            ),
+            Self::_111697 => Some(
+                "The reason why the patient\'s visual fixation was not steady or was indeterminate",
+            ),
+            Self::_111698 => {
+                Some("The reason why the macular grid measurements may be questionable")
+            }
+            Self::_111700 => Some(
+                "Identifier of container (box, block, microscope slide, etc.) for the specimen under observation",
+            ),
             Self::_111701 => Some("Type of processing that tissue specimen underwent"),
             Self::_111702 => Some("Date and time of processing step"),
-            Self::_111703 => Some("Description of the individual step in the tissue processing sequence"),
+            Self::_111703 => {
+                Some("Description of the individual step in the tissue processing sequence")
+            }
             Self::_111704 => Some("Method of sampling used to derive specimen from its parent"),
-            Self::_111705 => Some("Identifier of the parent specimen that gave rise to the current specimen"),
+            Self::_111705 => {
+                Some("Identifier of the parent specimen that gave rise to the current specimen")
+            }
             Self::_111706 => Some("Assigning authority for parent specimen\'s identifier"),
             Self::_111707 => Some("Parent specimen type that gave rise to current specimen"),
-            Self::_111708 => Some("Description of coordinate system and origin reference point on parent specimen, or parent specimen container, or image used for localizing the sampling site or location within container or image"),
-            Self::_111709 => Some("Reference to image of parent specimen localizing the sampling site; may include referenced Presentation State object"),
-            Self::_111710 => Some("Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the X dimension"),
-            Self::_111711 => Some("Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the Y dimension"),
-            Self::_111712 => Some("Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the Z dimension"),
-            Self::_111718 => Some("Description of specimen location, either in absolute terms or relative to the Position Frame of Reference"),
-            Self::_111719 => Some("Location of specimen (nominal center) relative to the Position Frame of Reference in the X dimension"),
-            Self::_111720 => Some("Location of specimen (nominal center) relative to the Position Frame of Reference in the Y dimension"),
-            Self::_111721 => Some("Location of specimen (nominal center) relative to the Position Frame of Reference in the Z dimension"),
-            Self::_111723 => Some("Description of visual distinguishing identifiers; e.g. ink, or a particular shape of the specimen"),
+            Self::_111708 => Some(
+                "Description of coordinate system and origin reference point on parent specimen, or parent specimen container, or image used for localizing the sampling site or location within container or image",
+            ),
+            Self::_111709 => Some(
+                "Reference to image of parent specimen localizing the sampling site; may include referenced Presentation State object",
+            ),
+            Self::_111710 => Some(
+                "Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the X dimension",
+            ),
+            Self::_111711 => Some(
+                "Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the Y dimension",
+            ),
+            Self::_111712 => Some(
+                "Location of sampling site of specimen (nominal center) relative to the Position Frame of Reference in the Z dimension",
+            ),
+            Self::_111718 => Some(
+                "Description of specimen location, either in absolute terms or relative to the Position Frame of Reference",
+            ),
+            Self::_111719 => Some(
+                "Location of specimen (nominal center) relative to the Position Frame of Reference in the X dimension",
+            ),
+            Self::_111720 => Some(
+                "Location of specimen (nominal center) relative to the Position Frame of Reference in the Y dimension",
+            ),
+            Self::_111721 => Some(
+                "Location of specimen (nominal center) relative to the Position Frame of Reference in the Z dimension",
+            ),
+            Self::_111723 => Some(
+                "Description of visual distinguishing identifiers; e.g. ink, or a particular shape of the specimen",
+            ),
             Self::_111724 => Some("Assigning authority for specimen identifier"),
-            Self::_111726 => Some("Dissection of specimen with submission of all its sections for further processing or examination"),
-            Self::_111727 => Some("Dissection of specimen with submission of representative sections for further processing or examination"),
-            Self::_111729 => Some("A workflow step, during which tissue specimens are stored in a climate-controlled environment"),
+            Self::_111726 => Some(
+                "Dissection of specimen with submission of all its sections for further processing or examination",
+            ),
+            Self::_111727 => Some(
+                "Dissection of specimen with submission of representative sections for further processing or examination",
+            ),
+            Self::_111729 => Some(
+                "A workflow step, during which tissue specimens are stored in a climate-controlled environment",
+            ),
             Self::_111741 => Some("Transmission illumination method for specimen microscopy"),
             Self::_111742 => Some("Reflection illumination method for specimen microscopy"),
             Self::_111743 => Some("Epifluorescence illumination method for specimen microscopy"),
@@ -13812,337 +15278,935 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_111745 => Some("Darkfield illumination method for specimen microscopy"),
             Self::_111746 => Some("Oblique illumination method for specimen microscopy"),
             Self::_111747 => Some("Phase contrast illumination method for specimen microscopy"),
-            Self::_111748 => Some("Differential interference contrast method for specimen microscopy"),
-            Self::_111749 => Some("Total internal reflection fluorescence method for specimen microscopy"),
-            Self::_111750 => Some("A method of obtaining ophthalmic axial measurements that uses ultrasound, and that requires applanation of the cornea"),
-            Self::_111751 => Some("A method of obtaining ophthalmic axial measurements that uses ultrasound, and that requires immersion of the patient\'s eye in fluid as he lies in a supine position"),
-            Self::_111752 => Some("A method of obtaining ophthalmic axial measurements that uses light"),
-            Self::_111753 => Some("Measurements taken of the corneal curvature using a manual keratometer"),
-            Self::_111754 => Some("Measurements taken of the corneal curvature using an automated keratometer"),
-            Self::_111755 => Some("Simulated Keratometry measurements derived from corneal topography"),
+            Self::_111748 => {
+                Some("Differential interference contrast method for specimen microscopy")
+            }
+            Self::_111749 => {
+                Some("Total internal reflection fluorescence method for specimen microscopy")
+            }
+            Self::_111750 => Some(
+                "A method of obtaining ophthalmic axial measurements that uses ultrasound, and that requires applanation of the cornea",
+            ),
+            Self::_111751 => Some(
+                "A method of obtaining ophthalmic axial measurements that uses ultrasound, and that requires immersion of the patient\'s eye in fluid as he lies in a supine position",
+            ),
+            Self::_111752 => {
+                Some("A method of obtaining ophthalmic axial measurements that uses light")
+            }
+            Self::_111753 => {
+                Some("Measurements taken of the corneal curvature using a manual keratometer")
+            }
+            Self::_111754 => {
+                Some("Measurements taken of the corneal curvature using an automated keratometer")
+            }
+            Self::_111755 => {
+                Some("Simulated Keratometry measurements derived from corneal topography")
+            }
             Self::_111756 => Some("Corneal power measurements using Scheimpflug camera"),
-            Self::_111760 => Some("The Haigis IOL calculation formula. Haigis W, Lege B, Miller N, Schneider B. Comparison of immersion ultrasound biometry and partial coherence interferometry for intraocular lens calculation according to Haigis. Graefes Arch Clin Exp Ophthalmol 2000;238:765-73"),
-            Self::_111761 => Some("The Haigis-L IOL calculation formula. Haigis W. Intraocular lens calculation after refractive surgery for myopia: Haigis-L formula. J Cataract Refract Surg. 2008 Oct;34(10):1658-63"),
-            Self::_111762 => Some("The Holladay 1 IOL calculation formula. Holladay JT, Prager TC, Chandler TY, Musgrove KH, Lewis JW, Ruiz RS. A three-part system for refining intraocular lens power calculations. J Cataract Refract Surg. 1988; 14:17-24"),
+            Self::_111760 => Some(
+                "The Haigis IOL calculation formula. Haigis W, Lege B, Miller N, Schneider B. Comparison of immersion ultrasound biometry and partial coherence interferometry for intraocular lens calculation according to Haigis. Graefes Arch Clin Exp Ophthalmol 2000;238:765-73",
+            ),
+            Self::_111761 => Some(
+                "The Haigis-L IOL calculation formula. Haigis W. Intraocular lens calculation after refractive surgery for myopia: Haigis-L formula. J Cataract Refract Surg. 2008 Oct;34(10):1658-63",
+            ),
+            Self::_111762 => Some(
+                "The Holladay 1 IOL calculation formula. Holladay JT, Prager TC, Chandler TY, Musgrove KH, Lewis JW, Ruiz RS. A three-part system for refining intraocular lens power calculations. J Cataract Refract Surg. 1988; 14:17-24",
+            ),
             Self::_111763 => Some("The Holladay 2 IOL calculation formula"),
-            Self::_111764 => Some("The Hoffer Q IOL calculation formula. Hoffer KJ. The Hoffer Q formula: a comparison of theoretic and regression formulas. J Cataract Refract Surg 1993;19:700-12. Errata. J Cataract Refract Surg 1994;20:677 and 2007;33:2-3"),
-            Self::_111765 => Some("The Olsen IOL calculation formula. Olsen T. Calculation of intraocular lens power: a review. Acta Ophthalmol. Scand. 2007: 85: 472-485"),
-            Self::_111766 => Some("The SRKII IOL calculation formula. Sanders DR, Retzlaff J, Kraff MC. Comparison of the SRK II formula and other second generation formulas. J Cataract Refract Surg. 1988 Mar;14(2):136-41"),
-            Self::_111767 => Some("The SRK-T IOL calculation formula. Retzlaff JA, Sanders DR, Kraff MC. Development of the SRK/T intraocular lens implant power calculation formula. J Cataract Refract Surg 1990;16:333-40. Erratum 1990;16:528"),
+            Self::_111764 => Some(
+                "The Hoffer Q IOL calculation formula. Hoffer KJ. The Hoffer Q formula: a comparison of theoretic and regression formulas. J Cataract Refract Surg 1993;19:700-12. Errata. J Cataract Refract Surg 1994;20:677 and 2007;33:2-3",
+            ),
+            Self::_111765 => Some(
+                "The Olsen IOL calculation formula. Olsen T. Calculation of intraocular lens power: a review. Acta Ophthalmol. Scand. 2007: 85: 472-485",
+            ),
+            Self::_111766 => Some(
+                "The SRKII IOL calculation formula. Sanders DR, Retzlaff J, Kraff MC. Comparison of the SRK II formula and other second generation formulas. J Cataract Refract Surg. 1988 Mar;14(2):136-41",
+            ),
+            Self::_111767 => Some(
+                "The SRK-T IOL calculation formula. Retzlaff JA, Sanders DR, Kraff MC. Development of the SRK/T intraocular lens implant power calculation formula. J Cataract Refract Surg 1990;16:333-40. Erratum 1990;16:528",
+            ),
             Self::_111768 => Some("The \"ACD Constant\" used in IOL calculation"),
             Self::_111769 => Some("The \"Haigis a0\" constant used in IOL calculation"),
             Self::_111770 => Some("The \"Haigis a1\" constant used in IOL calculation"),
             Self::_111771 => Some("The \"Haigis a2\" constant used in IOL calculation"),
             Self::_111772 => Some("The \"Hoffer pACD Constant\" used in IOL calculation"),
             Self::_111773 => Some("The \"Surgeon Factor\" constant used in IOL calculation"),
-            Self::_111776 => Some("Anterior chamber depth defined as the front of the cornea to the front of the lens"),
-            Self::_111777 => Some("Anterior chamber depth defined as the back of the cornea to the front of the lens"),
-            Self::_111778 => Some("Refers to the anterior lens when there are two lenses in the eye. The distance, in mm, from the anterior surface of the lens to the posterior surface of the lens"),
-            Self::_111779 => Some("Refers to the posterior lens when there are two lenses in the eye. The distance, in mm, from the anterior surface of the lens to the posterior surface of the lens"),
-            Self::_111780 => Some("Value obtained from measurements taken by the device creating this SOP Instance"),
-            Self::_111781 => Some("Value obtained by data transfer from an external source - not from measurements taken by the device providing the value"),
+            Self::_111776 => Some(
+                "Anterior chamber depth defined as the front of the cornea to the front of the lens",
+            ),
+            Self::_111777 => Some(
+                "Anterior chamber depth defined as the back of the cornea to the front of the lens",
+            ),
+            Self::_111778 => Some(
+                "Refers to the anterior lens when there are two lenses in the eye. The distance, in mm, from the anterior surface of the lens to the posterior surface of the lens",
+            ),
+            Self::_111779 => Some(
+                "Refers to the posterior lens when there are two lenses in the eye. The distance, in mm, from the anterior surface of the lens to the posterior surface of the lens",
+            ),
+            Self::_111780 => Some(
+                "Value obtained from measurements taken by the device creating this SOP Instance",
+            ),
+            Self::_111781 => Some(
+                "Value obtained by data transfer from an external source - not from measurements taken by the device providing the value",
+            ),
             Self::_111782 => Some("Axial Measurements DICOM SOP Instance"),
             Self::_111783 => Some("Refractive Measurements DICOM SOP Instance"),
-            Self::_111786 => Some("Standard Deviation is a simple measure of the variability of a data set"),
-            Self::_111787 => Some("Signal to Noise Ratio of the data samples taken to create a measurement"),
-            Self::_111791 => Some("Projection from 2D image pixels to 3D Cartesian coordinates based on a spherical mathematical model"),
-            Self::_111792 => Some("Mapping from 2D image pixels to 3D Cartesian coordinates based on measurements of the retinal surface; e.g. of the retina, derived via a measurement technology such as Optical Coherence Tomography, Ultrasound etc."),
-            Self::_111800 => Some("Test pattern, nominally covering an area within 24\u{b0} of fixation. Consists of 54 test points a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart. The \"-2\" distinguishes this from another 24\u{b0} pattern (no longer supported)"),
-            Self::_111801 => Some("Test pattern, nominally covering an area within 10\u{b0} of fixation. Consists of 68 test points a minimum of 1\u{b0} from each meridian and placed 2\u{b0} apart. The \"-2\" in this case indicates its point layout to be similar to the 30-2 and 24-2"),
-            Self::_111802 => Some("Test pattern consisting of test point locations within 30\u{b0} of fixation. Consists of 76 test points a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart. The \"-2\" distinguishes this from another 30\u{b0} pattern (no longer supported)"),
-            Self::_111803 => Some("Test pattern consisting of 60 test point locations between 30\u{b0} and 60\u{b0} of fixation a minimum of 6\u{b0} from each meridian and placed 12\u{b0} apart. The \"-4\" distinguishes this from a similar 60\u{b0} pattern having 4 additional points"),
-            Self::_111804 => Some("Test pattern consisting of 16 test point locations within 10\u{b0} of fixation a minimum of 1\u{b0} from each meridian and placed 2\u{b0} apart"),
-            Self::_111805 => Some("Test pattern consisting of 40 test point locations within 30\u{b0} of fixation that spread out radially from fixation"),
-            Self::_111806 => Some("Test pattern consisting of 76 test point locations within 30\u{b0} of fixation a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart"),
-            Self::_111807 => Some("Test pattern consisting of 60 test point locations between 30\u{b0} and 60\u{b0} of fixation a minimum of 6\u{b0} from each meridian and placed 12\u{b0} apart"),
-            Self::_111808 => Some("Test pattern consisting of 81 test point locations within 60\u{b0} of fixation that spread out radially from fixation"),
-            Self::_111809 => Some("Test pattern consisting of 120 test point locations within 60\u{b0} of fixation that spread out radially from fixation, concentrated in the nasal hemisphere"),
-            Self::_111810 => Some("Test pattern for Glaucoma and general visual field assessment with 59 test locations of which 16 test locations are in the macular area (up to 10\u{b0} eccentricity) and where the density of test location is reduced with eccentricity. The test can be extended with the inclusion of 14 test locations between 30\u{b0} and 60\u{b0} eccentricity, 6 of which are located at the nasal step"),
-            Self::_111811 => Some("Test pattern for the macular area. Orthogonal test pattern with 0.7\u{b0} spacing within the central 4\u{b0} of eccentricity and reduced density of test locations between 4 and 10, 5\u{b0} of eccentricity. 81 test locations over all. The test can be extended to include the test locations of the Visual Field G Test Pattern between 10, 5\u{b0} and 60\u{b0}"),
-            Self::_111812 => Some("Full field test pattern with 48 test locations from 0-30\u{b0} and 82 test locations from 30-70\u{b0}. Reduced test point density with increased eccentricity. Can be combined with screening and threshold strategies"),
-            Self::_111813 => Some("Low Vision Central. Orthogonal off-center test pattern with 6\u{b0} spacing. 75 test locations within the central 30\u{b0}. Corresponds with the 32/30-2 excluding the 2 locations at the blind spot, including a macular test location. The LVC is linked with a staircase threshold strategy starting at 0 dB intensity and applies stimulus area V"),
-            Self::_111814 => Some("General test corresponding to the 30-2 but excluding the 2 test locations in the blind spot area, hence with 74 instead of 76 test locations"),
-            Self::_111815 => Some("Swedish Interactive Thresholding Algorithm (SITA). Strategy gains testing efficiency through use of visual field and information theory models. In: Bengtsson B, Olsson J, Heijl A, Rootzen H. A new generation of algorithms for computerized threshold perimetry, SITA. Acta Ophthalmologica Scandinavica, 1997, 75: 368-375"),
+            Self::_111786 => {
+                Some("Standard Deviation is a simple measure of the variability of a data set")
+            }
+            Self::_111787 => {
+                Some("Signal to Noise Ratio of the data samples taken to create a measurement")
+            }
+            Self::_111791 => Some(
+                "Projection from 2D image pixels to 3D Cartesian coordinates based on a spherical mathematical model",
+            ),
+            Self::_111792 => Some(
+                "Mapping from 2D image pixels to 3D Cartesian coordinates based on measurements of the retinal surface; e.g. of the retina, derived via a measurement technology such as Optical Coherence Tomography, Ultrasound etc.",
+            ),
+            Self::_111800 => Some(
+                "Test pattern, nominally covering an area within 24\u{b0} of fixation. Consists of 54 test points a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart. The \"-2\" distinguishes this from another 24\u{b0} pattern (no longer supported)",
+            ),
+            Self::_111801 => Some(
+                "Test pattern, nominally covering an area within 10\u{b0} of fixation. Consists of 68 test points a minimum of 1\u{b0} from each meridian and placed 2\u{b0} apart. The \"-2\" in this case indicates its point layout to be similar to the 30-2 and 24-2",
+            ),
+            Self::_111802 => Some(
+                "Test pattern consisting of test point locations within 30\u{b0} of fixation. Consists of 76 test points a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart. The \"-2\" distinguishes this from another 30\u{b0} pattern (no longer supported)",
+            ),
+            Self::_111803 => Some(
+                "Test pattern consisting of 60 test point locations between 30\u{b0} and 60\u{b0} of fixation a minimum of 6\u{b0} from each meridian and placed 12\u{b0} apart. The \"-4\" distinguishes this from a similar 60\u{b0} pattern having 4 additional points",
+            ),
+            Self::_111804 => Some(
+                "Test pattern consisting of 16 test point locations within 10\u{b0} of fixation a minimum of 1\u{b0} from each meridian and placed 2\u{b0} apart",
+            ),
+            Self::_111805 => Some(
+                "Test pattern consisting of 40 test point locations within 30\u{b0} of fixation that spread out radially from fixation",
+            ),
+            Self::_111806 => Some(
+                "Test pattern consisting of 76 test point locations within 30\u{b0} of fixation a minimum of 3\u{b0} from each meridian and placed 6\u{b0} apart",
+            ),
+            Self::_111807 => Some(
+                "Test pattern consisting of 60 test point locations between 30\u{b0} and 60\u{b0} of fixation a minimum of 6\u{b0} from each meridian and placed 12\u{b0} apart",
+            ),
+            Self::_111808 => Some(
+                "Test pattern consisting of 81 test point locations within 60\u{b0} of fixation that spread out radially from fixation",
+            ),
+            Self::_111809 => Some(
+                "Test pattern consisting of 120 test point locations within 60\u{b0} of fixation that spread out radially from fixation, concentrated in the nasal hemisphere",
+            ),
+            Self::_111810 => Some(
+                "Test pattern for Glaucoma and general visual field assessment with 59 test locations of which 16 test locations are in the macular area (up to 10\u{b0} eccentricity) and where the density of test location is reduced with eccentricity. The test can be extended with the inclusion of 14 test locations between 30\u{b0} and 60\u{b0} eccentricity, 6 of which are located at the nasal step",
+            ),
+            Self::_111811 => Some(
+                "Test pattern for the macular area. Orthogonal test pattern with 0.7\u{b0} spacing within the central 4\u{b0} of eccentricity and reduced density of test locations between 4 and 10, 5\u{b0} of eccentricity. 81 test locations over all. The test can be extended to include the test locations of the Visual Field G Test Pattern between 10, 5\u{b0} and 60\u{b0}",
+            ),
+            Self::_111812 => Some(
+                "Full field test pattern with 48 test locations from 0-30\u{b0} and 82 test locations from 30-70\u{b0}. Reduced test point density with increased eccentricity. Can be combined with screening and threshold strategies",
+            ),
+            Self::_111813 => Some(
+                "Low Vision Central. Orthogonal off-center test pattern with 6\u{b0} spacing. 75 test locations within the central 30\u{b0}. Corresponds with the 32/30-2 excluding the 2 locations at the blind spot, including a macular test location. The LVC is linked with a staircase threshold strategy starting at 0 dB intensity and applies stimulus area V",
+            ),
+            Self::_111814 => Some(
+                "General test corresponding to the 30-2 but excluding the 2 test locations in the blind spot area, hence with 74 instead of 76 test locations",
+            ),
+            Self::_111815 => Some(
+                "Swedish Interactive Thresholding Algorithm (SITA). Strategy gains testing efficiency through use of visual field and information theory models. In: Bengtsson B, Olsson J, Heijl A, Rootzen H. A new generation of algorithms for computerized threshold perimetry, SITA. Acta Ophthalmologica Scandinavica, 1997, 75: 368-375",
+            ),
             Self::_111816 => Some("Adaptation of SITA testing methods to Blue-Yellow testing"),
-            Self::_111817 => Some("Similar to SITA-Standard but with less strict criteria for closing test points. Intended for patients who must be tested in the shortest possible time. In: Bengtsson B, Hejl A. SITA Fast, a new rapid perimetric threshold test. Description of methods and evaluation in patients with manifest and suspect glaucoma. Acta Ophthalmologica Scandinavica, 1998, 76: 431-437"),
-            Self::_111818 => Some("Threshold test algorithm that determines a patient\'s sensitivity at each test point in the threshold test pattern by adjusting intensity by 4 dB steps until the patient changes their response, and then adjusts the intensity in the opposite direction by 2 dB steps until the patient changes their response again. The last stimulus seen by the patient is recognized as the threshold for that point. The starting values are determined by first thresholding a \"primary\" point in each quadrant then using the results of each primary point to determine the starting values for neighboring points"),
-            Self::_111819 => Some("Similar to the Full Threshold algorithm except that it steps by 3 dB and only crosses the threshold only once. In: Flanagan JG, Wild JM, Trope GE. Evaluation of FASTPAC, a new strategy for threshold estimation with the Humphrey Field Analyzer, in a glaucomatous population. Ophthalmology, 1993, 100: 949-954"),
-            Self::_111820 => Some("Identical to Full Threshold except that starting values are determined by the results of a previous test performed using the same test pattern and the Full Threshold test strategy"),
-            Self::_111821 => Some("Similar to FastPac except that the steps are pseudo-dynamic (differ based on the intensity of the last presentation)"),
-            Self::_111822 => Some("Suprathreshold testing strategy, in which each point is initially tested using stimulus that is 6 dB brighter than the expected hill of vision. If the patient does not respond, the stimulus is presented a second time at the same brightness. If the patient sees either presentation, the point is marked as \"seen\"; otherwise it is marked as \"not seen\""),
-            Self::_111823 => Some("An extension of the two-zone strategy in which test points where the second stimulus is not seen are presented with a third stimulus at maximum brightness"),
-            Self::_111824 => Some("An extension of the two-zone strategy, in which test points where the second stimulus is not seen receive threshold testing to quantify the depth of any detected scotomas"),
-            Self::_111825 => Some("Tendency Oriented Perimetry. Fast thresholding algorithm. Test strategy makes use of the interaction between neighboring test locations to reduce the test time compared to normal full threshold strategy by 60-80%. In: Morales J, Weitzman ML, Gonzalez de la Rosa M. Comparison between Tendency-Oriented Perimetry (TOP) and octopus threshold perimetry. Ophthalmology, 2000, 107: 134-142"),
-            Self::_111826 => Some("Dynamic strategy is a fast thresholding strategy reducing test duration by adapting the dB step sizes according to the frequency-of-seeing curve of the threshold. Reduction of test time compared to normal full threshold strategy 30-50%"),
-            Self::_111827 => Some("Traditional full threshold staircase strategy. Initial intensities are presented, based on anchor point sensitivities in each quadrant and based on already known neighboring sensitivities. In a first run, thresholds are changed in 4dB steps until the first response reversal. Then the threshold is changed in 2 dB steps until the second response reversal. The threshold is calculated as the average between the last seen and last not-seen stimulus, supposed to correspond with the 50% point in the frequency-of-seeing curve"),
-            Self::_111828 => Some("One level screening test: Each test location is tested with a single intensity. The result is shown as seen or not-seen. The intensity can either be a 0 dB stimulus or a predefined intensity"),
-            Self::_111829 => Some("Two level screening test: Each test location is initially tested 6 dB brighter than the age corrected normal value"),
-            Self::_111830 => Some("Low Vision Strategy is a full threshold normal strategy with the exception that it starts at 0 dB intensity and applies stimulus area V"),
-            Self::_111831 => Some("German Adaptive Threshold Estimation is a fast strategy based on a modified 4-2 staircase algorithm, using prior visual fields to calculate the starting intensity. In: Chiefer U, Pascual JP, Edmunds B, Feudner E, Hoffmann EM, Johnson CA, Lagreze WA, Pfeiffer N, Sample PA, Staubach F, Weleber RG, Vonthein R, Krapp E, Paetzold J. Comparison of the new perimetric GATE strategy with conventional full-threshold and SITA standard strategies. Investigative Ophthalmology and Visual Science, 2009, 51: 488-494"),
-            Self::_111832 => Some("Similar to GATE. The i stands for initial. If there was no prior visual field test to calculate the starting values, an anchor point method is used to define the local start values"),
-            Self::_111833 => Some("A test started as two level screening test. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the dynamic threshold strategy"),
-            Self::_111834 => Some("A test started as two level screening test. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the normal full threshold strategy"),
-            Self::_111835 => Some("Takes neighborhood test point results into account and offers stimuli with an adapted value to save time"),
-            Self::_111836 => Some("Continuous Luminance Incremental Perimetry, which measures at first the individual reaction time of the patient and threshold values in every quadrant. The starting value for the main test is slightly below in individual threshold"),
-            Self::_111837 => Some("A supra threshold screening strategy. The starting stimuli intensities depend on the classification of the patient\'s visual hill by measuring the central (fovea) or peripheral (15\u{b0} meridian) threshold. The result of each dot slightly underestimates the sensitivity value (within 5 dB)"),
-            Self::_111838 => Some("Mode for determining the starting luminance for screening test points - the starting luminance s is chosen based on the age of the patient"),
-            Self::_111839 => Some("Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the results of thresholding a set of \"primary\" test points (one in each quadrant)"),
-            Self::_111840 => Some("Mode for determining the starting luminance for screening test points - in this case, all starting luminance is set to the same value"),
-            Self::_111841 => Some("Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the result of the foveal threshold value"),
-            Self::_111842 => Some("Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the result of four threshold values measured near the 15\u{b0} meridian (one in each quadrant)"),
-            Self::_111843 => Some("Real time evaluation of the camera image to recognize blinks and fixation losses with influence on the test procedure. Blinks that interfere with stimuli presentation cause the automated repetition of such stimulus presentations. Fixation losses can be used to delay the stimulus presentation until correct fixation is regained"),
-            Self::_111844 => Some("A method of monitoring the patient\'s fixation by periodically presenting stimulus in a location on the background surface that corresponds to the patient\'s blind spot"),
-            Self::_111845 => Some("A method of monitoring the patient\'s fixation by presenting the stimulus to the patient\'s macula"),
-            Self::_111846 => Some("A method of monitoring the patient\'s fixation by observation from the examiner of the patient"),
+            Self::_111817 => Some(
+                "Similar to SITA-Standard but with less strict criteria for closing test points. Intended for patients who must be tested in the shortest possible time. In: Bengtsson B, Hejl A. SITA Fast, a new rapid perimetric threshold test. Description of methods and evaluation in patients with manifest and suspect glaucoma. Acta Ophthalmologica Scandinavica, 1998, 76: 431-437",
+            ),
+            Self::_111818 => Some(
+                "Threshold test algorithm that determines a patient\'s sensitivity at each test point in the threshold test pattern by adjusting intensity by 4 dB steps until the patient changes their response, and then adjusts the intensity in the opposite direction by 2 dB steps until the patient changes their response again. The last stimulus seen by the patient is recognized as the threshold for that point. The starting values are determined by first thresholding a \"primary\" point in each quadrant then using the results of each primary point to determine the starting values for neighboring points",
+            ),
+            Self::_111819 => Some(
+                "Similar to the Full Threshold algorithm except that it steps by 3 dB and only crosses the threshold only once. In: Flanagan JG, Wild JM, Trope GE. Evaluation of FASTPAC, a new strategy for threshold estimation with the Humphrey Field Analyzer, in a glaucomatous population. Ophthalmology, 1993, 100: 949-954",
+            ),
+            Self::_111820 => Some(
+                "Identical to Full Threshold except that starting values are determined by the results of a previous test performed using the same test pattern and the Full Threshold test strategy",
+            ),
+            Self::_111821 => Some(
+                "Similar to FastPac except that the steps are pseudo-dynamic (differ based on the intensity of the last presentation)",
+            ),
+            Self::_111822 => Some(
+                "Suprathreshold testing strategy, in which each point is initially tested using stimulus that is 6 dB brighter than the expected hill of vision. If the patient does not respond, the stimulus is presented a second time at the same brightness. If the patient sees either presentation, the point is marked as \"seen\"; otherwise it is marked as \"not seen\"",
+            ),
+            Self::_111823 => Some(
+                "An extension of the two-zone strategy in which test points where the second stimulus is not seen are presented with a third stimulus at maximum brightness",
+            ),
+            Self::_111824 => Some(
+                "An extension of the two-zone strategy, in which test points where the second stimulus is not seen receive threshold testing to quantify the depth of any detected scotomas",
+            ),
+            Self::_111825 => Some(
+                "Tendency Oriented Perimetry. Fast thresholding algorithm. Test strategy makes use of the interaction between neighboring test locations to reduce the test time compared to normal full threshold strategy by 60-80%. In: Morales J, Weitzman ML, Gonzalez de la Rosa M. Comparison between Tendency-Oriented Perimetry (TOP) and octopus threshold perimetry. Ophthalmology, 2000, 107: 134-142",
+            ),
+            Self::_111826 => Some(
+                "Dynamic strategy is a fast thresholding strategy reducing test duration by adapting the dB step sizes according to the frequency-of-seeing curve of the threshold. Reduction of test time compared to normal full threshold strategy 30-50%",
+            ),
+            Self::_111827 => Some(
+                "Traditional full threshold staircase strategy. Initial intensities are presented, based on anchor point sensitivities in each quadrant and based on already known neighboring sensitivities. In a first run, thresholds are changed in 4dB steps until the first response reversal. Then the threshold is changed in 2 dB steps until the second response reversal. The threshold is calculated as the average between the last seen and last not-seen stimulus, supposed to correspond with the 50% point in the frequency-of-seeing curve",
+            ),
+            Self::_111828 => Some(
+                "One level screening test: Each test location is tested with a single intensity. The result is shown as seen or not-seen. The intensity can either be a 0 dB stimulus or a predefined intensity",
+            ),
+            Self::_111829 => Some(
+                "Two level screening test: Each test location is initially tested 6 dB brighter than the age corrected normal value",
+            ),
+            Self::_111830 => Some(
+                "Low Vision Strategy is a full threshold normal strategy with the exception that it starts at 0 dB intensity and applies stimulus area V",
+            ),
+            Self::_111831 => Some(
+                "German Adaptive Threshold Estimation is a fast strategy based on a modified 4-2 staircase algorithm, using prior visual fields to calculate the starting intensity. In: Chiefer U, Pascual JP, Edmunds B, Feudner E, Hoffmann EM, Johnson CA, Lagreze WA, Pfeiffer N, Sample PA, Staubach F, Weleber RG, Vonthein R, Krapp E, Paetzold J. Comparison of the new perimetric GATE strategy with conventional full-threshold and SITA standard strategies. Investigative Ophthalmology and Visual Science, 2009, 51: 488-494",
+            ),
+            Self::_111832 => Some(
+                "Similar to GATE. The i stands for initial. If there was no prior visual field test to calculate the starting values, an anchor point method is used to define the local start values",
+            ),
+            Self::_111833 => Some(
+                "A test started as two level screening test. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the dynamic threshold strategy",
+            ),
+            Self::_111834 => Some(
+                "A test started as two level screening test. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the normal full threshold strategy",
+            ),
+            Self::_111835 => Some(
+                "Takes neighborhood test point results into account and offers stimuli with an adapted value to save time",
+            ),
+            Self::_111836 => Some(
+                "Continuous Luminance Incremental Perimetry, which measures at first the individual reaction time of the patient and threshold values in every quadrant. The starting value for the main test is slightly below in individual threshold",
+            ),
+            Self::_111837 => Some(
+                "A supra threshold screening strategy. The starting stimuli intensities depend on the classification of the patient\'s visual hill by measuring the central (fovea) or peripheral (15\u{b0} meridian) threshold. The result of each dot slightly underestimates the sensitivity value (within 5 dB)",
+            ),
+            Self::_111838 => Some(
+                "Mode for determining the starting luminance for screening test points - the starting luminance s is chosen based on the age of the patient",
+            ),
+            Self::_111839 => Some(
+                "Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the results of thresholding a set of \"primary\" test points (one in each quadrant)",
+            ),
+            Self::_111840 => Some(
+                "Mode for determining the starting luminance for screening test points - in this case, all starting luminance is set to the same value",
+            ),
+            Self::_111841 => Some(
+                "Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the result of the foveal threshold value",
+            ),
+            Self::_111842 => Some(
+                "Mode for determining the starting luminance for screening test points - the starting luminance is chosen based on the result of four threshold values measured near the 15\u{b0} meridian (one in each quadrant)",
+            ),
+            Self::_111843 => Some(
+                "Real time evaluation of the camera image to recognize blinks and fixation losses with influence on the test procedure. Blinks that interfere with stimuli presentation cause the automated repetition of such stimulus presentations. Fixation losses can be used to delay the stimulus presentation until correct fixation is regained",
+            ),
+            Self::_111844 => Some(
+                "A method of monitoring the patient\'s fixation by periodically presenting stimulus in a location on the background surface that corresponds to the patient\'s blind spot",
+            ),
+            Self::_111845 => Some(
+                "A method of monitoring the patient\'s fixation by presenting the stimulus to the patient\'s macula",
+            ),
+            Self::_111846 => Some(
+                "A method of monitoring the patient\'s fixation by observation from the examiner of the patient",
+            ),
             Self::_111847 => Some("Analysis Results are outside normal limits"),
             Self::_111848 => Some("Analysis Results are borderline"),
             Self::_111849 => Some("Analysis Results identify abnormally high sensitivity"),
             Self::_111850 => Some("Analysis Results identify general reduction in sensitivity"),
-            Self::_111851 => Some("Analysis Results identify Borderline and general reduction in sensitivity"),
-            Self::_111852 => Some("Index of a patient\'s remaining visual field normalized for both age and generalized defect"),
-            Self::_111853 => Some("Estimate of the portion of a patient\'s visual field loss that is diffuse (i.e., spread evenly across all portions of the visual field)"),
-            Self::_111854 => Some("Estimate of the portion of a patient\'s visual field loss that is local (i.e., not spread evenly across all portions of the visual field)"),
-            Self::_111855 => Some("An analysis of asymmetry between zones of the superior and inferior visual field. It is designed to be specific for defects due to glaucoma"),
-            Self::_111856 => Some("The data output of an optical fixation monitoring process, consisting of a list of positive and negative numbers indicating the quality of patient fixation over the course of a visual field test. The value 0 represents the initial fixation. Negative numbers indicate a measuring error (i.e., the patient blinked). Positive numbers quantify the degree of eccentricity from initial fixation"),
-            Self::_111900 => Some("An image of at least 15\u{b0} angular subtend that is centered on the macula; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111901 => Some("An image of at least 15\u{b0} angular subtend that is centered on the optic disc; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111902 => Some("An image of any angular subtend that is centered on a lesion located in any region of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111903 => Some("An image of at least 15\u{b0} angular subtend centered midway between the disc and macula and containing at least a portion of the disc and both the disc and the macula; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111904 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-temporal and superior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111905 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the superior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111906 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-temporal and inferior-temporal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111907 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the inferior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111908 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the inferior-temporal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111909 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the inferior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111910 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-nasal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111911 => Some("An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the superior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111912 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and the ora serrata, and spanning both the superior temporal and superior nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111913 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the superior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111914 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the superior-temporal and inferior-temporal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111915 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the inferior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111916 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the inferior-temporal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111917 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the inferior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111918 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the superior-nasal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111919 => Some("An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the superior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17"),
-            Self::_111920 => Some("Identifies the use of physical signals with respect to time to capture information"),
-            Self::_111921 => Some("Identifies the use of physical signals with respect to multiple frequencies to capture information"),
+            Self::_111851 => {
+                Some("Analysis Results identify Borderline and general reduction in sensitivity")
+            }
+            Self::_111852 => Some(
+                "Index of a patient\'s remaining visual field normalized for both age and generalized defect",
+            ),
+            Self::_111853 => Some(
+                "Estimate of the portion of a patient\'s visual field loss that is diffuse (i.e., spread evenly across all portions of the visual field)",
+            ),
+            Self::_111854 => Some(
+                "Estimate of the portion of a patient\'s visual field loss that is local (i.e., not spread evenly across all portions of the visual field)",
+            ),
+            Self::_111855 => Some(
+                "An analysis of asymmetry between zones of the superior and inferior visual field. It is designed to be specific for defects due to glaucoma",
+            ),
+            Self::_111856 => Some(
+                "The data output of an optical fixation monitoring process, consisting of a list of positive and negative numbers indicating the quality of patient fixation over the course of a visual field test. The value 0 represents the initial fixation. Negative numbers indicate a measuring error (i.e., the patient blinked). Positive numbers quantify the degree of eccentricity from initial fixation",
+            ),
+            Self::_111900 => Some(
+                "An image of at least 15\u{b0} angular subtend that is centered on the macula; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111901 => Some(
+                "An image of at least 15\u{b0} angular subtend that is centered on the optic disc; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111902 => Some(
+                "An image of any angular subtend that is centered on a lesion located in any region of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111903 => Some(
+                "An image of at least 15\u{b0} angular subtend centered midway between the disc and macula and containing at least a portion of the disc and both the disc and the macula; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111904 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-temporal and superior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111905 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the superior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111906 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-temporal and inferior-temporal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111907 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the inferior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111908 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the inferior-temporal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111909 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the inferior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111910 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator, and spanning both the superior-nasal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111911 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the central zone and the equator in the superior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111912 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and the ora serrata, and spanning both the superior temporal and superior nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111913 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the superior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111914 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the superior-temporal and inferior-temporal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111915 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the inferior-temporal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111916 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the inferior-temporal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111917 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the inferior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111918 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata, and spanning both the superior-nasal and inferior-nasal quadrants of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111919 => Some(
+                "An image of at least 15\u{b0} angular subtend positioned between the equator and ora serrata in the superior-nasal quadrant of the fundus; see Section U.1.8 \"Relative Image Position Definitions\" in PS3.17",
+            ),
+            Self::_111920 => Some(
+                "Identifies the use of physical signals with respect to time to capture information",
+            ),
+            Self::_111921 => Some(
+                "Identifies the use of physical signals with respect to multiple frequencies to capture information",
+            ),
             Self::_111922 => Some("No compensation algorithm for corneal birefringence"),
-            Self::_111923 => Some("Algorithm to compensate for variability in corneal birefringence"),
-            Self::_111924 => Some("Measurement of the retinal surface contour relative to an assigned datum plane"),
-            Self::_111925 => Some("Measurement approximating the distance related to the structure between the internal limiting membrane (ILM) and the outer boarder of the retinal nerve fiber layer (RNFL); see Section III.6 \"Retinal Thickness Definition\" in PS3.17"),
-            Self::_111926 => Some("Measurement approximating the distance related to the structure between the ILM and the outer border of the inner plexiform layer (IPL), called the ganglion cell complex (GCC); see Section III.6 \"Retinal Thickness Definition\" in PS3.17"),
-            Self::_111927 => Some("Measurement approximating the distance related to the structure between the ILM and the inner-outer segment junction (IS-OS); see Section III.6 \"Retinal Thickness Definition\" in PS3.17"),
-            Self::_111928 => Some("Measurement approximating the distance related to the structure between the ILM and the retinal pigment epithelium (RPE); see Section III.6 \"Retinal Thickness Definition\" in PS3.17"),
-            Self::_111929 => Some("Measurement approximating the distance related to the structure between the ILM and the Bruch\'s membrane (BM); see Section III.6 \"Retinal Thickness Definition\" in PS3.17"),
-            Self::_111930 => Some("Thickness of a component of the posterior segment of the eye; e.g. thickness of retina, choroid, etc."),
-            Self::_111931 => Some("Ophthalmic Thickness map based upon statistical significance category (such as percentile) from a normative data set"),
-            Self::_111932 => Some("Ophthalmic Thickness map based upon deviation (such as microns) from a normative data set"),
-            Self::_111933 => Some("Ophthalmic Thickness Map related to another Ophthalmic Thickness Map or another SOP Instance"),
-            Self::_111934 => Some("An anatomic point centered midway between the disc and fovea centralis"),
-            Self::_111935 => Some("Assuming the null hypothesis is true, the conditional percent probability of observing this result is not statistically significant"),
-            Self::_111936 => Some("Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 95% unlikely to happen by chance"),
-            Self::_111937 => Some("Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 98% unlikely to happen by chance"),
-            Self::_111938 => Some("Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 99% unlikely to happen by chance"),
-            Self::_111939 => Some("Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 99.5% unlikely to happen by chance"),
-            Self::_111940 => Some("A two dimensional representation of the axial curvature of the cornea. Axial curvature is calculated from the reciprocal of the distance from a point on a meridian normal at the point to the corneal topographer axis. Also known as sagittal curvature"),
-            Self::_111941 => Some("A two dimensional representation of the instantaneous curvature of the cornea. Instantaneous curvature is calculated from the reciprocal of the distance from a point on a meridian normal at the point to the center of curvature of that point. Also called tangential curvature"),
-            Self::_111942 => Some("A two dimensional representation of the refractive power of the cornea. Corneal refractive power is calculated using Snell\'s Law"),
-            Self::_111943 => Some("A two dimensional representation of the elevation of the cornea. Elevation is calculated as the distance from a point on the corneal surface to a point on a reference surface along a line parallel to the corneal topographer axis. For the purpose of visualization the reference surface is usually a sphere or an ellipse"),
-            Self::_111944 => Some("A two dimensional representation of a wavefront aberration surface of the cornea. Wavefront aberration surface is calculated from the corneal elevation data fit with either the Zernike polynomial series or the Fourier Series. Maps generally display total aberrations and selectable higher order aberrations"),
-            Self::_111945 => Some("A device that measures corneal anterior surface shape using elevation-based methods (stereographic and light slit-based). Rasterstereography images a grid pattern illuminating the fluorescein dyed tear film with 2 cameras to produce 3D. Slit-based devices scan the cornea, usually by rotation about the instrument axis centered on the cornea vertex"),
-            Self::_111946 => Some("A reflection-based device that projects a pattern of light onto the cornea and an image of the reflection of that pattern from the tear film is recorded in one video frame. Light patterns include the circular mire pattern (Placido disc) and spot matrix patterns. Sequential scanning of light spots reflected from the corneal surface is also used requiring multiple video frames for recording"),
-            Self::_111947 => Some("An Interference-based device that projects a beam of light onto and through the cornea. Light reflected from within the cornea is combined with a reference beam giving rise to an interference pattern. Appropriately scanned, this imaging is used to construct 3-dimensional images of the cornea from anterior to posterior surfaces; e.g. swept source OCT"),
-            Self::_112000 => Some("A structured report containing the results of computer-aided detection or diagnosis applied to chest imaging and associated clinical information"),
-            Self::_112001 => Some("The shadow of an absorber that attenuates the X-Ray beam more effectively than do surrounding absorbers. In a radiograph, any circumscribed area that appears more nearly white (of lesser photometric density) than its surround [Fraser and Pare]"),
+            Self::_111923 => {
+                Some("Algorithm to compensate for variability in corneal birefringence")
+            }
+            Self::_111924 => Some(
+                "Measurement of the retinal surface contour relative to an assigned datum plane",
+            ),
+            Self::_111925 => Some(
+                "Measurement approximating the distance related to the structure between the internal limiting membrane (ILM) and the outer boarder of the retinal nerve fiber layer (RNFL); see Section III.6 \"Retinal Thickness Definition\" in PS3.17",
+            ),
+            Self::_111926 => Some(
+                "Measurement approximating the distance related to the structure between the ILM and the outer border of the inner plexiform layer (IPL), called the ganglion cell complex (GCC); see Section III.6 \"Retinal Thickness Definition\" in PS3.17",
+            ),
+            Self::_111927 => Some(
+                "Measurement approximating the distance related to the structure between the ILM and the inner-outer segment junction (IS-OS); see Section III.6 \"Retinal Thickness Definition\" in PS3.17",
+            ),
+            Self::_111928 => Some(
+                "Measurement approximating the distance related to the structure between the ILM and the retinal pigment epithelium (RPE); see Section III.6 \"Retinal Thickness Definition\" in PS3.17",
+            ),
+            Self::_111929 => Some(
+                "Measurement approximating the distance related to the structure between the ILM and the Bruch\'s membrane (BM); see Section III.6 \"Retinal Thickness Definition\" in PS3.17",
+            ),
+            Self::_111930 => Some(
+                "Thickness of a component of the posterior segment of the eye; e.g. thickness of retina, choroid, etc.",
+            ),
+            Self::_111931 => Some(
+                "Ophthalmic Thickness map based upon statistical significance category (such as percentile) from a normative data set",
+            ),
+            Self::_111932 => Some(
+                "Ophthalmic Thickness map based upon deviation (such as microns) from a normative data set",
+            ),
+            Self::_111933 => Some(
+                "Ophthalmic Thickness Map related to another Ophthalmic Thickness Map or another SOP Instance",
+            ),
+            Self::_111934 => {
+                Some("An anatomic point centered midway between the disc and fovea centralis")
+            }
+            Self::_111935 => Some(
+                "Assuming the null hypothesis is true, the conditional percent probability of observing this result is not statistically significant",
+            ),
+            Self::_111936 => Some(
+                "Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 95% unlikely to happen by chance",
+            ),
+            Self::_111937 => Some(
+                "Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 98% unlikely to happen by chance",
+            ),
+            Self::_111938 => Some(
+                "Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 99% unlikely to happen by chance",
+            ),
+            Self::_111939 => Some(
+                "Assuming the null hypothesis is true, the conditional percent probability of observing this result is statistically significant, 99.5% unlikely to happen by chance",
+            ),
+            Self::_111940 => Some(
+                "A two dimensional representation of the axial curvature of the cornea. Axial curvature is calculated from the reciprocal of the distance from a point on a meridian normal at the point to the corneal topographer axis. Also known as sagittal curvature",
+            ),
+            Self::_111941 => Some(
+                "A two dimensional representation of the instantaneous curvature of the cornea. Instantaneous curvature is calculated from the reciprocal of the distance from a point on a meridian normal at the point to the center of curvature of that point. Also called tangential curvature",
+            ),
+            Self::_111942 => Some(
+                "A two dimensional representation of the refractive power of the cornea. Corneal refractive power is calculated using Snell\'s Law",
+            ),
+            Self::_111943 => Some(
+                "A two dimensional representation of the elevation of the cornea. Elevation is calculated as the distance from a point on the corneal surface to a point on a reference surface along a line parallel to the corneal topographer axis. For the purpose of visualization the reference surface is usually a sphere or an ellipse",
+            ),
+            Self::_111944 => Some(
+                "A two dimensional representation of a wavefront aberration surface of the cornea. Wavefront aberration surface is calculated from the corneal elevation data fit with either the Zernike polynomial series or the Fourier Series. Maps generally display total aberrations and selectable higher order aberrations",
+            ),
+            Self::_111945 => Some(
+                "A device that measures corneal anterior surface shape using elevation-based methods (stereographic and light slit-based). Rasterstereography images a grid pattern illuminating the fluorescein dyed tear film with 2 cameras to produce 3D. Slit-based devices scan the cornea, usually by rotation about the instrument axis centered on the cornea vertex",
+            ),
+            Self::_111946 => Some(
+                "A reflection-based device that projects a pattern of light onto the cornea and an image of the reflection of that pattern from the tear film is recorded in one video frame. Light patterns include the circular mire pattern (Placido disc) and spot matrix patterns. Sequential scanning of light spots reflected from the corneal surface is also used requiring multiple video frames for recording",
+            ),
+            Self::_111947 => Some(
+                "An Interference-based device that projects a beam of light onto and through the cornea. Light reflected from within the cornea is combined with a reference beam giving rise to an interference pattern. Appropriately scanned, this imaging is used to construct 3-dimensional images of the cornea from anterior to posterior surfaces; e.g. swept source OCT",
+            ),
+            Self::_112000 => Some(
+                "A structured report containing the results of computer-aided detection or diagnosis applied to chest imaging and associated clinical information",
+            ),
+            Self::_112001 => Some(
+                "The shadow of an absorber that attenuates the X-Ray beam more effectively than do surrounding absorbers. In a radiograph, any circumscribed area that appears more nearly white (of lesser photometric density) than its surround [Fraser and Pare]",
+            ),
             Self::_112002 => Some("A unique identifier for a series of DICOM SOP instances"),
             Self::_112003 => Some("A named anatomic region within the chest cavity"),
-            Self::_112004 => Some("A collection of opacities detected within the continuum of loose connective tissue throughout the lung, that is not expected in a diagnostically normal radiograph"),
-            Self::_112005 => Some("A type of anatomy that is expected to be detectable on a radiographic (X-Ray based) image"),
-            Self::_112006 => Some("Characteristic of the extent of spreading of a finding or feature"),
-            Self::_112007 => Some("Characteristic of the clarity of the boundary or edges of a finding or feature"),
-            Self::_112008 => Some("The part(s) of the anatomy affected or encompassed by a finding or feature"),
-            Self::_112009 => Some("Characteristic of the matter or substance within a finding or feature"),
-            Self::_112010 => Some("Characteristic of the surface or consistency of a finding or feature"),
-            Self::_112011 => Some("Position of the X-Ray beam about the patient from the RAO to LAO direction where movement from RAO to vertical is positive"),
-            Self::_112012 => Some("Position of the X-Ray beam about the patient from the caudal to cranial direction where movement from caudal to vertical is positive"),
-            Self::_112013 => Some("The zone, lobe or segment within the chest cavity in which a finding or feature is situated"),
-            Self::_112014 => Some("Vertical refers to orientation parallel to the superior-inferior (cephalad-caudad) axis of the body, with horizontal being perpendicular to this, and an oblique orientation having projections in both the horizontal and vertical"),
-            Self::_112015 => Some("Characteristic of the shape formed by the boundary or edges of a finding or feature"),
-            Self::_112016 => Some("Indicates whether a finding was considered a target lesion, non-target lesion, or non-lesion during evaluation of a baseline series, according to a method such as RECIST"),
-            Self::_112017 => Some("The extent of a detected cavity, represented as the percent of the surrounding volume that it occupies"),
-            Self::_112018 => Some("The extent of a detected calcification, represented as the percent of the surrounding surface that it occupies"),
-            Self::_112019 => Some("The extent of a detected calcification, represented as the percent of the surrounding volume that it occupies"),
-            Self::_112020 => Some("A heading for the reporting of response evaluation for treatment of solid tumors"),
-            Self::_112021 => Some("The system applied in the reporting of response evaluation for treatment of solid tumors"),
-            Self::_112022 => Some("Response Evaluation Criteria In Solid Tumors; see Normative References"),
-            Self::_112023 => Some("A term that further specifies the name of an item that is an inferred correlation relating two or more individual findings or features"),
-            Self::_112024 => Some("A term that further specifies the name of an item that was detected on one image"),
-            Self::_112025 => Some("A qualitative descriptor for the extent of a finding or feature"),
-            Self::_112026 => Some("A qualitative descriptor for the thickness of tubular structures, such as blood vessels"),
-            Self::_112027 => Some("A characteristic that further describes the nature of an opacity"),
-            Self::_112028 => Some("The type of adverse affect that a finding or feature is having on the surrounding anatomy"),
-            Self::_112029 => Some("Response evaluation method as defined in chapter 5, \"Reporting of Response\" of the WHO Handbook for Reporting Results for Cancer Treatment; see Normative References"),
+            Self::_112004 => Some(
+                "A collection of opacities detected within the continuum of loose connective tissue throughout the lung, that is not expected in a diagnostically normal radiograph",
+            ),
+            Self::_112005 => Some(
+                "A type of anatomy that is expected to be detectable on a radiographic (X-Ray based) image",
+            ),
+            Self::_112006 => {
+                Some("Characteristic of the extent of spreading of a finding or feature")
+            }
+            Self::_112007 => Some(
+                "Characteristic of the clarity of the boundary or edges of a finding or feature",
+            ),
+            Self::_112008 => {
+                Some("The part(s) of the anatomy affected or encompassed by a finding or feature")
+            }
+            Self::_112009 => {
+                Some("Characteristic of the matter or substance within a finding or feature")
+            }
+            Self::_112010 => {
+                Some("Characteristic of the surface or consistency of a finding or feature")
+            }
+            Self::_112011 => Some(
+                "Position of the X-Ray beam about the patient from the RAO to LAO direction where movement from RAO to vertical is positive",
+            ),
+            Self::_112012 => Some(
+                "Position of the X-Ray beam about the patient from the caudal to cranial direction where movement from caudal to vertical is positive",
+            ),
+            Self::_112013 => Some(
+                "The zone, lobe or segment within the chest cavity in which a finding or feature is situated",
+            ),
+            Self::_112014 => Some(
+                "Vertical refers to orientation parallel to the superior-inferior (cephalad-caudad) axis of the body, with horizontal being perpendicular to this, and an oblique orientation having projections in both the horizontal and vertical",
+            ),
+            Self::_112015 => Some(
+                "Characteristic of the shape formed by the boundary or edges of a finding or feature",
+            ),
+            Self::_112016 => Some(
+                "Indicates whether a finding was considered a target lesion, non-target lesion, or non-lesion during evaluation of a baseline series, according to a method such as RECIST",
+            ),
+            Self::_112017 => Some(
+                "The extent of a detected cavity, represented as the percent of the surrounding volume that it occupies",
+            ),
+            Self::_112018 => Some(
+                "The extent of a detected calcification, represented as the percent of the surrounding surface that it occupies",
+            ),
+            Self::_112019 => Some(
+                "The extent of a detected calcification, represented as the percent of the surrounding volume that it occupies",
+            ),
+            Self::_112020 => Some(
+                "A heading for the reporting of response evaluation for treatment of solid tumors",
+            ),
+            Self::_112021 => Some(
+                "The system applied in the reporting of response evaluation for treatment of solid tumors",
+            ),
+            Self::_112022 => {
+                Some("Response Evaluation Criteria In Solid Tumors; see Normative References")
+            }
+            Self::_112023 => Some(
+                "A term that further specifies the name of an item that is an inferred correlation relating two or more individual findings or features",
+            ),
+            Self::_112024 => Some(
+                "A term that further specifies the name of an item that was detected on one image",
+            ),
+            Self::_112025 => {
+                Some("A qualitative descriptor for the extent of a finding or feature")
+            }
+            Self::_112026 => Some(
+                "A qualitative descriptor for the thickness of tubular structures, such as blood vessels",
+            ),
+            Self::_112027 => {
+                Some("A characteristic that further describes the nature of an opacity")
+            }
+            Self::_112028 => Some(
+                "The type of adverse affect that a finding or feature is having on the surrounding anatomy",
+            ),
+            Self::_112029 => Some(
+                "Response evaluation method as defined in chapter 5, \"Reporting of Response\" of the WHO Handbook for Reporting Results for Cancer Treatment; see Normative References",
+            ),
             Self::_112030 => Some("Identification of the morphology of detected calcifications"),
-            Self::_112031 => Some("A quantitative numerical statement of the relative attenuation of the X-Ray beam at a specified point. Coefficient that describes the fraction of a beam of X-Rays or gamma rays that is absorbed or scattered per unit thickness of the absorber. This value basically accounts for the number of atoms in a cubic cm volume of material and the probability of a photon being scattered or absorbed from the nucleus or an electron of one of these atoms. Usually expressed in Hounsfield units [referred to as CT Number in Fraser and Pare]"),
-            Self::_112032 => Some("An X-Ray attenuation coefficient that is used as a threshold; e.g. in calcium scoring"),
-            Self::_112033 => Some("An opacity that is not expected in a diagnostically normal radiograph"),
-            Self::_112034 => Some("A textual description of the mathematical method of calculation that resulted in a calculated value"),
-            Self::_112035 => Some("American College of Radiology. ACR Standard for the Performance of Pediatric and Adult Chest Radiography. In: Standards. Reston, Va: 2001:95-98"),
-            Self::_112036 => Some("American College of Radiology. ACR Position Statement for Quality Control and Improvement, Safety, Infection Control, and Patient Concerns. In: Practice Guidelines and Technical Standards. Reston, Va: 2001:iv"),
-            Self::_112037 => Some("A descriptor for a non-lesion object finding or feature, used to indicate whether the object was detected as being internal or external to the patient\'s body"),
-            Self::_112038 => Some("A concept modifier for an Osseous Anatomy, or bone related, finding"),
-            Self::_112039 => Some("A text label used for tracking a finding or feature, potentially across multiple reporting objects, over time. This label shall be unique within the domain in which it is used"),
-            Self::_112040 => Some("A unique identifier used for tracking a finding or feature, potentially across multiple reporting objects, over time"),
+            Self::_112031 => Some(
+                "A quantitative numerical statement of the relative attenuation of the X-Ray beam at a specified point. Coefficient that describes the fraction of a beam of X-Rays or gamma rays that is absorbed or scattered per unit thickness of the absorber. This value basically accounts for the number of atoms in a cubic cm volume of material and the probability of a photon being scattered or absorbed from the nucleus or an electron of one of these atoms. Usually expressed in Hounsfield units [referred to as CT Number in Fraser and Pare]",
+            ),
+            Self::_112032 => Some(
+                "An X-Ray attenuation coefficient that is used as a threshold; e.g. in calcium scoring",
+            ),
+            Self::_112033 => {
+                Some("An opacity that is not expected in a diagnostically normal radiograph")
+            }
+            Self::_112034 => Some(
+                "A textual description of the mathematical method of calculation that resulted in a calculated value",
+            ),
+            Self::_112035 => Some(
+                "American College of Radiology. ACR Standard for the Performance of Pediatric and Adult Chest Radiography. In: Standards. Reston, Va: 2001:95-98",
+            ),
+            Self::_112036 => Some(
+                "American College of Radiology. ACR Position Statement for Quality Control and Improvement, Safety, Infection Control, and Patient Concerns. In: Practice Guidelines and Technical Standards. Reston, Va: 2001:iv",
+            ),
+            Self::_112037 => Some(
+                "A descriptor for a non-lesion object finding or feature, used to indicate whether the object was detected as being internal or external to the patient\'s body",
+            ),
+            Self::_112038 => {
+                Some("A concept modifier for an Osseous Anatomy, or bone related, finding")
+            }
+            Self::_112039 => Some(
+                "A text label used for tracking a finding or feature, potentially across multiple reporting objects, over time. This label shall be unique within the domain in which it is used",
+            ),
+            Self::_112040 => Some(
+                "A unique identifier used for tracking a finding or feature, potentially across multiple reporting objects, over time",
+            ),
             Self::_112041 => Some("Disappearance of all target lesions"),
-            Self::_112042 => Some("At least a 30% decrease in the sum of the Longest Diameter of target lesions, taking as reference the baseline sum Longest Diameter"),
-            Self::_112043 => Some("At least a 20% increase in the sum of the Longest Diameter of target lesions, taking as reference the smallest sum Longest Diameter recorded since the treatment started, or the appearance of one or more new lesions"),
-            Self::_112044 => Some("Neither sufficient shrinkage to qualify for Partial Response nor sufficient increase to qualify for Progressive Disease, taking as reference the smallest sum Longest Diameter since the treatment started"),
-            Self::_112045 => Some("Disappearance of all non-target lesions and normalization of tumor marker level"),
-            Self::_112046 => Some("Persistence of one or more non-target lesions and/or maintenance of tumor marker level above the normal limits"),
-            Self::_112047 => Some("Appearance of one or more new lesions and/or unequivocal progression of existing non-target lesions"),
-            Self::_112048 => Some("The current response evaluation for treatment of solid tumors, according to a method such as RECIST"),
-            Self::_112049 => Some("Best response recorded from the start of the treatment until disease progression/recurrence, taking as reference for Progressive Disease the smallest measurements recorded since the treatment started, according to a method such as RECIST"),
-            Self::_112050 => Some("A text identifier of an anatomic feature when a multiplicity of features of that type may be present, such as \"Rib 1\", \"Rib 2\" or thoracic vertebrae \"T1\" or \"T2\""),
-            Self::_112051 => Some("A measured or calculated evaluation of response; e.g. according to a method such as RECIST, the value would be the calculated sum of the lengths of the longest axes of a set of target lesions"),
-            Self::_112052 => Some("Of or relating to a bronchial (lung) specific channel for the conveyance of a body fluid"),
+            Self::_112042 => Some(
+                "At least a 30% decrease in the sum of the Longest Diameter of target lesions, taking as reference the baseline sum Longest Diameter",
+            ),
+            Self::_112043 => Some(
+                "At least a 20% increase in the sum of the Longest Diameter of target lesions, taking as reference the smallest sum Longest Diameter recorded since the treatment started, or the appearance of one or more new lesions",
+            ),
+            Self::_112044 => Some(
+                "Neither sufficient shrinkage to qualify for Partial Response nor sufficient increase to qualify for Progressive Disease, taking as reference the smallest sum Longest Diameter since the treatment started",
+            ),
+            Self::_112045 => Some(
+                "Disappearance of all non-target lesions and normalization of tumor marker level",
+            ),
+            Self::_112046 => Some(
+                "Persistence of one or more non-target lesions and/or maintenance of tumor marker level above the normal limits",
+            ),
+            Self::_112047 => Some(
+                "Appearance of one or more new lesions and/or unequivocal progression of existing non-target lesions",
+            ),
+            Self::_112048 => Some(
+                "The current response evaluation for treatment of solid tumors, according to a method such as RECIST",
+            ),
+            Self::_112049 => Some(
+                "Best response recorded from the start of the treatment until disease progression/recurrence, taking as reference for Progressive Disease the smallest measurements recorded since the treatment started, according to a method such as RECIST",
+            ),
+            Self::_112050 => Some(
+                "A text identifier of an anatomic feature when a multiplicity of features of that type may be present, such as \"Rib 1\", \"Rib 2\" or thoracic vertebrae \"T1\" or \"T2\"",
+            ),
+            Self::_112051 => Some(
+                "A measured or calculated evaluation of response; e.g. according to a method such as RECIST, the value would be the calculated sum of the lengths of the longest axes of a set of target lesions",
+            ),
+            Self::_112052 => Some(
+                "Of or relating to a bronchial (lung) specific channel for the conveyance of a body fluid",
+            ),
             Self::_112053 => Some("Of, relating to, or composed of bone"),
-            Self::_112054 => Some("The smallest unit of lung surrounded by connective tissue septa; the unit of lung subtended by any bronchiole that gives off three to five terminal bronchioles [Fraser and Pare]"),
-            Self::_112055 => Some("A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the maximum X-Ray attenuation coefficient and the area of calcium deposits"),
-            Self::_112056 => Some("A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the volume of each calcification, typically expressed in mm3"),
-            Self::_112057 => Some("A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the total mass of calcification, typically expressed in mg"),
-            Self::_112058 => Some("A measure often arrived at through calculation of findings from CT examination, which is a common predictor of significant stenosis of the coronary arteries"),
-            Self::_112059 => Some("The combination of a focus of pneumonia due to a primary infection with granulomas in the draining hilar or mediastinal lymph nodes [Fraser and Pare]"),
-            Self::_112060 => Some("General or local decrease in the apparent width of visible pulmonary vessels, suggesting less than normal blood flow (reduced blood flow) [Fraser and Pare]"),
-            Self::_112061 => Some("Linear opacity of very fine width, i.e., a nearly one dimensional opacity"),
-            Self::_112062 => Some("Area of abnormal very low X-Ray attenuation, typically lower than aerated lung when occurring in or projecting over lung, or lower than soft tissue when occurring in or projecting over soft tissue"),
-            Self::_112063 => Some("A calcific opacity within the lung that may be organized, but does not display the trabecular organization of true bone [Fraser and Pare]"),
-            Self::_112064 => Some("Relatively homogeneous, extended, pattern of abnormal opacity in the lung, typically low in contrast"),
-            Self::_112065 => Some("A collection of innumerable small, linear, and nodular opacities that together produce a composite appearance resembling a net with small superimposed nodules. The reticular and nodular elements are dimensionally of similar magnitude [Fraser and Pare]"),
-            Self::_112066 => Some("Irregular septal thickening that suggests the appearance of a row of beads; usually a sign of lymphangitic carcinomatosis, but may also occur rarely in sarcoidosis [Fraser and Pare]"),
-            Self::_112067 => Some("A collection of innumerable, small discrete opacities ranging in diameter from 2-10 mm, generally uniform in size and widespread in distribution, and without marginal spiculation [Fraser and Pare]"),
-            Self::_112068 => Some("An irregular band of peripheral pulmonary opacity adjacent to visceral pleura that simulates the appearance of a pleural plaque and is formed by coalescence of small nodules [Fraser and Pare] "),
-            Self::_112069 => Some("A ring of opacities (usually representing a dilated, thick-walled bronchus) in association with a smaller, round, soft tissue opacity (the adjacent pulmonary artery) suggesting a \"signet ring\" [Fraser and Pare]"),
-            Self::_112070 => Some("Equivalent of air bronchogram, but in airways assumed to be bronchioles because of peripheral location and diameter [Fraser and Pare]"),
-            Self::_112071 => Some("Radiographic shadow of an air-containing bronchus; presumed to represent an air-containing segment of the bronchial tree (identity often inferred) [Fraser and Pare]"),
-            Self::_112072 => Some("Air in a crescentic shape in a nodule or mass, in which the air separates the outer wall of the lesion from an inner sequestrum, which most commonly is a fungus ball of Aspergillusspecies [Fraser and Pare]"),
-            Self::_112073 => Some("Ground-glass opacity surrounding the circumference of a nodule or mass. May be a sign of invasive aspergillosis or hemorrhage of various causes [Fraser and Pare]"),
-            Self::_112074 => Some("Flag denoting that this lesion was identified, at baseline, as a target lesion intended for tracking over time [RECIST]"),
-            Self::_112075 => Some("Flag denoting that this lesion was not identified, at baseline, as a target lesion, and was not intended for tracking over time [RECIST]"),
-            Self::_112076 => Some("Flag denoting that this finding was identified, at baseline, as a category other than a lesion, and was not intended for tracking over time [RECIST]"),
-            Self::_112077 => Some("Local or general reduction in the caliber of visible pulmonary vessels, presumed to result from decreased flow occasioned by contraction of muscular pulmonary arteries [Fraser and Pare]"),
-            Self::_112078 => Some("Local or general increase in the width of visible pulmonary vessels resulting from increased pulmonary blood flow [Fraser and Pare]"),
-            Self::_112079 => Some("A manifestation of lung disease in which bronchi, pulmonary vessels, a fissure or fissures, or septa of secondary pulmonary lobules are abnormally displaced [Fraser and Pare]"),
-            Self::_112080 => Some("A patchwork of regions of varied attenuation, interpreted as secondary to regional differences in perfusion [Fraser and Pare]"),
-            Self::_112081 => Some("Increased blood flow to the lungs or a portion thereof, manifested by a general or local increase in the width of visible pulmonary vessels [Fraser and Pare]"),
-            Self::_112082 => Some("The common boundary between the shadows of two juxtaposed structures or tissues of different texture or opacity (edge, border) [Fraser and Pare]"),
-            Self::_112083 => Some("A longitudinal opacity no greater than 2 mm in width [Fraser and Pare]"),
-            Self::_112084 => Some("The shadow of an absorber that attenuates the primary X-Ray beam less effectively than do surrounding absorbers. In a radiograph, any circumscribed area that appears more nearly black (of greater photometric density) than its surround [Fraser and Pare]"),
-            Self::_112085 => Some("A midlung region, characterized by the absence of large blood vessels and by a paucity of small blood vessels, that corresponds to the minor fissure and adjacent peripheral lung [Fraser and Pare]"),
-            Self::_112086 => Some("The angle formed by the right and left main bronchi at the tracheal bifurcation [Fraser and Pare]"),
-            Self::_112087 => Some("The pulmonary artery and its immediate branches in a secondary lobule; HRCT depicts these vessels in certain cases; a.k.a. core structures or lobular core structures [Fraser and Pare]"),
-            Self::_112088 => Some("A vertically oriented linear or curvilinear opacity approximately 1-2 mm wide, commonly projected on the tracheal air shadow [Fraser and Pare]"),
-            Self::_112089 => Some("A vertically oriented, linear or curvilinear opacity approximately 2 mm wide, commonly projected on the tracheal air shadow, and usually slightly concave to the right [Fraser and Pare]"),
-            Self::_112090 => Some("A space in the right side of the mediastinum into which the medial edge of the right lower lobe extends [Fraser and Pare]"),
-            Self::_112091 => Some("A vertically oriented interface usually seen in a frontal chest radiograph to the left of the thoracic vertebral column [Fraser and Pare]"),
-            Self::_112092 => Some("A vertically oriented linear opacity ranging in width from 2-5 mm, extending from the thoracic inlet to the bifurcation of the trachea, and visible only on lateral radiographs of the chest [Fraser and Pare]"),
-            Self::_112093 => Some("A vertically oriented linear opacity approximately 2-3 mm wide extending from the thoracic inlet to the right tracheobronchial angle [Fraser and Pare]"),
-            Self::_112094 => Some("A longitudinal composite opacity measuring 2-5 mm in width; acceptable when limited to anatomic structures within the mediastinum [Fraser and Pare]"),
-            Self::_112095 => Some("A gap or passage through an anatomical part or organ; especially : a gap through which another part or organ passes"),
-            Self::_112096 => Some("A small rounded elevation or eminence on the first rib for the attachment of the scalenus anterior"),
-            Self::_112097 => Some("A groove that serves for the transmission of the vertebral artery"),
+            Self::_112054 => Some(
+                "The smallest unit of lung surrounded by connective tissue septa; the unit of lung subtended by any bronchiole that gives off three to five terminal bronchioles [Fraser and Pare]",
+            ),
+            Self::_112055 => Some(
+                "A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the maximum X-Ray attenuation coefficient and the area of calcium deposits",
+            ),
+            Self::_112056 => Some(
+                "A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the volume of each calcification, typically expressed in mm3",
+            ),
+            Self::_112057 => Some(
+                "A method of calculating an overall calcium score, reflecting the calcification of coronary arteries, based on the total mass of calcification, typically expressed in mg",
+            ),
+            Self::_112058 => Some(
+                "A measure often arrived at through calculation of findings from CT examination, which is a common predictor of significant stenosis of the coronary arteries",
+            ),
+            Self::_112059 => Some(
+                "The combination of a focus of pneumonia due to a primary infection with granulomas in the draining hilar or mediastinal lymph nodes [Fraser and Pare]",
+            ),
+            Self::_112060 => Some(
+                "General or local decrease in the apparent width of visible pulmonary vessels, suggesting less than normal blood flow (reduced blood flow) [Fraser and Pare]",
+            ),
+            Self::_112061 => {
+                Some("Linear opacity of very fine width, i.e., a nearly one dimensional opacity")
+            }
+            Self::_112062 => Some(
+                "Area of abnormal very low X-Ray attenuation, typically lower than aerated lung when occurring in or projecting over lung, or lower than soft tissue when occurring in or projecting over soft tissue",
+            ),
+            Self::_112063 => Some(
+                "A calcific opacity within the lung that may be organized, but does not display the trabecular organization of true bone [Fraser and Pare]",
+            ),
+            Self::_112064 => Some(
+                "Relatively homogeneous, extended, pattern of abnormal opacity in the lung, typically low in contrast",
+            ),
+            Self::_112065 => Some(
+                "A collection of innumerable small, linear, and nodular opacities that together produce a composite appearance resembling a net with small superimposed nodules. The reticular and nodular elements are dimensionally of similar magnitude [Fraser and Pare]",
+            ),
+            Self::_112066 => Some(
+                "Irregular septal thickening that suggests the appearance of a row of beads; usually a sign of lymphangitic carcinomatosis, but may also occur rarely in sarcoidosis [Fraser and Pare]",
+            ),
+            Self::_112067 => Some(
+                "A collection of innumerable, small discrete opacities ranging in diameter from 2-10 mm, generally uniform in size and widespread in distribution, and without marginal spiculation [Fraser and Pare]",
+            ),
+            Self::_112068 => Some(
+                "An irregular band of peripheral pulmonary opacity adjacent to visceral pleura that simulates the appearance of a pleural plaque and is formed by coalescence of small nodules [Fraser and Pare] ",
+            ),
+            Self::_112069 => Some(
+                "A ring of opacities (usually representing a dilated, thick-walled bronchus) in association with a smaller, round, soft tissue opacity (the adjacent pulmonary artery) suggesting a \"signet ring\" [Fraser and Pare]",
+            ),
+            Self::_112070 => Some(
+                "Equivalent of air bronchogram, but in airways assumed to be bronchioles because of peripheral location and diameter [Fraser and Pare]",
+            ),
+            Self::_112071 => Some(
+                "Radiographic shadow of an air-containing bronchus; presumed to represent an air-containing segment of the bronchial tree (identity often inferred) [Fraser and Pare]",
+            ),
+            Self::_112072 => Some(
+                "Air in a crescentic shape in a nodule or mass, in which the air separates the outer wall of the lesion from an inner sequestrum, which most commonly is a fungus ball of Aspergillusspecies [Fraser and Pare]",
+            ),
+            Self::_112073 => Some(
+                "Ground-glass opacity surrounding the circumference of a nodule or mass. May be a sign of invasive aspergillosis or hemorrhage of various causes [Fraser and Pare]",
+            ),
+            Self::_112074 => Some(
+                "Flag denoting that this lesion was identified, at baseline, as a target lesion intended for tracking over time [RECIST]",
+            ),
+            Self::_112075 => Some(
+                "Flag denoting that this lesion was not identified, at baseline, as a target lesion, and was not intended for tracking over time [RECIST]",
+            ),
+            Self::_112076 => Some(
+                "Flag denoting that this finding was identified, at baseline, as a category other than a lesion, and was not intended for tracking over time [RECIST]",
+            ),
+            Self::_112077 => Some(
+                "Local or general reduction in the caliber of visible pulmonary vessels, presumed to result from decreased flow occasioned by contraction of muscular pulmonary arteries [Fraser and Pare]",
+            ),
+            Self::_112078 => Some(
+                "Local or general increase in the width of visible pulmonary vessels resulting from increased pulmonary blood flow [Fraser and Pare]",
+            ),
+            Self::_112079 => Some(
+                "A manifestation of lung disease in which bronchi, pulmonary vessels, a fissure or fissures, or septa of secondary pulmonary lobules are abnormally displaced [Fraser and Pare]",
+            ),
+            Self::_112080 => Some(
+                "A patchwork of regions of varied attenuation, interpreted as secondary to regional differences in perfusion [Fraser and Pare]",
+            ),
+            Self::_112081 => Some(
+                "Increased blood flow to the lungs or a portion thereof, manifested by a general or local increase in the width of visible pulmonary vessels [Fraser and Pare]",
+            ),
+            Self::_112082 => Some(
+                "The common boundary between the shadows of two juxtaposed structures or tissues of different texture or opacity (edge, border) [Fraser and Pare]",
+            ),
+            Self::_112083 => {
+                Some("A longitudinal opacity no greater than 2 mm in width [Fraser and Pare]")
+            }
+            Self::_112084 => Some(
+                "The shadow of an absorber that attenuates the primary X-Ray beam less effectively than do surrounding absorbers. In a radiograph, any circumscribed area that appears more nearly black (of greater photometric density) than its surround [Fraser and Pare]",
+            ),
+            Self::_112085 => Some(
+                "A midlung region, characterized by the absence of large blood vessels and by a paucity of small blood vessels, that corresponds to the minor fissure and adjacent peripheral lung [Fraser and Pare]",
+            ),
+            Self::_112086 => Some(
+                "The angle formed by the right and left main bronchi at the tracheal bifurcation [Fraser and Pare]",
+            ),
+            Self::_112087 => Some(
+                "The pulmonary artery and its immediate branches in a secondary lobule; HRCT depicts these vessels in certain cases; a.k.a. core structures or lobular core structures [Fraser and Pare]",
+            ),
+            Self::_112088 => Some(
+                "A vertically oriented linear or curvilinear opacity approximately 1-2 mm wide, commonly projected on the tracheal air shadow [Fraser and Pare]",
+            ),
+            Self::_112089 => Some(
+                "A vertically oriented, linear or curvilinear opacity approximately 2 mm wide, commonly projected on the tracheal air shadow, and usually slightly concave to the right [Fraser and Pare]",
+            ),
+            Self::_112090 => Some(
+                "A space in the right side of the mediastinum into which the medial edge of the right lower lobe extends [Fraser and Pare]",
+            ),
+            Self::_112091 => Some(
+                "A vertically oriented interface usually seen in a frontal chest radiograph to the left of the thoracic vertebral column [Fraser and Pare]",
+            ),
+            Self::_112092 => Some(
+                "A vertically oriented linear opacity ranging in width from 2-5 mm, extending from the thoracic inlet to the bifurcation of the trachea, and visible only on lateral radiographs of the chest [Fraser and Pare]",
+            ),
+            Self::_112093 => Some(
+                "A vertically oriented linear opacity approximately 2-3 mm wide extending from the thoracic inlet to the right tracheobronchial angle [Fraser and Pare]",
+            ),
+            Self::_112094 => Some(
+                "A longitudinal composite opacity measuring 2-5 mm in width; acceptable when limited to anatomic structures within the mediastinum [Fraser and Pare]",
+            ),
+            Self::_112095 => Some(
+                "A gap or passage through an anatomical part or organ; especially : a gap through which another part or organ passes",
+            ),
+            Self::_112096 => Some(
+                "A small rounded elevation or eminence on the first rib for the attachment of the scalenus anterior",
+            ),
+            Self::_112097 => {
+                Some("A groove that serves for the transmission of the vertebral artery")
+            }
             Self::_112098 => Some("The concave depression of the anterior surface of the scapula"),
-            Self::_112099 => Some("A sloping ridge dividing the dorsal surface of the scapula into the supraspinatous fossa (above), and the infraspinatous fossa (below)"),
-            Self::_112100 => Some("The portion of the dorsal surface of the scapula above the scapular spine"),
-            Self::_112101 => Some("The portion of the dorsal surface of the scapula below the scapular spine"),
-            Self::_112102 => Some("The portion of the aortic arch that defines the transition between its ascending and descending limbs"),
-            Self::_112103 => Some("Section of Azygos vein near the fourth thoracic vertebra, where it arches forward over the root of the right lung, and ends in the superior vena cava, just before that vessel pierces the pericardium"),
-            Self::_112104 => Some("A local collection of gas and liquid that, when traversed by a horizontal X-Ray beam, creates a shadow characterized by a sharp horizontal interface between gas density above and liquid density below [Fraser and Pare]"),
-            Self::_112105 => Some("A circumferential pattern of fine linear spicules, approximately 5 mm long, extending outward from the margin of a solitary pulmonary nodule through a zone of relative lucency [Fraser and Pare]"),
-            Self::_112106 => Some("A number of closely approximated ring shadows representing air spaces 5-10 mm in diameter with walls 2-3 mm thick that resemble a true honeycomb; implies \"end-stage\" lung [Fraser and Pare]"),
-            Self::_112107 => Some("A straight, curved, or irregular linear opacity that is visible in multiple projections; usually situated in the lower half of the lung; vary markedly in length and width [Fraser and Pare]"),
-            Self::_112108 => Some("Fine linear opacities present in a lobule when the intralobular interstitium is thickened. When numerous, they may appear as a fine reticular pattern [Fraser and Pare]"),
-            Self::_112109 => Some("Essentially straight linear opacity 2-6 cm in length and 1-3 mm in width, usually in an upper lung zone [Fraser and Pare]"),
-            Self::_112110 => Some("A straight linear opacity 1.5-2 cm in length and 1-2 mm in width, usually at the lung base [Fraser and Pare]"),
-            Self::_112111 => Some("A group of branching, linear opacities producing the appearing of a fine net, at the lung base [Fraser and Pare]"),
-            Self::_112112 => Some("Elongated opacity, usually several millimeters wide and up to about 5 cm long, often extending to the pleura, which may be thickened and retracted at the site of contact [Fraser and Pare]"),
-            Self::_112113 => Some("A collection of innumerable small linear opacities that together produce an appearance resembling a net [Fraser and Pare]"),
-            Self::_112114 => Some("Usually used in the plural, a generic term for linear opacities of varied distribution produced when the interstitium between pulmonary lobules is thickened [Fraser and Pare]"),
-            Self::_112115 => Some("A thin curvilinear opacity, a few millimeters or less in thickness, usually less than 1 cm from the pleural surface and paralleling the pleura [Fraser and Pare]"),
-            Self::_112116 => Some("Parallel or slightly convergent linear opacities that suggest the planar projection of tubular structures and that correspond in location and orientation to elements of the bronchial tree [Fraser and Pare]"),
-            Self::_112117 => Some("Paired, parallel, or slightly convergent linear opacities presumed to represent the walls of a tubular structure seen en face; used if the anatomic nature of a shadow is obscure [Fraser and Pare]"),
-            Self::_112118 => Some("The opacity of a radiographic shadow to visible light; film blackening; the term should never be used to mean an \"opacity\" or \"radiopacity\" [Fraser and Pare]"),
-            Self::_112119 => Some("Subpleural increased attenuation in dependent lung. The increased attenuation disappears when the region of lung is nondependent; a.k.a. dependent increased attenuation [Fraser and Pare]"),
-            Self::_112120 => Some("Hazy increased attenuation of lung, but with preservation of bronchial and vascular margins; caused by partial filling of air spaces, interstitial thickening, partial collapse of alveoli, normal expiration, or increased capillary blood volume [Fraser and Pare]"),
+            Self::_112099 => Some(
+                "A sloping ridge dividing the dorsal surface of the scapula into the supraspinatous fossa (above), and the infraspinatous fossa (below)",
+            ),
+            Self::_112100 => {
+                Some("The portion of the dorsal surface of the scapula above the scapular spine")
+            }
+            Self::_112101 => {
+                Some("The portion of the dorsal surface of the scapula below the scapular spine")
+            }
+            Self::_112102 => Some(
+                "The portion of the aortic arch that defines the transition between its ascending and descending limbs",
+            ),
+            Self::_112103 => Some(
+                "Section of Azygos vein near the fourth thoracic vertebra, where it arches forward over the root of the right lung, and ends in the superior vena cava, just before that vessel pierces the pericardium",
+            ),
+            Self::_112104 => Some(
+                "A local collection of gas and liquid that, when traversed by a horizontal X-Ray beam, creates a shadow characterized by a sharp horizontal interface between gas density above and liquid density below [Fraser and Pare]",
+            ),
+            Self::_112105 => Some(
+                "A circumferential pattern of fine linear spicules, approximately 5 mm long, extending outward from the margin of a solitary pulmonary nodule through a zone of relative lucency [Fraser and Pare]",
+            ),
+            Self::_112106 => Some(
+                "A number of closely approximated ring shadows representing air spaces 5-10 mm in diameter with walls 2-3 mm thick that resemble a true honeycomb; implies \"end-stage\" lung [Fraser and Pare]",
+            ),
+            Self::_112107 => Some(
+                "A straight, curved, or irregular linear opacity that is visible in multiple projections; usually situated in the lower half of the lung; vary markedly in length and width [Fraser and Pare]",
+            ),
+            Self::_112108 => Some(
+                "Fine linear opacities present in a lobule when the intralobular interstitium is thickened. When numerous, they may appear as a fine reticular pattern [Fraser and Pare]",
+            ),
+            Self::_112109 => Some(
+                "Essentially straight linear opacity 2-6 cm in length and 1-3 mm in width, usually in an upper lung zone [Fraser and Pare]",
+            ),
+            Self::_112110 => Some(
+                "A straight linear opacity 1.5-2 cm in length and 1-2 mm in width, usually at the lung base [Fraser and Pare]",
+            ),
+            Self::_112111 => Some(
+                "A group of branching, linear opacities producing the appearing of a fine net, at the lung base [Fraser and Pare]",
+            ),
+            Self::_112112 => Some(
+                "Elongated opacity, usually several millimeters wide and up to about 5 cm long, often extending to the pleura, which may be thickened and retracted at the site of contact [Fraser and Pare]",
+            ),
+            Self::_112113 => Some(
+                "A collection of innumerable small linear opacities that together produce an appearance resembling a net [Fraser and Pare]",
+            ),
+            Self::_112114 => Some(
+                "Usually used in the plural, a generic term for linear opacities of varied distribution produced when the interstitium between pulmonary lobules is thickened [Fraser and Pare]",
+            ),
+            Self::_112115 => Some(
+                "A thin curvilinear opacity, a few millimeters or less in thickness, usually less than 1 cm from the pleural surface and paralleling the pleura [Fraser and Pare]",
+            ),
+            Self::_112116 => Some(
+                "Parallel or slightly convergent linear opacities that suggest the planar projection of tubular structures and that correspond in location and orientation to elements of the bronchial tree [Fraser and Pare]",
+            ),
+            Self::_112117 => Some(
+                "Paired, parallel, or slightly convergent linear opacities presumed to represent the walls of a tubular structure seen en face; used if the anatomic nature of a shadow is obscure [Fraser and Pare]",
+            ),
+            Self::_112118 => Some(
+                "The opacity of a radiographic shadow to visible light; film blackening; the term should never be used to mean an \"opacity\" or \"radiopacity\" [Fraser and Pare]",
+            ),
+            Self::_112119 => Some(
+                "Subpleural increased attenuation in dependent lung. The increased attenuation disappears when the region of lung is nondependent; a.k.a. dependent increased attenuation [Fraser and Pare]",
+            ),
+            Self::_112120 => Some(
+                "Hazy increased attenuation of lung, but with preservation of bronchial and vascular margins; caused by partial filling of air spaces, interstitial thickening, partial collapse of alveoli, normal expiration, or increased capillary blood volume [Fraser and Pare]",
+            ),
             Self::_112121 => Some("Any ill-defined opacity in the lung [Fraser and Pare]"),
-            Self::_112122 => Some("Discrete, small, round, focal opacity of at least soft tissue attenuation and with a diameter no greater than 7 mm [Fraser and Pare]"),
-            Self::_112123 => Some("A shadow produced by a local collection of fluid in one of the interlobar fissures, usually elliptic in one radiographic projection and rounded in the other, resembling a tumor [Fraser and Pare]"),
-            Self::_112124 => Some("Any perceptible discontinuity in film blackening attributed to the attenuation of the X-Ray beam by a specific anatomic absorber or lesion on or within the body of the patient; to be employed only when more specific identification is not possible [Fraser and Pare]"),
-            Self::_112125 => Some("Term used to define a reticular pattern specific to pneumoconioses [Fraser and Pare]"),
-            Self::_112126 => Some("Term used to define a nodular pattern specific to pneumoconioses [Fraser and Pare]"),
-            Self::_112127 => Some("Nodular dilation of centrilobular branching structures that resembles a budding tree and represents exudative bronchiolar dilation [Fraser and Pare]"),
-            Self::_112128 => Some("Any extended, finely granular pattern of pulmonary opacity within which normal anatomic details are partly obscured [Fraser and Pare]"),
-            Self::_112129 => Some("A collection of tiny discrete opacities in the lungs, each measuring 2 mm or less in diameter, generally uniform in size and widespread in distribution [Fraser and Pare]"),
-            Self::_112130 => Some("Generalized pattern of relatively well defined areas in the lung having different X-Ray attenuations due to a longstanding underlying pulmonary disease"),
-            Self::_112131 => Some("A qualitative descriptor of a size that is dramatically less than typical"),
-            Self::_112132 => Some("A qualitative descriptor of a size that is considerably less than typical"),
-            Self::_112133 => Some("A qualitative descriptor of a size that is so small as to be abnormal versus expected size"),
+            Self::_112122 => Some(
+                "Discrete, small, round, focal opacity of at least soft tissue attenuation and with a diameter no greater than 7 mm [Fraser and Pare]",
+            ),
+            Self::_112123 => Some(
+                "A shadow produced by a local collection of fluid in one of the interlobar fissures, usually elliptic in one radiographic projection and rounded in the other, resembling a tumor [Fraser and Pare]",
+            ),
+            Self::_112124 => Some(
+                "Any perceptible discontinuity in film blackening attributed to the attenuation of the X-Ray beam by a specific anatomic absorber or lesion on or within the body of the patient; to be employed only when more specific identification is not possible [Fraser and Pare]",
+            ),
+            Self::_112125 => Some(
+                "Term used to define a reticular pattern specific to pneumoconioses [Fraser and Pare]",
+            ),
+            Self::_112126 => Some(
+                "Term used to define a nodular pattern specific to pneumoconioses [Fraser and Pare]",
+            ),
+            Self::_112127 => Some(
+                "Nodular dilation of centrilobular branching structures that resembles a budding tree and represents exudative bronchiolar dilation [Fraser and Pare]",
+            ),
+            Self::_112128 => Some(
+                "Any extended, finely granular pattern of pulmonary opacity within which normal anatomic details are partly obscured [Fraser and Pare]",
+            ),
+            Self::_112129 => Some(
+                "A collection of tiny discrete opacities in the lungs, each measuring 2 mm or less in diameter, generally uniform in size and widespread in distribution [Fraser and Pare]",
+            ),
+            Self::_112130 => Some(
+                "Generalized pattern of relatively well defined areas in the lung having different X-Ray attenuations due to a longstanding underlying pulmonary disease",
+            ),
+            Self::_112131 => {
+                Some("A qualitative descriptor of a size that is dramatically less than typical")
+            }
+            Self::_112132 => {
+                Some("A qualitative descriptor of a size that is considerably less than typical")
+            }
+            Self::_112133 => Some(
+                "A qualitative descriptor of a size that is so small as to be abnormal versus expected size",
+            ),
             Self::_112134 => Some("Shaped like an ellipse (oval)"),
-            Self::_112135 => Some("A border shape that is made up of, provided with, or divided into lobules (small lobes, curved or rounded projections or divisions)"),
+            Self::_112135 => Some(
+                "A border shape that is made up of, provided with, or divided into lobules (small lobes, curved or rounded projections or divisions)",
+            ),
             Self::_112136 => Some("Radially orientated border shape"),
-            Self::_112137 => Some("The border of a shadow (opacity) is sharply defined [Fraser and Pare]"),
-            Self::_112138 => Some("The border of a shadow (opacity) is distinctly defined [Fraser and Pare]"),
-            Self::_112139 => Some("The border of a shadow (opacity) is well distinct from adjacent structures [Fraser and Pare]"),
-            Self::_112140 => Some("The border of a shadow (opacity) is sharply distinct from adjacent structures [Fraser and Pare]"),
-            Self::_112141 => Some("The border of a shadow (opacity) is poorly distinct from adjacent structures [Fraser and Pare]"),
-            Self::_112142 => Some("A shadow (opacity) possessing a complete or nearly complete visible border [Fraser and Pare]"),
-            Self::_112143 => Some("Inspired atmospheric gas. The word is sometimes used to describe gas within the body regardless of its composition or site [Fraser and Pare]"),
+            Self::_112137 => {
+                Some("The border of a shadow (opacity) is sharply defined [Fraser and Pare]")
+            }
+            Self::_112138 => {
+                Some("The border of a shadow (opacity) is distinctly defined [Fraser and Pare]")
+            }
+            Self::_112139 => Some(
+                "The border of a shadow (opacity) is well distinct from adjacent structures [Fraser and Pare]",
+            ),
+            Self::_112140 => Some(
+                "The border of a shadow (opacity) is sharply distinct from adjacent structures [Fraser and Pare]",
+            ),
+            Self::_112141 => Some(
+                "The border of a shadow (opacity) is poorly distinct from adjacent structures [Fraser and Pare]",
+            ),
+            Self::_112142 => Some(
+                "A shadow (opacity) possessing a complete or nearly complete visible border [Fraser and Pare]",
+            ),
+            Self::_112143 => Some(
+                "Inspired atmospheric gas. The word is sometimes used to describe gas within the body regardless of its composition or site [Fraser and Pare]",
+            ),
             Self::_112144 => Some("Material having X-Ray attenuation properties similar to muscle"),
-            Self::_112145 => Some("Material having X-Ray attenuation properties similar to calcium, a silver-white bivalent metallic element occurring in plants and animals"),
-            Self::_112146 => Some("A pulmonary opacity 4-8 mm in diameter, presumed to represent anatomic acinus, or a collection of opacities in the lung, each measuring 4-8 mm in diameter, and together producing an extended, homogeneous shadow [Fraser and Pare]"),
-            Self::_112147 => Some("The gas-containing portion of the lung parenchyma, including the acini and excluding the interstitium [Fraser and Pare]"),
-            Self::_112148 => Some("Sharply defined, approximately circular opacities occurring singly or in clusters, usually in the upper lobes [Fraser and Pare]"),
-            Self::_112149 => Some("A shadow (opacity) that is ill-defined, lacking clear-cut margins [Fraser and Pare]"),
-            Self::_112150 => Some("A shadow resembling a line; any elongated opacity of approximately uniform width [Fraser and Pare]"),
-            Self::_112151 => Some("The number of small opacities per unit area or zone of lung. In the International Labor Organization (ILO) classification of radiographs of the pneumoconioses, the qualifiers 0 through 3 subdivide the profusion into 4 categories. The profusion categories may be further subdivided by employing a 12-point scale [Fraser and Pare]"),
-            Self::_112152 => Some("The effacement of an anatomic soft tissue border by either a normal anatomic structure or a pathologic state such as airlessness of adjacent lung or accumulation of fluid in the contiguous pleural space; useful in detecting and localizing an opacity along the axis of the X-Ray beam [Fraser and Pare]"),
+            Self::_112145 => Some(
+                "Material having X-Ray attenuation properties similar to calcium, a silver-white bivalent metallic element occurring in plants and animals",
+            ),
+            Self::_112146 => Some(
+                "A pulmonary opacity 4-8 mm in diameter, presumed to represent anatomic acinus, or a collection of opacities in the lung, each measuring 4-8 mm in diameter, and together producing an extended, homogeneous shadow [Fraser and Pare]",
+            ),
+            Self::_112147 => Some(
+                "The gas-containing portion of the lung parenchyma, including the acini and excluding the interstitium [Fraser and Pare]",
+            ),
+            Self::_112148 => Some(
+                "Sharply defined, approximately circular opacities occurring singly or in clusters, usually in the upper lobes [Fraser and Pare]",
+            ),
+            Self::_112149 => Some(
+                "A shadow (opacity) that is ill-defined, lacking clear-cut margins [Fraser and Pare]",
+            ),
+            Self::_112150 => Some(
+                "A shadow resembling a line; any elongated opacity of approximately uniform width [Fraser and Pare]",
+            ),
+            Self::_112151 => Some(
+                "The number of small opacities per unit area or zone of lung. In the International Labor Organization (ILO) classification of radiographs of the pneumoconioses, the qualifiers 0 through 3 subdivide the profusion into 4 categories. The profusion categories may be further subdivided by employing a 12-point scale [Fraser and Pare]",
+            ),
+            Self::_112152 => Some(
+                "The effacement of an anatomic soft tissue border by either a normal anatomic structure or a pathologic state such as airlessness of adjacent lung or accumulation of fluid in the contiguous pleural space; useful in detecting and localizing an opacity along the axis of the X-Ray beam [Fraser and Pare]",
+            ),
             Self::_112153 => Some("Situated or occurring between the pleura and the body wall"),
-            Self::_112154 => Some("Spatial arrangement of opacities that bears vague resemblance to the shape of a bat in flight; bilaterally symmetric [Fraser and Pare]"),
-            Self::_112155 => Some("Spatial arrangement of opacities that bears vague resemblance to the shape of a butterfly in flight; bilaterally symmetric [Fraser and Pare]"),
-            Self::_112156 => Some("Referring to the region of the bronchioloarteriolar core of a secondary pulmonary lobule [Fraser and Pare]"),
-            Self::_112157 => Some("The joining together of a number of opacities into a single opacity [Fraser and Pare]"),
-            Self::_112158 => Some("Of or relating to a lobe (a curved or rounded projection or division); e.g. involving an entire lobe of the lung"),
-            Self::_112159 => Some("Extremely or excessively acute, as a qualitative measure of severity"),
+            Self::_112154 => Some(
+                "Spatial arrangement of opacities that bears vague resemblance to the shape of a bat in flight; bilaterally symmetric [Fraser and Pare]",
+            ),
+            Self::_112155 => Some(
+                "Spatial arrangement of opacities that bears vague resemblance to the shape of a butterfly in flight; bilaterally symmetric [Fraser and Pare]",
+            ),
+            Self::_112156 => Some(
+                "Referring to the region of the bronchioloarteriolar core of a secondary pulmonary lobule [Fraser and Pare]",
+            ),
+            Self::_112157 => Some(
+                "The joining together of a number of opacities into a single opacity [Fraser and Pare]",
+            ),
+            Self::_112158 => Some(
+                "Of or relating to a lobe (a curved or rounded projection or division); e.g. involving an entire lobe of the lung",
+            ),
+            Self::_112159 => {
+                Some("Extremely or excessively acute, as a qualitative measure of severity")
+            }
             Self::_112160 => Some("Of uniform opacity or texture throughout [Fraser and Pare]"),
             Self::_112161 => Some("Lack of homogeneity in opacity or texture"),
-            Self::_112162 => Some("Discrete opacity centrally within a larger opacity, as a calcification descriptor"),
-            Self::_112163 => Some("Pertaining to sharply defined, linear, and/or nodular opacities containing calcification(s) [Fraser and Pare]"),
-            Self::_112164 => Some("Calcifications made up of loosely aggregated particles, resembling wool"),
-            Self::_112165 => Some("A change in the shape formed by the boundary or edges of a finding or feature"),
-            Self::_112166 => Some("A change in the clarity of the boundary or edges of a finding or feature"),
+            Self::_112162 => Some(
+                "Discrete opacity centrally within a larger opacity, as a calcification descriptor",
+            ),
+            Self::_112163 => Some(
+                "Pertaining to sharply defined, linear, and/or nodular opacities containing calcification(s) [Fraser and Pare]",
+            ),
+            Self::_112164 => {
+                Some("Calcifications made up of loosely aggregated particles, resembling wool")
+            }
+            Self::_112165 => Some(
+                "A change in the shape formed by the boundary or edges of a finding or feature",
+            ),
+            Self::_112166 => {
+                Some("A change in the clarity of the boundary or edges of a finding or feature")
+            }
             Self::_112167 => Some("A change in the extent of spreading of a finding or feature"),
-            Self::_112168 => Some("A change in the part(s) of the anatomy affected or encompassed by a finding or feature"),
-            Self::_112169 => Some("A change in the matter or substance within a finding or feature"),
+            Self::_112168 => Some(
+                "A change in the part(s) of the anatomy affected or encompassed by a finding or feature",
+            ),
+            Self::_112169 => {
+                Some("A change in the matter or substance within a finding or feature")
+            }
             Self::_112170 => Some("A change in the surface or consistency of a finding or feature"),
-            Self::_112171 => Some("A location in image space, which may or may not correspond to an anatomical reference, which is often used for registering data sets"),
-            Self::_112172 => Some("Connected to an injection chamber placed under the skin in the upper part of the chest. When it is necessary to inject some drug, a specific needle is put in the chamber through the skin and a silicon membrane. The advantage of a portacath is that it may be left in place several months contrarily of \"classical\" catheters"),
-            Self::_112173 => Some("A tube inserted into the chest wall from outside the body, for drainage. Sometimes used for collapsed lung. Usually connected to a receptor placed lower than the insertion site"),
-            Self::_112174 => Some("A tube placed into the subclavian vein to deliver medication directly into the venous system"),
-            Self::_112175 => Some("A stent is a tube inserted into another tube. Kidney stent is a tube that is inserted into the kidney, ureter, and bladder, to help drain urine. Usually inserted through a scoping device presented through the urethra"),
-            Self::_112176 => Some("A stent is a tube inserted into another tube. Pancreatic stent is inserted through the common bile duct to the pancreatic duct, to drain bile"),
-            Self::_112177 => Some("A non-lesion object that appears to be a circular band, attached to the body via pierced nipple"),
-            Self::_112178 => Some("A non-lesion object that appears to be a flat round piece of metal"),
-            Self::_112179 => Some("The least quantity assignable, admissible, or possible; the least of a set of X-Ray attenuation coefficients"),
-            Self::_112180 => Some("The greatest quantity or value attainable or attained; the largest of a set of X-Ray attenuation coefficients"),
-            Self::_112181 => Some("The value that is computed by dividing the sum of a set of X-Ray attenuation coefficients by the number of values "),
-            Self::_112182 => Some("The value in an ordered set of X-Ray attenuation coefficients, below and above which there is an equal number of values"),
-            Self::_112183 => Some("For a set of X-Ray attenuation coefficients: 1) a measure of the dispersion of a frequency distribution that is the square root of the arithmetic mean of the squares of the deviation of each of the class frequencies from the arithmetic mean of the frequency distribution; 2) a parameter that indicates the way in which a probability function or a probability density function is centered around its mean and that is equal to the square root of the moment in which the deviation from the mean is squared"),
-            Self::_112184 => Some("American College of Radiology. ACR Standard for the Performance of Pediatric and Adult Thoracic Computed Tomography (CT). In: Standards. Reston, Va: 2001:103-107"),
-            Self::_112185 => Some("American College of Radiology. ACR Standard for the Performance of Computed Tomography for the Detection of Pulmonary Embolism in Adults. In: Standards. Reston, Va: 2001:109-113"),
-            Self::_112186 => Some("American College of Radiology. ACR Standard for the Performance of High-Resolution Computed Tomography (HRCT) of the Lungs in Adults. In: Standards. Reston, Va: 2001:115-118"),
-            Self::_112187 => Some("The method of calculation of a measurement or other type of numeric value is not specified"),
+            Self::_112171 => Some(
+                "A location in image space, which may or may not correspond to an anatomical reference, which is often used for registering data sets",
+            ),
+            Self::_112172 => Some(
+                "Connected to an injection chamber placed under the skin in the upper part of the chest. When it is necessary to inject some drug, a specific needle is put in the chamber through the skin and a silicon membrane. The advantage of a portacath is that it may be left in place several months contrarily of \"classical\" catheters",
+            ),
+            Self::_112173 => Some(
+                "A tube inserted into the chest wall from outside the body, for drainage. Sometimes used for collapsed lung. Usually connected to a receptor placed lower than the insertion site",
+            ),
+            Self::_112174 => Some(
+                "A tube placed into the subclavian vein to deliver medication directly into the venous system",
+            ),
+            Self::_112175 => Some(
+                "A stent is a tube inserted into another tube. Kidney stent is a tube that is inserted into the kidney, ureter, and bladder, to help drain urine. Usually inserted through a scoping device presented through the urethra",
+            ),
+            Self::_112176 => Some(
+                "A stent is a tube inserted into another tube. Pancreatic stent is inserted through the common bile duct to the pancreatic duct, to drain bile",
+            ),
+            Self::_112177 => Some(
+                "A non-lesion object that appears to be a circular band, attached to the body via pierced nipple",
+            ),
+            Self::_112178 => {
+                Some("A non-lesion object that appears to be a flat round piece of metal")
+            }
+            Self::_112179 => Some(
+                "The least quantity assignable, admissible, or possible; the least of a set of X-Ray attenuation coefficients",
+            ),
+            Self::_112180 => Some(
+                "The greatest quantity or value attainable or attained; the largest of a set of X-Ray attenuation coefficients",
+            ),
+            Self::_112181 => Some(
+                "The value that is computed by dividing the sum of a set of X-Ray attenuation coefficients by the number of values ",
+            ),
+            Self::_112182 => Some(
+                "The value in an ordered set of X-Ray attenuation coefficients, below and above which there is an equal number of values",
+            ),
+            Self::_112183 => Some(
+                "For a set of X-Ray attenuation coefficients: 1) a measure of the dispersion of a frequency distribution that is the square root of the arithmetic mean of the squares of the deviation of each of the class frequencies from the arithmetic mean of the frequency distribution; 2) a parameter that indicates the way in which a probability function or a probability density function is centered around its mean and that is equal to the square root of the moment in which the deviation from the mean is squared",
+            ),
+            Self::_112184 => Some(
+                "American College of Radiology. ACR Standard for the Performance of Pediatric and Adult Thoracic Computed Tomography (CT). In: Standards. Reston, Va: 2001:103-107",
+            ),
+            Self::_112185 => Some(
+                "American College of Radiology. ACR Standard for the Performance of Computed Tomography for the Detection of Pulmonary Embolism in Adults. In: Standards. Reston, Va: 2001:109-113",
+            ),
+            Self::_112186 => Some(
+                "American College of Radiology. ACR Standard for the Performance of High-Resolution Computed Tomography (HRCT) of the Lungs in Adults. In: Standards. Reston, Va: 2001:115-118",
+            ),
+            Self::_112187 => Some(
+                "The method of calculation of a measurement or other type of numeric value is not specified",
+            ),
             Self::_112188 => Some("The calculation method was performed in two-dimensional space"),
-            Self::_112189 => Some("The calculation method was performed in three-dimensional space"),
-            Self::_112191 => Some("The relative density of parenchymal tissue as a proportion of breast volume"),
+            Self::_112189 => {
+                Some("The calculation method was performed in three-dimensional space")
+            }
+            Self::_112191 => {
+                Some("The relative density of parenchymal tissue as a proportion of breast volume")
+            }
             Self::_112192 => Some("The volume of parenchymal tissue"),
             Self::_112193 => Some("The volume of the breast"),
             Self::_112194 => Some("The mass of parenchymal tissue"),
@@ -14151,74 +16215,154 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_112197 => Some("A measured or calculated volume of vascular calcification"),
             Self::_112198 => Some("A measured or calculated percentage of vascular calcification"),
             Self::_112199 => Some("A measured or calculated mass of vascular calcification"),
-            Self::_112200 => Some("The average nearest neighbor distance of all individual microcalcifications in a cluster"),
-            Self::_112201 => Some("The standard deviation of nearest neighbor distance of all individual microcalcifications in a cluster"),
-            Self::_112220 => Some("A structured report containing the results of computer-aided detection or diagnosis applied to colon imaging and associated clinical information"),
-            Self::_112222 => Some("Overall interpretation of the colon using C-RADS categorization system"),
+            Self::_112200 => Some(
+                "The average nearest neighbor distance of all individual microcalcifications in a cluster",
+            ),
+            Self::_112201 => Some(
+                "The standard deviation of nearest neighbor distance of all individual microcalcifications in a cluster",
+            ),
+            Self::_112220 => Some(
+                "A structured report containing the results of computer-aided detection or diagnosis applied to colon imaging and associated clinical information",
+            ),
+            Self::_112222 => {
+                Some("Overall interpretation of the colon using C-RADS categorization system")
+            }
             Self::_112224 => Some("Characteristics of a set of images"),
             Self::_112225 => Some("Nominal slice thickness, in mm"),
-            Self::_112226 => Some("Distance between contiguous images, measured from the center-to-center of each image"),
-            Self::_112227 => Some("Uniquely identifies groups of composite instances that have the same coordinate system that conveys spatial and/or temporal information"),
-            Self::_112228 => Some("Patient orientation with respect to downward direction (gravity)"),
+            Self::_112226 => Some(
+                "Distance between contiguous images, measured from the center-to-center of each image",
+            ),
+            Self::_112227 => Some(
+                "Uniquely identifies groups of composite instances that have the same coordinate system that conveys spatial and/or temporal information",
+            ),
+            Self::_112228 => {
+                Some("Patient orientation with respect to downward direction (gravity)")
+            }
             Self::_112229 => Some("Distinguishes a part of a segmentation"),
-            Self::_112232 => Some("The diameter of a polyp stalk measured perpendicular to the axis of the stalk"),
-            Self::_112233 => Some("The length of the path following the centerline of the colon from the anus to the area of interest"),
+            Self::_112232 => Some(
+                "The diameter of a polyp stalk measured perpendicular to the axis of the stalk",
+            ),
+            Self::_112233 => Some(
+                "The length of the path following the centerline of the colon from the anus to the area of interest",
+            ),
             Self::_112238 => Some("A location in the body that is outside the colon"),
-            Self::_112240 => Some("An inadequate study or a study that is awaiting prior comparisons. The study may have inadequate preparation and cannot exclude lesions greater than or equal to ten millimeters owing to presence of fluid or feces. The study may have inadequate insufflation where one or more colonic segments collapsed on both views. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9"),
-            Self::_112241 => Some("The study has a normal colon or benign lesion, with the recommendation to continue routine screening. The study has no visible abnormalities of the colon. The study has no polyps greater than six millimeters. The study may have lipoma, inverted diverticulum, or nonneoplastic findings, such as colonic diverticula. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9"),
-            Self::_112242 => Some("The study has an intermediate polyp or indeterminate finding and surveillance or colonoscopy is recommended. There may be intermediate polyps between six and nine millimeters and there are less than three in number. The study may have an intermediate finding and cannot exclude a polyp that is greater than or equal to six millimeters in a technically adequate exam. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9"),
-            Self::_112243 => Some("The study has a polyp, possibly advanced adenoma, and a follow-up colonoscopy is recommended. The study has a polyp greater than or equal to ten millimeters or the study has three or more polyps that are each between six to nine millimeters. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9"),
-            Self::_112244 => Some("The study has a colonic mass, likely malignant, and surgical consultation is recommended. The lesion compromises bowel lumen and demonstrates extracolonic invasion. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9"),
-            Self::_112248 => Some("American College of Radiology Practice Guideline for the Performance of Computed Tomography (CT) Colonography in Adults. In: Practice Guidelines and Technical Standards.Reston, Va: American College of Radiology;2006:371-376"),
-            Self::_112249 => Some("American College of Radiology Technical Standard for Diagnostic Medical Physics Performance Monitoring of Computed Tomography (CT) Equipment. In: Practice Guidelines and Technical Standards.Reston, Va: American College of Radiology;2006:945-948"),
-            Self::_112300 => Some("View Orientation Modifier indicates that the view orientation of the imaging plane is rotated +45\u{b0} along the cranial-caudal axis"),
-            Self::_112301 => Some("View Orientation Modifier indicates that the view orientation of the imaging plane is rotated -45\u{b0} along the cranial-caudal axis"),
+            Self::_112240 => Some(
+                "An inadequate study or a study that is awaiting prior comparisons. The study may have inadequate preparation and cannot exclude lesions greater than or equal to ten millimeters owing to presence of fluid or feces. The study may have inadequate insufflation where one or more colonic segments collapsed on both views. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9",
+            ),
+            Self::_112241 => Some(
+                "The study has a normal colon or benign lesion, with the recommendation to continue routine screening. The study has no visible abnormalities of the colon. The study has no polyps greater than six millimeters. The study may have lipoma, inverted diverticulum, or nonneoplastic findings, such as colonic diverticula. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9",
+            ),
+            Self::_112242 => Some(
+                "The study has an intermediate polyp or indeterminate finding and surveillance or colonoscopy is recommended. There may be intermediate polyps between six and nine millimeters and there are less than three in number. The study may have an intermediate finding and cannot exclude a polyp that is greater than or equal to six millimeters in a technically adequate exam. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9",
+            ),
+            Self::_112243 => Some(
+                "The study has a polyp, possibly advanced adenoma, and a follow-up colonoscopy is recommended. The study has a polyp greater than or equal to ten millimeters or the study has three or more polyps that are each between six to nine millimeters. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9",
+            ),
+            Self::_112244 => Some(
+                "The study has a colonic mass, likely malignant, and surgical consultation is recommended. The lesion compromises bowel lumen and demonstrates extracolonic invasion. Based on \"CT Colonography Reporting and Data System: A Consensus Proposal\", Radiology, July 2005; 236:3-9",
+            ),
+            Self::_112248 => Some(
+                "American College of Radiology Practice Guideline for the Performance of Computed Tomography (CT) Colonography in Adults. In: Practice Guidelines and Technical Standards.Reston, Va: American College of Radiology;2006:371-376",
+            ),
+            Self::_112249 => Some(
+                "American College of Radiology Technical Standard for Diagnostic Medical Physics Performance Monitoring of Computed Tomography (CT) Equipment. In: Practice Guidelines and Technical Standards.Reston, Va: American College of Radiology;2006:945-948",
+            ),
+            Self::_112300 => Some(
+                "View Orientation Modifier indicates that the view orientation of the imaging plane is rotated +45\u{b0} along the cranial-caudal axis",
+            ),
+            Self::_112301 => Some(
+                "View Orientation Modifier indicates that the view orientation of the imaging plane is rotated -45\u{b0} along the cranial-caudal axis",
+            ),
             Self::_112302 => Some("The axis following the shaft of the femur"),
             Self::_112303 => Some("Center of Rotation of the natural Acetabulum"),
             Self::_112304 => Some("Center of Rotation of the natural femur head"),
-            Self::_112305 => Some("Prosthetic component implanted into the acetabulum. Provides hold for the insert that is mounted inside the cup"),
-            Self::_112306 => Some("Prosthetic pelvic joint component. Inserted into the cup, takes in the femoral head replacement"),
+            Self::_112305 => Some(
+                "Prosthetic component implanted into the acetabulum. Provides hold for the insert that is mounted inside the cup",
+            ),
+            Self::_112306 => Some(
+                "Prosthetic pelvic joint component. Inserted into the cup, takes in the femoral head replacement",
+            ),
             Self::_112307 => Some("Prosthetic pelvic joint cup including insert"),
-            Self::_112308 => Some("Component for Femoral Head Prosthesis where the conic intake for the stem neck can be exchanged. Combined with a Femoral Head Cone Taper Component"),
-            Self::_112309 => Some("Exchangeable neck intake for composite femoral head prosthesis. Combined with a Femoral Head Ball Component"),
-            Self::_112310 => Some("Prosthesis Implanted into the femoral bone to provide force transmission between joint replacement and bone. On the proximal end a conic neck holds the femoral head replacement"),
-            Self::_112311 => Some("Distal half of a modular stem prosthesis system. Combined with a Stem Proximal Component"),
-            Self::_112312 => Some("Proximal half of a modular stem prosthesis system. Combined with a Stem Distal Component"),
-            Self::_112313 => Some("Stem prosthetic component with a modular insert for an exchangeable neck component. Combined with a Neck Component"),
+            Self::_112308 => Some(
+                "Component for Femoral Head Prosthesis where the conic intake for the stem neck can be exchanged. Combined with a Femoral Head Cone Taper Component",
+            ),
+            Self::_112309 => Some(
+                "Exchangeable neck intake for composite femoral head prosthesis. Combined with a Femoral Head Ball Component",
+            ),
+            Self::_112310 => Some(
+                "Prosthesis Implanted into the femoral bone to provide force transmission between joint replacement and bone. On the proximal end a conic neck holds the femoral head replacement",
+            ),
+            Self::_112311 => Some(
+                "Distal half of a modular stem prosthesis system. Combined with a Stem Proximal Component",
+            ),
+            Self::_112312 => Some(
+                "Proximal half of a modular stem prosthesis system. Combined with a Stem Distal Component",
+            ),
+            Self::_112313 => Some(
+                "Stem prosthetic component with a modular insert for an exchangeable neck component. Combined with a Neck Component",
+            ),
             Self::_112314 => Some("Prosthetic Neck to be combined with a Stem Component"),
             Self::_112315 => Some("Prosthetic Stem and Femoral Head in one piece"),
-            Self::_112316 => Some("A proximal attachment to the shaft used to compensate for bone deficiencies or bone loss"),
-            Self::_112317 => Some("Artificial femur head surface needed for the partial replacement of the femoral head where only the surface is replaced"),
+            Self::_112316 => Some(
+                "A proximal attachment to the shaft used to compensate for bone deficiencies or bone loss",
+            ),
+            Self::_112317 => Some(
+                "Artificial femur head surface needed for the partial replacement of the femoral head where only the surface is replaced",
+            ),
             Self::_112318 => Some("Fixation using a pin"),
             Self::_112319 => Some("Fixation sewing several objects together"),
             Self::_112320 => Some("Fixation using a bolt"),
             Self::_112321 => Some("Fixation due to forcing an object into a narrow space"),
-            Self::_112325 => Some("Attachment to the distal end of a cemented stem assuring that the stem is in a central position inside the drilled femoral canal before cementation"),
+            Self::_112325 => Some(
+                "Attachment to the distal end of a cemented stem assuring that the stem is in a central position inside the drilled femoral canal before cementation",
+            ),
             Self::_112340 => Some("Planning by an unspecified 2D method"),
             Self::_112341 => Some("Planning by an unspecified 3D method"),
             Self::_112342 => Some("Planning of a Hip Replacement, by an unspecified method"),
             Self::_112343 => Some("Planning of Knee Replacement, by an unspecified method"),
-            Self::_112344 => Some("Planning of Hip Replacement according to the procedure of M. E. M\u{fc}ller [Eggli et. al.1998]"),
-            Self::_112345 => Some("A Report containing the results of an Implantation Planning Activity"),
+            Self::_112344 => Some(
+                "Planning of Hip Replacement according to the procedure of M. E. M\u{fc}ller [Eggli et. al.1998]",
+            ),
+            Self::_112345 => {
+                Some("A Report containing the results of an Implantation Planning Activity")
+            }
             Self::_112346 => Some("A selection of one Implant Component"),
             Self::_112347 => Some("Identification ID of an Implant Component"),
-            Self::_112348 => Some("An implant template describing the properties (2D/3D geometry and other data) of one Implant Component"),
+            Self::_112348 => Some(
+                "An implant template describing the properties (2D/3D geometry and other data) of one Implant Component",
+            ),
             Self::_112350 => Some("A connection of two Connected Implantation Plan Components"),
             Self::_112351 => Some("ID of a Mating Feature Set in an Implant Component"),
-            Self::_112352 => Some("ID of the Mating Feature in a Mating Feature Set in an Implant Component"),
+            Self::_112352 => {
+                Some("ID of the Mating Feature in a Mating Feature Set in an Implant Component")
+            }
             Self::_112353 => Some("The Spatial Registration of one or more Implant Components"),
             Self::_112354 => Some("Patient Images used for an implantation planning activity"),
             Self::_112355 => Some("A collection of Component Connections of Implant Components"),
-            Self::_112356 => Some("Fiducials that are selected by the user and may or may not belong to anatomical landmarks"),
-            Self::_112357 => Some("Fiducials that represent geometric characteristics, such as center of rotation, and are derived from other fiducials"),
-            Self::_112358 => Some("All parameters and data that were used for the planning activity"),
+            Self::_112356 => Some(
+                "Fiducials that are selected by the user and may or may not belong to anatomical landmarks",
+            ),
+            Self::_112357 => Some(
+                "Fiducials that represent geometric characteristics, such as center of rotation, and are derived from other fiducials",
+            ),
+            Self::_112358 => {
+                Some("All parameters and data that were used for the planning activity")
+            }
             Self::_112359 => Some("A description of the plan as encapsulated PDF SOP Instance"),
             Self::_112360 => Some("A list of all Implant Components selected for an implantation"),
-            Self::_112361 => Some("Reference to objects containing patient data that is used for planning"),
-            Self::_112362 => Some("A specification of the values from one or more Degrees of Freedom"),
+            Self::_112361 => {
+                Some("Reference to objects containing patient data that is used for planning")
+            }
+            Self::_112362 => {
+                Some("A specification of the values from one or more Degrees of Freedom")
+            }
             Self::_112363 => Some("ID of one Degree of Freedom"),
-            Self::_112364 => Some("Reference to objects containing patient data that were not used for planning but are somehow related"),
-            Self::_112365 => Some("Implantation Reports that are somehow related; e.g. contemporaneous implantations that are independent"),
+            Self::_112364 => Some(
+                "Reference to objects containing patient data that were not used for planning but are somehow related",
+            ),
+            Self::_112365 => Some(
+                "Implantation Reports that are somehow related; e.g. contemporaneous implantations that are independent",
+            ),
             Self::_112366 => Some("Implant Assembly Template"),
             Self::_112367 => Some("Information that is intended to be used intra-operatively"),
             Self::_112368 => Some("Position of the patient on the operating room table"),
@@ -14227,7 +16371,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_112371 => Some("Implant Template released by the Manufacturer"),
             Self::_112372 => Some("Images that are created by a planning application"),
             Self::_112373 => Some("Data that is created by a planning application"),
-            Self::_112374 => Some("One Implant Component that is connected to another Implant Component"),
+            Self::_112374 => {
+                Some("One Implant Component that is connected to another Implant Component")
+            }
             Self::_112375 => Some("The method used for planning"),
             Self::_112376 => Some("Defines the exact value that was planned for translation"),
             Self::_112377 => Some("Defines the minimum value that was planned for translation"),
@@ -14235,28 +16381,56 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_112379 => Some("Defines the exact value that was planned for rotation"),
             Self::_112380 => Some("Defines the minimum value that was planned for rotation"),
             Self::_112381 => Some("Defines the maximum value that was planned for rotation"),
-            Self::_112700 => Some("Procedure step protocol for photographic imaging of surgical procedures, including photography of specimens collected"),
-            Self::_112701 => Some("Procedure step protocol for imaging gross specimens, typically with a photographic camera (modality XC), and planning further dissection"),
+            Self::_112700 => Some(
+                "Procedure step protocol for photographic imaging of surgical procedures, including photography of specimens collected",
+            ),
+            Self::_112701 => Some(
+                "Procedure step protocol for imaging gross specimens, typically with a photographic camera (modality XC), and planning further dissection",
+            ),
             Self::_112702 => Some("Procedure step protocol for imaging slide specimens"),
-            Self::_112703 => Some("Procedure step protocol for imaging slide specimens using a whole slide scanner"),
-            Self::_112704 => Some("Procedure step protocol for imaging slide specimens using a whole slide scanner with a 20X nominal objective lens, in full color, with a single imaging focal plane across the image"),
-            Self::_112705 => Some("Procedure step protocol for imaging slide specimens using a whole slide scanner with a 40X nominal objective lens, in full color, with a single imaging focal plane across the image"),
+            Self::_112703 => Some(
+                "Procedure step protocol for imaging slide specimens using a whole slide scanner",
+            ),
+            Self::_112704 => Some(
+                "Procedure step protocol for imaging slide specimens using a whole slide scanner with a 20X nominal objective lens, in full color, with a single imaging focal plane across the image",
+            ),
+            Self::_112705 => Some(
+                "Procedure step protocol for imaging slide specimens using a whole slide scanner with a 40X nominal objective lens, in full color, with a single imaging focal plane across the image",
+            ),
             Self::_112706 => Some("Technique of illuminating specimen"),
             Self::_112707 => Some("Number of focal planes for a microscopy image acquisition"),
-            Self::_112708 => Some("Nominal distance above a reference plane (typically a slide glass substrate top surface) of the focal plane"),
+            Self::_112708 => Some(
+                "Nominal distance above a reference plane (typically a slide glass substrate top surface) of the focal plane",
+            ),
             Self::_112709 => Some("Microscope magnification based on nominal objective lens power"),
             Self::_112710 => Some("Nominal center wavelength for an imaging spectral band"),
             Self::_112711 => Some("Name (coded) for an imaging spectral band"),
             Self::_112712 => Some("Type of filter inserted into the optical imaging path"),
-            Self::_112713 => Some("Technique for identifying tissue to be imaged versus area of slide not to be imaged"),
+            Self::_112713 => Some(
+                "Technique for identifying tissue to be imaged versus area of slide not to be imaged",
+            ),
             Self::_112714 => Some("Imaging performed at multiple imaging (focal) planes"),
-            Self::_112715 => Some("Nominal 5 power objective lens, resulting in a digital image at approximately 2 um/pixel spacing"),
-            Self::_112716 => Some("Nominal 10 power objective lens, resulting in a digital image at approximately 1 um/pixel spacing"),
-            Self::_112717 => Some("Nominal 20 power microscope objective lens, resulting in a digital image at approximately 0.5 um/pixel spacing"),
-            Self::_112718 => Some("Nominal 40 power microscope objective lens, with a combined condenser and objective lens numerical aperture of approximately 1.3, resulting in a digital image at approximately 0.25 um/pixel spacing"),
-            Self::_112719 => Some("Equipment-specific nominal or default method for identifying tiles without tissue imaged for suppression from inclusion in image object"),
-            Self::_112720 => Some("Equipment-specific high threshold method for identifying tiles without tissue imaged for suppression from inclusion in image object"),
-            Self::_112721 => Some("Tiles without tissue imaged are not suppressed from inclusion in image object"),
+            Self::_112715 => Some(
+                "Nominal 5 power objective lens, resulting in a digital image at approximately 2 um/pixel spacing",
+            ),
+            Self::_112716 => Some(
+                "Nominal 10 power objective lens, resulting in a digital image at approximately 1 um/pixel spacing",
+            ),
+            Self::_112717 => Some(
+                "Nominal 20 power microscope objective lens, resulting in a digital image at approximately 0.5 um/pixel spacing",
+            ),
+            Self::_112718 => Some(
+                "Nominal 40 power microscope objective lens, with a combined condenser and objective lens numerical aperture of approximately 1.3, resulting in a digital image at approximately 0.25 um/pixel spacing",
+            ),
+            Self::_112719 => Some(
+                "Equipment-specific nominal or default method for identifying tiles without tissue imaged for suppression from inclusion in image object",
+            ),
+            Self::_112720 => Some(
+                "Equipment-specific high threshold method for identifying tiles without tissue imaged for suppression from inclusion in image object",
+            ),
+            Self::_112721 => Some(
+                "Tiles without tissue imaged are not suppressed from inclusion in image object",
+            ),
             Self::_113000 => Some("Of Interest"),
             Self::_113001 => Some("Rejected for Quality Reasons"),
             Self::_113002 => Some("For Referring Provider"),
@@ -14270,262 +16444,640 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_113010 => Some("Quality Issue"),
             Self::_113011 => Some("Document Title Modifier"),
             Self::_113012 => Some("Key Object Description"),
-            Self::_113013 => Some("A selection that represents the \"best\" chosen from a larger set of items; e.g. the best images within a Study or Series. The criteria against which \"best\" is measured is not defined. Contrast this with the more specific term \"Best illustration of finding\""),
-            Self::_113014 => Some("A study is a collection of one or more series of medical images, presentation states, and/or SR documents that are logically related for the purpose of diagnosing a patient. A study may include composite instances that are created by a single modality, multiple modalities or by multiple devices of the same modality. [From Section A.1.2.2 \"Study IE\" in PS3.3 ]"),
-            Self::_113015 => Some("A distinct logical set used to group composite instances. All instances within a Series are of the same modality, in the same Frame of Reference (if any), and created by the same equipment. [See Section A.1.2.3 \"Series IE\" in PS3.3 ]"),
-            Self::_113016 => Some("An arbitrarily defined unit of service that has actually been performed (not just scheduled). [From Section 7.3.1.9 \"Modality Performed Procedure Step\" in PS3.3 ]"),
-            Self::_113017 => Some("An image or set of images illustrating a specific stage (phase in a stress echo exam protocol) and view (combination of the transducer position and orientation at the time of image acquisition)"),
+            Self::_113013 => Some(
+                "A selection that represents the \"best\" chosen from a larger set of items; e.g. the best images within a Study or Series. The criteria against which \"best\" is measured is not defined. Contrast this with the more specific term \"Best illustration of finding\"",
+            ),
+            Self::_113014 => Some(
+                "A study is a collection of one or more series of medical images, presentation states, and/or SR documents that are logically related for the purpose of diagnosing a patient. A study may include composite instances that are created by a single modality, multiple modalities or by multiple devices of the same modality. [From Section A.1.2.2 \"Study IE\" in PS3.3 ]",
+            ),
+            Self::_113015 => Some(
+                "A distinct logical set used to group composite instances. All instances within a Series are of the same modality, in the same Frame of Reference (if any), and created by the same equipment. [See Section A.1.2.3 \"Series IE\" in PS3.3 ]",
+            ),
+            Self::_113016 => Some(
+                "An arbitrarily defined unit of service that has actually been performed (not just scheduled). [From Section 7.3.1.9 \"Modality Performed Procedure Step\" in PS3.3 ]",
+            ),
+            Self::_113017 => Some(
+                "An image or set of images illustrating a specific stage (phase in a stress echo exam protocol) and view (combination of the transducer position and orientation at the time of image acquisition)",
+            ),
             Self::_113018 => Some("For Printing"),
-            Self::_113020 => Some("Selection of information objects for attachment to the clinical report of the Current Requested Procedure"),
-            Self::_113021 => Some("List of objects that are related to litigation and should be specially handled; e.g. may apply if a complaint has been received regarding a patient, or a specific set of images has been the subject of a subpoena, and needs to be sequestered or excluded from automatic purging according to retention policy"),
+            Self::_113020 => Some(
+                "Selection of information objects for attachment to the clinical report of the Current Requested Procedure",
+            ),
+            Self::_113021 => Some(
+                "List of objects that are related to litigation and should be specially handled; e.g. may apply if a complaint has been received regarding a patient, or a specific set of images has been the subject of a subpoena, and needs to be sequestered or excluded from automatic purging according to retention policy",
+            ),
             Self::_113026 => Some("Double exposure"),
-            Self::_113030 => Some("A list of objects that have been exported out of one organizational domain into another domain. Typically, the first domain has no direct control over what the second domain will do with the objects"),
-            Self::_113031 => Some("A signed list of objects that have been exported out of one organizational domain into another domain, referenced securely with either Digital Signatures or MACs. Typically, the first domain has no direct control over what the second domain will do with the objects"),
-            Self::_113032 => Some("The list of objects that constitute a study at the time that the list was created"),
-            Self::_113033 => Some("The signed list of objects that constitute a study at the time that the list was created, referenced securely with either Digital Signatures or MACs"),
-            Self::_113034 => Some("The list of objects that were generated in a single procedure step"),
-            Self::_113035 => Some("The signed list of objects that were generated in a single procedure step, referenced securely with either Digital Signatures or MACs"),
-            Self::_113036 => Some("A list of frames or single-frame or entire multi-frame instances that together constitute a set for some purpose, such as might be displayed together in the same viewport, as distinct from another set that might be displayed in a separate viewport"),
-            Self::_113037 => Some("List of objects whose use is potentially harmful to the patient; e.g. an improperly labeled image could lead to dangerous surgical decisions"),
-            Self::_113038 => Some("List of objects that were acquired using an incorrect modality worklist entry, and that should not be used, since they may be incorrectly identified"),
-            Self::_113039 => Some("List of objects that have expired according to a defined data retention policy"),
+            Self::_113030 => Some(
+                "A list of objects that have been exported out of one organizational domain into another domain. Typically, the first domain has no direct control over what the second domain will do with the objects",
+            ),
+            Self::_113031 => Some(
+                "A signed list of objects that have been exported out of one organizational domain into another domain, referenced securely with either Digital Signatures or MACs. Typically, the first domain has no direct control over what the second domain will do with the objects",
+            ),
+            Self::_113032 => Some(
+                "The list of objects that constitute a study at the time that the list was created",
+            ),
+            Self::_113033 => Some(
+                "The signed list of objects that constitute a study at the time that the list was created, referenced securely with either Digital Signatures or MACs",
+            ),
+            Self::_113034 => {
+                Some("The list of objects that were generated in a single procedure step")
+            }
+            Self::_113035 => Some(
+                "The signed list of objects that were generated in a single procedure step, referenced securely with either Digital Signatures or MACs",
+            ),
+            Self::_113036 => Some(
+                "A list of frames or single-frame or entire multi-frame instances that together constitute a set for some purpose, such as might be displayed together in the same viewport, as distinct from another set that might be displayed in a separate viewport",
+            ),
+            Self::_113037 => Some(
+                "List of objects whose use is potentially harmful to the patient; e.g. an improperly labeled image could lead to dangerous surgical decisions",
+            ),
+            Self::_113038 => Some(
+                "List of objects that were acquired using an incorrect modality worklist entry, and that should not be used, since they may be incorrectly identified",
+            ),
+            Self::_113039 => Some(
+                "List of objects that have expired according to a defined data retention policy",
+            ),
             Self::_113040 => Some("Lossy compression has been applied to an image"),
-            Self::_113041 => Some("Values are derived by calculation of the apparent diffusion coefficient"),
-            Self::_113042 => Some("Values are derived by the pixel by pixel addition of two images"),
+            Self::_113041 => {
+                Some("Values are derived by calculation of the apparent diffusion coefficient")
+            }
+            Self::_113042 => {
+                Some("Values are derived by the pixel by pixel addition of two images")
+            }
             Self::_113043 => Some("Values are derived by calculation of the diffusion weighting"),
             Self::_113044 => Some("Values are derived by calculation of the diffusion anisotropy"),
             Self::_113045 => Some("Values are derived by calculation of the diffusion attenuation"),
-            Self::_113046 => Some("Values are derived by the pixel by pixel division of two images"),
-            Self::_113047 => Some("Values are derived by the pixel by pixel masking of one image by another"),
-            Self::_113048 => Some("Values are derived by calculating the pixel by pixel maximum of two or more images"),
-            Self::_113049 => Some("Values are derived by calculating the pixel by pixel mean of two or more images"),
-            Self::_113050 => Some("Values are derived by calculating from spectroscopy data pixel values localized in two dimensional space based on the concentration of specific metabolites (i.e, at specific frequencies)"),
-            Self::_113051 => Some("Values are derived by calculating the pixel by pixel minimum of two or more images"),
+            Self::_113046 => {
+                Some("Values are derived by the pixel by pixel division of two images")
+            }
+            Self::_113047 => {
+                Some("Values are derived by the pixel by pixel masking of one image by another")
+            }
+            Self::_113048 => Some(
+                "Values are derived by calculating the pixel by pixel maximum of two or more images",
+            ),
+            Self::_113049 => Some(
+                "Values are derived by calculating the pixel by pixel mean of two or more images",
+            ),
+            Self::_113050 => Some(
+                "Values are derived by calculating from spectroscopy data pixel values localized in two dimensional space based on the concentration of specific metabolites (i.e, at specific frequencies)",
+            ),
+            Self::_113051 => Some(
+                "Values are derived by calculating the pixel by pixel minimum of two or more images",
+            ),
             Self::_113052 => Some("The time required for blood to pass through a region of tissue"),
-            Self::_113053 => Some("Values are derived by the pixel by pixel multiplication of two images"),
-            Self::_113054 => Some("Values are derived by calculating negative enhancement integral values"),
-            Self::_113055 => Some("The flow rate of blood perfusing a region of the brain as volume per mass per unit of time"),
-            Self::_113056 => Some("The volume of blood perfusing a region of brain as volume per mass"),
+            Self::_113053 => {
+                Some("Values are derived by the pixel by pixel multiplication of two images")
+            }
+            Self::_113054 => {
+                Some("Values are derived by calculating negative enhancement integral values")
+            }
+            Self::_113055 => Some(
+                "The flow rate of blood perfusing a region of the brain as volume per mass per unit of time",
+            ),
+            Self::_113056 => {
+                Some("The volume of blood perfusing a region of brain as volume per mass")
+            }
             Self::_113057 => Some("Correlation Coefficient, r"),
             Self::_113058 => Some("Values are derived by calculating proton density values"),
             Self::_113059 => Some("Values are derived by calculating signal change values"),
             Self::_113060 => Some("Values are derived by calculating the signal to noise ratio"),
-            Self::_113061 => Some("Values are derived by calculating the standard deviation of two or more images"),
-            Self::_113062 => Some("Values are derived by the pixel by pixel subtraction of two images"),
+            Self::_113061 => Some(
+                "Values are derived by calculating the standard deviation of two or more images",
+            ),
+            Self::_113062 => {
+                Some("Values are derived by the pixel by pixel subtraction of two images")
+            }
             Self::_113063 => Some("Values are derived by calculating T1 values"),
             Self::_113064 => Some("Values are derived by calculating T2* values"),
             Self::_113065 => Some("Values are derived by calculating T2 values"),
-            Self::_113066 => Some("Values are derived by calculating values based on the time course of signal"),
-            Self::_113067 => Some("Values are derived by calculating values based on temperature encoding"),
-            Self::_113068 => Some("Values are derived by calculating the value of the Student\'s T-Test statistic from multiple image samples"),
-            Self::_113069 => Some("The time from the start of the contrast agent injection to the maximum enhancement value"),
-            Self::_113070 => Some("Values are derived by calculating values based on velocity encoded; e.g. phase contrast"),
-            Self::_113071 => Some("Values are derived by calculating the value of the Z-Score statistic from multiple image samples"),
-            Self::_113072 => Some("Values are derived by reformatting in a flat plane other than that originally acquired"),
-            Self::_113073 => Some("Values are derived by reformatting in a curve plane other than that originally acquired"),
+            Self::_113066 => {
+                Some("Values are derived by calculating values based on the time course of signal")
+            }
+            Self::_113067 => {
+                Some("Values are derived by calculating values based on temperature encoding")
+            }
+            Self::_113068 => Some(
+                "Values are derived by calculating the value of the Student\'s T-Test statistic from multiple image samples",
+            ),
+            Self::_113069 => Some(
+                "The time from the start of the contrast agent injection to the maximum enhancement value",
+            ),
+            Self::_113070 => Some(
+                "Values are derived by calculating values based on velocity encoded; e.g. phase contrast",
+            ),
+            Self::_113071 => Some(
+                "Values are derived by calculating the value of the Z-Score statistic from multiple image samples",
+            ),
+            Self::_113072 => Some(
+                "Values are derived by reformatting in a flat plane other than that originally acquired",
+            ),
+            Self::_113073 => Some(
+                "Values are derived by reformatting in a curve plane other than that originally acquired",
+            ),
             Self::_113074 => Some("Values are derived by volume rendering of acquired data"),
             Self::_113075 => Some("Values are derived by surface rendering of acquired data"),
-            Self::_113076 => Some("Values are derived by segmentation (classification into tissue types) of acquired data"),
-            Self::_113077 => Some("Values are derived by selectively editing acquired data (removing values from the volume), such as in order to remove obscuring structures or noise"),
-            Self::_113078 => Some("Values are derived by maximum intensity projection of acquired data"),
-            Self::_113079 => Some("Values are derived by minimum intensity projection of acquired data"),
-            Self::_113080 => Some("For single-proton MR spectroscopy, the resonance peak corresponding to glutamate and glutamine"),
-            Self::_113081 => Some("For single-proton MR spectroscopy, the ratio between the Choline and Creatine resonance peaks"),
-            Self::_113082 => Some("For single-proton MR spectroscopy, the ratio between the N-acetylaspartate and Creatine resonance peaks"),
-            Self::_113083 => Some("For single-proton MR spectroscopy, the ratio between the N-acetylaspartate and Choline resonance peaks"),
+            Self::_113076 => Some(
+                "Values are derived by segmentation (classification into tissue types) of acquired data",
+            ),
+            Self::_113077 => Some(
+                "Values are derived by selectively editing acquired data (removing values from the volume), such as in order to remove obscuring structures or noise",
+            ),
+            Self::_113078 => {
+                Some("Values are derived by maximum intensity projection of acquired data")
+            }
+            Self::_113079 => {
+                Some("Values are derived by minimum intensity projection of acquired data")
+            }
+            Self::_113080 => Some(
+                "For single-proton MR spectroscopy, the resonance peak corresponding to glutamate and glutamine",
+            ),
+            Self::_113081 => Some(
+                "For single-proton MR spectroscopy, the ratio between the Choline and Creatine resonance peaks",
+            ),
+            Self::_113082 => Some(
+                "For single-proton MR spectroscopy, the ratio between the N-acetylaspartate and Creatine resonance peaks",
+            ),
+            Self::_113083 => Some(
+                "For single-proton MR spectroscopy, the ratio between the N-acetylaspartate and Choline resonance peaks",
+            ),
             Self::_113085 => Some("Values are derived by spatial resampling of acquired data"),
             Self::_113086 => Some("Values are derived by edge enhancement"),
             Self::_113087 => Some("Values are derived by smoothing"),
             Self::_113088 => Some("Values are derived by Gaussian blurring"),
             Self::_113089 => Some("Values are derived by unsharp masking"),
             Self::_113090 => Some("Values are derived by stitching two or more images together"),
-            Self::_113091 => Some("Spatially-related frames in this image are representative frames from the referenced 3D volume data set"),
-            Self::_113092 => Some("Temporally-related frames in this image are representative frames from the referenced 3D volume data set"),
-            Self::_113093 => Some("Conversion of a polar coordinate image to rectangular (Cartesian) coordinate image"),
-            Self::_113094 => Some("For single-proton MR spectroscopy, the resonance peak corresponding to creatine and choline"),
-            Self::_113095 => Some("For single-proton MR spectroscopy, the resonance peak corresponding to lipid and lactate"),
-            Self::_113096 => Some("For single-proton MR spectroscopy, the ratio between the Choline and Creatine resonance peak and the Citrate resonance peak"),
-            Self::_113097 => Some("Image pixels created through proportional weighting of multiple acquisitions at distinct X-Ray energies"),
-            Self::_113100 => Some("De-identification using a profile defined in PS3.15 that requires removing all information related to the identity and demographic characteristics of the patient, any responsible parties or family members, any personnel involved in the procedure, the organizations involved in ordering or performing the procedure, additional information that could be used to match instances if given access to the originals, such as UIDs, dates and times, and private attributes, when that information is present in the non-Pixel Data Attributes, including graphics or overlays"),
-            Self::_113101 => Some("Additional de-identification according to an option defined in PS3.15 that requires any information burned in to the Pixel Data corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed"),
-            Self::_113102 => Some("Additional de-identification according to an option defined in PS3.15 that requires that sufficient removal or distortion of the Pixel Data shall be applied to prevent recognition of an individual from the instances themselves or a reconstruction of a set of instances"),
-            Self::_113103 => Some("Additional de-identification according to an option defined in PS3.15 that requires that any information encoded in graphics, text annotations or overlays corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed"),
-            Self::_113104 => Some("Additional de-identification according to an option defined in PS3.15 that requires that any information encoded in SR Content Items or Acquisition Context Sequence Items corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed"),
-            Self::_113105 => Some("Additional de-identification according to an option defined in PS3.15 that requires that any information that is embedded in text or string Attributes corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed"),
-            Self::_113106 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any dates and times be retained,"),
-            Self::_113107 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any dates and times be modified in a manner that preserves temporal relationships; e.g. Study Date and Time"),
-            Self::_113108 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any physical characteristics of the patient, which are descriptive rather than identifying information per se, be retained; e.g. Patient\'s Age, Sex, Size (height) and Weight"),
-            Self::_113109 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any information that identifies a device be retained; e.g. Device Serial Number"),
-            Self::_113110 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that UIDs be retained; e.g. SOP Instance UID"),
-            Self::_113111 => Some("Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that private attributes that are known not to contain identity information be retained; e.g. private SUV scale factor"),
-            Self::_113500 => Some("The procedure report is a Radiopharmaceutical Radiation Dose report"),
-            Self::_113502 => Some("Information pertaining to the administration of a radiopharmaceutical"),
-            Self::_113503 => Some("Unique identification of a single radiopharmaceutical administration event"),
+            Self::_113091 => Some(
+                "Spatially-related frames in this image are representative frames from the referenced 3D volume data set",
+            ),
+            Self::_113092 => Some(
+                "Temporally-related frames in this image are representative frames from the referenced 3D volume data set",
+            ),
+            Self::_113093 => Some(
+                "Conversion of a polar coordinate image to rectangular (Cartesian) coordinate image",
+            ),
+            Self::_113094 => Some(
+                "For single-proton MR spectroscopy, the resonance peak corresponding to creatine and choline",
+            ),
+            Self::_113095 => Some(
+                "For single-proton MR spectroscopy, the resonance peak corresponding to lipid and lactate",
+            ),
+            Self::_113096 => Some(
+                "For single-proton MR spectroscopy, the ratio between the Choline and Creatine resonance peak and the Citrate resonance peak",
+            ),
+            Self::_113097 => Some(
+                "Image pixels created through proportional weighting of multiple acquisitions at distinct X-Ray energies",
+            ),
+            Self::_113100 => Some(
+                "De-identification using a profile defined in PS3.15 that requires removing all information related to the identity and demographic characteristics of the patient, any responsible parties or family members, any personnel involved in the procedure, the organizations involved in ordering or performing the procedure, additional information that could be used to match instances if given access to the originals, such as UIDs, dates and times, and private attributes, when that information is present in the non-Pixel Data Attributes, including graphics or overlays",
+            ),
+            Self::_113101 => Some(
+                "Additional de-identification according to an option defined in PS3.15 that requires any information burned in to the Pixel Data corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed",
+            ),
+            Self::_113102 => Some(
+                "Additional de-identification according to an option defined in PS3.15 that requires that sufficient removal or distortion of the Pixel Data shall be applied to prevent recognition of an individual from the instances themselves or a reconstruction of a set of instances",
+            ),
+            Self::_113103 => Some(
+                "Additional de-identification according to an option defined in PS3.15 that requires that any information encoded in graphics, text annotations or overlays corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed",
+            ),
+            Self::_113104 => Some(
+                "Additional de-identification according to an option defined in PS3.15 that requires that any information encoded in SR Content Items or Acquisition Context Sequence Items corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed",
+            ),
+            Self::_113105 => Some(
+                "Additional de-identification according to an option defined in PS3.15 that requires that any information that is embedded in text or string Attributes corresponding to the Attribute information specified to be removed by the Profile and any other Options specified also be removed",
+            ),
+            Self::_113106 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any dates and times be retained,",
+            ),
+            Self::_113107 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any dates and times be modified in a manner that preserves temporal relationships; e.g. Study Date and Time",
+            ),
+            Self::_113108 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any physical characteristics of the patient, which are descriptive rather than identifying information per se, be retained; e.g. Patient\'s Age, Sex, Size (height) and Weight",
+            ),
+            Self::_113109 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that any information that identifies a device be retained; e.g. Device Serial Number",
+            ),
+            Self::_113110 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that UIDs be retained; e.g. SOP Instance UID",
+            ),
+            Self::_113111 => Some(
+                "Retention of information that would otherwise be removed during de-identification according to an option defined in PS3.15 that requires that private attributes that are known not to contain identity information be retained; e.g. private SUV scale factor",
+            ),
+            Self::_113500 => {
+                Some("The procedure report is a Radiopharmaceutical Radiation Dose report")
+            }
+            Self::_113502 => {
+                Some("Information pertaining to the administration of a radiopharmaceutical")
+            }
+            Self::_113503 => {
+                Some("Unique identification of a single radiopharmaceutical administration event")
+            }
             Self::_113505 => Some("Initial signs or symptoms of extravasation"),
-            Self::_113506 => Some("The estimated percentage of administered activity lost at the injection site. The estimation includes extravasation, paravenous administration and leakage at the injection site"),
-            Self::_113507 => Some("The calculated activity at the Radiopharmaceutical Start Time when the radiopharmaceutical is administered to the patient. The residual activity (i.e. radiopharmaceutical not administered) , if measured, is reflected in the calculated value. The estimated extravasation is not reflected in the calculated value"),
-            Self::_113508 => Some("Radioactivity measurement of radiopharmaceutical before or during the administration"),
-            Self::_113509 => Some("Radioactivity measurement of radiopharmaceutical after the administration"),
-            Self::_113510 => Some("Registered drug establishment code for product, coding scheme example is NDC or RxNorm"),
-            Self::_113511 => Some("The human readable identification of the specific radiopharmaceutical dispensed quantity or dose (\"dose\" as unit of medication delivery, not radiation dose measure) to be administered to the patient"),
-            Self::_113512 => Some("Identifies the vial, batch or lot number from which the individual dispense radiopharmaceutical quantity (dose) is produced. The Radiopharmaceutical Dispense Unit Identifier records the identification for each individual dose"),
-            Self::_113513 => Some("Identifies the lot or unit serial number for the reagent component for the radiopharmaceutical"),
-            Self::_113514 => Some("Identifies the lot or unit serial number for the radionuclide component for the radiopharmaceutical"),
+            Self::_113506 => Some(
+                "The estimated percentage of administered activity lost at the injection site. The estimation includes extravasation, paravenous administration and leakage at the injection site",
+            ),
+            Self::_113507 => Some(
+                "The calculated activity at the Radiopharmaceutical Start Time when the radiopharmaceutical is administered to the patient. The residual activity (i.e. radiopharmaceutical not administered) , if measured, is reflected in the calculated value. The estimated extravasation is not reflected in the calculated value",
+            ),
+            Self::_113508 => Some(
+                "Radioactivity measurement of radiopharmaceutical before or during the administration",
+            ),
+            Self::_113509 => {
+                Some("Radioactivity measurement of radiopharmaceutical after the administration")
+            }
+            Self::_113510 => Some(
+                "Registered drug establishment code for product, coding scheme example is NDC or RxNorm",
+            ),
+            Self::_113511 => Some(
+                "The human readable identification of the specific radiopharmaceutical dispensed quantity or dose (\"dose\" as unit of medication delivery, not radiation dose measure) to be administered to the patient",
+            ),
+            Self::_113512 => Some(
+                "Identifies the vial, batch or lot number from which the individual dispense radiopharmaceutical quantity (dose) is produced. The Radiopharmaceutical Dispense Unit Identifier records the identification for each individual dose",
+            ),
+            Self::_113513 => Some(
+                "Identifies the lot or unit serial number for the reagent component for the radiopharmaceutical",
+            ),
+            Self::_113514 => Some(
+                "Identifies the lot or unit serial number for the radionuclide component for the radiopharmaceutical",
+            ),
             Self::_113516 => Some("Administered Product\'s Prescription Number"),
-            Self::_113517 => Some("Information pertaining to the estimated absorbed radiation dose to an organ"),
+            Self::_113517 => {
+                Some("Information pertaining to the estimated absorbed radiation dose to an organ")
+            }
             Self::_113518 => Some("The absorbed radiation dose to organ"),
-            Self::_113520 => Some("Reference authority MIRD Pamphlet No.1 (rev) ,Society of Nuclear Medicine, 1976"),
-            Self::_113521 => Some("Reference authority ICRP, 1988. Radiation Dose to Patients from Radiopharmaceuticals. ICRP Publication 53. Ann. ICRP 18 (1-4)"),
-            Self::_113522 => Some("Reference authority ICRP, 1998. Radiation Dose to Patients from Radiopharmaceuticals (Addendum to ICRP Publication 53). ICRP Publication 80. Ann. ICRP 28 (3)"),
-            Self::_113523 => Some("Reference authority ICRP, 2008. Radiation Dose to Patients from Radiopharmaceuticals - Addendum 3 to ICRP Publication 53. ICRP Publication 106. Ann. ICRP 38 (1-2)"),
-            Self::_113526 => Some("Reference authority Stabin MG, Sparks RB, Crowe E (1994) MIRDOSE: personal computer software for internal dose assessment in nuclear medicine [Computer program]"),
-            Self::_113527 => Some("Reference authority Stabin MG, Sparks RB, Crowe E (2005) OLINDA/EXM: The Second-Generation Personal Computer Software for Internal Dose Assessment in Nuclear Medicine [Computer program]"),
-            Self::_113528 => Some("Reference authority The reported organ dose is based on radiopharmaceutical\'s package insert"),
-            Self::_113529 => Some("Reference authority The reported organ dose is based on Institutionally approved estimates from the Radioactive Drug Research Committee (RDRC) of the institution itself"),
-            Self::_113530 => Some("Reference authority The reported organ dose is based on an Investigation new drug"),
+            Self::_113520 => Some(
+                "Reference authority MIRD Pamphlet No.1 (rev) ,Society of Nuclear Medicine, 1976",
+            ),
+            Self::_113521 => Some(
+                "Reference authority ICRP, 1988. Radiation Dose to Patients from Radiopharmaceuticals. ICRP Publication 53. Ann. ICRP 18 (1-4)",
+            ),
+            Self::_113522 => Some(
+                "Reference authority ICRP, 1998. Radiation Dose to Patients from Radiopharmaceuticals (Addendum to ICRP Publication 53). ICRP Publication 80. Ann. ICRP 28 (3)",
+            ),
+            Self::_113523 => Some(
+                "Reference authority ICRP, 2008. Radiation Dose to Patients from Radiopharmaceuticals - Addendum 3 to ICRP Publication 53. ICRP Publication 106. Ann. ICRP 38 (1-2)",
+            ),
+            Self::_113526 => Some(
+                "Reference authority Stabin MG, Sparks RB, Crowe E (1994) MIRDOSE: personal computer software for internal dose assessment in nuclear medicine [Computer program]",
+            ),
+            Self::_113527 => Some(
+                "Reference authority Stabin MG, Sparks RB, Crowe E (2005) OLINDA/EXM: The Second-Generation Personal Computer Software for Internal Dose Assessment in Nuclear Medicine [Computer program]",
+            ),
+            Self::_113528 => Some(
+                "Reference authority The reported organ dose is based on radiopharmaceutical\'s package insert",
+            ),
+            Self::_113529 => Some(
+                "Reference authority The reported organ dose is based on Institutionally approved estimates from the Radioactive Drug Research Committee (RDRC) of the institution itself",
+            ),
+            Self::_113530 => Some(
+                "Reference authority The reported organ dose is based on an Investigation new drug",
+            ),
             Self::_113540 => Some("The type of device that performed the activity measurement"),
-            Self::_113541 => Some("The device that measures the radiation activity of the radiopharmaceutical"),
+            Self::_113541 => {
+                Some("The device that measures the radiation activity of the radiopharmaceutical")
+            }
             Self::_113542 => Some("Radiopharmaceutical Infusion System"),
             Self::_113543 => Some("Radioisotope Generator"),
             Self::_113550 => Some("The number hours the patient has gone without food"),
-            Self::_113551 => Some("The amount of fluids the patient has consumed before the procedure"),
-            Self::_113552 => Some("A description of physical activity the patient performed before the start of the procedure, such as that which may affect imaging agent biodistribution"),
-            Self::_113560 => Some("Blockage in one of the tubes (ureters) that drain urine from the kidneys"),
+            Self::_113551 => {
+                Some("The amount of fluids the patient has consumed before the procedure")
+            }
+            Self::_113552 => Some(
+                "A description of physical activity the patient performed before the start of the procedure, such as that which may affect imaging agent biodistribution",
+            ),
+            Self::_113560 => {
+                Some("Blockage in one of the tubes (ureters) that drain urine from the kidneys")
+            }
             Self::_113561 => Some("5% or less Thyroid Uptake of Iodine"),
             Self::_113562 => Some("25% or higher Thyroid Uptake of Iodine"),
-            Self::_113563 => Some("The patient exhibits symptoms severe of jaundice and/or has a Bilirubin >10 mg/dL"),
-            Self::_113568 => Some("Extravasation or paravenous administration of the product is visible in the images"),
-            Self::_113570 => Some("The measurement method of the Glomerular Filtration Rate is Cockroft-Gault Formula"),
-            Self::_113571 => Some("The measurement method of the Glomerular Filtration Rate is CKD-EPI Formula"),
-            Self::_113572 => Some("The measurement method of the Glomerular Filtration Rate is MDRD"),
-            Self::_113573 => Some("The measurement method of the Glomerular Filtration Rate is non-black MDRD"),
-            Self::_113574 => Some("The measurement method of the Glomerular Filtration Rate is black (MDRD)"),
-            Self::_113575 => Some("The measurement method of the Glomerular Filtration Rate is female (MDRD)"),
-            Self::_113576 => Some("The measurement method of the Glomerular Filtration Rate is Cystatin-based formula"),
-            Self::_113577 => Some("The measurement method of the Glomerular Filtration Rate is Creatinine-based formula (Schwartz)"),
-            Self::_113601 => Some("Small body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image"),
-            Self::_113602 => Some("Medium body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image"),
-            Self::_113603 => Some("Large body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image"),
+            Self::_113563 => Some(
+                "The patient exhibits symptoms severe of jaundice and/or has a Bilirubin >10 mg/dL",
+            ),
+            Self::_113568 => Some(
+                "Extravasation or paravenous administration of the product is visible in the images",
+            ),
+            Self::_113570 => Some(
+                "The measurement method of the Glomerular Filtration Rate is Cockroft-Gault Formula",
+            ),
+            Self::_113571 => {
+                Some("The measurement method of the Glomerular Filtration Rate is CKD-EPI Formula")
+            }
+            Self::_113572 => {
+                Some("The measurement method of the Glomerular Filtration Rate is MDRD")
+            }
+            Self::_113573 => {
+                Some("The measurement method of the Glomerular Filtration Rate is non-black MDRD")
+            }
+            Self::_113574 => {
+                Some("The measurement method of the Glomerular Filtration Rate is black (MDRD)")
+            }
+            Self::_113575 => {
+                Some("The measurement method of the Glomerular Filtration Rate is female (MDRD)")
+            }
+            Self::_113576 => Some(
+                "The measurement method of the Glomerular Filtration Rate is Cystatin-based formula",
+            ),
+            Self::_113577 => Some(
+                "The measurement method of the Glomerular Filtration Rate is Creatinine-based formula (Schwartz)",
+            ),
+            Self::_113601 => Some(
+                "Small body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image",
+            ),
+            Self::_113602 => Some(
+                "Medium body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image",
+            ),
+            Self::_113603 => Some(
+                "Large body thickness for calcium scoring adjustment. Lateral thickness is measured from skin-to-skin, at the level of the proximal ascending aorta, from an A/P localizer image",
+            ),
             Self::_113605 => Some("A human-readable label identifying an irradiation event"),
             Self::_113606 => Some("The type of a human-readable label"),
-            Self::_113607 => Some("A number that identifies a Series. Corresponds to (0020,0011) in PS3.3"),
-            Self::_113608 => Some("A number that identifies an Acquisition. Corresponds to (0020,0012) in PS3.3"),
-            Self::_113609 => Some("A number that identifies an Instance. Corresponds to (0020,0013) in PS3.3"),
-            Self::_113611 => Some("Acquisition where the X-Ray source does not move in relation to the patient"),
-            Self::_113612 => Some("Acquisition where the X-Ray source moves laterally in relation to the patient"),
-            Self::_113613 => Some("Acquisition where the X-Ray source moves angularly in relation to the patient"),
+            Self::_113607 => {
+                Some("A number that identifies a Series. Corresponds to (0020,0011) in PS3.3")
+            }
+            Self::_113608 => {
+                Some("A number that identifies an Acquisition. Corresponds to (0020,0012) in PS3.3")
+            }
+            Self::_113609 => {
+                Some("A number that identifies an Instance. Corresponds to (0020,0013) in PS3.3")
+            }
+            Self::_113611 => {
+                Some("Acquisition where the X-Ray source does not move in relation to the patient")
+            }
+            Self::_113612 => Some(
+                "Acquisition where the X-Ray source moves laterally in relation to the patient",
+            ),
+            Self::_113613 => Some(
+                "Acquisition where the X-Ray source moves angularly in relation to the patient",
+            ),
             Self::_113620 => Some("Primary plane of a Biplane acquisition equipment"),
             Self::_113621 => Some("Secondary plane of a Biplane acquisition equipment"),
             Self::_113622 => Some("Single plane acquisition equipment"),
-            Self::_113630 => Some("Continuous X-Ray radiation is applied during an irradiation event"),
+            Self::_113630 => {
+                Some("Continuous X-Ray radiation is applied during an irradiation event")
+            }
             Self::_113631 => Some("Pulsed X-Ray radiation is applied during an irradiation event"),
             Self::_113650 => Some("Filter with uniform thickness"),
-            Self::_113651 => Some("Filter with variation in thickness from one edge to the opposite edge"),
+            Self::_113651 => {
+                Some("Filter with variation in thickness from one edge to the opposite edge")
+            }
             Self::_113652 => Some("Filter with two triangular sections"),
-            Self::_113653 => Some("Filter with uniform thickness that is for spectral filtering only; e.g. filter out low energy portion of the X-Ray that would only contribute to skin dose, but not to image"),
+            Self::_113653 => Some(
+                "Filter with uniform thickness that is for spectral filtering only; e.g. filter out low energy portion of the X-Ray that would only contribute to skin dose, but not to image",
+            ),
             Self::_113661 => Some("A polyline defining the outline of a lobulated finding"),
-            Self::_113662 => Some("A polyline defining the inner limits of a finding with fuzzy margin"),
-            Self::_113663 => Some("A polyline defining the outer limits of a finding with fuzzy margin"),
-            Self::_113664 => Some("A polyline defining the outline of the spiculations of a finding"),
-            Self::_113665 => Some("A polyline segment graphically indicating the location and direction of a spiculation of a finding"),
-            Self::_113666 => Some("A collection of points indicating the pixel locations of the spiculations of a finding"),
-            Self::_113669 => Some("Connected line segments indicating the center of location of a finding on an orthogonal view"),
-            Self::_113670 => Some("Connected line segments indicating the inner margin of the location of a finding on an orthogonal view"),
-            Self::_113671 => Some("Connected line segments indicating the outer location of a finding on an orthogonal view"),
-            Self::_113680 => Some("This procedure is intended to gather data that is used for calibration or other quality control purposes"),
+            Self::_113662 => {
+                Some("A polyline defining the inner limits of a finding with fuzzy margin")
+            }
+            Self::_113663 => {
+                Some("A polyline defining the outer limits of a finding with fuzzy margin")
+            }
+            Self::_113664 => {
+                Some("A polyline defining the outline of the spiculations of a finding")
+            }
+            Self::_113665 => Some(
+                "A polyline segment graphically indicating the location and direction of a spiculation of a finding",
+            ),
+            Self::_113666 => Some(
+                "A collection of points indicating the pixel locations of the spiculations of a finding",
+            ),
+            Self::_113669 => Some(
+                "Connected line segments indicating the center of location of a finding on an orthogonal view",
+            ),
+            Self::_113670 => Some(
+                "Connected line segments indicating the inner margin of the location of a finding on an orthogonal view",
+            ),
+            Self::_113671 => Some(
+                "Connected line segments indicating the outer location of a finding on an orthogonal view",
+            ),
+            Self::_113680 => Some(
+                "This procedure is intended to gather data that is used for calibration or other quality control purposes",
+            ),
             Self::_113681 => Some("An artificial subject of an imaging study"),
-            Self::_113682 => Some("A phantom acceptable for the ACR Computed Tomography Accreditation program"),
-            Self::_113683 => Some("A phantom acceptable for the ACR Magnetic Resonance Imaging Accreditation program"),
-            Self::_113684 => Some("A phantom acceptable for the ACR Mammography Accreditation program"),
-            Self::_113685 => Some("A phantom acceptable for the ACR Stereotactic Breast Biopsy Accreditation program"),
-            Self::_113686 => Some("A phantom acceptable for the ACR SPECT Accreditation program (but not for PET)"),
-            Self::_113687 => Some("A phantom acceptable for the ACR PET Accreditation program (but not for SPECT)"),
-            Self::_113688 => Some("A SPECT phantom with a PET faceplate acceptable for both the ACR SPECT and PET Accreditation programs"),
-            Self::_113689 => Some("A PET faceplate (made to fit an existing flangeless or flanged ECT phantom) acceptable for the ACR PET Accreditation program"),
-            Self::_113690 => Some("A phantom used for CTDI measurement in head modes according to IEC 60601-2-44, Ed.2.1 (Head 16 cm diameter Polymethyl methacrylate PMMA)"),
-            Self::_113691 => Some("A phantom used for CTDI measurement in body modes according to IEC 60601-2-44, Ed.2.1 (Body 32cm diameter Polymethyl methacrylate PMMA)"),
+            Self::_113682 => {
+                Some("A phantom acceptable for the ACR Computed Tomography Accreditation program")
+            }
+            Self::_113683 => Some(
+                "A phantom acceptable for the ACR Magnetic Resonance Imaging Accreditation program",
+            ),
+            Self::_113684 => {
+                Some("A phantom acceptable for the ACR Mammography Accreditation program")
+            }
+            Self::_113685 => Some(
+                "A phantom acceptable for the ACR Stereotactic Breast Biopsy Accreditation program",
+            ),
+            Self::_113686 => Some(
+                "A phantom acceptable for the ACR SPECT Accreditation program (but not for PET)",
+            ),
+            Self::_113687 => Some(
+                "A phantom acceptable for the ACR PET Accreditation program (but not for SPECT)",
+            ),
+            Self::_113688 => Some(
+                "A SPECT phantom with a PET faceplate acceptable for both the ACR SPECT and PET Accreditation programs",
+            ),
+            Self::_113689 => Some(
+                "A PET faceplate (made to fit an existing flangeless or flanged ECT phantom) acceptable for the ACR PET Accreditation program",
+            ),
+            Self::_113690 => Some(
+                "A phantom used for CTDI measurement in head modes according to IEC 60601-2-44, Ed.2.1 (Head 16 cm diameter Polymethyl methacrylate PMMA)",
+            ),
+            Self::_113691 => Some(
+                "A phantom used for CTDI measurement in body modes according to IEC 60601-2-44, Ed.2.1 (Body 32cm diameter Polymethyl methacrylate PMMA)",
+            ),
             Self::_113692 => Some("A phantom in accordance with NEMA standard XR-21-2000"),
             Self::_113701 => Some("X-Ray Radiation Dose Report"),
-            Self::_113702 => Some("X-Ray dose data accumulated over multiple irradiation events; e.g. for a study or a performed procedure step"),
-            Self::_113704 => Some("Imaging using a point X-Ray source with a diverging beam projected onto a 2 dimensional detector"),
+            Self::_113702 => Some(
+                "X-Ray dose data accumulated over multiple irradiation events; e.g. for a study or a performed procedure step",
+            ),
+            Self::_113704 => Some(
+                "Imaging using a point X-Ray source with a diverging beam projected onto a 2 dimensional detector",
+            ),
             Self::_113705 => Some("Entity over which dose accumulation values are integrated"),
             Self::_113706 => Some("X-Ray dose data for a single Irradiation Event"),
             Self::_113710 => Some("Material containing Niobium or a Niobium compound"),
             Self::_113711 => Some("Material containing Europium or a Europium compound"),
             Self::_113720 => Some("Describes the method used to derive the calibration factor"),
             Self::_113721 => Some("Denotes the type of irradiation event recorded"),
-            Self::_113722 => Some("Total calculated Dose Area Product (in the scope of the including report)"),
-            Self::_113723 => Some("Last calibration Date for the integrated dose meter or dose calculation"),
+            Self::_113722 => {
+                Some("Total calculated Dose Area Product (in the scope of the including report)")
+            }
+            Self::_113723 => {
+                Some("Last calibration Date for the integrated dose meter or dose calculation")
+            }
             Self::_113724 => Some("Individual or organization responsible for calibration"),
-            Self::_113725 => Some("Total Dose related to Reference Point (RP). (in the scope of the including report)"),
-            Self::_113726 => Some("Total calculated Dose Area Product applied in Fluoroscopy Modes (in the scope of the including report)"),
-            Self::_113727 => Some("Total calculated Dose Area Product applied in Acquisition Modes (in the scope of the including report)"),
-            Self::_113728 => Some("Dose applied in Fluoroscopy Modes, related to Reference Point (RP). (in the scope of the including report)"),
-            Self::_113729 => Some("Dose applied in Acquisition Modes, related to Reference Point (RP). (in the scope of the including report)"),
-            Self::_113730 => Some("Total accumulated clock time of Fluoroscopy in the scope of the including report (i.e., the sum of the Irradiation Duration values for accumulated fluoroscopy irradiation events)"),
-            Self::_113731 => Some("Accumulated Count of exposure pulses (single or multi-frame encoded) created from irradiation events performed with high dose (acquisition)"),
+            Self::_113725 => Some(
+                "Total Dose related to Reference Point (RP). (in the scope of the including report)",
+            ),
+            Self::_113726 => Some(
+                "Total calculated Dose Area Product applied in Fluoroscopy Modes (in the scope of the including report)",
+            ),
+            Self::_113727 => Some(
+                "Total calculated Dose Area Product applied in Acquisition Modes (in the scope of the including report)",
+            ),
+            Self::_113728 => Some(
+                "Dose applied in Fluoroscopy Modes, related to Reference Point (RP). (in the scope of the including report)",
+            ),
+            Self::_113729 => Some(
+                "Dose applied in Acquisition Modes, related to Reference Point (RP). (in the scope of the including report)",
+            ),
+            Self::_113730 => Some(
+                "Total accumulated clock time of Fluoroscopy in the scope of the including report (i.e., the sum of the Irradiation Duration values for accumulated fluoroscopy irradiation events)",
+            ),
+            Self::_113731 => Some(
+                "Accumulated Count of exposure pulses (single or multi-frame encoded) created from irradiation events performed with high dose (acquisition)",
+            ),
             Self::_113732 => Some("Mode of application of X-Rays during Fluoroscopy"),
-            Self::_113733 => Some("Applied X-Ray Tube voltage at peak of X-Ray generation, in kilovolts; Mean value if measured over multiple peaks (pulses)"),
+            Self::_113733 => Some(
+                "Applied X-Ray Tube voltage at peak of X-Ray generation, in kilovolts; Mean value if measured over multiple peaks (pulses)",
+            ),
             Self::_113734 => Some("Mean value of applied Tube Current"),
-            Self::_113735 => Some("Cumulative time the patient has received X-Ray exposure during the irradiation event"),
+            Self::_113735 => Some(
+                "Cumulative time the patient has received X-Ray exposure during the irradiation event",
+            ),
             Self::_113736 => Some("Mean value of X-Ray Current Time product"),
-            Self::_113737 => Some("Distance to the Reference Point (RP) defined according to IEC 60601-2-43 or equipment defined"),
+            Self::_113737 => Some(
+                "Distance to the Reference Point (RP) defined according to IEC 60601-2-43 or equipment defined",
+            ),
             Self::_113738 => Some("Dose applied at the Reference Point (RP)"),
-            Self::_113739 => Some("Positioner Primary Angle at the end of an irradiation event. For further definition see (112011, DCM, \"Positioner Primary Angle\") "),
-            Self::_113740 => Some("Positioner Secondary Angle at the end of an irradiation event. For further definition see (112012, DCM, \"Positioner Secondary Angle\") "),
-            Self::_113742 => Some("Clock time from the start of loading time of the first pulse until the loading time trailing edge of the final pulse in the same irradiation event. Note Loading time is defined in IEC 60601-1-3:2008, 3.37, and described in IEC 60601-2-54:2009, 203.4.101.3"),
+            Self::_113739 => Some(
+                "Positioner Primary Angle at the end of an irradiation event. For further definition see (112011, DCM, \"Positioner Primary Angle\") ",
+            ),
+            Self::_113740 => Some(
+                "Positioner Secondary Angle at the end of an irradiation event. For further definition see (112012, DCM, \"Positioner Secondary Angle\") ",
+            ),
+            Self::_113742 => Some(
+                "Clock time from the start of loading time of the first pulse until the loading time trailing edge of the final pulse in the same irradiation event. Note Loading time is defined in IEC 60601-1-3:2008, 3.37, and described in IEC 60601-2-54:2009, 203.4.101.3",
+            ),
             Self::_113743 => Some("Orientation of the Patient with respect to Gravity"),
-            Self::_113744 => Some("Enhances or modifies the Patient orientation specified in Patient Orientation"),
-            Self::_113745 => Some("Orientation of the Patient with respect to the Head of the Table"),
-            Self::_113748 => Some("Distance from the X-Ray Source to the Equipment C-Arm Isocenter.(Center of Rotation)"),
-            Self::_113750 => Some("Measured or calculated distance from the X-Ray source to the detector plane in the center of the beam"),
-            Self::_113751 => Some("Table Longitudinal Position with respect to an arbitrary chosen reference by the equipment. Table motion towards LAO is positive assuming that the patient is positioned supine and its head is in normal position"),
-            Self::_113752 => Some("Table Lateral Position with respect to an arbitrary chosen reference by the equipment. Table motion towards CRA is positive assuming that the patient is positioned supine and its head is in normal position"),
-            Self::_113753 => Some("Table Height Position with respect to an arbitrary chosen reference by the equipment in (mm). Table motion downwards is positive"),
-            Self::_113754 => Some("Angle of the head-feet axis of the table in degrees relative to the horizontal plane. Positive values indicate that the head of the table is upwards"),
-            Self::_113755 => Some("Rotation of the table in the horizontal plane (clockwise when looking from above the table)"),
-            Self::_113756 => Some("Angle of the left-right axis of the table in degrees relative to the horizontal plane. Positive values indicate that the left of the table is upwards"),
+            Self::_113744 => Some(
+                "Enhances or modifies the Patient orientation specified in Patient Orientation",
+            ),
+            Self::_113745 => {
+                Some("Orientation of the Patient with respect to the Head of the Table")
+            }
+            Self::_113748 => Some(
+                "Distance from the X-Ray Source to the Equipment C-Arm Isocenter.(Center of Rotation)",
+            ),
+            Self::_113750 => Some(
+                "Measured or calculated distance from the X-Ray source to the detector plane in the center of the beam",
+            ),
+            Self::_113751 => Some(
+                "Table Longitudinal Position with respect to an arbitrary chosen reference by the equipment. Table motion towards LAO is positive assuming that the patient is positioned supine and its head is in normal position",
+            ),
+            Self::_113752 => Some(
+                "Table Lateral Position with respect to an arbitrary chosen reference by the equipment. Table motion towards CRA is positive assuming that the patient is positioned supine and its head is in normal position",
+            ),
+            Self::_113753 => Some(
+                "Table Height Position with respect to an arbitrary chosen reference by the equipment in (mm). Table motion downwards is positive",
+            ),
+            Self::_113754 => Some(
+                "Angle of the head-feet axis of the table in degrees relative to the horizontal plane. Positive values indicate that the head of the table is upwards",
+            ),
+            Self::_113755 => Some(
+                "Rotation of the table in the horizontal plane (clockwise when looking from above the table)",
+            ),
+            Self::_113756 => Some(
+                "Angle of the left-right axis of the table in degrees relative to the horizontal plane. Positive values indicate that the left of the table is upwards",
+            ),
             Self::_113757 => Some("X-Ray absorbing material used in the filter"),
-            Self::_113758 => Some("The minimum thickness of the X-Ray absorbing material used in the filters"),
-            Self::_113759 => Some("Table Longitudinal Position at the end of an irradiation event; see (113751, DCM, \"Table Longitudinal Position\") "),
-            Self::_113760 => Some("Table Lateral Position at the end of an irradiation event; see (113752, DCM, \"Table Lateral Position\") "),
-            Self::_113761 => Some("Table Height Position at the end of an irradiation event; see (113753, DCM, \"Table Height Position\") "),
+            Self::_113758 => {
+                Some("The minimum thickness of the X-Ray absorbing material used in the filters")
+            }
+            Self::_113759 => Some(
+                "Table Longitudinal Position at the end of an irradiation event; see (113751, DCM, \"Table Longitudinal Position\") ",
+            ),
+            Self::_113760 => Some(
+                "Table Lateral Position at the end of an irradiation event; see (113752, DCM, \"Table Lateral Position\") ",
+            ),
+            Self::_113761 => Some(
+                "Table Height Position at the end of an irradiation event; see (113753, DCM, \"Table Height Position\") ",
+            ),
             Self::_113763 => Some("Uncertainty of the \'actual\' value"),
             Self::_113764 => Some("Identification of Acquisition Plane with Biplane systems"),
             Self::_113766 => Some("Nominal Size of Focal Spot of X-Ray Tube"),
-            Self::_113767 => Some("Average X-Ray Tube Current averaged over time for pulse or for continuous Fluoroscopy"),
-            Self::_113768 => Some("Number of pulses applied by X-Ray systems during an irradiation event (acquisition run or pulsed fluoro)"),
+            Self::_113767 => Some(
+                "Average X-Ray Tube Current averaged over time for pulse or for continuous Fluoroscopy",
+            ),
+            Self::_113768 => Some(
+                "Number of pulses applied by X-Ray systems during an irradiation event (acquisition run or pulsed fluoro)",
+            ),
             Self::_113769 => Some("Unique identification of a single irradiation event"),
-            Self::_113770 => Some("Angle of the X-Ray beam in degree relative to an orthogonal axis to the detector plane"),
-            Self::_113771 => Some("Devices used to modify the energy or energy distribution of X-Rays"),
+            Self::_113770 => Some(
+                "Angle of the X-Ray beam in degree relative to an orthogonal axis to the detector plane",
+            ),
+            Self::_113771 => {
+                Some("Devices used to modify the energy or energy distribution of X-Rays")
+            }
             Self::_113772 => Some("Type of filter(s) inserted into the X-Ray beam; e.g. wedges"),
-            Self::_113773 => Some("The maximum thickness of the X-Ray absorbing material used in the filters"),
-            Self::_113780 => Some("System provided definition of the Reference Point used for Dose calculations"),
-            Self::_113788 => Some("Distance between the collimator blades in pixel column direction as projected at the detector plane"),
-            Self::_113789 => Some("Distance between the collimator blades in pixel row direction as projected at the detector plane"),
-            Self::_113790 => Some("Collimated field area at image receptor. Area for compatibility with IEC 60601-2-43"),
+            Self::_113773 => {
+                Some("The maximum thickness of the X-Ray absorbing material used in the filters")
+            }
+            Self::_113780 => {
+                Some("System provided definition of the Reference Point used for Dose calculations")
+            }
+            Self::_113788 => Some(
+                "Distance between the collimator blades in pixel column direction as projected at the detector plane",
+            ),
+            Self::_113789 => Some(
+                "Distance between the collimator blades in pixel row direction as projected at the detector plane",
+            ),
+            Self::_113790 => Some(
+                "Collimated field area at image receptor. Area for compatibility with IEC 60601-2-43",
+            ),
             Self::_113791 => Some("Pulse rate applied by equipment during Fluoroscopy"),
-            Self::_113792 => Some("Measured or calculated distance from the X-Ray source to the table plane in the center of the beam"),
+            Self::_113792 => Some(
+                "Measured or calculated distance from the X-Ray source to the table plane in the center of the beam",
+            ),
             Self::_113793 => Some("(Average) X-Ray pulse width"),
             Self::_113794 => Some("Calibrated device to perform dose measurements"),
             Self::_113795 => Some("Image acquired during a specified event"),
-            Self::_113800 => Some("Effective Dose evaluation from the product of Dose Length Product (DLP) and the Effective Dose Conversion Factor (E/DLP in units of mSv/mGy-cm), where the ratio is derived by means of Monte Carlo computations"),
-            Self::_113801 => Some("Effective Dose evaluation from the product of the Mean CTDIfreeair and the ratio E/CTDIfreeair (mSv/mGy), where the ratio is derived by means of Monte Carlo computations"),
-            Self::_113802 => Some("Effective Dose evaluation from the product of Dose Length Product (DLP) and the Effective Dose Conversion Factor (E/DLP in units of mSv/mGy-cm), where the ratio is derived by means of dosimetric measurements with an anthropomorphic phantom"),
-            Self::_113803 => Some("Effective Dose evaluation from the product of the Mean CTDIfreeair and the ratio E/CTDIfreeair (mSv/mGy), where the ratio is derived by means of dosimetric measurements with an anthropomorphic phantom"),
-            Self::_113804 => Some("The CT acquisition was performed by acquiring single or multi detector data while rotating the source about the gantry while the table is not moving. Additional slices are acquired by incrementing the table position and again rotating the source about the gantry while the table is not moving"),
-            Self::_113805 => Some("The CT acquisition was performed by holding the source at a constant angle and moving the table to obtain a projection image; e.g. localizer"),
-            Self::_113806 => Some("The CT acquisition was performed by holding the table at a constant position and acquiring multiple slices over time at the same location"),
-            Self::_113807 => Some("The CT acquisition was performed while rotating the source about the gantry while the table movement is under direct control of a human operator or under the control of an analysis application; e.g. fluoro"),
-            Self::_113808 => Some("Reference authority 1990 Recommendations of the International Commission on Radiological Protection (ICRP Publication 60, published as the Annals of the ICRP Vol. 21, No. 1-3, Pergamon Press,1991)"),
-            Self::_113809 => Some("Start, DateTime of the first X-Ray Irradiation Event of the accumulation within a Study"),
-            Self::_113810 => Some("End, DateTime of the last X-Ray Irradiation Event of the accumulation within a Study"),
-            Self::_113811 => Some("X-Ray dose accumulated over multiple CT irradiation events; e.g. for a study or a performed procedure step"),
-            Self::_113812 => Some("Total number of events during the defined scope of accumulation"),
+            Self::_113800 => Some(
+                "Effective Dose evaluation from the product of Dose Length Product (DLP) and the Effective Dose Conversion Factor (E/DLP in units of mSv/mGy-cm), where the ratio is derived by means of Monte Carlo computations",
+            ),
+            Self::_113801 => Some(
+                "Effective Dose evaluation from the product of the Mean CTDIfreeair and the ratio E/CTDIfreeair (mSv/mGy), where the ratio is derived by means of Monte Carlo computations",
+            ),
+            Self::_113802 => Some(
+                "Effective Dose evaluation from the product of Dose Length Product (DLP) and the Effective Dose Conversion Factor (E/DLP in units of mSv/mGy-cm), where the ratio is derived by means of dosimetric measurements with an anthropomorphic phantom",
+            ),
+            Self::_113803 => Some(
+                "Effective Dose evaluation from the product of the Mean CTDIfreeair and the ratio E/CTDIfreeair (mSv/mGy), where the ratio is derived by means of dosimetric measurements with an anthropomorphic phantom",
+            ),
+            Self::_113804 => Some(
+                "The CT acquisition was performed by acquiring single or multi detector data while rotating the source about the gantry while the table is not moving. Additional slices are acquired by incrementing the table position and again rotating the source about the gantry while the table is not moving",
+            ),
+            Self::_113805 => Some(
+                "The CT acquisition was performed by holding the source at a constant angle and moving the table to obtain a projection image; e.g. localizer",
+            ),
+            Self::_113806 => Some(
+                "The CT acquisition was performed by holding the table at a constant position and acquiring multiple slices over time at the same location",
+            ),
+            Self::_113807 => Some(
+                "The CT acquisition was performed while rotating the source about the gantry while the table movement is under direct control of a human operator or under the control of an analysis application; e.g. fluoro",
+            ),
+            Self::_113808 => Some(
+                "Reference authority 1990 Recommendations of the International Commission on Radiological Protection (ICRP Publication 60, published as the Annals of the ICRP Vol. 21, No. 1-3, Pergamon Press,1991)",
+            ),
+            Self::_113809 => Some(
+                "Start, DateTime of the first X-Ray Irradiation Event of the accumulation within a Study",
+            ),
+            Self::_113810 => Some(
+                "End, DateTime of the last X-Ray Irradiation Event of the accumulation within a Study",
+            ),
+            Self::_113811 => Some(
+                "X-Ray dose accumulated over multiple CT irradiation events; e.g. for a study or a performed procedure step",
+            ),
+            Self::_113812 => {
+                Some("Total number of events during the defined scope of accumulation")
+            }
             Self::_113813 => Some("The total dose length product defined scope of accumulation"),
             Self::_113814 => Some("The total Effective Dose at the defined scope of accumulation"),
-            Self::_113815 => Some("Identification of the reference-patient model used when Effective Dose is evaluated via Monte Carlo calculations or from a Dose Length Product conversion factor based on Monte Carlo calculations"),
-            Self::_113816 => Some("References the physical phantom and the type of dosimeter used when measurements are done to establish Effective Dose Conversion Factors (E/DLP) or ratios E/CTDIfreeair"),
+            Self::_113815 => Some(
+                "Identification of the reference-patient model used when Effective Dose is evaluated via Monte Carlo calculations or from a Dose Length Product conversion factor based on Monte Carlo calculations",
+            ),
+            Self::_113816 => Some(
+                "References the physical phantom and the type of dosimeter used when measurements are done to establish Effective Dose Conversion Factors (E/DLP) or ratios E/CTDIfreeair",
+            ),
             Self::_113817 => Some("Type of Effective Dose phantom used"),
             Self::_113818 => Some("Type of dosimeter used"),
             Self::_113819 => Some("General description of the CT Irradiation event"),
@@ -14533,47 +17085,113 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_113821 => Some("Thickness of an equivalent filter in mm in Aluminum"),
             Self::_113822 => Some("General description of the acquisition parameters"),
             Self::_113823 => Some("Number of X-Ray sources"),
-            Self::_113824 => Some("Total time the patient has received X-Ray exposure during the irradiation event"),
-            Self::_113825 => Some("Length of the table travel during the entire tube loading, according to IEC 60601-2-44 Note Scanning Length might be longer than the programmed acquisition length (Length of Reconstructable Volume)"),
-            Self::_113826 => Some("The value of the nominal width referenced to the location of the isocenter along the z axis of a single row of acquired data in mm"),
-            Self::_113827 => Some("The value of the nominal width referenced to the location of the isocenter along the z axis of the total collimation in mm over the area of active X-Ray detection"),
-            Self::_113828 => Some("For Spiral scanning: Pitch Factor = (Table Feed per Rotation (mm)) /(Nominal Total Collimation Width (mm)) For Sequenced scanning: Pitch Factor = (Table Feed per single Sequenced scan (mm)) /(Nominal Total Collimation Width (mm))"),
+            Self::_113824 => Some(
+                "Total time the patient has received X-Ray exposure during the irradiation event",
+            ),
+            Self::_113825 => Some(
+                "Length of the table travel during the entire tube loading, according to IEC 60601-2-44 Note Scanning Length might be longer than the programmed acquisition length (Length of Reconstructable Volume)",
+            ),
+            Self::_113826 => Some(
+                "The value of the nominal width referenced to the location of the isocenter along the z axis of a single row of acquired data in mm",
+            ),
+            Self::_113827 => Some(
+                "The value of the nominal width referenced to the location of the isocenter along the z axis of the total collimation in mm over the area of active X-Ray detection",
+            ),
+            Self::_113828 => Some(
+                "For Spiral scanning: Pitch Factor = (Table Feed per Rotation (mm)) /(Nominal Total Collimation Width (mm)) For Sequenced scanning: Pitch Factor = (Table Feed per single Sequenced scan (mm)) /(Nominal Total Collimation Width (mm))",
+            ),
             Self::_113829 => Some("General description of CT dose values"),
-            Self::_113830 => Some("\"Mean CTDIvol\" refers to the average value of the CTDIvol associated with this acquisition"),
-            Self::_113831 => Some("Identification, tube-potential, tube-current, and exposure-time parameters associated with an X-Ray source during an acquisition"),
-            Self::_113832 => Some("Identifies the particular X-Ray source (in a multi-source CT system) for which the set of X-Ray source parameter values is reported"),
+            Self::_113830 => Some(
+                "\"Mean CTDIvol\" refers to the average value of the CTDIvol associated with this acquisition",
+            ),
+            Self::_113831 => Some(
+                "Identification, tube-potential, tube-current, and exposure-time parameters associated with an X-Ray source during an acquisition",
+            ),
+            Self::_113832 => Some(
+                "Identifies the particular X-Ray source (in a multi-source CT system) for which the set of X-Ray source parameter values is reported",
+            ),
             Self::_113833 => Some("Maximum X-Ray tube current"),
-            Self::_113834 => Some("The exposure time for one rotation of the source around the object in s"),
-            Self::_113835 => Some("A label describing the type of phantom used for CTDIW measurement according to IEC 60601-2-44 (Head 16 cm diameter PMMA, Body 32 cm diameter PMMA)"),
-            Self::_113836 => Some("The CTDIfreeair Calculation Factor is the CTDIfreeair per mAs, expressed in units of mGy/mAs. The CTDIfreeair Calculation Factor may be used in one method calculating Dose"),
-            Self::_113837 => Some("The average value of the free-in-air CTDI associated with this acquisition"),
-            Self::_113838 => Some("Dose Length Product (DLP), expressed in mGy-cm, is an index characterizing the product of the CTDIvol and the length scanned. For Spiral scanning, DLP = CTDIvol x Scanning Length. For Sequenced scanning, DLP = CTDIvol x Nominal Total Collimation Width x Cumulative Exposure Time / Exposure Time per Rotation. For Stationary and Free scanning, DLP = CTDIvol x Nominal Total Collimation Width"),
+            Self::_113834 => {
+                Some("The exposure time for one rotation of the source around the object in s")
+            }
+            Self::_113835 => Some(
+                "A label describing the type of phantom used for CTDIW measurement according to IEC 60601-2-44 (Head 16 cm diameter PMMA, Body 32 cm diameter PMMA)",
+            ),
+            Self::_113836 => Some(
+                "The CTDIfreeair Calculation Factor is the CTDIfreeair per mAs, expressed in units of mGy/mAs. The CTDIfreeair Calculation Factor may be used in one method calculating Dose",
+            ),
+            Self::_113837 => {
+                Some("The average value of the free-in-air CTDI associated with this acquisition")
+            }
+            Self::_113838 => Some(
+                "Dose Length Product (DLP), expressed in mGy-cm, is an index characterizing the product of the CTDIvol and the length scanned. For Spiral scanning, DLP = CTDIvol x Scanning Length. For Sequenced scanning, DLP = CTDIvol x Nominal Total Collimation Width x Cumulative Exposure Time / Exposure Time per Rotation. For Stationary and Free scanning, DLP = CTDIvol x Nominal Total Collimation Width",
+            ),
             Self::_113839 => Some("Effective dose in mSv"),
-            Self::_113840 => Some("Effective Dose per DLP, reference value for Effective Dose calculation, expressed in mSv/mGY.cm"),
-            Self::_113841 => Some("Effective Dose Reference authority 2007 Recommendations of the International Commission on Radiological Protection (ICRP Publication 103, published as the Annals of the ICRP Vol. 37, No. 2-4, Elsevier, 2007)"),
-            Self::_113842 => Some("The type of exposure modulation used for the purpose of limiting the dose"),
-            Self::_113845 => Some("Measure of the detector response to radiation in the relevant image region of an image acquired with a digital X-Ray imaging system as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro"),
-            Self::_113846 => Some("The target value used to calculate the Deviation Index as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro"),
-            Self::_113847 => Some("A scaled representation of the accuracy of the Exposure Index compared to the Target Exposure Index as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro"),
-            Self::_113850 => Some("The clinician responsible for determining that the irradiating procedure was appropriate for the indications"),
+            Self::_113840 => Some(
+                "Effective Dose per DLP, reference value for Effective Dose calculation, expressed in mSv/mGY.cm",
+            ),
+            Self::_113841 => Some(
+                "Effective Dose Reference authority 2007 Recommendations of the International Commission on Radiological Protection (ICRP Publication 103, published as the Annals of the ICRP Vol. 37, No. 2-4, Elsevier, 2007)",
+            ),
+            Self::_113842 => {
+                Some("The type of exposure modulation used for the purpose of limiting the dose")
+            }
+            Self::_113845 => Some(
+                "Measure of the detector response to radiation in the relevant image region of an image acquired with a digital X-Ray imaging system as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro",
+            ),
+            Self::_113846 => Some(
+                "The target value used to calculate the Deviation Index as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro",
+            ),
+            Self::_113847 => Some(
+                "A scaled representation of the accuracy of the Exposure Index compared to the Target Exposure Index as defined in IEC 62494-1; see PS3.3 definition of Exposure Index Macro",
+            ),
+            Self::_113850 => Some(
+                "The clinician responsible for determining that the irradiating procedure was appropriate for the indications",
+            ),
             Self::_113851 => Some("The person responsible for the administration of radiation"),
-            Self::_113852 => Some("An irradiation event is the loading of X-Ray equipment caused by a single continuous actuation of the equipment\'s irradiation switch, from the start of the loading time of the first pulse until the loading time trailing edge of the final pulse. Any automatic on-off switching of the irradiation source during the event is not treated as separate events, rather the event includes the time between start and stop of irradiation as triggered by the user; e.g. a pulsed fluoro X-Ray acquisition shall be treated as a single irradiation event"),
+            Self::_113852 => Some(
+                "An irradiation event is the loading of X-Ray equipment caused by a single continuous actuation of the equipment\'s irradiation switch, from the start of the loading time of the first pulse until the loading time trailing edge of the final pulse. Any automatic on-off switching of the irradiation source during the event is not treated as separate events, rather the event includes the time between start and stop of irradiation as triggered by the user; e.g. a pulsed fluoro X-Ray acquisition shall be treated as a single irradiation event",
+            ),
             Self::_113853 => Some("Unique Identifier of an Irradiation Event"),
-            Self::_113854 => Some("Method by which dose-related details of an Irradiation Event were obtained"),
-            Self::_113855 => Some("Total accumulated acquisition clock time in the scope of the including report (i.e., the sum of the Irradiation Duration values for accumulated acquisition irradiation events)"),
+            Self::_113854 => {
+                Some("Method by which dose-related details of an Irradiation Event were obtained")
+            }
+            Self::_113855 => Some(
+                "Total accumulated acquisition clock time in the scope of the including report (i.e., the sum of the Irradiation Duration values for accumulated acquisition irradiation events)",
+            ),
             Self::_113856 => Some("Direct recording of data by a relevant system"),
-            Self::_113857 => Some("Recording of data by a human operator, including manual transcription of electronic data"),
+            Self::_113857 => Some(
+                "Recording of data by a human operator, including manual transcription of electronic data",
+            ),
             Self::_113858 => Some("The data is taken from an MPPS SOP Instance"),
             Self::_113859 => Some("A device exposing a patient to ionizing radiation"),
-            Self::_113860 => Some("15cm from the isocenter towards the X-Ray source; See IEC 60601-2-43"),
-            Self::_113861 => Some("30cm in front (towards the tube) of the input surface of the image receptor; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)"),
-            Self::_113862 => Some("1cm above the patient tabletop or cradle; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)"),
-            Self::_113863 => Some("30cm above the patient tabletop of cradle; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)"),
-            Self::_113864 => Some("15cm from the centerline of the X-Ray table and in the direction of the X-Ray source; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)"),
-            Self::_113865 => Some("Standard breast means a 4.2 centimeter (cm) thick compressed breast consisting of 50 percent glandular and 50 percent adipose tissue. See Department of Health and Human Services, Food and Drug Administration. Mammography quality standards; final rule. Federal Register. Oct. 28, 1997; 68(208):55852-55994; see 900.2(uu)"),
-            Self::_113866 => Some("The data is copied from information present in the image attributes; e.g. dose attributes such as CTDIvol (0018,9345)"),
-            Self::_113867 => Some("The data is computed from information present in the image attributes; e.g. by using dosimetry information for the specific irradiating device make and model, applied to technique information such as KVP and mAs"),
-            Self::_113868 => Some("The data is derived from human-readable reports; e.g. by natural language parsing of text reports, or optical character recognition from reports saved as images by the irradiating device"),
+            Self::_113860 => {
+                Some("15cm from the isocenter towards the X-Ray source; See IEC 60601-2-43")
+            }
+            Self::_113861 => Some(
+                "30cm in front (towards the tube) of the input surface of the image receptor; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)",
+            ),
+            Self::_113862 => Some(
+                "1cm above the patient tabletop or cradle; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)",
+            ),
+            Self::_113863 => Some(
+                "30cm above the patient tabletop of cradle; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)",
+            ),
+            Self::_113864 => Some(
+                "15cm from the centerline of the X-Ray table and in the direction of the X-Ray source; See FDA Federal Performance Standard for Diagnostic X-Ray Systems \u{a7}1020.32(d) (7)",
+            ),
+            Self::_113865 => Some(
+                "Standard breast means a 4.2 centimeter (cm) thick compressed breast consisting of 50 percent glandular and 50 percent adipose tissue. See Department of Health and Human Services, Food and Drug Administration. Mammography quality standards; final rule. Federal Register. Oct. 28, 1997; 68(208):55852-55994; see 900.2(uu)",
+            ),
+            Self::_113866 => Some(
+                "The data is copied from information present in the image attributes; e.g. dose attributes such as CTDIvol (0018,9345)",
+            ),
+            Self::_113867 => Some(
+                "The data is computed from information present in the image attributes; e.g. by using dosimetry information for the specific irradiating device make and model, applied to technique information such as KVP and mAs",
+            ),
+            Self::_113868 => Some(
+                "The data is derived from human-readable reports; e.g. by natural language parsing of text reports, or optical character recognition from reports saved as images by the irradiating device",
+            ),
             Self::_113870 => Some("The name of a specific person"),
             Self::_113871 => Some("An identification number or code for a specific person"),
             Self::_113872 => Some("The organization that issued a Person ID"),
@@ -14586,62 +17204,152 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_113879 => Some("Model Name of a device"),
             Self::_113880 => Some("Serial Number of a device"),
             Self::_113890 => Some("All planes of a multi-plane acquisition equipment"),
-            Self::_113893 => Some("The length from which images may be reconstructed (i.e., excluding any overranging performed in a spiral acquisition that is required for data interpolation). Value is distinct from (1113825, DCM, \"Scanning Length\"), which is the actual length of the table travel during the entire tube loading, according to IEC 60601-2-44, and includes overranging. Also distinct from any actual Reconstructed Volume, which may depend on the slice thickness chosen for a particular reconstruction"),
-            Self::_113895 => Some("The Z location that is the top (highest Z value) of the Reconstructable Volume. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference"),
-            Self::_113896 => Some("The Z location that is the bottom (lowest Z value) of the Reconstructable Volume. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference"),
-            Self::_113897 => Some("The Z location that is the top (highest Z value) of the scanning length. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference"),
-            Self::_113898 => Some("The Z location that is the bottom (lowest Z value) of the scanning length. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference"),
-            Self::_113899 => Some("The range along the z axis of the total volume irradiated, per IEC 60601-2-44, Ed. 3, 203.115(b). The start and stop of loading corresponding to the outer edge of the full width half maximum of the free-in-air dose profile for the beam collimation used"),
-            Self::_113900 => Some("Report section about cumulative dose alerts during an examination"),
+            Self::_113893 => Some(
+                "The length from which images may be reconstructed (i.e., excluding any overranging performed in a spiral acquisition that is required for data interpolation). Value is distinct from (1113825, DCM, \"Scanning Length\"), which is the actual length of the table travel during the entire tube loading, according to IEC 60601-2-44, and includes overranging. Also distinct from any actual Reconstructed Volume, which may depend on the slice thickness chosen for a particular reconstruction",
+            ),
+            Self::_113895 => Some(
+                "The Z location that is the top (highest Z value) of the Reconstructable Volume. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference",
+            ),
+            Self::_113896 => Some(
+                "The Z location that is the bottom (lowest Z value) of the Reconstructable Volume. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference",
+            ),
+            Self::_113897 => Some(
+                "The Z location that is the top (highest Z value) of the scanning length. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference",
+            ),
+            Self::_113898 => Some(
+                "The Z location that is the bottom (lowest Z value) of the scanning length. Specified as the Z component within the Patient Coordinate System defined by a specified Frame of Reference",
+            ),
+            Self::_113899 => Some(
+                "The range along the z axis of the total volume irradiated, per IEC 60601-2-44, Ed. 3, 203.115(b). The start and stop of loading corresponding to the outer edge of the full width half maximum of the free-in-air dose profile for the beam collimation used",
+            ),
+            Self::_113900 => {
+                Some("Report section about cumulative dose alerts during an examination")
+            }
             Self::_113901 => Some("Flag denoting whether a DLP Alert Value was configured"),
             Self::_113902 => Some("Flag denoting whether a CTDIvol Alert Value was configured"),
-            Self::_113903 => Some("Cumulative Dose Length Product value configured to trigger an alert; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113904 => Some("Cumulative CTDIvol value configured to trigger an alert; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113905 => Some("A forward estimate of the accumulated DLP plus the estimated DLP for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113906 => Some("A forward estimate at a given location of the accumulated CTDIvol plus the estimated CTDIvol for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113907 => Some("Reason provided for proceeding with a procedure that is projected to exceed a configured dose value"),
-            Self::_113908 => Some("Report section about dose notifications during a protocol element"),
+            Self::_113903 => Some(
+                "Cumulative Dose Length Product value configured to trigger an alert; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113904 => Some(
+                "Cumulative CTDIvol value configured to trigger an alert; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113905 => Some(
+                "A forward estimate of the accumulated DLP plus the estimated DLP for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113906 => Some(
+                "A forward estimate at a given location of the accumulated CTDIvol plus the estimated CTDIvol for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113907 => Some(
+                "Reason provided for proceeding with a procedure that is projected to exceed a configured dose value",
+            ),
+            Self::_113908 => {
+                Some("Report section about dose notifications during a protocol element")
+            }
             Self::_113909 => Some("Flag denoting whether a DLP Notification Value was configured"),
-            Self::_113910 => Some("Flag denoting whether a CTDIvol Notification Value was configured"),
-            Self::_113911 => Some("Dose Length Product value configured to trigger a notification for a given protocol element"),
-            Self::_113912 => Some("CTDIvol value configured to trigger a notification for a given protocol element"),
-            Self::_113913 => Some("A forward estimate of the DLP for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113914 => Some("A forward estimate of the CTDIvol for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard"),
-            Self::_113921 => Some("The amount of ionizing radiation to which the patient was exposed"),
+            Self::_113910 => {
+                Some("Flag denoting whether a CTDIvol Notification Value was configured")
+            }
+            Self::_113911 => Some(
+                "Dose Length Product value configured to trigger a notification for a given protocol element",
+            ),
+            Self::_113912 => Some(
+                "CTDIvol value configured to trigger a notification for a given protocol element",
+            ),
+            Self::_113913 => Some(
+                "A forward estimate of the DLP for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113914 => Some(
+                "A forward estimate of the CTDIvol for the next Protocol Element Group; see NEMA XR 25-2010 Dose Check Standard",
+            ),
+            Self::_113921 => {
+                Some("The amount of ionizing radiation to which the patient was exposed")
+            }
             Self::_113922 => Some("Type, amount and route of radioactive substance administered"),
-            Self::_113923 => Some("Exposure to ionizing radiation and associated preventive measures used to reduce the exposure of parts of the body like lead apron or eye, thyroid gland or gonad protection"),
-            Self::_113930 => Some("The Size-Specific Dose Estimate is a patient dose estimate that takes into account the size of the patient, such as described in AAPM Report 204 by using linear dimensions measured on the patient or patient images or estimated from patient age"),
-            Self::_113931 => Some("The side-to-side (left to right) dimension of the body part being scanned (per AAPM Report 204)"),
-            Self::_113932 => Some("The thickness of the body part being scanned, in the antero-posterior dimension (per AAPM Report 204)"),
-            Self::_113933 => Some("The diameter of the patient at a given location along the Z-axis of the patient, assuming that the patient has a circular cross-section (per AAPM Report 204)"),
-            Self::_113934 => Some("The Size Specific Dose Estimation is computed using Table 1B (32cm phantom) or Table 2B (16cm phantom) of AAPM Report 204"),
-            Self::_113935 => Some("The Size Specific Dose Estimation is computed using Table 1C (32cm phantom) or Table 2C (16cm phantom) of AAPM Report 204"),
-            Self::_113936 => Some("The Size Specific Dose Estimation is computed using Table 1A (32cm phantom) or Table 2A (16cm phantom) of AAPM Report 204"),
-            Self::_113937 => Some("The Size Specific Dose Estimation is computed using Table 1D (32cm phantom) or Table 2D (16cm phantom) using an effective diameter estimated from the patient\'s age using Table 3 of AAPM Report 204"),
+            Self::_113923 => Some(
+                "Exposure to ionizing radiation and associated preventive measures used to reduce the exposure of parts of the body like lead apron or eye, thyroid gland or gonad protection",
+            ),
+            Self::_113930 => Some(
+                "The Size-Specific Dose Estimate is a patient dose estimate that takes into account the size of the patient, such as described in AAPM Report 204 by using linear dimensions measured on the patient or patient images or estimated from patient age",
+            ),
+            Self::_113931 => Some(
+                "The side-to-side (left to right) dimension of the body part being scanned (per AAPM Report 204)",
+            ),
+            Self::_113932 => Some(
+                "The thickness of the body part being scanned, in the antero-posterior dimension (per AAPM Report 204)",
+            ),
+            Self::_113933 => Some(
+                "The diameter of the patient at a given location along the Z-axis of the patient, assuming that the patient has a circular cross-section (per AAPM Report 204)",
+            ),
+            Self::_113934 => Some(
+                "The Size Specific Dose Estimation is computed using Table 1B (32cm phantom) or Table 2B (16cm phantom) of AAPM Report 204",
+            ),
+            Self::_113935 => Some(
+                "The Size Specific Dose Estimation is computed using Table 1C (32cm phantom) or Table 2C (16cm phantom) of AAPM Report 204",
+            ),
+            Self::_113936 => Some(
+                "The Size Specific Dose Estimation is computed using Table 1A (32cm phantom) or Table 2A (16cm phantom) of AAPM Report 204",
+            ),
+            Self::_113937 => Some(
+                "The Size Specific Dose Estimation is computed using Table 1D (32cm phantom) or Table 2D (16cm phantom) using an effective diameter estimated from the patient\'s age using Table 3 of AAPM Report 204",
+            ),
             Self::_113940 => Some("Values calculated from other existing parameters"),
-            Self::_113941 => Some("A segmented region of the detector surface within the irradiated area (but might not be near the center of the detector)"),
-            Self::_113942 => Some("A device that creates digital images from X-Ray detectors (Direct, Indirect or Storage)"),
-            Self::_113943 => Some("Parameters related to the X-Ray source (generator, tube, etc.) are available to the recording application"),
-            Self::_113944 => Some("Parameters related to the X-Ray Mechanical System (Stand, Table) are available to the recording application"),
-            Self::_113945 => Some("Parameters related to the X-Ray Detector are available to the recording application"),
-            Self::_113946 => Some("Describes the radiographic method of patient, tube and detector positioning to achieve a well described projection or view"),
+            Self::_113941 => Some(
+                "A segmented region of the detector surface within the irradiated area (but might not be near the center of the detector)",
+            ),
+            Self::_113942 => Some(
+                "A device that creates digital images from X-Ray detectors (Direct, Indirect or Storage)",
+            ),
+            Self::_113943 => Some(
+                "Parameters related to the X-Ray source (generator, tube, etc.) are available to the recording application",
+            ),
+            Self::_113944 => Some(
+                "Parameters related to the X-Ray Mechanical System (Stand, Table) are available to the recording application",
+            ),
+            Self::_113945 => Some(
+                "Parameters related to the X-Ray Detector are available to the recording application",
+            ),
+            Self::_113946 => Some(
+                "Describes the radiographic method of patient, tube and detector positioning to achieve a well described projection or view",
+            ),
             Self::_113947 => Some("Type of Detector used to acquire data; e.g. Images"),
-            Self::_113948 => Some("Detector that directly transforms the input signal to pixel values"),
-            Self::_113949 => Some("Detector that transforms an intermediate signal into pixel values; e.g. a scintillator-based detector"),
-            Self::_113950 => Some("Storage detector that stores a signal that is later transformed by a reader into pixel values; e.g. a phosphor-based detector"),
+            Self::_113948 => {
+                Some("Detector that directly transforms the input signal to pixel values")
+            }
+            Self::_113949 => Some(
+                "Detector that transforms an intermediate signal into pixel values; e.g. a scintillator-based detector",
+            ),
+            Self::_113950 => Some(
+                "Storage detector that stores a signal that is later transformed by a reader into pixel values; e.g. a phosphor-based detector",
+            ),
             Self::_113951 => Some("Film that is scanned to create pixel values"),
             Self::_113952 => Some("The cassette/detector is mounted in the patient table"),
-            Self::_113953 => Some("The cassette/detector is not mounted.; e.g. a cassette placed underneath the patient"),
+            Self::_113953 => Some(
+                "The cassette/detector is not mounted.; e.g. a cassette placed underneath the patient",
+            ),
             Self::_113954 => Some("The cassette/detector is mounted in an upright stand"),
             Self::_113955 => Some("The cassette/detector is mounted on a c-arm"),
             Self::_113956 => Some("Method of mounting or positioning a CR/DR cassette or detector"),
-            Self::_113957 => Some("An integrated projection radiography system capable of fluoroscopy"),
-            Self::_113958 => Some("A projection radiography system where the X-Ray detector, X-Ray Source and gantry components are integrated and the managing system is able to access details of each component"),
-            Self::_113959 => Some("A projection radiography system where the X-Ray detector, X-Ray Source and gantry components are not integrated; e.g. cassette-based CR and DR systems"),
-            Self::_113961 => Some("Description of the algorithm used when reconstructing the image from the data acquired during the acquisition process"),
-            Self::_113962 => Some("An algorithm for reconstructing an image from multiple projections by back-projecting the measured values along the line of the projection and filtering the result to reduce blurring"),
-            Self::_113963 => Some("An algorithm for reconstructing an image from multiple projections by starting with an assumed reconstructed image, computing projections from the image, comparing the original projection data and updating the reconstructed image based upon the difference between the calculated and the actual projections"),
-            Self::_113970 => Some("The period of time from the start of a Procedure Step until the time point established by the context of the reference"),
+            Self::_113957 => {
+                Some("An integrated projection radiography system capable of fluoroscopy")
+            }
+            Self::_113958 => Some(
+                "A projection radiography system where the X-Ray detector, X-Ray Source and gantry components are integrated and the managing system is able to access details of each component",
+            ),
+            Self::_113959 => Some(
+                "A projection radiography system where the X-Ray detector, X-Ray Source and gantry components are not integrated; e.g. cassette-based CR and DR systems",
+            ),
+            Self::_113961 => Some(
+                "Description of the algorithm used when reconstructing the image from the data acquired during the acquisition process",
+            ),
+            Self::_113962 => Some(
+                "An algorithm for reconstructing an image from multiple projections by back-projecting the measured values along the line of the projection and filtering the result to reduce blurring",
+            ),
+            Self::_113963 => Some(
+                "An algorithm for reconstructing an image from multiple projections by starting with an assumed reconstructed image, computing projections from the image, comparing the original projection data and updating the reconstructed image based upon the difference between the calculated and the actual projections",
+            ),
+            Self::_113970 => Some(
+                "The period of time from the start of a Procedure Step until the time point established by the context of the reference",
+            ),
             Self::_114000 => Some("Measurement not available: Not a number (per IEEE 754)"),
             Self::_114001 => Some("Measurement not available: Negative Infinity (per IEEE 754)"),
             Self::_114002 => Some("Measurement not available: Positive Infinity (per IEEE 754)"),
@@ -14654,20 +17362,42 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_114009 => Some("Measurement not available: Value out of range"),
             Self::_114010 => Some("Measurement not available: Value unknown"),
             Self::_114011 => Some("Measurement not available: Value indeterminate"),
-            Self::_114201 => Some("Measures the time-of-flight of a light signal between the camera and the subject for each point of the image"),
-            Self::_114202 => Some("Interferometry is a family of techniques in which waves are superimposed in order to extract depth information about the scanned object"),
-            Self::_114203 => Some("Laser scanning describes the general method to sample or scan a surface using laser technology"),
-            Self::_114204 => Some("Projecting a narrow band of light onto a three-dimensionally shaped surface produces a line of illumination that appears distorted from other perspectives than that of the projector. It can be used for an exact geometric reconstruction of the surface shape"),
-            Self::_114205 => Some("A technique for estimating the surface normal of an object by observing that object under different lighting conditions"),
-            Self::_114206 => Some("A technique for estimating the surface normal of an object by observing that object under different motions"),
-            Self::_114207 => Some("An optical imaging technique used to increase optical resolution and contrast of a micrograph by using point illumination and a spatial pinhole to eliminate out-of-focus light in specimens that are thicker than the focal plane. It enables the reconstruction of 3D structures from the obtained images"),
+            Self::_114201 => Some(
+                "Measures the time-of-flight of a light signal between the camera and the subject for each point of the image",
+            ),
+            Self::_114202 => Some(
+                "Interferometry is a family of techniques in which waves are superimposed in order to extract depth information about the scanned object",
+            ),
+            Self::_114203 => Some(
+                "Laser scanning describes the general method to sample or scan a surface using laser technology",
+            ),
+            Self::_114204 => Some(
+                "Projecting a narrow band of light onto a three-dimensionally shaped surface produces a line of illumination that appears distorted from other perspectives than that of the projector. It can be used for an exact geometric reconstruction of the surface shape",
+            ),
+            Self::_114205 => Some(
+                "A technique for estimating the surface normal of an object by observing that object under different lighting conditions",
+            ),
+            Self::_114206 => Some(
+                "A technique for estimating the surface normal of an object by observing that object under different motions",
+            ),
+            Self::_114207 => Some(
+                "An optical imaging technique used to increase optical resolution and contrast of a micrograph by using point illumination and a spatial pinhole to eliminate out-of-focus light in specimens that are thicker than the focal plane. It enables the reconstruction of 3D structures from the obtained images",
+            ),
             Self::_114208 => Some("Point cloud that was calculated by an algorithm"),
-            Self::_114209 => Some("Scanning the object from different views by placing it on a rotating table"),
+            Self::_114209 => {
+                Some("Scanning the object from different views by placing it on a rotating table")
+            }
             Self::_114210 => Some("Higher resolution with a longer acquisition time"),
             Self::_114211 => Some("Lower resolution with a shorter acquisition time"),
-            Self::_114213 => Some("An algorithm employed to minimize the difference between two clouds of points. It iteratively revises the transformation (translation, rotation) needed to minimize the distance between the points of two point clouds"),
-            Self::_114215 => Some("Human controlled minimization of the distance between the points of two point clouds"),
-            Self::_114216 => Some("Scanning the object from different views by placing it in front of a checkerboard pattern"),
+            Self::_114213 => Some(
+                "An algorithm employed to minimize the difference between two clouds of points. It iteratively revises the transformation (translation, rotation) needed to minimize the distance between the points of two point clouds",
+            ),
+            Self::_114215 => Some(
+                "Human controlled minimization of the distance between the points of two point clouds",
+            ),
+            Self::_114216 => Some(
+                "Scanning the object from different views by placing it in front of a checkerboard pattern",
+            ),
             Self::_121001 => Some("Type of source for observations quoted from an external source"),
             Self::_121002 => Some("Reference to external source of quoted observations"),
             Self::_121003 => Some("Documentary source of quoted observations"),
@@ -14676,28 +17406,54 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121006 => Some("Human observer created the observations"),
             Self::_121007 => Some("Automated device created the observations"),
             Self::_121008 => Some("Name of human observer that created the observations"),
-            Self::_121009 => Some("Organization or institution with which the human observer is affiliated for the context of the current observation"),
-            Self::_121010 => Some("Organizational role of human observer for the context of the current observation"),
-            Self::_121011 => Some("Procedural role of human observer for the context of the current observation"),
-            Self::_121012 => Some("Unique identifier of automated device that created the observations"),
-            Self::_121013 => Some("Institution-provided identifier of automated device that created the observations"),
+            Self::_121009 => Some(
+                "Organization or institution with which the human observer is affiliated for the context of the current observation",
+            ),
+            Self::_121010 => Some(
+                "Organizational role of human observer for the context of the current observation",
+            ),
+            Self::_121011 => {
+                Some("Procedural role of human observer for the context of the current observation")
+            }
+            Self::_121012 => {
+                Some("Unique identifier of automated device that created the observations")
+            }
+            Self::_121013 => Some(
+                "Institution-provided identifier of automated device that created the observations",
+            ),
             Self::_121014 => Some("Manufacturer of automated device that created the observations"),
-            Self::_121015 => Some("Manufacturer-provided model name of automated device that created the observations"),
-            Self::_121016 => Some("Manufacturer-provided serial number of automated device that created the observations"),
-            Self::_121017 => Some("Location of automated device that created the observations whilst the observations were being made"),
+            Self::_121015 => Some(
+                "Manufacturer-provided model name of automated device that created the observations",
+            ),
+            Self::_121016 => Some(
+                "Manufacturer-provided serial number of automated device that created the observations",
+            ),
+            Self::_121017 => Some(
+                "Location of automated device that created the observations whilst the observations were being made",
+            ),
             Self::_121018 => Some("Unique identifier for the Study or Requested Procedure"),
             Self::_121019 => Some("Unique identifier for the Performed Procedure Step"),
-            Self::_121020 => Some("Identifier for the Order (or Service Request) assigned by the order placer system"),
-            Self::_121021 => Some("Identifier for the Order (or Service Request) assigned by the order filler system"),
-            Self::_121022 => Some("Identifier for the Order (or Service Request) assigned by the department information system"),
+            Self::_121020 => Some(
+                "Identifier for the Order (or Service Request) assigned by the order placer system",
+            ),
+            Self::_121021 => Some(
+                "Identifier for the Order (or Service Request) assigned by the order filler system",
+            ),
+            Self::_121022 => Some(
+                "Identifier for the Order (or Service Request) assigned by the department information system",
+            ),
             Self::_121023 => Some("Type of procedure scheduled or performed"),
             Self::_121024 => Some("Type of observation subject"),
             Self::_121025 => Some("A patient is the subject of observations"),
             Self::_121026 => Some("Fetus of patient is the subject of observations"),
             Self::_121027 => Some("Specimen is the subject of observations"),
-            Self::_121028 => Some("Unique Identifier of patient or fetus who is the subject of observations"),
+            Self::_121028 => {
+                Some("Unique Identifier of patient or fetus who is the subject of observations")
+            }
             Self::_121029 => Some("Name of patient who is the subject of observations"),
-            Self::_121030 => Some("Identifier of patient or fetus who is the subject of observations"),
+            Self::_121030 => {
+                Some("Identifier of patient or fetus who is the subject of observations")
+            }
             Self::_121031 => Some("Birth Date of patient who is the subject of observations"),
             Self::_121032 => Some("Sex of patient who is the subject of observations"),
             Self::_121033 => Some("Age of patient who is the subject of observations"),
@@ -14706,25 +17462,53 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121036 => Some("Name of mother of fetus that is the subject of observations"),
             Self::_121037 => None,
             Self::_121038 => None,
-            Self::_121039 => Some("Unique Identifier of specimen that is the subject of observations"),
-            Self::_121040 => Some("Accession Number of specimen that is the subject of observations"),
+            Self::_121039 => {
+                Some("Unique Identifier of specimen that is the subject of observations")
+            }
+            Self::_121040 => {
+                Some("Accession Number of specimen that is the subject of observations")
+            }
             Self::_121041 => Some("Identifier of specimen that is the subject of observations"),
             Self::_121042 => Some("Coded category of specimen that is the subject of observations"),
-            Self::_121043 => Some("Identifier of specimen microscope slide that is the subject of observations"),
-            Self::_121044 => Some("Unique Identifier of specimen microscope slide that is the subject of observations"),
-            Self::_121045 => Some("The language of the content, being a language that is primarily used for human communication; e.g. English, French"),
-            Self::_121046 => Some("The country-specific variant of language; e.g. Canada for Candadian French"),
+            Self::_121043 => {
+                Some("Identifier of specimen microscope slide that is the subject of observations")
+            }
+            Self::_121044 => Some(
+                "Unique Identifier of specimen microscope slide that is the subject of observations",
+            ),
+            Self::_121045 => Some(
+                "The language of the content, being a language that is primarily used for human communication; e.g. English, French",
+            ),
+            Self::_121046 => {
+                Some("The country-specific variant of language; e.g. Canada for Candadian French")
+            }
             Self::_121047 => Some("The language of the value component of a name-value pair"),
-            Self::_121048 => Some("The language of both the name component and the value component of a name-value pair"),
-            Self::_121049 => Some("The language of the current content item (node in a tree of content) and all its descendants"),
-            Self::_121050 => Some("The human readable meaning of the name component of a name-value pair that is equivalent to the post-coordinated meaning conveyed by the coded name and its concept modifier children"),
-            Self::_121051 => Some("The human readable meaning of the value component of a name-value pair that is equivalent to the post-coordinated meaning conveyed by the coded value and its concept modifier children"),
-            Self::_121052 => Some("Whether or not the property concept being modified is present or absent"),
+            Self::_121048 => Some(
+                "The language of both the name component and the value component of a name-value pair",
+            ),
+            Self::_121049 => Some(
+                "The language of the current content item (node in a tree of content) and all its descendants",
+            ),
+            Self::_121050 => Some(
+                "The human readable meaning of the name component of a name-value pair that is equivalent to the post-coordinated meaning conveyed by the coded name and its concept modifier children",
+            ),
+            Self::_121051 => Some(
+                "The human readable meaning of the value component of a name-value pair that is equivalent to the post-coordinated meaning conveyed by the coded value and its concept modifier children",
+            ),
+            Self::_121052 => {
+                Some("Whether or not the property concept being modified is present or absent")
+            }
             Self::_121053 => None,
             Self::_121054 => None,
-            Self::_121055 => Some("A set of points on an image, that when connected by line segments, provide a polyline from which a linear measurement was inferred"),
-            Self::_121056 => Some("A set of points on an image, that when connected by line segments, provide a closed polyline that is the border of a defined region from which an area, or two-dimensional measurement, was inferred"),
-            Self::_121057 => Some("A set of points on an image, that when connected by line segments, provide a closed polyline that is a two-dimensional border of a three-dimensional region\'s intersection with, or projection into the image"),
+            Self::_121055 => Some(
+                "A set of points on an image, that when connected by line segments, provide a polyline from which a linear measurement was inferred",
+            ),
+            Self::_121056 => Some(
+                "A set of points on an image, that when connected by line segments, provide a closed polyline that is the border of a defined region from which an area, or two-dimensional measurement, was inferred",
+            ),
+            Self::_121057 => Some(
+                "A set of points on an image, that when connected by line segments, provide a closed polyline that is a two-dimensional border of a three-dimensional region\'s intersection with, or projection into the image",
+            ),
             Self::_121058 => Some("The imaging procedure whose results are reported"),
             Self::_121059 => Some("Presence or absence of a property is undetermined"),
             Self::_121060 => None,
@@ -14737,14 +17521,24 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121070 => None,
             Self::_121071 => Some("An observation found on an imaging study"),
             Self::_121072 => None,
-            Self::_121073 => Some("An interpretation in the clinical context of the finding(s) on an imaging study"),
+            Self::_121073 => Some(
+                "An interpretation in the clinical context of the finding(s) on an imaging study",
+            ),
             Self::_121074 => None,
-            Self::_121075 => Some("A recommendation for management or investigation based on the findings and impressions of an imaging study"),
+            Self::_121075 => Some(
+                "A recommendation for management or investigation based on the findings and impressions of an imaging study",
+            ),
             Self::_121076 => None,
-            Self::_121077 => Some("An interpretation in the clinical context of the finding(s) on an imaging study"),
+            Self::_121077 => Some(
+                "An interpretation in the clinical context of the finding(s) on an imaging study",
+            ),
             Self::_121078 => None,
-            Self::_121079 => Some("Initial images used to esyablish a beginning condition that is used for comparison over time to look for changes. [Paraphrases NCI-PT (C1442488, UMLS, \"Baseline\"), which is defined as \"An initial measurement that is taken at an early time point to represent a beginning condition, and is used for comparison over time to look for changes. For example, the size of a tumor will be measured before treatment (baseline) and then afterwards to see if the treatment had an effect. A starting point to which things may be compared.\"]"),
-            Self::_121080 => Some("A selection of composite instances that best illustrates a particular finding; e.g. an image slice at the location of the largest extent of a tumor"),
+            Self::_121079 => Some(
+                "Initial images used to esyablish a beginning condition that is used for comparison over time to look for changes. [Paraphrases NCI-PT (C1442488, UMLS, \"Baseline\"), which is defined as \"An initial measurement that is taken at an early time point to represent a beginning condition, and is used for comparison over time to look for changes. For example, the size of a tumor will be measured before treatment (baseline) and then afterwards to see if the treatment had an effect. A starting point to which things may be compared.\"]",
+            ),
+            Self::_121080 => Some(
+                "A selection of composite instances that best illustrates a particular finding; e.g. an image slice at the location of the largest extent of a tumor",
+            ),
             Self::_121081 => None,
             Self::_121082 => None,
             Self::_121083 => None,
@@ -14752,20 +17546,34 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121085 => None,
             Self::_121086 => None,
             Self::_121087 => None,
-            Self::_121088 => Some("A medical practitioner undergoing sub-specialty training; e.g. during the period after specialty training (residency)"),
+            Self::_121088 => Some(
+                "A medical practitioner undergoing sub-specialty training; e.g. during the period after specialty training (residency)",
+            ),
             Self::_121089 => None,
             Self::_121090 => None,
             Self::_121091 => None,
-            Self::_121092 => Some("A medical practitioner with sub-specialty training in Ultrasound"),
+            Self::_121092 => {
+                Some("A medical practitioner with sub-specialty training in Ultrasound")
+            }
             Self::_121093 => None,
             Self::_121094 => Some("The person responsible for performing the procedure"),
-            Self::_121095 => Some("The person responsible for referring the patient for the procedure"),
+            Self::_121095 => {
+                Some("The person responsible for referring the patient for the procedure")
+            }
             Self::_121096 => Some("The person responsible for requesting the procedure"),
-            Self::_121097 => Some("The person responsible for recording the procedure or observation"),
-            Self::_121098 => Some("The person responsible for verifying the recorded procedure or observation"),
+            Self::_121097 => {
+                Some("The person responsible for recording the procedure or observation")
+            }
+            Self::_121098 => {
+                Some("The person responsible for verifying the recorded procedure or observation")
+            }
             Self::_121099 => Some("The person responsible for assisting with the procedure"),
-            Self::_121100 => Some("The person responsible for making preparations for and monitoring the procedure"),
-            Self::_121101 => Some("The person responsible for standing by to assist with the precedure if required"),
+            Self::_121100 => Some(
+                "The person responsible for making preparations for and monitoring the procedure",
+            ),
+            Self::_121101 => Some(
+                "The person responsible for standing by to assist with the precedure if required",
+            ),
             Self::_121102 => Some("Other sex"),
             Self::_121103 => Some("Sex of subject undetermined at time of encoding"),
             Self::_121104 => Some("Ambiguous sex"),
@@ -14777,11 +17585,19 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121112 => Some("Image or waveform used as source for measurement"),
             Self::_121113 => Some("Complications from a procedure"),
             Self::_121114 => Some("Physician who performed a procedure"),
-            Self::_121115 => Some("Summary of patient condition upon Discharge from a healthcare facility"),
-            Self::_121116 => Some("Proximal Anatomic Location for a differential measurement; may be considered subtype of term (G-C0E3, SRT, \"Finding Site\"); e.g. distance or pressure gradient"),
-            Self::_121117 => Some("Distal Anatomic Location for a differential measurement; may be considered subtype of term (G-C0E3, SRT, \"Finding Site\"); e.g. distance or pressure gradient"),
+            Self::_121115 => {
+                Some("Summary of patient condition upon Discharge from a healthcare facility")
+            }
+            Self::_121116 => Some(
+                "Proximal Anatomic Location for a differential measurement; may be considered subtype of term (G-C0E3, SRT, \"Finding Site\"); e.g. distance or pressure gradient",
+            ),
+            Self::_121117 => Some(
+                "Distal Anatomic Location for a differential measurement; may be considered subtype of term (G-C0E3, SRT, \"Finding Site\"); e.g. distance or pressure gradient",
+            ),
             Self::_121118 => Some("Patient Characteristics (findings)"),
-            Self::_121120 => Some("Time-stamped record of events that occur during a catheterization procedure"),
+            Self::_121120 => {
+                Some("Time-stamped record of events that occur during a catheterization procedure")
+            }
             Self::_121121 => Some("Room identification"),
             Self::_121122 => Some("Equipment identification"),
             Self::_121123 => Some("A recorded Patient Status or an event involving a patient"),
@@ -14794,8 +17610,12 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121131 => Some("End of a step, action, or phase of a procedure"),
             Self::_121132 => Some("Suspension of a step, action, or phase of a procedure"),
             Self::_121133 => Some("Resumption of a step, action, or phase of a procedure"),
-            Self::_121135 => Some("Concept modifier for the DateTime of Recording of an Entry in an Event Log"),
-            Self::_121136 => Some("Recorded DateTime had its source in a system clock not synchronized to other recorded DateTimes"),
+            Self::_121135 => {
+                Some("Concept modifier for the DateTime of Recording of an Entry in an Event Log")
+            }
+            Self::_121136 => Some(
+                "Recorded DateTime had its source in a system clock not synchronized to other recorded DateTimes",
+            ),
             Self::_121137 => Some("Recorded DateTime is estimated"),
             Self::_121138 => Some("Event of the acquisition of an image"),
             Self::_121139 => Some("Type of data acquisition device"),
@@ -14810,23 +17630,43 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121148 => Some("Unit or Device Serial Identifier"),
             Self::_121149 => Some("Lot Identifier"),
             Self::_121150 => Some("Vendor or local coded value identifying a device"),
-            Self::_121151 => Some("Identification of a Lesion observed during an imaging procedure"),
+            Self::_121151 => {
+                Some("Identification of a Lesion observed during an imaging procedure")
+            }
             Self::_121152 => Some("Person administering drug/contrast"),
-            Self::_121153 => Some("Assessment of the risk a coronary lesion presents to the health of a patient"),
+            Self::_121153 => {
+                Some("Assessment of the risk a coronary lesion presents to the health of a patient")
+            }
             Self::_121154 => Some("Identifier for an attempted Intervention"),
             Self::_121155 => Some("Use of a device to deploy another device"),
-            Self::_121156 => Some("Action of a clinical professional at the site of percutaneous access to a patient\'s cardiovascular system"),
-            Self::_121157 => Some("The action or event of beginning circulatory support for a patient"),
-            Self::_121158 => Some("The action or event of ending circulatory support for a patient"),
+            Self::_121156 => Some(
+                "Action of a clinical professional at the site of percutaneous access to a patient\'s cardiovascular system",
+            ),
+            Self::_121157 => {
+                Some("The action or event of beginning circulatory support for a patient")
+            }
+            Self::_121158 => {
+                Some("The action or event of ending circulatory support for a patient")
+            }
             Self::_121160 => Some("Rate of Oxygen Administration"),
-            Self::_121161 => Some("The action or event of beginning administration of oxygen to a patient"),
-            Self::_121162 => Some("The action or event of ending administration of oxygen to a patient"),
+            Self::_121161 => {
+                Some("The action or event of beginning administration of oxygen to a patient")
+            }
+            Self::_121162 => {
+                Some("The action or event of ending administration of oxygen to a patient")
+            }
             Self::_121163 => Some("Method of administration of oxygen to a patient by ventilator"),
-            Self::_121165 => Some("The action or event of assessing the clinical status of a patient"),
+            Self::_121165 => {
+                Some("The action or event of assessing the clinical status of a patient")
+            }
             Self::_121166 => Some("The action or event of beginning pacing support for a patient"),
             Self::_121167 => Some("The action or event of ending pacing support for a patient"),
-            Self::_121168 => Some("The action or event of beginning ventilation support for a patient"),
-            Self::_121169 => Some("The action or event of ending ventilation support for a patient"),
+            Self::_121168 => {
+                Some("The action or event of beginning ventilation support for a patient")
+            }
+            Self::_121169 => {
+                Some("The action or event of ending ventilation support for a patient")
+            }
             Self::_121171 => Some("Procedural note originated by a technologist"),
             Self::_121172 => Some("Procedural note originated by a nurse"),
             Self::_121173 => Some("Procedural note originated by a Physician"),
@@ -14834,165 +17674,399 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_121180 => Some("List of references to images considered significant"),
             Self::_121181 => Some("List of references to DICOM SOP Instances"),
             Self::_121190 => Some("Individual frames selected as a subset of a multi-frame image"),
-            Self::_121191 => Some("Segment selected as a subset of a segmentation image, specifically the pixels/voxels identified as belonging to the classification of the identified segment"),
+            Self::_121191 => Some(
+                "Segment selected as a subset of a segmentation image, specifically the pixels/voxels identified as belonging to the classification of the identified segment",
+            ),
             Self::_121192 => Some("A device is the subject of observations"),
-            Self::_121193 => Some("Name or other identifier of a device that is the subject of observations"),
+            Self::_121193 => {
+                Some("Name or other identifier of a device that is the subject of observations")
+            }
             Self::_121194 => Some("Manufacturer of a device that is the subject of observations"),
             Self::_121195 => Some("Model Name of a device that is the subject of observations"),
             Self::_121196 => Some("Serial Number of a device that is the subject of observations"),
-            Self::_121197 => Some("Physical Location of a device that is the subject of observations during those observations"),
-            Self::_121198 => Some("Unique Identifier of a device that is the subject of observations"),
+            Self::_121197 => Some(
+                "Physical Location of a device that is the subject of observations during those observations",
+            ),
+            Self::_121198 => {
+                Some("Unique Identifier of a device that is the subject of observations")
+            }
             Self::_121200 => Some("Illustration of a region of interest"),
             Self::_121201 => None,
             Self::_121202 => None,
             Self::_121206 => Some("A one dimensional, or linear, numeric measurement"),
             Self::_121207 => Some("Vertical measurement value"),
-            Self::_121208 => Some("Distance between marks on a device of calibrated size; e.g. a ruler"),
+            Self::_121208 => {
+                Some("Distance between marks on a device of calibrated size; e.g. a ruler")
+            }
             Self::_121210 => None,
-            Self::_121211 => Some("A one dimensional, or linear, numeric measurement along a polyline"),
+            Self::_121211 => {
+                Some("A one dimensional, or linear, numeric measurement along a polyline")
+            }
             Self::_121213 => None,
-            Self::_121214 => Some("Frame selected from a segmentation image, specifically the pixels/voxels identified as belonging to the classification of the segment encompassing the identified frame"),
-            Self::_121216 => Some("A three-dimensional numeric measurement that is approximate, based on a two-dimensional region in a single image"),
-            Self::_121217 => Some("A three-dimensional numeric measurement that is approximate, based on three or more non-coplanar two-dimensional image regions"),
-            Self::_121218 => Some("A three-dimensional numeric measurement that is approximate, based on two non-coplanar two-dimensional image regions"),
-            Self::_121219 => Some("A three-dimensional numeric measurement of the bounding region of a three-dimensional region of interest in an image set"),
-            Self::_121220 => Some("A three-dimensional numeric measurement of the bounding sphere of a three-dimensional region of interest in an image set"),
-            Self::_121221 => Some("A three-dimensional numeric measurement of an ellipsoid shaped three-dimensional region of interest in an image set"),
-            Self::_121222 => Some("A three-dimensional numeric measurement of a sphere shaped three-dimensional region of interest in an image set"),
+            Self::_121214 => Some(
+                "Frame selected from a segmentation image, specifically the pixels/voxels identified as belonging to the classification of the segment encompassing the identified frame",
+            ),
+            Self::_121216 => Some(
+                "A three-dimensional numeric measurement that is approximate, based on a two-dimensional region in a single image",
+            ),
+            Self::_121217 => Some(
+                "A three-dimensional numeric measurement that is approximate, based on three or more non-coplanar two-dimensional image regions",
+            ),
+            Self::_121218 => Some(
+                "A three-dimensional numeric measurement that is approximate, based on two non-coplanar two-dimensional image regions",
+            ),
+            Self::_121219 => Some(
+                "A three-dimensional numeric measurement of the bounding region of a three-dimensional region of interest in an image set",
+            ),
+            Self::_121220 => Some(
+                "A three-dimensional numeric measurement of the bounding sphere of a three-dimensional region of interest in an image set",
+            ),
+            Self::_121221 => Some(
+                "A three-dimensional numeric measurement of an ellipsoid shaped three-dimensional region of interest in an image set",
+            ),
+            Self::_121222 => Some(
+                "A three-dimensional numeric measurement of a sphere shaped three-dimensional region of interest in an image set",
+            ),
             Self::_121230 => Some("Coordinates of a point on a defined path"),
             Self::_121231 => Some("Surface of an identified or measured volume"),
-            Self::_121232 => Some("Series of image instances used as source data for a segmentation"),
+            Self::_121232 => {
+                Some("Series of image instances used as source data for a segmentation")
+            }
             Self::_121233 => Some("Image instances used as source data for a segmentation"),
-            Self::_121242 => Some("Indicates the location of the area of interest as measured from the nipple of the breast"),
-            Self::_121243 => Some("Indicates the location of the area of interest as measured from the most direct skin point of the breast"),
-            Self::_121244 => Some("Indicates the location of the area of interest as measured from the chest wall"),
+            Self::_121242 => Some(
+                "Indicates the location of the area of interest as measured from the nipple of the breast",
+            ),
+            Self::_121243 => Some(
+                "Indicates the location of the area of interest as measured from the most direct skin point of the breast",
+            ),
+            Self::_121244 => Some(
+                "Indicates the location of the area of interest as measured from the chest wall",
+            ),
             Self::_121290 => Some("Patient exposure to ionizing radiation (procedure)"),
-            Self::_121291 => Some("The act of communicating actionable findings to a responsible receiver"),
-            Self::_121301 => Some("Reference is to a Doppler waveform acquired simultaneously with an image"),
-            Self::_121302 => Some("Reference is to a Hemodynamic waveform acquired simultaneously with an image"),
-            Self::_121303 => Some("Reference is to a ECG waveform acquired simultaneously with an image"),
-            Self::_121304 => Some("Reference is to a voice narrative recording acquired simultaneously with an image"),
-            Self::_121305 => Some("A waveform representing chest expansion and contraction due to respiratory activity, measured simultaneously with the acquisition of this Image"),
-            Self::_121306 => Some("Arterial pulse waveform obtained simultaneously with acquisition of a referencing image"),
-            Self::_121307 => Some("Phonocardiographic waveform obtained simultaneously with acquisition of a referencing image"),
-            Self::_121311 => Some("Image providing an anatomical reference on the patient under examination, for the purpose of defining the location of the ensuing imaging"),
-            Self::_121312 => Some("Image providing an anatomical reference on the patient under examination, for the purpose of planning or documenting a biopsy"),
-            Self::_121313 => Some("Image providing a partial view of the target anatomy, when the target anatomy is too large for a single image"),
-            Self::_121314 => Some("Image providing a view of the target anatomy in a different imaging plane, typically from a near perpendicular angle"),
-            Self::_121315 => Some("Image providing a view of the target anatomy in a different imaging plane, typically with a small angular difference"),
+            Self::_121291 => {
+                Some("The act of communicating actionable findings to a responsible receiver")
+            }
+            Self::_121301 => {
+                Some("Reference is to a Doppler waveform acquired simultaneously with an image")
+            }
+            Self::_121302 => {
+                Some("Reference is to a Hemodynamic waveform acquired simultaneously with an image")
+            }
+            Self::_121303 => {
+                Some("Reference is to a ECG waveform acquired simultaneously with an image")
+            }
+            Self::_121304 => Some(
+                "Reference is to a voice narrative recording acquired simultaneously with an image",
+            ),
+            Self::_121305 => Some(
+                "A waveform representing chest expansion and contraction due to respiratory activity, measured simultaneously with the acquisition of this Image",
+            ),
+            Self::_121306 => Some(
+                "Arterial pulse waveform obtained simultaneously with acquisition of a referencing image",
+            ),
+            Self::_121307 => Some(
+                "Phonocardiographic waveform obtained simultaneously with acquisition of a referencing image",
+            ),
+            Self::_121311 => Some(
+                "Image providing an anatomical reference on the patient under examination, for the purpose of defining the location of the ensuing imaging",
+            ),
+            Self::_121312 => Some(
+                "Image providing an anatomical reference on the patient under examination, for the purpose of planning or documenting a biopsy",
+            ),
+            Self::_121313 => Some(
+                "Image providing a partial view of the target anatomy, when the target anatomy is too large for a single image",
+            ),
+            Self::_121314 => Some(
+                "Image providing a view of the target anatomy in a different imaging plane, typically from a near perpendicular angle",
+            ),
+            Self::_121315 => Some(
+                "Image providing a view of the target anatomy in a different imaging plane, typically with a small angular difference",
+            ),
             Self::_121316 => Some("Image related to a non-image information object"),
-            Self::_121317 => Some("Image where signals are identified and separated according to their frequencies; e.g. to identify individual chemicals, or individual nuclei in a chemical compound"),
-            Self::_121318 => Some("MR spectroscopy data acquired to correct the phase of the diagnostic data for the phase signal of the Water"),
-            Self::_121320 => Some("An image that has not already been lossy compressed that is used as the source for creation of a lossy compressed image"),
-            Self::_121321 => Some("Image used as the mask for an image processing operation, such as subtraction"),
+            Self::_121317 => Some(
+                "Image where signals are identified and separated according to their frequencies; e.g. to identify individual chemicals, or individual nuclei in a chemical compound",
+            ),
+            Self::_121318 => Some(
+                "MR spectroscopy data acquired to correct the phase of the diagnostic data for the phase signal of the Water",
+            ),
+            Self::_121320 => Some(
+                "An image that has not already been lossy compressed that is used as the source for creation of a lossy compressed image",
+            ),
+            Self::_121321 => Some(
+                "Image used as the mask for an image processing operation, such as subtraction",
+            ),
             Self::_121322 => Some("Image used as the source for an image processing operation"),
             Self::_121323 => Some("Series used as the source for an image processing operation"),
             Self::_121324 => Some("Image used as the source for a derived or compressed image"),
             Self::_121325 => Some("Image encoded with a lossy compression transfer syntax"),
-            Self::_121326 => Some("SOP Instance encoded with a different SOP Class but otherwise equivalent data"),
+            Self::_121326 => Some(
+                "SOP Instance encoded with a different SOP Class but otherwise equivalent data",
+            ),
             Self::_121327 => Some("Full fidelity image, uncompressed or lossless compressed"),
             Self::_121328 => Some("Image encoded with a different photometric interpretation"),
             Self::_121329 => Some("Image used as a source for a montage (stitched) image"),
-            Self::_121330 => Some("An image that has previously been lossy compressed that is used as the source for creation of another lossy compressed image"),
-            Self::_121331 => Some("HL7 Document Architecture (CDA) Document that contains clinical content equivalent to the referencing Instance"),
-            Self::_121332 => Some("Instance that contains a displayable complete rendering of the referencing Instance"),
-            Self::_121333 => Some("Instance that contains a displayable partial rendering of the referencing Instance"),
-            Self::_121334 => Some("Instance that contains a displayable complete rendering of the referencing Instance, plus additional content such as inline rendering of referenced images"),
-            Self::_121335 => Some("Document whose content has been wholly or partially transformed to create the referencing document"),
+            Self::_121330 => Some(
+                "An image that has previously been lossy compressed that is used as the source for creation of another lossy compressed image",
+            ),
+            Self::_121331 => Some(
+                "HL7 Document Architecture (CDA) Document that contains clinical content equivalent to the referencing Instance",
+            ),
+            Self::_121332 => Some(
+                "Instance that contains a displayable complete rendering of the referencing Instance",
+            ),
+            Self::_121333 => Some(
+                "Instance that contains a displayable partial rendering of the referencing Instance",
+            ),
+            Self::_121334 => Some(
+                "Instance that contains a displayable complete rendering of the referencing Instance, plus additional content such as inline rendering of referenced images",
+            ),
+            Self::_121335 => Some(
+                "Document whose content has been wholly or partially transformed to create the referencing document",
+            ),
             Self::_121338 => Some("Image showing structural anatomic features"),
             Self::_121339 => Some("Image showing physical or chemical activity"),
-            Self::_121340 => Some("Image providing the same view of the target anatomy acquired using only a specific imaging wavelength, frequency or energy"),
-            Self::_121341 => Some("Image providing an anatomical reference on the patient under examination, for the purpose of documenting the location of device such as a diagnostic or therapeutic catheter"),
-            Self::_121342 => Some("Image providing a graphic view of the distribution of radiation dose"),
-            Self::_121346 => Some("The referenced image is the source of spatially-related frames from which the referencing 3D volume data set was derived"),
-            Self::_121347 => Some("3D Volume containing the spatially-related frames in the referencing instance"),
-            Self::_121348 => Some("Instance acquired prior to the referencing instance in a set of consecutively acquired instances"),
-            Self::_121349 => Some("Instance acquired subsequent to the referencing instance in a set of consecutively acquired instances"),
-            Self::_121350 => Some("Image of the same target area at lower resolution acquired in the same acquisition process"),
-            Self::_121351 => Some("Image of the same target area at higher resolution acquired in the same acquisition process"),
-            Self::_121352 => Some("Image of the same target area at different focal depth (Z-plane) acquired in the same acquisition process"),
-            Self::_121353 => Some("Image of the same target area at different spectral band acquired in the same acquisition process"),
+            Self::_121340 => Some(
+                "Image providing the same view of the target anatomy acquired using only a specific imaging wavelength, frequency or energy",
+            ),
+            Self::_121341 => Some(
+                "Image providing an anatomical reference on the patient under examination, for the purpose of documenting the location of device such as a diagnostic or therapeutic catheter",
+            ),
+            Self::_121342 => {
+                Some("Image providing a graphic view of the distribution of radiation dose")
+            }
+            Self::_121346 => Some(
+                "The referenced image is the source of spatially-related frames from which the referencing 3D volume data set was derived",
+            ),
+            Self::_121347 => Some(
+                "3D Volume containing the spatially-related frames in the referencing instance",
+            ),
+            Self::_121348 => Some(
+                "Instance acquired prior to the referencing instance in a set of consecutively acquired instances",
+            ),
+            Self::_121349 => Some(
+                "Instance acquired subsequent to the referencing instance in a set of consecutively acquired instances",
+            ),
+            Self::_121350 => Some(
+                "Image of the same target area at lower resolution acquired in the same acquisition process",
+            ),
+            Self::_121351 => Some(
+                "Image of the same target area at higher resolution acquired in the same acquisition process",
+            ),
+            Self::_121352 => Some(
+                "Image of the same target area at different focal depth (Z-plane) acquired in the same acquisition process",
+            ),
+            Self::_121353 => Some(
+                "Image of the same target area at different spectral band acquired in the same acquisition process",
+            ),
             Self::_121354 => Some("Image specifically targeting the container label"),
             Self::_121358 => Some("Source image from which FOR PRESENTATION images were created"),
-            Self::_121360 => Some("The reference is to a predecessor report that has been replaced by the current report"),
-            Self::_121361 => Some("The reference is to a predecessor report to which the current report provides and addendum"),
-            Self::_121362 => Some("A report that precedes the final report and may contain only limited information; it may be time sensitive, and it is not expected to contain all the reportable findings"),
+            Self::_121360 => Some(
+                "The reference is to a predecessor report that has been replaced by the current report",
+            ),
+            Self::_121361 => Some(
+                "The reference is to a predecessor report to which the current report provides and addendum",
+            ),
+            Self::_121362 => Some(
+                "A report that precedes the final report and may contain only limited information; it may be time sensitive, and it is not expected to contain all the reportable findings",
+            ),
             Self::_121363 => Some("A report that is not complete"),
-            Self::_121370 => Some("The dose object created was calculated by summation of existing, previously calculated, RT Dose instances"),
-            Self::_121371 => Some("The dose object created was calculated by summation of existing, previously calculated, RT Dose instances and dose newly calculated by the application. The newly calculated dose may or may not exist as an independent object"),
+            Self::_121370 => Some(
+                "The dose object created was calculated by summation of existing, previously calculated, RT Dose instances",
+            ),
+            Self::_121371 => Some(
+                "The dose object created was calculated by summation of existing, previously calculated, RT Dose instances and dose newly calculated by the application. The newly calculated dose may or may not exist as an independent object",
+            ),
             Self::_121372 => Some("RT Dose Instances used as source for calculated dose"),
-            Self::_121380 => Some("Concentration of the chemically or physically interesting (active) ingredient of a drug or contrast agent as delivered in product form from the manufacturer, typically in mg/ml"),
-            Self::_121381 => Some("X-Ray absorption of the active ingredient of a contrast agent ingredient is greater than the absorption of water (tissue)"),
-            Self::_121382 => Some("Number of units of substance administered to a patient; e.g. tablets"),
+            Self::_121380 => Some(
+                "Concentration of the chemically or physically interesting (active) ingredient of a drug or contrast agent as delivered in product form from the manufacturer, typically in mg/ml",
+            ),
+            Self::_121381 => Some(
+                "X-Ray absorption of the active ingredient of a contrast agent ingredient is greater than the absorption of water (tissue)",
+            ),
+            Self::_121382 => {
+                Some("Number of units of substance administered to a patient; e.g. tablets")
+            }
             Self::_121383 => Some("Mass of substance administered to a patient"),
-            Self::_121401 => Some("Method of deriving or calculating a measured value; e.g. mean, or maximum of set"),
-            Self::_121402 => Some("Assessment of a measurement relative to a normal range of values; may be considered subtype of term (G-C0F2, SRT, \"has interpretation\")"),
+            Self::_121401 => Some(
+                "Method of deriving or calculating a measured value; e.g. mean, or maximum of set",
+            ),
+            Self::_121402 => Some(
+                "Assessment of a measurement relative to a normal range of values; may be considered subtype of term (G-C0F2, SRT, \"has interpretation\")",
+            ),
             Self::_121403 => Some("Significance of a measurement"),
-            Self::_121404 => Some("Status of selection of a measurement for further processing or use"),
+            Self::_121404 => {
+                Some("Status of selection of a measurement for further processing or use")
+            }
             Self::_121405 => Some("Description of a population of measurements"),
-            Self::_121406 => Some("Bibliographic or clinical reference for a Description of a population of measurements"),
-            Self::_121407 => Some("Description of a normal range of values for a measurement concept"),
-            Self::_121408 => Some("Bibliographic or clinical reference for a Description of a normal range of values"),
-            Self::_121410 => Some("Observation value selected by user for further processing or use, or as most representative"),
-            Self::_121411 => Some("Observation value is the recently obtained, and has been selected for further processing or use"),
-            Self::_121412 => Some("Observation value is the mean of several measurements, and has been selected for further processing or use"),
+            Self::_121406 => Some(
+                "Bibliographic or clinical reference for a Description of a population of measurements",
+            ),
+            Self::_121407 => {
+                Some("Description of a normal range of values for a measurement concept")
+            }
+            Self::_121408 => Some(
+                "Bibliographic or clinical reference for a Description of a normal range of values",
+            ),
+            Self::_121410 => Some(
+                "Observation value selected by user for further processing or use, or as most representative",
+            ),
+            Self::_121411 => Some(
+                "Observation value is the recently obtained, and has been selected for further processing or use",
+            ),
+            Self::_121412 => Some(
+                "Observation value is the mean of several measurements, and has been selected for further processing or use",
+            ),
             Self::_121414 => Some("Standard deviation of a measurement in a reference population"),
-            Self::_121415 => Some("Percentile Ranking of an observation value with respect a reference population"),
-            Self::_121416 => Some("Z-score of an observation value with respect a reference population, expressed as the dimensionless quantity (x-m) /s, where (x-m) is the deviation of the observation value (x) from the population mean (m), and s is the standard deviation of the population"),
+            Self::_121415 => Some(
+                "Percentile Ranking of an observation value with respect a reference population",
+            ),
+            Self::_121416 => Some(
+                "Z-score of an observation value with respect a reference population, expressed as the dimensionless quantity (x-m) /s, where (x-m) is the deviation of the observation value (x) from the population mean (m), and s is the standard deviation of the population",
+            ),
             Self::_121417 => Some("2 Sigma deviation of a measurement in a reference population"),
             Self::_121420 => Some("Formula used to compute a derived measurement"),
-            Self::_121421 => Some("Bibliographic reference to a formula used to compute a derived measurement; reference may be to a specific equation in a journal article"),
-            Self::_121422 => Some("Bibliographic reference to a Table of Values used to look up a derived measurement"),
-            Self::_121423 => Some("Bibliographic reference to a method used to compute a derived measurement"),
+            Self::_121421 => Some(
+                "Bibliographic reference to a formula used to compute a derived measurement; reference may be to a specific equation in a journal article",
+            ),
+            Self::_121422 => Some(
+                "Bibliographic reference to a Table of Values used to look up a derived measurement",
+            ),
+            Self::_121423 => {
+                Some("Bibliographic reference to a method used to compute a derived measurement")
+            }
             Self::_121424 => Some("A Table of Values used to look up a derived measurement"),
-            Self::_121425 => Some("Factor (divisor or multiplicand) for normalizing a measurement; e.g. body surface area used for normalizing hemodynamic measurements"),
-            Self::_121427 => Some("Measurement obtained by observer estimation, rather than with a measurement tool or by calculation"),
+            Self::_121425 => Some(
+                "Factor (divisor or multiplicand) for normalizing a measurement; e.g. body surface area used for normalizing hemodynamic measurements",
+            ),
+            Self::_121427 => Some(
+                "Measurement obtained by observer estimation, rather than with a measurement tool or by calculation",
+            ),
             Self::_121428 => Some("Measurement obtained by calculation"),
-            Self::_121430 => Some("Identified issue about a state or process that has the potential to require intervention or management"),
-            Self::_121431 => Some("DateTime concern noted (noted by whom is determined by context of use)"),
+            Self::_121430 => Some(
+                "Identified issue about a state or process that has the potential to require intervention or management",
+            ),
+            Self::_121431 => {
+                Some("DateTime concern noted (noted by whom is determined by context of use)")
+            }
             Self::_121432 => Some("DateTime the concern was resolved"),
             Self::_121433 => Some("DateTime the problem was resolved"),
             Self::_121434 => Some("Place at which healthcare services may be provided"),
-            Self::_121435 => Some("Identification of a healthcare provider who performed a healthcare service; may be either a person or an organization"),
-            Self::_121436 => Some("Type or identifier of a medical device used on, in, or by a patient"),
+            Self::_121435 => Some(
+                "Identification of a healthcare provider who performed a healthcare service; may be either a person or an organization",
+            ),
+            Self::_121436 => {
+                Some("Type or identifier of a medical device used on, in, or by a patient")
+            }
             Self::_121437 => Some("Cardiac stress test using pharmacologic and exercise stressors"),
-            Self::_121438 => Some("Cardiac stress test using an implanted or external cardiac pacing device"),
-            Self::_121439 => Some("Procedure for correction of congenital cardiovascular deformity"),
-            Self::_121701 => Some("Process of placing patient in the anticipated treatment position, including specification and location of positioning aids, and other treatment delivery accessories"),
-            Self::_121702 => Some("Acquisition of patient positioning information prior to treatment delivery, using single-plane megavoltage imaging"),
-            Self::_121703 => Some("Acquisition of patient positioning information prior to treatment delivery, using dual-plane megavoltage imaging"),
-            Self::_121704 => Some("Acquisition of patient positioning information prior to treatment delivery, using single-plane kilovoltage imaging"),
-            Self::_121705 => Some("Acquisition of patient positioning information prior to treatment delivery, using dual-plane kilovoltage imaging"),
-            Self::_121706 => Some("Acquisition of patient positioning information prior to treatment delivery, using dual-plane combination kilovoltage and megavoltage imaging"),
-            Self::_121707 => Some("Acquisition of patient positioning information prior to treatment delivery, using kilovoltage CT imaging"),
-            Self::_121708 => Some("Acquisition of patient positioning information prior to treatment delivery, using megavoltage CT imaging"),
-            Self::_121709 => Some("Acquisition of patient positioning information prior to treatment delivery, using optical imaging"),
-            Self::_121710 => Some("Acquisition of patient positioning information prior to treatment delivery, using ultrasound imaging"),
-            Self::_121711 => Some("Acquisition of patient positioning information prior to treatment delivery, using spatial fiducials"),
-            Self::_121712 => Some("Registration of intended and actual patient position prior to treatment delivery, using single-plane images"),
-            Self::_121713 => Some("Registration of intended and actual patient position prior to treatment delivery, using dual-plane images"),
-            Self::_121714 => Some("Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and an unspecified registration approach"),
-            Self::_121715 => Some("Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and a marker-based registration approach"),
-            Self::_121716 => Some("Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and a volume-based registration approach"),
-            Self::_121717 => Some("Registration of intended and actual patient position prior to treatment delivery, using 3D verification images and 2D reference images"),
-            Self::_121718 => Some("Registration of intended and actual patient position prior to treatment delivery, using 2D verification images and 3D reference images"),
-            Self::_121719 => Some("Registration of intended and actual patient position prior to treatment delivery, using optical images"),
-            Self::_121720 => Some("Registration of intended and actual patient position prior to treatment delivery, using ultrasound images"),
-            Self::_121721 => Some("Registration of intended and actual patient position prior to treatment delivery, using spatial fiducials"),
-            Self::_121722 => Some("Adjustment of patient position such that the patient is correctly positioned for treatment"),
-            Self::_121723 => Some("Review of patient positioning information in the process of delivering a treatment session"),
-            Self::_121724 => Some("Simulated radiotherapy treatment delivery using verification integral to the Treatment Delivery System"),
-            Self::_121725 => Some("Simulated radiotherapy treatment delivery using verification by a external Machine Parameter Verifier"),
-            Self::_121726 => Some("Radiotherapy treatment delivery using verification integral to the Treatment Delivery System"),
-            Self::_121727 => Some("Radiotherapy treatment delivery using verification by an external Machine Parameter Verifier"),
-            Self::_121728 => Some("Quality assurance of a radiotherapy treatment delivery using verification integral to the Treatment Delivery System"),
-            Self::_121729 => Some("Quality assurance of a radiotherapy treatment delivery using verification by an external Machine Parameter Verifier"),
+            Self::_121438 => {
+                Some("Cardiac stress test using an implanted or external cardiac pacing device")
+            }
+            Self::_121439 => {
+                Some("Procedure for correction of congenital cardiovascular deformity")
+            }
+            Self::_121701 => Some(
+                "Process of placing patient in the anticipated treatment position, including specification and location of positioning aids, and other treatment delivery accessories",
+            ),
+            Self::_121702 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using single-plane megavoltage imaging",
+            ),
+            Self::_121703 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using dual-plane megavoltage imaging",
+            ),
+            Self::_121704 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using single-plane kilovoltage imaging",
+            ),
+            Self::_121705 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using dual-plane kilovoltage imaging",
+            ),
+            Self::_121706 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using dual-plane combination kilovoltage and megavoltage imaging",
+            ),
+            Self::_121707 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using kilovoltage CT imaging",
+            ),
+            Self::_121708 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using megavoltage CT imaging",
+            ),
+            Self::_121709 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using optical imaging",
+            ),
+            Self::_121710 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using ultrasound imaging",
+            ),
+            Self::_121711 => Some(
+                "Acquisition of patient positioning information prior to treatment delivery, using spatial fiducials",
+            ),
+            Self::_121712 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using single-plane images",
+            ),
+            Self::_121713 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using dual-plane images",
+            ),
+            Self::_121714 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and an unspecified registration approach",
+            ),
+            Self::_121715 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and a marker-based registration approach",
+            ),
+            Self::_121716 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using 3D CT images and a volume-based registration approach",
+            ),
+            Self::_121717 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using 3D verification images and 2D reference images",
+            ),
+            Self::_121718 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using 2D verification images and 3D reference images",
+            ),
+            Self::_121719 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using optical images",
+            ),
+            Self::_121720 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using ultrasound images",
+            ),
+            Self::_121721 => Some(
+                "Registration of intended and actual patient position prior to treatment delivery, using spatial fiducials",
+            ),
+            Self::_121722 => Some(
+                "Adjustment of patient position such that the patient is correctly positioned for treatment",
+            ),
+            Self::_121723 => Some(
+                "Review of patient positioning information in the process of delivering a treatment session",
+            ),
+            Self::_121724 => Some(
+                "Simulated radiotherapy treatment delivery using verification integral to the Treatment Delivery System",
+            ),
+            Self::_121725 => Some(
+                "Simulated radiotherapy treatment delivery using verification by a external Machine Parameter Verifier",
+            ),
+            Self::_121726 => Some(
+                "Radiotherapy treatment delivery using verification integral to the Treatment Delivery System",
+            ),
+            Self::_121727 => Some(
+                "Radiotherapy treatment delivery using verification by an external Machine Parameter Verifier",
+            ),
+            Self::_121728 => Some(
+                "Quality assurance of a radiotherapy treatment delivery using verification integral to the Treatment Delivery System",
+            ),
+            Self::_121729 => Some(
+                "Quality assurance of a radiotherapy treatment delivery using verification by an external Machine Parameter Verifier",
+            ),
             Self::_121730 => Some("Quality assurance of a Treatment Delivery Device"),
-            Self::_121731 => Some("Perform Quality Assurance on an RT Plan by evaluating dosimetric content of the current RT Plan"),
-            Self::_121732 => Some("Perform Quality Assurance on an RT Plan by comparing the content of previously quality-assessed RT Plans with the current RT Plan"),
-            Self::_121733 => Some("Perform Quality Assurance on an RT Ion Plan by evaluating dosimetric content of the current RT Ion Plan"),
-            Self::_121734 => Some("Perform Quality Assurance on an RT Ion Plan by comparing the content of previously quality-assessed RT Ion Plans with the current RT Ion Plan"),
-            Self::_121740 => Some("Indicates whether the treatment to be delivered is a complete fraction or a continuation of previous incompletely treated fraction"),
+            Self::_121731 => Some(
+                "Perform Quality Assurance on an RT Plan by evaluating dosimetric content of the current RT Plan",
+            ),
+            Self::_121732 => Some(
+                "Perform Quality Assurance on an RT Plan by comparing the content of previously quality-assessed RT Plans with the current RT Plan",
+            ),
+            Self::_121733 => Some(
+                "Perform Quality Assurance on an RT Ion Plan by evaluating dosimetric content of the current RT Ion Plan",
+            ),
+            Self::_121734 => Some(
+                "Perform Quality Assurance on an RT Ion Plan by comparing the content of previously quality-assessed RT Ion Plans with the current RT Ion Plan",
+            ),
+            Self::_121740 => Some(
+                "Indicates whether the treatment to be delivered is a complete fraction or a continuation of previous incompletely treated fraction",
+            ),
             Self::_122001 => Some("Patient called to procedure room"),
             Self::_122002 => Some("Patient admitted to procedure room"),
             Self::_122003 => Some("Patient given pre-procedure instruction"),
@@ -15046,11 +18120,15 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122061 => Some("Percutaneous Coronary Intervention"),
             Self::_122062 => Some("15-Lead electrocardiography"),
             Self::_122072 => Some("Log of events occurring prior to the current procedure"),
-            Self::_122073 => Some("Analysis or measurements for current procedure (purpose of reference to evidence document)"),
+            Self::_122073 => Some(
+                "Analysis or measurements for current procedure (purpose of reference to evidence document)",
+            ),
             Self::_122075 => Some("Prior report for current patient"),
             Self::_122076 => Some("Identifier of Consumable taken from inventory"),
             Self::_122077 => Some("Identifier of Consumable returned to inventory"),
-            Self::_122078 => Some("Identifier of consumable whose remaining content has been disposed"),
+            Self::_122078 => {
+                Some("Identifier of consumable whose remaining content has been disposed")
+            }
             Self::_122079 => Some("Identifier of Consumable determined to be unusable"),
             Self::_122081 => Some("Identifier of Drug whose administration has started"),
             Self::_122082 => Some("Identifier of Drug whose administration has ended"),
@@ -15061,27 +18139,51 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122087 => Some("Identifier of Infusate whose administration has started"),
             Self::_122088 => Some("Identifier of Infusate whose administration has ended"),
             Self::_122089 => Some("Action of a device traversing a vascular lesion"),
-            Self::_122090 => Some("Action of a clinical professional performed on a patient for therapeutic purpose"),
+            Self::_122090 => Some(
+                "Action of a clinical professional performed on a patient for therapeutic purpose",
+            ),
             Self::_122091 => Some("Volume of Drug, Contrast agent, or Infusate administered"),
-            Self::_122092 => Some("Undiluted dose of Drug, Contrast agent, or Infusate administered"),
-            Self::_122093 => Some("Concentration of Drug, Contrast agent, or Infusate administered"),
+            Self::_122092 => {
+                Some("Undiluted dose of Drug, Contrast agent, or Infusate administered")
+            }
+            Self::_122093 => {
+                Some("Concentration of Drug, Contrast agent, or Infusate administered")
+            }
             Self::_122094 => Some("Rate of Drug, Contrast agent, or Infusate administration"),
             Self::_122095 => Some("Duration of Drug, Contrast agent, or Infusate administration"),
-            Self::_122096 => Some("Volume of Drug, Contrast agent, or Infusate unadministered or discarded"),
+            Self::_122096 => {
+                Some("Volume of Drug, Contrast agent, or Infusate unadministered or discarded")
+            }
             Self::_122097 => Some("Numeric parameter of Curvature of Catheter"),
             Self::_122098 => Some("Transmit Frequency"),
-            Self::_122099 => Some("Measured change of patient electrocardiographic ST level relative to baseline measurement"),
-            Self::_122101 => Some("Anatomic term modifier indicating aneurysm on cited vessel is the subject of the finding"),
-            Self::_122102 => Some("Anatomic term modifier indicating proximal section of graft to cited vessel is the subject of the finding"),
-            Self::_122103 => Some("Anatomic term modifier indicating mid section of graft to cited vessel is the subject of the finding"),
-            Self::_122104 => Some("Anatomic term modifier indicating distal section of graft to cited vessel is the subject of the finding"),
+            Self::_122099 => Some(
+                "Measured change of patient electrocardiographic ST level relative to baseline measurement",
+            ),
+            Self::_122101 => Some(
+                "Anatomic term modifier indicating aneurysm on cited vessel is the subject of the finding",
+            ),
+            Self::_122102 => Some(
+                "Anatomic term modifier indicating proximal section of graft to cited vessel is the subject of the finding",
+            ),
+            Self::_122103 => Some(
+                "Anatomic term modifier indicating mid section of graft to cited vessel is the subject of the finding",
+            ),
+            Self::_122104 => Some(
+                "Anatomic term modifier indicating distal section of graft to cited vessel is the subject of the finding",
+            ),
             Self::_122105 => Some("DateTime of Intervention"),
             Self::_122106 => Some("Duration of Intervention"),
             Self::_122107 => Some("Lesion stenosis measured prior to any interventional procedure"),
             Self::_122108 => Some("Lesion stenosis measured after an interventional procedure"),
-            Self::_122109 => Some("Assessment of perfusion across a coronary lesion measured prior to any interventional procedure"),
-            Self::_122110 => Some("Assessment of perfusion across a coronary lesion measured after an interventional procedure"),
-            Self::_122111 => Some("Indication that device is the primary (first and/or most significant) device used for interventional therapy of a particular pathology; e.g. lesion"),
+            Self::_122109 => Some(
+                "Assessment of perfusion across a coronary lesion measured prior to any interventional procedure",
+            ),
+            Self::_122110 => Some(
+                "Assessment of perfusion across a coronary lesion measured after an interventional procedure",
+            ),
+            Self::_122111 => Some(
+                "Indication that device is the primary (first and/or most significant) device used for interventional therapy of a particular pathology; e.g. lesion",
+            ),
             Self::_122112 => Some("Normal Myocardium"),
             Self::_122113 => Some("Sacrred Myocardial"),
             Self::_122114 => Some("Thinning Myocardium"),
@@ -15094,52 +18196,84 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122126 => Some("Derived Hemodynamic Measurements, report section"),
             Self::_122127 => Some("Clinical Context, report section"),
             Self::_122128 => Some("Location from which the patient was transferred"),
-            Self::_122129 => Some("Indication that the procedure includes a percutaneous coronary intervention"),
+            Self::_122129 => {
+                Some("Indication that the procedure includes a percutaneous coronary intervention")
+            }
             Self::_122130 => Some("Radiation dose times area of exposure"),
             Self::_122131 => Some("Finding of probability and/or severity of thrombus"),
             Self::_122132 => Some("Severity of Calcification, property of lesion"),
             Self::_122133 => Some("Lesion Morphology; form and/or structural properties of lesion"),
             Self::_122134 => Some("Vessel Morphology; form and/or structural properties of vessel"),
-            Self::_122138 => Some("Technique (device or procedure) of support for patient circulatory system; hemodynamic support"),
+            Self::_122138 => Some(
+                "Technique (device or procedure) of support for patient circulatory system; hemodynamic support",
+            ),
             Self::_122139 => Some("Reason for Exam"),
-            Self::_122140 => Some("Indication that the current exam data has been compared with prior exam data"),
+            Self::_122140 => {
+                Some("Indication that the current exam data has been compared with prior exam data")
+            }
             Self::_122141 => Some("Electrocardiographic electrode placement technique"),
             Self::_122142 => Some("Acquisition Device Type"),
             Self::_122143 => Some("Acquisition Device ID"),
             Self::_122144 => Some("Quantitative Analysis, report section"),
             Self::_122145 => Some("Qualitative Analysis, report section"),
-            Self::_122146 => Some("The date and time on which a procedure was performed on a patient"),
+            Self::_122146 => {
+                Some("The date and time on which a procedure was performed on a patient")
+            }
             Self::_122147 => Some("Clinical Interpretation, report section"),
             Self::_122148 => Some("ECG Lead Identifier"),
             Self::_122149 => Some("Beat Number; ordinal of cardiac cycle within an acquisition"),
-            Self::_122150 => Some("Complex coded semantic unit, consisting of several coded components"),
-            Self::_122151 => Some("Trend (temporal progression) of a clinical condition, finding, or disease"),
+            Self::_122150 => {
+                Some("Complex coded semantic unit, consisting of several coded components")
+            }
+            Self::_122151 => {
+                Some("Trend (temporal progression) of a clinical condition, finding, or disease")
+            }
             Self::_122152 => Some("Coded semantic unit"),
             Self::_122153 => Some("Coded modifier for a semantic unit"),
             Self::_122154 => Some("Conjunctive term between semantic units"),
             Self::_122157 => Some("Probability"),
             Self::_122158 => Some("ECG Global Measurements, report section"),
             Self::_122159 => Some("ECG Lead Measurements, report section"),
-            Self::_122160 => Some("Derived cross-sectional area of a vessel or anatomic feature, other than a cardiac valve"),
+            Self::_122160 => Some(
+                "Derived cross-sectional area of a vessel or anatomic feature, other than a cardiac valve",
+            ),
             Self::_122161 => Some("Rate of blood flow through Pulmonary artery"),
             Self::_122162 => Some("Rate of blood flow through the aorta"),
             Self::_122163 => Some("DateTime of patient discharge from hospital admission"),
-            Self::_122164 => Some("Indication that a Coronary Artery Bypass operation was performed during the current hospital admission"),
+            Self::_122164 => Some(
+                "Indication that a Coronary Artery Bypass operation was performed during the current hospital admission",
+            ),
             Self::_122165 => Some("Date of Death"),
-            Self::_122166 => Some("Indication that the patient died during the current hospital admission"),
-            Self::_122167 => Some("Indication that the patient died during the current Catheterization procedure"),
+            Self::_122166 => {
+                Some("Indication that the patient died during the current hospital admission")
+            }
+            Self::_122167 => Some(
+                "Indication that the patient died during the current Catheterization procedure",
+            ),
             Self::_122170 => Some("Finding of type of Myocardial Infarction"),
             Self::_122171 => Some("Finding of Coronary lesion with greater than 50% stenosis"),
-            Self::_122172 => Some("Finding of Acute Myocardial Infarction Presence as indication for interventional procedure"),
-            Self::_122173 => Some("DateTime of first determination of elevated ECG ST segment, as indication of Myocardial Infarction"),
-            Self::_122175 => Some("Number of lesion interventions attempted during current procedure"),
-            Self::_122176 => Some("Number of lesion interventions successful during current procedure, where the residual post intervention stenosis is less than or equal to 50% of the arterial luminal diameter, TIMI Flow is 3 and the minimal decrease in stenosis was 20%"),
+            Self::_122172 => Some(
+                "Finding of Acute Myocardial Infarction Presence as indication for interventional procedure",
+            ),
+            Self::_122173 => Some(
+                "DateTime of first determination of elevated ECG ST segment, as indication of Myocardial Infarction",
+            ),
+            Self::_122175 => {
+                Some("Number of lesion interventions attempted during current procedure")
+            }
+            Self::_122176 => Some(
+                "Number of lesion interventions successful during current procedure, where the residual post intervention stenosis is less than or equal to 50% of the arterial luminal diameter, TIMI Flow is 3 and the minimal decrease in stenosis was 20%",
+            ),
             Self::_122177 => Some("Overall success of interventional procedure"),
             Self::_122178 => Some("Lesion Intervention Information, report section"),
-            Self::_122179 => Some("Indication that Myocardial Infarction occurred during current procedure"),
+            Self::_122179 => {
+                Some("Indication that Myocardial Infarction occurred during current procedure")
+            }
             Self::_122180 => Some("Creatine Kinase-MB value at baseline (start of procedure)"),
             Self::_122181 => Some("Creatine Kinase-MB highest value measured during procedure"),
-            Self::_122182 => Some("Time interval between ECG R-wave peaks in subsequent cardiac cycles"),
+            Self::_122182 => {
+                Some("Time interval between ECG R-wave peaks in subsequent cardiac cycles")
+            }
             Self::_122183 => Some("Blood temperature"),
             Self::_122185 => Some("Blood Oxygen content"),
             Self::_122187 => Some("Blood Carbon dioxide saturation"),
@@ -15147,11 +18281,15 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122189 => Some("Pulmonary Venous Content (FCpv)"),
             Self::_122190 => Some("Max dp/dt/P"),
             Self::_122191 => Some("Ventricular End Diastolic pressure"),
-            Self::_122192 => Some("Elapsed time from injection of an indicator bolus until it is observed at another location"),
+            Self::_122192 => Some(
+                "Elapsed time from injection of an indicator bolus until it is observed at another location",
+            ),
             Self::_122193 => Some("Maximum pressure acceleration"),
             Self::_122194 => Some("Ventricular Systolic blood pressure"),
             Self::_122195 => Some("Pulse Strength; palpable strength of systolic flow"),
-            Self::_122196 => Some("The secondary peak pressure in the atrium during atrial contraction"),
+            Self::_122196 => {
+                Some("The secondary peak pressure in the atrium during atrial contraction")
+            }
             Self::_122197 => Some("Gradient pressure, average"),
             Self::_122198 => Some("Gradient pressure, peak"),
             Self::_122199 => Some("Pressure at dp/dt max"),
@@ -15162,8 +18300,12 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122205 => Some("Blood velocity, mean"),
             Self::_122206 => Some("Blood velocity, minimum"),
             Self::_122207 => Some("Blood velocity, peak"),
-            Self::_122208 => Some("Venous or atrial pressure minimum during ventricular systole, after A-wave"),
-            Self::_122209 => Some("Venous or atrial pressure minimum when tricuspid valve opens during diastole, after V-wave"),
+            Self::_122208 => {
+                Some("Venous or atrial pressure minimum during ventricular systole, after A-wave")
+            }
+            Self::_122209 => Some(
+                "Venous or atrial pressure minimum when tricuspid valve opens during diastole, after V-wave",
+            ),
             Self::_122210 => Some("Atrial pressure upon closure of tricuspid and mitral valves"),
             Self::_122211 => Some("Left Ventricular ejection time"),
             Self::_122212 => Some("Left Ventricular filling time"),
@@ -15193,36 +18335,82 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122237 => Some("Corrected Sinus Node Recovery Time"),
             Self::_122238 => Some("Max volume normalized to 50mmHg pulse pressure"),
             Self::_122239 => Some("Oxygen Consumption"),
-            Self::_122240 => Some("Body Surface Area computed from patient height and weight: BSA = 3.207*WT[g]^(0.7285-0.0188 log (WT[g])) *HT[cm] ^ 0.3 [Boyd E, The growth of the surface area of the human body. Minneapolis: University of Minnesota Press, 1935, eq. (36) ]"),
-            Self::_122241 => Some("Body Surface Area computed from patient height and weight: BSA = 0.007184* WT[kg] ^ 0.425*HT[cm] ^ 0.725 [Dubois and Dubois, Arch Int Med 1916 17:863-71]"),
-            Self::_122242 => Some("Body Surface Area computed from patient height and weight: BSA = 0.0235* WT[kg] ^0.51456*HT[cm]^ 0.42246 [Gehan EA, George SL, \'Estimation of human body surface area from height and weight\', Cancer Chemother Rep 1970 54:225-35]"),
-            Self::_122243 => Some("Body Surface Area computed from patient height and weight: BSA = 0.024265 * WT[kg] ^ 0.5378 * HT[cm] ^ 0.3964 [Haycock G.B., Schwartz G.J., Wisotsky D.H. \'Geometric method for measuring body surface area: A height weight formula validated in infants, children and adults.\' The Journal of Pediatrics 1978 93:1:62-66]"),
-            Self::_122244 => Some("Body Surface Area computed from patient height and weight: BSA = (HT[m] * WT[kg] / 36) ^ 0.5 [Mosteller, R.D. \'Simplified Calculation of Body Surface Area.\' N Engl J Med 1987 Oct 22;317(17):1098]"),
-            Self::_122245 => Some("Body Surface Area computed from patient weight:BSA = 1321 + 0.3433 * WT[kg] (for pediatrics 3-30 kg) [Current, J.D. \'A Linear Equation For Estimating The Body Surface Area In Infants And Children\', The Internet Journal of Anesthesiology. 1998. 2:2]"),
-            Self::_122246 => Some("BSA = 0.0004688 * (1000 * WT) ^ (0.8168 - 0.0154 * log(1000 * WT)) Where (WT is weight in kilogram) Units = m2 Boyd, Edith. The Growth of the Surface Area of the Human Body(originally published in 1935 by the University of Minnesota Press), Greenwood Press, Westport, Connecticut, 1975, p. 102.Equation (35)"),
-            Self::_122247 => Some("Equation for estimated oxygen consumption: VO2male = BSA (138.1 - 11.49 * loge(age) + 0.378 * HRf)"),
-            Self::_122248 => Some("Equation for estimated oxygen consumption: VO2female = BSA (138.1 - 17.04 * loge(age) + 0.378 * HRf)"),
-            Self::_122249 => Some("Equation for estimated oxygen consumption: VO2 = VeSTPD * 10 * (FIO2 - FE02)"),
+            Self::_122240 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 3.207*WT[g]^(0.7285-0.0188 log (WT[g])) *HT[cm] ^ 0.3 [Boyd E, The growth of the surface area of the human body. Minneapolis: University of Minnesota Press, 1935, eq. (36) ]",
+            ),
+            Self::_122241 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.007184* WT[kg] ^ 0.425*HT[cm] ^ 0.725 [Dubois and Dubois, Arch Int Med 1916 17:863-71]",
+            ),
+            Self::_122242 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.0235* WT[kg] ^0.51456*HT[cm]^ 0.42246 [Gehan EA, George SL, \'Estimation of human body surface area from height and weight\', Cancer Chemother Rep 1970 54:225-35]",
+            ),
+            Self::_122243 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.024265 * WT[kg] ^ 0.5378 * HT[cm] ^ 0.3964 [Haycock G.B., Schwartz G.J., Wisotsky D.H. \'Geometric method for measuring body surface area: A height weight formula validated in infants, children and adults.\' The Journal of Pediatrics 1978 93:1:62-66]",
+            ),
+            Self::_122244 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = (HT[m] * WT[kg] / 36) ^ 0.5 [Mosteller, R.D. \'Simplified Calculation of Body Surface Area.\' N Engl J Med 1987 Oct 22;317(17):1098]",
+            ),
+            Self::_122245 => Some(
+                "Body Surface Area computed from patient weight:BSA = 1321 + 0.3433 * WT[kg] (for pediatrics 3-30 kg) [Current, J.D. \'A Linear Equation For Estimating The Body Surface Area In Infants And Children\', The Internet Journal of Anesthesiology. 1998. 2:2]",
+            ),
+            Self::_122246 => Some(
+                "BSA = 0.0004688 * (1000 * WT) ^ (0.8168 - 0.0154 * log(1000 * WT)) Where (WT is weight in kilogram) Units = m2 Boyd, Edith. The Growth of the Surface Area of the Human Body(originally published in 1935 by the University of Minnesota Press), Greenwood Press, Westport, Connecticut, 1975, p. 102.Equation (35)",
+            ),
+            Self::_122247 => Some(
+                "Equation for estimated oxygen consumption: VO2male = BSA (138.1 - 11.49 * loge(age) + 0.378 * HRf)",
+            ),
+            Self::_122248 => Some(
+                "Equation for estimated oxygen consumption: VO2female = BSA (138.1 - 17.04 * loge(age) + 0.378 * HRf)",
+            ),
+            Self::_122249 => {
+                Some("Equation for estimated oxygen consumption: VO2 = VeSTPD * 10 * (FIO2 - FE02)")
+            }
             Self::_122250 => Some("Equation for estimated oxygen consumption: VO2 = 152 * BSA"),
             Self::_122251 => Some("Equation for estimated oxygen consumption: VO2 = 175 * BSA"),
             Self::_122252 => Some("Equation for estimated oxygen consumption: VO2 = 176 * BSA"),
             Self::_122253 => Some("Robertson & Reid Table for estimated oxygen consumption"),
             Self::_122254 => Some("Fleisch table for estimated oxygen consumption"),
             Self::_122255 => Some("Boothby table for estimated oxygen consumption"),
-            Self::_122256 => Some("Estimate of Oxygen partial pressure at 50% saturation for premature infants less than 3 days old: P50 = 19.9"),
-            Self::_122257 => Some("Estimate of Oxygen partial pressure at 50% saturation for infants less than 1 day old: P50 = 21.6"),
-            Self::_122258 => Some("Estimate of Oxygen partial pressure at 50% saturation for infants less than 30 days old: P50 = 24.6"),
-            Self::_122259 => Some("Estimate of Oxygen partial pressure at 50% saturation for patients less than 18 years old: P50 = 27.2"),
-            Self::_122260 => Some("Estimate of Oxygen partial pressure at 50% saturation for patients less than 40 years old: P50 = 27.4"),
-            Self::_122261 => Some("Estimate of Oxygen partial pressure at 50% saturation for patients more than 60 years old: P50 = 29.3"),
-            Self::_122262 => Some("Cardiac valve area computed from flow and pressure gradient: Area = Flow / 44.5 * sqrt(Gradient[mmHg]) [Gorlin and Gorlin, Am Heart J, 1951]"),
-            Self::_122263 => Some("Mitral valve area computed from flow and pressure gradient: Mitral valve Area = Flow / 38.0 * sqrt(Gradient[mmHg]) [Gorlin and Gorlin, Am Heart J, 1951]"),
+            Self::_122256 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for premature infants less than 3 days old: P50 = 19.9",
+            ),
+            Self::_122257 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for infants less than 1 day old: P50 = 21.6",
+            ),
+            Self::_122258 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for infants less than 30 days old: P50 = 24.6",
+            ),
+            Self::_122259 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for patients less than 18 years old: P50 = 27.2",
+            ),
+            Self::_122260 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for patients less than 40 years old: P50 = 27.4",
+            ),
+            Self::_122261 => Some(
+                "Estimate of Oxygen partial pressure at 50% saturation for patients more than 60 years old: P50 = 29.3",
+            ),
+            Self::_122262 => Some(
+                "Cardiac valve area computed from flow and pressure gradient: Area = Flow / 44.5 * sqrt(Gradient[mmHg]) [Gorlin and Gorlin, Am Heart J, 1951]",
+            ),
+            Self::_122263 => Some(
+                "Mitral valve area computed from flow and pressure gradient: Mitral valve Area = Flow / 38.0 * sqrt(Gradient[mmHg]) [Gorlin and Gorlin, Am Heart J, 1951]",
+            ),
             Self::_122265 => Some("Body Mass Index computed from weight and height: BMI = Wt/Ht^2"),
-            Self::_122266 => Some("Body Surface Area computed from patient height and weight: BSA = 0.007358 * WT[kg] ^ 0.425 * HT[cm] ^ 0.725 (for East Asian adult, aged 15+ years) [Kanai Izumi, Masamitsu Kanai, \'Clinical examination method summary\']"),
-            Self::_122267 => Some("Body Surface Area computed from patient height and weight: BSA = 0.010265 * WT[kg] ^ 0.423 * HT[cm] ^ 0.651 (For East Asian child aged 12-14 years)"),
-            Self::_122268 => Some("Body Surface Area computed from patient height and weight: BSA = 0.008883* WT[kg] ^ 0.444 * HT[cm] ^ 0.663 (For East Asian child aged 6-11 years)"),
-            Self::_122269 => Some("Body Surface Area computed from patient height and weight: BSA = 0.038189 * WT[kg] ^ 0.423 * HT[cm] ^ 0.362 (For East Asian child aged 1-5 years)"),
-            Self::_122270 => Some("Body Surface Area computed from patient height and weight: BSA = 0.009568* WT[kg] ^ 0.473 * HT[cm] ^ 0.655 (For East Asian child aged 0-12 months)"),
+            Self::_122266 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.007358 * WT[kg] ^ 0.425 * HT[cm] ^ 0.725 (for East Asian adult, aged 15+ years) [Kanai Izumi, Masamitsu Kanai, \'Clinical examination method summary\']",
+            ),
+            Self::_122267 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.010265 * WT[kg] ^ 0.423 * HT[cm] ^ 0.651 (For East Asian child aged 12-14 years)",
+            ),
+            Self::_122268 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.008883* WT[kg] ^ 0.444 * HT[cm] ^ 0.663 (For East Asian child aged 6-11 years)",
+            ),
+            Self::_122269 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.038189 * WT[kg] ^ 0.423 * HT[cm] ^ 0.362 (For East Asian child aged 1-5 years)",
+            ),
+            Self::_122270 => Some(
+                "Body Surface Area computed from patient height and weight: BSA = 0.009568* WT[kg] ^ 0.473 * HT[cm] ^ 0.655 (For East Asian child aged 0-12 months)",
+            ),
             Self::_122271 => Some("Skin Condition Warm"),
             Self::_122272 => Some("Skin Condition Cool"),
             Self::_122273 => Some("Skin Condition Cold"),
@@ -15254,73 +18442,165 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122319 => Some("Catheter Size"),
             Self::_122320 => Some("Injectate Temperature"),
             Self::_122321 => Some("Injectate Volume"),
-            Self::_122322 => Some("Factor by which a measured or calculated value is multiplied to obtain the estimated real-world value"),
+            Self::_122322 => Some(
+                "Factor by which a measured or calculated value is multiplied to obtain the estimated real-world value",
+            ),
             Self::_122325 => Some("Intravascular Ultrasound Report"),
-            Self::_122330 => Some("External Elastic Membrane (EEM) diameter measured through the center point of the vessel. Center point of the vessel is defined as the center of gravity of the EEM area. The EEM is a discrete interface at the border between the media and the adventitia"),
-            Self::_122331 => Some("The distance from intimal leading edge to the external elastic membrane along any line passing through the luminal center, which is defined as the center of gravity of the lumen area"),
+            Self::_122330 => Some(
+                "External Elastic Membrane (EEM) diameter measured through the center point of the vessel. Center point of the vessel is defined as the center of gravity of the EEM area. The EEM is a discrete interface at the border between the media and the adventitia",
+            ),
+            Self::_122331 => Some(
+                "The distance from intimal leading edge to the external elastic membrane along any line passing through the luminal center, which is defined as the center of gravity of the lumen area",
+            ),
             Self::_122332 => Some("Planimetered perimeter of the lumen"),
-            Self::_122333 => Some("Vessel area measured at the External Elastic Membrane (EEM), a discrete interface at the border between the media and the adventitia"),
-            Self::_122334 => Some("Area within the EEM occupied by atheroma, regardless of lumen compromise. Plaque plus Media Area = EEM cross-sectional area - vessel lumen cross-sectional area"),
-            Self::_122335 => Some("Measurement of in-stent restenosis. In-Stent Intimal Area = Stent cross-sectional area - vessel lumen cross-sectional area"),
-            Self::_122336 => Some("Longitudinal extent of the Vascular Volume Measurement. This is the distance from the distal edge to the proximal edge of the Volume measurement"),
-            Self::_122337 => Some("Longitudinal distance from the closest edge of a fiducial feature or reference location to the start of the vascular measurement. This value will be a positive if the measurement is distal to the fiducial feature or reference location, or negative if the measurement is proximal to the fiducial feature or reference location"),
+            Self::_122333 => Some(
+                "Vessel area measured at the External Elastic Membrane (EEM), a discrete interface at the border between the media and the adventitia",
+            ),
+            Self::_122334 => Some(
+                "Area within the EEM occupied by atheroma, regardless of lumen compromise. Plaque plus Media Area = EEM cross-sectional area - vessel lumen cross-sectional area",
+            ),
+            Self::_122335 => Some(
+                "Measurement of in-stent restenosis. In-Stent Intimal Area = Stent cross-sectional area - vessel lumen cross-sectional area",
+            ),
+            Self::_122336 => Some(
+                "Longitudinal extent of the Vascular Volume Measurement. This is the distance from the distal edge to the proximal edge of the Volume measurement",
+            ),
+            Self::_122337 => Some(
+                "Longitudinal distance from the closest edge of a fiducial feature or reference location to the start of the vascular measurement. This value will be a positive if the measurement is distal to the fiducial feature or reference location, or negative if the measurement is proximal to the fiducial feature or reference location",
+            ),
             Self::_122339 => Some("In-Stent Neointimal Volume / Stent Volume"),
-            Self::_122340 => Some("Reference, normally anatomical, which is used for locating the position of a measurement"),
+            Self::_122340 => Some(
+                "Reference, normally anatomical, which is used for locating the position of a measurement",
+            ),
             Self::_122341 => Some("Longitudinal calcium length measurement"),
-            Self::_122343 => Some("Measurement of vessel lumen eccentricity. Lumen Eccentricity Index = (maximum vessel lumen diameter - minimum vessel lumen diameter) / maximum vessel lumen diameter. Lumen diameters are measured through the center point of the lumen, which is defined as the center of gravity of the lumen area"),
-            Self::_122344 => Some("Plaque plus Media Eccentricity Index = (maximum Plaque plus media thickness - minimum Plaque plus media thickness) / maximum Plaque plus media thickness"),
-            Self::_122345 => Some("Measurement of increase or decrease in EEM area that occurs during the development of atherosclerosis. Remodeling Index = Lesion EEM area / reference EEM area"),
-            Self::_122346 => Some("Measurement of stent circularity. Stent Symmetry Index = (maximum stent diameter - minimum stent diameter) / maximum stent diameter"),
-            Self::_122347 => Some("Measurement of stent area relative to the reference lumen area. Stent Expansion Index = Minimum stent area / reference vessel lumen cross-sectional area"),
-            Self::_122348 => Some("Measurement of vessel lumen eccentricity. Lumen Shape Index = (2p * sqrt(Vessel lumen cross-sectional area / p) / Lumen Perimeter) 2 Reference: Tobis & Yock, \"Intravascular Ultrasound Imaging\", Chapter 7"),
-            Self::_122350 => Some("Lumen diameter ratio = minimum vessel lumen diameter / maximum vessel lumen diameter, measured at the same cross section in the vessel. Lumen diameters are measured through the center point of the lumen, which is defined as the center of gravity of the lumen area"),
-            Self::_122351 => Some("Stent diameter ratio = Minimum stent diameter / Maximum stent diameter, measured at the same cross section in the vessel. Stent diameters are measured through the center point of the stent, which is defined as the center of gravity of the stent area"),
-            Self::_122352 => Some("EEM diameter ratio = minimum EEM diameter / maximum EEM diameter. Measured at the same cross section in the vessel"),
-            Self::_122354 => Some("Fractional area within the External Elastic Membrane (EEM) occupied by atheroma. Plaque Burden = (EEM area - vessel lumen cross-sectional area) / EEM area"),
-            Self::_122355 => Some("Angular measurement of a Calcium deposit with the apex located at the center of the lumen, which is defined as the center of gravity of the lumen area"),
+            Self::_122343 => Some(
+                "Measurement of vessel lumen eccentricity. Lumen Eccentricity Index = (maximum vessel lumen diameter - minimum vessel lumen diameter) / maximum vessel lumen diameter. Lumen diameters are measured through the center point of the lumen, which is defined as the center of gravity of the lumen area",
+            ),
+            Self::_122344 => Some(
+                "Plaque plus Media Eccentricity Index = (maximum Plaque plus media thickness - minimum Plaque plus media thickness) / maximum Plaque plus media thickness",
+            ),
+            Self::_122345 => Some(
+                "Measurement of increase or decrease in EEM area that occurs during the development of atherosclerosis. Remodeling Index = Lesion EEM area / reference EEM area",
+            ),
+            Self::_122346 => Some(
+                "Measurement of stent circularity. Stent Symmetry Index = (maximum stent diameter - minimum stent diameter) / maximum stent diameter",
+            ),
+            Self::_122347 => Some(
+                "Measurement of stent area relative to the reference lumen area. Stent Expansion Index = Minimum stent area / reference vessel lumen cross-sectional area",
+            ),
+            Self::_122348 => Some(
+                "Measurement of vessel lumen eccentricity. Lumen Shape Index = (2p * sqrt(Vessel lumen cross-sectional area / p) / Lumen Perimeter) 2 Reference: Tobis & Yock, \"Intravascular Ultrasound Imaging\", Chapter 7",
+            ),
+            Self::_122350 => Some(
+                "Lumen diameter ratio = minimum vessel lumen diameter / maximum vessel lumen diameter, measured at the same cross section in the vessel. Lumen diameters are measured through the center point of the lumen, which is defined as the center of gravity of the lumen area",
+            ),
+            Self::_122351 => Some(
+                "Stent diameter ratio = Minimum stent diameter / Maximum stent diameter, measured at the same cross section in the vessel. Stent diameters are measured through the center point of the stent, which is defined as the center of gravity of the stent area",
+            ),
+            Self::_122352 => Some(
+                "EEM diameter ratio = minimum EEM diameter / maximum EEM diameter. Measured at the same cross section in the vessel",
+            ),
+            Self::_122354 => Some(
+                "Fractional area within the External Elastic Membrane (EEM) occupied by atheroma. Plaque Burden = (EEM area - vessel lumen cross-sectional area) / EEM area",
+            ),
+            Self::_122355 => Some(
+                "Angular measurement of a Calcium deposit with the apex located at the center of the lumen, which is defined as the center of gravity of the lumen area",
+            ),
             Self::_122356 => Some("Plaque characterized by low density or echogenicity"),
             Self::_122357 => Some("Abnormal thickening of the intima within the stented segment"),
-            Self::_122360 => Some("Lumen surrounded by all three layers of the vessel-intima, media, and adventitia"),
-            Self::_122361 => Some("A channel, usually parallel to the true lumen, which does not communicate with the true lumen over a portion of its length"),
+            Self::_122360 => Some(
+                "Lumen surrounded by all three layers of the vessel-intima, media, and adventitia",
+            ),
+            Self::_122361 => Some(
+                "A channel, usually parallel to the true lumen, which does not communicate with the true lumen over a portion of its length",
+            ),
             Self::_122363 => Some("Plaque ulceration with a tear detected in a fibrous cap"),
             Self::_122364 => Some("Length of gap between two consecutive stents"),
-            Self::_122367 => Some("Worst stenosis - the stenosis with the smallest lumen size within a vessel segment"),
+            Self::_122367 => Some(
+                "Worst stenosis - the stenosis with the smallest lumen size within a vessel segment",
+            ),
             Self::_122368 => Some("2nd most severe stenosis within a vessel segment"),
             Self::_122369 => Some("3rd most severe stenosis within a vessel segment"),
             Self::_122370 => Some("4th most severe stenosis within a vessel segment"),
-            Self::_122371 => Some("External Elastic Membrane (EEM) volume measured within a specified region. The EEM is a discrete interface at the border between the media and the Adventitia"),
+            Self::_122371 => Some(
+                "External Elastic Membrane (EEM) volume measured within a specified region. The EEM is a discrete interface at the border between the media and the Adventitia",
+            ),
             Self::_122372 => Some("Lumen volume measured within a specified region"),
-            Self::_122374 => Some("The amount of plaque between the lumen and stent, within the stent region; In-stent restenosis. In-Stent Neointimal Volume = Stent Volume - Lumen Volume"),
-            Self::_122375 => Some("The amount of plaque between the stent and the EEM, within the stent region. Native Plaque Volume = EEM Volume - Stent Volume"),
-            Self::_122376 => Some("Total amount of plaque between the EEM and the Lumen, over the entire region that is measured. Total Plaque Volume = EEM Volume - Lumen Volume"),
-            Self::_122380 => Some("Proximal reference segment measurement site. Typically the site with the largest lumen proximal to a stenosis but within the same segment (usually within 10 mm of the stenosis with no major intervening branches)"),
-            Self::_122381 => Some("Distal reference segment measurement site. Typically the site with the largest lumen distal to a stenosis but within the same segment (usually within 10 mm of the stenosis with no major intervening branches)"),
-            Self::_122382 => Some("Site of the smallest lumen in a vessel; e.g. due to a stenotic lesion"),
-            Self::_122383 => Some("Measurement region that encompasses the entire vessel imaged in a single pullback acquisition"),
+            Self::_122374 => Some(
+                "The amount of plaque between the lumen and stent, within the stent region; In-stent restenosis. In-Stent Neointimal Volume = Stent Volume - Lumen Volume",
+            ),
+            Self::_122375 => Some(
+                "The amount of plaque between the stent and the EEM, within the stent region. Native Plaque Volume = EEM Volume - Stent Volume",
+            ),
+            Self::_122376 => Some(
+                "Total amount of plaque between the EEM and the Lumen, over the entire region that is measured. Total Plaque Volume = EEM Volume - Lumen Volume",
+            ),
+            Self::_122380 => Some(
+                "Proximal reference segment measurement site. Typically the site with the largest lumen proximal to a stenosis but within the same segment (usually within 10 mm of the stenosis with no major intervening branches)",
+            ),
+            Self::_122381 => Some(
+                "Distal reference segment measurement site. Typically the site with the largest lumen distal to a stenosis but within the same segment (usually within 10 mm of the stenosis with no major intervening branches)",
+            ),
+            Self::_122382 => {
+                Some("Site of the smallest lumen in a vessel; e.g. due to a stenotic lesion")
+            }
+            Self::_122383 => Some(
+                "Measurement region that encompasses the entire vessel imaged in a single pullback acquisition",
+            ),
             Self::_122384 => Some("Measurement region occupied by the stent"),
-            Self::_122385 => Some("Region starting at the proximal edge of the Stent and extending several millimeters (usually 5 mm) proximal to the Stent edge"),
-            Self::_122386 => Some("Region starting at the distal edge of the Stent and extending several millimeters (usually 5 mm) distal to the Stent edge"),
+            Self::_122385 => Some(
+                "Region starting at the proximal edge of the Stent and extending several millimeters (usually 5 mm) proximal to the Stent edge",
+            ),
+            Self::_122386 => Some(
+                "Region starting at the distal edge of the Stent and extending several millimeters (usually 5 mm) distal to the Stent edge",
+            ),
             Self::_122387 => Some("Classification of dissections in a vessel"),
-            Self::_122388 => Some("Separation of neointimal hyperplasia from stent struts, usually seen only after treatment of in-stent restenosis"),
-            Self::_122389 => Some("Plaque with a thin cap fibrous atheroma that is at increased risk of rupture and thrombosis (or re-thrombosis) and rapid stenosis progression"),
-            Self::_122390 => Some("Plaque erosions with no structural defect (beyond endothelial injury) or gap in the plaque"),
-            Self::_122391 => Some("Stenosis severity classifications of multiple lesions in a vessel"),
-            Self::_122393 => Some("A finding of a previously treated lesion in which stenosis has reoccurred"),
-            Self::_122394 => Some("Loosely packed bundles of collagen fibers with regions of lipid deposition present. Region is cellular and no cholesterol clefts or necrosis are present. Some macrophage infiltration. Increase in extra cellular matrix"),
-            Self::_122395 => Some("Area within the plaque with very low echogenicity separated from the lumen and surrounded by more echogenic structures (fibrous cap). Highly lipidic necrotic region with remnants of foam cells and dead lymphocytes present. No collagen fibers are visible and mechanical integrity is poor. Cholesterol clefts and micro calcifications are visible"),
-            Self::_122398 => Some("Dissection limited to the intima or atheroma, and not extending to the media"),
+            Self::_122388 => Some(
+                "Separation of neointimal hyperplasia from stent struts, usually seen only after treatment of in-stent restenosis",
+            ),
+            Self::_122389 => Some(
+                "Plaque with a thin cap fibrous atheroma that is at increased risk of rupture and thrombosis (or re-thrombosis) and rapid stenosis progression",
+            ),
+            Self::_122390 => Some(
+                "Plaque erosions with no structural defect (beyond endothelial injury) or gap in the plaque",
+            ),
+            Self::_122391 => {
+                Some("Stenosis severity classifications of multiple lesions in a vessel")
+            }
+            Self::_122393 => {
+                Some("A finding of a previously treated lesion in which stenosis has reoccurred")
+            }
+            Self::_122394 => Some(
+                "Loosely packed bundles of collagen fibers with regions of lipid deposition present. Region is cellular and no cholesterol clefts or necrosis are present. Some macrophage infiltration. Increase in extra cellular matrix",
+            ),
+            Self::_122395 => Some(
+                "Area within the plaque with very low echogenicity separated from the lumen and surrounded by more echogenic structures (fibrous cap). Highly lipidic necrotic region with remnants of foam cells and dead lymphocytes present. No collagen fibers are visible and mechanical integrity is poor. Cholesterol clefts and micro calcifications are visible",
+            ),
+            Self::_122398 => {
+                Some("Dissection limited to the intima or atheroma, and not extending to the media")
+            }
             Self::_122399 => Some("Dissection in the arterial Media, extending into the media"),
-            Self::_122400 => Some("The referenced information was acquired simultaneously with the information in the object in which the reference occurs"),
+            Self::_122400 => Some(
+                "The referenced information was acquired simultaneously with the information in the object in which the reference occurs",
+            ),
             Self::_122401 => Some("Information acquired for the same anatomic region"),
-            Self::_122402 => Some("Information acquired for the same indication; e.g. to elucidate the same diagnostic question"),
-            Self::_122403 => Some("The referenced information was used to correct the data for differential attenuation through different anatomic tissue"),
+            Self::_122402 => Some(
+                "Information acquired for the same indication; e.g. to elucidate the same diagnostic question",
+            ),
+            Self::_122403 => Some(
+                "The referenced information was used to correct the data for differential attenuation through different anatomic tissue",
+            ),
             Self::_122404 => Some("Value estimated for a vessel in the absence of a stenosis"),
             Self::_122405 => Some("Manufacturer of application used"),
             Self::_122406 => Some("Left Atrial Ejection Fraction by Angiography"),
             Self::_122407 => Some("Left Atrial End Diastolic Volume"),
             Self::_122408 => Some("Left Atrial End Systolic Volume"),
-            Self::_122410 => Some("Contour repositioning of End Diastolic relative to End Systolic contour"),
-            Self::_122411 => Some("The minimum standard deviation to define the hypokinesis and hyperkinesis"),
+            Self::_122410 => {
+                Some("Contour repositioning of End Diastolic relative to End Systolic contour")
+            }
+            Self::_122411 => {
+                Some("The minimum standard deviation to define the hypokinesis and hyperkinesis")
+            }
             Self::_122417 => Some("Report of differentiation of wall motion compared to normal"),
             Self::_122421 => Some("Object used for Calibration"),
             Self::_122422 => Some("Method used for Calibration"),
@@ -15328,77 +18608,171 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122428 => Some("Method how long axis is positioned"),
             Self::_122429 => Some("Model for cardiac chamber volume calculation"),
             Self::_122430 => Some("Method to define original diameter of the artery"),
-            Self::_122431 => Some("Relation between calculated End Diastolic volume and ventricular End Diastolic volume. The specific meaning is dependent on volume method used"),
-            Self::_122432 => Some("Correction factor for the calculated End Diastolic volume and ventricular End Diastolic volume. The specific meaning is dependent on volume method used"),
-            Self::_122433 => Some("Relation between calculated End Systolic volume and ventricular End Systolic volume. The specific meaning is dependent on volume method used"),
-            Self::_122434 => Some("Correction factor for the calculated End Systolic volume and ventricular End Systolic volume. The specific meaning is dependent on volume method used"),
+            Self::_122431 => Some(
+                "Relation between calculated End Diastolic volume and ventricular End Diastolic volume. The specific meaning is dependent on volume method used",
+            ),
+            Self::_122432 => Some(
+                "Correction factor for the calculated End Diastolic volume and ventricular End Diastolic volume. The specific meaning is dependent on volume method used",
+            ),
+            Self::_122433 => Some(
+                "Relation between calculated End Systolic volume and ventricular End Systolic volume. The specific meaning is dependent on volume method used",
+            ),
+            Self::_122434 => Some(
+                "Correction factor for the calculated End Systolic volume and ventricular End Systolic volume. The specific meaning is dependent on volume method used",
+            ),
             Self::_122435 => Some("Exponent of volume in regression formula"),
-            Self::_122438 => Some("Container for spatial locations or coordinates used for calculation"),
+            Self::_122438 => {
+                Some("Container for spatial locations or coordinates used for calculation")
+            }
             Self::_122445 => Some("Average thickness of the chamber wall in the current view"),
             Self::_122446 => Some("Volume of the chamber wall estimated from the current view"),
             Self::_122447 => Some("Mass of the chamber wall (myocardium)"),
             Self::_122448 => Some("Peak systolic stress of chamber wall"),
             Self::_122449 => Some("Method to calculate wall motion [example: Sheehan, 1986]"),
-            Self::_122450 => Some("The length between End Diastolic and End Systolic contour perpendicular on the centerline normalized by a method dependent ventricular perimeter length. The centerline is the line equidistant between the End Diastolic and End Systolic contour [example: Sheehan, 1986]"),
-            Self::_122451 => Some("The report of the boundaries of the abnormal (hyperkinetic, hypokinetic, a-kinetic) regions associated with the territory of the artery [example: Sheehan, 1986]"),
-            Self::_122452 => Some("The chord number specifying the begin of abnormal region [example: Sheehan, 1986]"),
-            Self::_122453 => Some("The chord number specifying the end of abnormal region [example: Sheehan, 1986]"),
-            Self::_122459 => Some("Severity at the regional abnormality extent [example: Sheehan, 1986]"),
-            Self::_122461 => Some("Severity at the opposite regional abnormality extent [example: Sheehan, 1986]"),
-            Self::_122464 => Some("Based on a total number of chords of 100 and RAO project the range of chords belonging to this circumferential extent lies between 5 - 85. [Sheehan, 1986]"),
-            Self::_122465 => Some("Based on a total number of chords of 100 and RAO project the range of chords belonging to this circumferential extent lies between 25 - 85. [Sheehan, 1986]"),
-            Self::_122466 => Some("Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 10 - 66 (hypokinetic) and 67 - 80 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122467 => Some("Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 51 - 80 (hypokinetic) and 10 - 50 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122468 => Some("Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 10 - 58 (hypokinetic) and 59 -80 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122469 => Some("Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 59 - 80 (hypokinetic) and 10 - 58 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122470 => Some("Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 50 -100 (hypokinetic) and 20 - 49 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122471 => Some("Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 19 - 67 (hypokinetic) and 68 - 100 (hyperkinetic). [Sheehan, 1986]"),
-            Self::_122472 => Some("Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 38 -74 (hypokinetic) and 75 - 100 (hyperkinetic). [Sheehan, 1986]"),
+            Self::_122450 => Some(
+                "The length between End Diastolic and End Systolic contour perpendicular on the centerline normalized by a method dependent ventricular perimeter length. The centerline is the line equidistant between the End Diastolic and End Systolic contour [example: Sheehan, 1986]",
+            ),
+            Self::_122451 => Some(
+                "The report of the boundaries of the abnormal (hyperkinetic, hypokinetic, a-kinetic) regions associated with the territory of the artery [example: Sheehan, 1986]",
+            ),
+            Self::_122452 => Some(
+                "The chord number specifying the begin of abnormal region [example: Sheehan, 1986]",
+            ),
+            Self::_122453 => Some(
+                "The chord number specifying the end of abnormal region [example: Sheehan, 1986]",
+            ),
+            Self::_122459 => {
+                Some("Severity at the regional abnormality extent [example: Sheehan, 1986]")
+            }
+            Self::_122461 => Some(
+                "Severity at the opposite regional abnormality extent [example: Sheehan, 1986]",
+            ),
+            Self::_122464 => Some(
+                "Based on a total number of chords of 100 and RAO project the range of chords belonging to this circumferential extent lies between 5 - 85. [Sheehan, 1986]",
+            ),
+            Self::_122465 => Some(
+                "Based on a total number of chords of 100 and RAO project the range of chords belonging to this circumferential extent lies between 25 - 85. [Sheehan, 1986]",
+            ),
+            Self::_122466 => Some(
+                "Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 10 - 66 (hypokinetic) and 67 - 80 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122467 => Some(
+                "Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 51 - 80 (hypokinetic) and 10 - 50 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122468 => Some(
+                "Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 10 - 58 (hypokinetic) and 59 -80 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122469 => Some(
+                "Based on a total number of chords of 100 and RAO projection the range of chords belonging to this regional extent lies between 59 - 80 (hypokinetic) and 10 - 58 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122470 => Some(
+                "Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 50 -100 (hypokinetic) and 20 - 49 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122471 => Some(
+                "Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 19 - 67 (hypokinetic) and 68 - 100 (hyperkinetic). [Sheehan, 1986]",
+            ),
+            Self::_122472 => Some(
+                "Based on a total number of chords of 100 and LAO projection the range of chords belonging to this regional extent lies between 38 -74 (hypokinetic) and 75 - 100 (hyperkinetic). [Sheehan, 1986]",
+            ),
             Self::_122473 => Some("Method based on assumption that the image object is circular"),
             Self::_122474 => Some("Method based on the gray value distribution of the image"),
-            Self::_122475 => Some("End Systolic contour realigned to End Diastolic contour based on the center of gravity"),
-            Self::_122476 => Some("End Systolic contour realigned to End Diastolic contour based on the mid point of the long axis. The long axis end-points are defined as the posterior and apex"),
+            Self::_122475 => Some(
+                "End Systolic contour realigned to End Diastolic contour based on the center of gravity",
+            ),
+            Self::_122476 => Some(
+                "End Systolic contour realigned to End Diastolic contour based on the mid point of the long axis. The long axis end-points are defined as the posterior and apex",
+            ),
             Self::_122477 => Some("No Contour Realignment applied"),
-            Self::_122480 => Some("Calculated Vessel Lumen Cross-Sectional Area based on the referenced method"),
+            Self::_122480 => {
+                Some("Calculated Vessel Lumen Cross-Sectional Area based on the referenced method")
+            }
             Self::_122481 => Some("Location of the beginning of a contour"),
             Self::_122482 => Some("Location of the end of a contour"),
             Self::_122485 => Some("Sphere is used as calibration object"),
-            Self::_122486 => Some("Object of interest in isocenter of image and pixel separation is calculated from geometric data"),
-            Self::_122487 => Some("Object of interest not in isocenter of image and pixel separation is calculated from geometric data and out of isocenter distances"),
+            Self::_122486 => Some(
+                "Object of interest in isocenter of image and pixel separation is calculated from geometric data",
+            ),
+            Self::_122487 => Some(
+                "Object of interest not in isocenter of image and pixel separation is calculated from geometric data and out of isocenter distances",
+            ),
             Self::_122488 => Some("Object used for calibration; e.g. sphere"),
-            Self::_122489 => Some("Application dependent method to calculate the reference diameter based on the multiple diameter values"),
-            Self::_122490 => Some("Application dependent method to calculate reference by interpolation, based on the diameter of two or more user defined reference positions"),
-            Self::_122491 => Some("Application dependent method to calculate by averaging the reference, based on the diameter of one or more user defined reference positions"),
-            Self::_122493 => Some("Method to calculate wall motion based on the lengths of the radials in the predefined regions [Ingels]"),
-            Self::_122495 => Some("Contribution of Region to global Ejection factor based on radial or landmark based wall motion method"),
-            Self::_122496 => Some("The reduction of area between End Systolic and End Diastolic based on radial wall motion analysis"),
-            Self::_122497 => Some("Method to calculate wall motion based on the move of landmarks on the wall [Slager]"),
-            Self::_122498 => Some("Contribution to the ejection fraction of a specific slice region [Slager]"),
-            Self::_122499 => Some("Method to calculate volumes of heart chambers for every image in a range"),
-            Self::_122501 => Some("The area is derived by considering a set of coordinates as a closed irregular polygon, accounting for inner angles. The exact method, such as by decomposition into triangles or quadrilaterals, is not specified, since it does not affect the numeric result, apart from the effect of numeric precision during computation of intermediate results"),
-            Self::_122502 => Some("The area is derived by using a set of coordinates as control points for a Non Uniform Rational B-Spline (NURBS)"),
-            Self::_122503 => Some("The volume derived by integrating the sum of the areas on adjacent slices across the slice interval; each area is defined by a regular planar shape or by considering a set of coordinates as a closed irregular polygon, accounting for inner angles"),
-            Self::_122505 => Some("Procedure used to calibrate measurements or measurement devices"),
+            Self::_122489 => Some(
+                "Application dependent method to calculate the reference diameter based on the multiple diameter values",
+            ),
+            Self::_122490 => Some(
+                "Application dependent method to calculate reference by interpolation, based on the diameter of two or more user defined reference positions",
+            ),
+            Self::_122491 => Some(
+                "Application dependent method to calculate by averaging the reference, based on the diameter of one or more user defined reference positions",
+            ),
+            Self::_122493 => Some(
+                "Method to calculate wall motion based on the lengths of the radials in the predefined regions [Ingels]",
+            ),
+            Self::_122495 => Some(
+                "Contribution of Region to global Ejection factor based on radial or landmark based wall motion method",
+            ),
+            Self::_122496 => Some(
+                "The reduction of area between End Systolic and End Diastolic based on radial wall motion analysis",
+            ),
+            Self::_122497 => Some(
+                "Method to calculate wall motion based on the move of landmarks on the wall [Slager]",
+            ),
+            Self::_122498 => {
+                Some("Contribution to the ejection fraction of a specific slice region [Slager]")
+            }
+            Self::_122499 => {
+                Some("Method to calculate volumes of heart chambers for every image in a range")
+            }
+            Self::_122501 => Some(
+                "The area is derived by considering a set of coordinates as a closed irregular polygon, accounting for inner angles. The exact method, such as by decomposition into triangles or quadrilaterals, is not specified, since it does not affect the numeric result, apart from the effect of numeric precision during computation of intermediate results",
+            ),
+            Self::_122502 => Some(
+                "The area is derived by using a set of coordinates as control points for a Non Uniform Rational B-Spline (NURBS)",
+            ),
+            Self::_122503 => Some(
+                "The volume derived by integrating the sum of the areas on adjacent slices across the slice interval; each area is defined by a regular planar shape or by considering a set of coordinates as a closed irregular polygon, accounting for inner angles",
+            ),
+            Self::_122505 => {
+                Some("Procedure used to calibrate measurements or measurement devices")
+            }
             Self::_122507 => Some("Left contour of lumen (direction proximal to distal)"),
             Self::_122508 => Some("Right contour of lumen (direction proximal to distal)"),
-            Self::_122509 => Some("Ordered set of diameters values derived from contours (direction proximal to distal)"),
+            Self::_122509 => Some(
+                "Ordered set of diameters values derived from contours (direction proximal to distal)",
+            ),
             Self::_122510 => Some("Length Luminal Segment"),
             Self::_122511 => Some("Increment value along X-axis in Diameter Graph"),
             Self::_122516 => Some("Location of the maximum lumen area in a lesion or vessel"),
-            Self::_122517 => Some("Ordered set of cross-sectional Vessel Lumen Cross-Sectional Area values derived from contours (direction proximal to distal) based on densitometric method"),
-            Self::_122528 => Some("Position of proximal border of segment relative to the contour start (proximal end of analysis area)"),
-            Self::_122529 => Some("Position of distal border of segment relative to the contour start (proximal end of analysis area)"),
+            Self::_122517 => Some(
+                "Ordered set of cross-sectional Vessel Lumen Cross-Sectional Area values derived from contours (direction proximal to distal) based on densitometric method",
+            ),
+            Self::_122528 => Some(
+                "Position of proximal border of segment relative to the contour start (proximal end of analysis area)",
+            ),
+            Self::_122529 => Some(
+                "Position of distal border of segment relative to the contour start (proximal end of analysis area)",
+            ),
             Self::_122542 => Some("Longitudinal cross sectional area of plaque"),
-            Self::_122544 => Some("Symmetry of stenosis (0 = complete asymmetry, 1 = complete symmetry); see Section T.2 \"Definition of Diameter Symmetry with Arterial Plaques\" in PS3.17"),
-            Self::_122545 => Some("Symmetry of plaque (0 = complete asymmetry, 1 = complete symmetry); see Section T.2 \"Definition of Diameter Symmetry with Arterial Plaques\" in PS3.17"),
-            Self::_122546 => Some("The average slope of the diameter function between the position of the minimum luminal diameter and the position of the proximal border of the segment"),
-            Self::_122547 => Some("The average slope of the diameter function between the position of the minimum luminal diameter and the position of the distal border of the segment"),
+            Self::_122544 => Some(
+                "Symmetry of stenosis (0 = complete asymmetry, 1 = complete symmetry); see Section T.2 \"Definition of Diameter Symmetry with Arterial Plaques\" in PS3.17",
+            ),
+            Self::_122545 => Some(
+                "Symmetry of plaque (0 = complete asymmetry, 1 = complete symmetry); see Section T.2 \"Definition of Diameter Symmetry with Arterial Plaques\" in PS3.17",
+            ),
+            Self::_122546 => Some(
+                "The average slope of the diameter function between the position of the minimum luminal diameter and the position of the proximal border of the segment",
+            ),
+            Self::_122547 => Some(
+                "The average slope of the diameter function between the position of the minimum luminal diameter and the position of the distal border of the segment",
+            ),
             Self::_122548 => Some("The relation between coronary pressure and coronary flow"),
             Self::_122549 => Some("Poiseuille Resistance at the location of the stenosis"),
             Self::_122550 => Some("Turbulence Resistance at the location of the stenosis"),
             Self::_122551 => Some("Pressure drop over the stenosis at maximum heart output"),
             Self::_122554 => Some("Method for selection of vessel sub-segments"),
-            Self::_122555 => Some("Estimate of the volume of blood flow in the absence of stenosis"),
+            Self::_122555 => {
+                Some("Estimate of the volume of blood flow in the absence of stenosis")
+            }
             Self::_122558 => Some("Area Length method defined by Kennedy [Kennedy, 1970]"),
             Self::_122559 => Some("Area Length method defined by Dodge [Dodge, 1960]"),
             Self::_122560 => Some("Area Length method defined by Wynne [Wynne]"),
@@ -15407,11 +18781,17 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122564 => Some("Volume method defined by Ferlinz [Ferlinz]"),
             Self::_122565 => Some("Volume method defined by Graham [Graham]"),
             Self::_122566 => Some("Volume method defined by Arcilla [Arcilla]"),
-            Self::_122572 => Some("Corrected Body Surface area for indexing the hemodynamic measurements for a pediatric patient"),
-            Self::_122574 => Some("Method for selecting sub-segments that are all of the same length"),
+            Self::_122572 => Some(
+                "Corrected Body Surface area for indexing the hemodynamic measurements for a pediatric patient",
+            ),
+            Self::_122574 => {
+                Some("Method for selecting sub-segments that are all of the same length")
+            }
             Self::_122575 => Some("Manually selected start and end of sub-segment"),
             Self::_122582 => Some("Left ventricular posterobasal segment"),
-            Self::_122600 => Some("Report of a Cardiovascular Analysis, typically from a CT or MR study"),
+            Self::_122600 => {
+                Some("Report of a Cardiovascular Analysis, typically from a CT or MR study")
+            }
             Self::_122601 => Some("Ventricular Analysis"),
             Self::_122602 => Some("Myocardial Perfusion Analysis"),
             Self::_122603 => Some("Calcium Scoring Analysis"),
@@ -15419,27 +18799,47 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122605 => Some("Vascular Morphological Analysis"),
             Self::_122606 => Some("Vascular Functional Analysis"),
             Self::_122607 => Some("Analysis of myocardial wall thickening"),
-            Self::_122608 => Some("Section Heading for absolute values of ventricular measurements"),
+            Self::_122608 => {
+                Some("Section Heading for absolute values of ventricular measurements")
+            }
             Self::_122609 => Some("Results of normalizing ventricular measurements"),
             Self::_122611 => Some("Reference Point of a measurement"),
             Self::_122612 => Some("Central breathing position between inspiration and expiration"),
             Self::_122616 => Some("Peak of the ventricular ejection rate"),
             Self::_122617 => Some("Time of the peak of ventricular ejection"),
             Self::_122618 => Some("Peak of the fluid filling rate"),
-            Self::_122619 => Some("Time interval until time of peak filling from a given reference point; e.g. end systole"),
+            Self::_122619 => Some(
+                "Time interval until time of peak filling from a given reference point; e.g. end systole",
+            ),
             Self::_122620 => Some("Papillary muscle was excluded from the measurement"),
             Self::_122621 => Some("Papillary muscle was included in the measurement"),
-            Self::_122624 => Some("The ratio of the end-systolic wall thickness compared to the end-diastolic wall thickness"),
-            Self::_122627 => Some("The method to smooth a ventricular volume as a function of time"),
+            Self::_122624 => Some(
+                "The ratio of the end-systolic wall thickness compared to the end-diastolic wall thickness",
+            ),
+            Self::_122627 => {
+                Some("The method to smooth a ventricular volume as a function of time")
+            }
             Self::_122628 => Some("Baseline correction used in the calculation of the results"),
-            Self::_122631 => Some("The time in a dynamic set of images at which the first peak of the signal is observed for the analyzed myocardial wall segments"),
+            Self::_122631 => Some(
+                "The time in a dynamic set of images at which the first peak of the signal is observed for the analyzed myocardial wall segments",
+            ),
             Self::_122633 => Some("This is the time at which the signal begins to increase"),
-            Self::_122634 => Some("Time interval between the beginning of the signal increase to the time at which the signal intensity reaches its first maximum in a dynamic set of images"),
+            Self::_122634 => Some(
+                "Time interval between the beginning of the signal increase to the time at which the signal intensity reaches its first maximum in a dynamic set of images",
+            ),
             Self::_122635 => Some("Peak of the MR perfusion signal"),
-            Self::_122636 => Some("Signal intensity as a function of time. It is the change in the signal intensity divided by the change in the time"),
-            Self::_122637 => Some("MR perfusion time integral from baseline (foot time) to earliest peak"),
-            Self::_122638 => Some("First time point in a dynamic set of images used in the calculation of the baseline signal intensity for each myocardial wall segment"),
-            Self::_122639 => Some("Last time point in a dynamic set of images used in the calculation of the baseline signal intensity for each myocardial wall segment"),
+            Self::_122636 => Some(
+                "Signal intensity as a function of time. It is the change in the signal intensity divided by the change in the time",
+            ),
+            Self::_122637 => {
+                Some("MR perfusion time integral from baseline (foot time) to earliest peak")
+            }
+            Self::_122638 => Some(
+                "First time point in a dynamic set of images used in the calculation of the baseline signal intensity for each myocardial wall segment",
+            ),
+            Self::_122639 => Some(
+                "Last time point in a dynamic set of images used in the calculation of the baseline signal intensity for each myocardial wall segment",
+            ),
             Self::_122640 => Some("The time delta between images in a dynamic set of images"),
             Self::_122642 => Some("The minimum velocity encoded by the phase encoding gradient"),
             Self::_122643 => Some("The maximum velocity encoded by the phase encoding gradient"),
@@ -15447,28 +18847,44 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122650 => Some("Area Based Method for estimating volume or area"),
             Self::_122651 => Some("Diameter Based Method for estimating volume, area or diameter"),
             Self::_122652 => Some("Volume Based Method for estimating volume"),
-            Self::_122655 => Some("A method of diameter measurements according to NASCET (North American Symptomatic Carotid Endarterectomy Trial)"),
-            Self::_122656 => Some("A method of diameter measurements according to ECST (European Carotid Surgery Trial)"),
+            Self::_122655 => Some(
+                "A method of diameter measurements according to NASCET (North American Symptomatic Carotid Endarterectomy Trial)",
+            ),
+            Self::_122656 => Some(
+                "A method of diameter measurements according to ECST (European Carotid Surgery Trial)",
+            ),
             Self::_122657 => Some("Agatston Score Threshold"),
             Self::_122658 => Some("Calcium Mass Threshold"),
             Self::_122659 => Some("Calcium Scoring Calibration"),
             Self::_122660 => Some("Calcium Volume"),
             Self::_122661 => Some("Calcium Mass"),
-            Self::_122664 => Some("Delayed hyperenhancement of a tissue observed in an image acquired after injection of contrast media"),
+            Self::_122664 => Some(
+                "Delayed hyperenhancement of a tissue observed in an image acquired after injection of contrast media",
+            ),
             Self::_122665 => Some("Time interval since injection of contrast media"),
             Self::_122666 => Some("Time relative to R-wave peak"),
-            Self::_122667 => Some("Relationship between blood velocity and time relative to R-wave peak"),
+            Self::_122667 => {
+                Some("Relationship between blood velocity and time relative to R-wave peak")
+            }
             Self::_122668 => Some("Time interval since detection of contrast bolus"),
-            Self::_122670 => Some("Indicates if the papillary muscle was included or excluded in the measurement"),
+            Self::_122670 => Some(
+                "Indicates if the papillary muscle was included or excluded in the measurement",
+            ),
             Self::_122675 => Some("Anterior to Posterior direction"),
             Self::_122680 => Some("Persistent flow of blood into the stent-grafting"),
             Self::_122683 => Some("Fracture of a stent"),
             Self::_122684 => Some("Disintegration of a stent"),
             Self::_122685 => Some("Material that a stent consists of"),
-            Self::_122686 => Some("Finding about the characteristics of the parent vessel of a vessel"),
+            Self::_122686 => {
+                Some("Finding about the characteristics of the parent vessel of a vessel")
+            }
             Self::_122687 => Some("Site of Maximal lumen diameter of a vessel"),
-            Self::_122698 => Some("The physical domain (time, space, etc.) to the horizontal axis of the graphical presentation"),
-            Self::_122699 => Some("The physical domain (time, space, etc.) to the vertical axis of the graphical presentation"),
+            Self::_122698 => Some(
+                "The physical domain (time, space, etc.) to the horizontal axis of the graphical presentation",
+            ),
+            Self::_122699 => Some(
+                "The physical domain (time, space, etc.) to the vertical axis of the graphical presentation",
+            ),
             Self::_122700 => Some("Indications for Pharmacological Stress"),
             Self::_122701 => Some("Reference time for measurement of elapsed time in a procedure"),
             Self::_122702 => Some("Treadmill speed"),
@@ -15485,20 +18901,36 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122713 => Some("Attenuation correction method"),
             Self::_122715 => Some("Pharmacological Stress Agent Dose"),
             Self::_122716 => Some("Maximum power output achieved during course of procedure"),
-            Self::_122717 => Some("Peak physical activity intensity measurement during course of procedure"),
+            Self::_122717 => {
+                Some("Peak physical activity intensity measurement during course of procedure")
+            }
             Self::_122718 => Some("Peak Double Product measurement during course of procedure"),
-            Self::_122720 => Some("Ordered subsets expectation maximization reconstruction algorithm"),
+            Self::_122720 => {
+                Some("Ordered subsets expectation maximization reconstruction algorithm")
+            }
             Self::_122721 => Some("Chang attenuation correction method"),
-            Self::_122726 => Some("Attenuation correction not based on image-based attenuation maps"),
+            Self::_122726 => {
+                Some("Attenuation correction not based on image-based attenuation maps")
+            }
             Self::_122727 => Some("NM transmission attenuation correction"),
             Self::_122728 => Some("CT-based attenuation correction"),
             Self::_122729 => Some("No attenuation correction"),
-            Self::_122730 => Some("Bazett QT Correction Algorithm; QT/(RR ^ 0.5); Bazett HC. \"An analysis of the time-relations of electrocardiograms\" Heart7:353-370 (1920)"),
-            Self::_122731 => Some("Hodges QT Correction Algorithm; QT + 1.75 (heart rate-60); Hodges M, Salerno Q, Erlien D. \"Bazett\'s QT correction reviewed. Evidence that a linear QT correction for heart rate is better.\" J Am Coll Cardiol1:694 (1983)"),
-            Self::_122732 => Some("Fridericia QT Correction Algorithm; QT/(RR ^ 0.333); Fridericia LS. \"The duration of systole in the electrocardiogram of normal subjects and of patients with heart disease\" Acta Med Scand53:469-486 (1920)"),
-            Self::_122733 => Some("Framingham QT Correction Algorithm; QT + 0.154 (1- RR); Sagie A, Larson MG, Goldberg RJ, et al. \"An improved method for adjusting the QT interval for heart rate (the Framingham Heart Study).\" Am J Cardiol70:797-801(1992)"),
+            Self::_122730 => Some(
+                "Bazett QT Correction Algorithm; QT/(RR ^ 0.5); Bazett HC. \"An analysis of the time-relations of electrocardiograms\" Heart7:353-370 (1920)",
+            ),
+            Self::_122731 => Some(
+                "Hodges QT Correction Algorithm; QT + 1.75 (heart rate-60); Hodges M, Salerno Q, Erlien D. \"Bazett\'s QT correction reviewed. Evidence that a linear QT correction for heart rate is better.\" J Am Coll Cardiol1:694 (1983)",
+            ),
+            Self::_122732 => Some(
+                "Fridericia QT Correction Algorithm; QT/(RR ^ 0.333); Fridericia LS. \"The duration of systole in the electrocardiogram of normal subjects and of patients with heart disease\" Acta Med Scand53:469-486 (1920)",
+            ),
+            Self::_122733 => Some(
+                "Framingham QT Correction Algorithm; QT + 0.154 (1- RR); Sagie A, Larson MG, Goldberg RJ, et al. \"An improved method for adjusting the QT interval for heart rate (the Framingham Heart Study).\" Am J Cardiol70:797-801(1992)",
+            ),
             Self::_122734 => Some("Borg Rating of Perceived Exertion Scale, range 6:20"),
-            Self::_122735 => Some("Borg category ratio scale, open ended range with nominal range 0:10"),
+            Self::_122735 => {
+                Some("Borg category ratio scale, open ended range with nominal range 0:10")
+            }
             Self::_122739 => Some("Overall study quality"),
             Self::_122740 => Some("Excellent image quality"),
             Self::_122741 => Some("Good image quality"),
@@ -15509,7 +18941,9 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122748 => Some("Finding of a defect is incorrect; e.g. from automated analysis"),
             Self::_122750 => Some("ECG is non-diagnostic due to low heart rate"),
             Self::_122751 => Some("ECG is non-diagnostic due to resting ST abnormalities"),
-            Self::_122752 => Some("ECG is non-diagnostic due to ventricular pacing or Left Bundle Branch Block"),
+            Self::_122752 => {
+                Some("ECG is non-diagnostic due to ventricular pacing or Left Bundle Branch Block")
+            }
             Self::_122753 => Some("ECG is non-diagnostic for presence of acute coronary syndrome"),
             Self::_122755 => Some("Strongly positive finding"),
             Self::_122756 => Some("Strongly positive finding - ST elevation"),
@@ -15524,251 +18958,627 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_122770 => Some("Ratio of achieved to predicted maximal oxygen consumption"),
             Self::_122771 => Some("Ratio of achieved to predicted functional capacity"),
             Self::_122772 => Some("Workload (Watts) at target heart rate divided by body weight"),
-            Self::_122773 => Some("ST depression at peak exercise divided by the exercise-induced increase in heart rate [Kligfield P, Ameisen O, Okin PM. \"Heart rate adjustment of ST segment depression for improved detection of coronary artery disease.\" Circulation 1989;79:245-55.]"),
+            Self::_122773 => Some(
+                "ST depression at peak exercise divided by the exercise-induced increase in heart rate [Kligfield P, Ameisen O, Okin PM. \"Heart rate adjustment of ST segment depression for improved detection of coronary artery disease.\" Circulation 1989;79:245-55.]",
+            ),
             Self::_122775 => Some("Agreement with prior findings"),
             Self::_122776 => Some("Disagreement with prior findings"),
             Self::_122781 => Some("Nuclear Medicine Rest thallium/stress technetium procedure"),
-            Self::_122782 => Some("Nuclear Medicine Rest technetium/stress technetium 1 day procedure"),
-            Self::_122783 => Some("Nuclear Medicine Rest technetium/stress technetium 2 day procedure"),
-            Self::_122784 => Some("Nuclear Medicine Stress technetium/rest technetium 1 day procedure"),
+            Self::_122782 => {
+                Some("Nuclear Medicine Rest technetium/stress technetium 1 day procedure")
+            }
+            Self::_122783 => {
+                Some("Nuclear Medicine Rest technetium/stress technetium 2 day procedure")
+            }
+            Self::_122784 => {
+                Some("Nuclear Medicine Stress technetium/rest technetium 1 day procedure")
+            }
             Self::_122785 => Some("Nuclear Medicine Myocardial Viability procedure"),
-            Self::_122791 => Some("Positron Emission Tomography Perfusion Imaging procedure, rest only"),
-            Self::_122792 => Some("Positron Emission Tomography Perfusion Imaging procedure, stress only"),
-            Self::_122793 => Some("Positron Emission Tomography Perfusion Imaging procedure, rest and stress"),
-            Self::_122795 => Some("Positron Emission Tomography Myocardial Viability procedure, rest only"),
-            Self::_122796 => Some("Positron Emission Tomography Myocardial Viability procedure, stress only"),
-            Self::_122797 => Some("Positron Emission Tomography Myocardial Viability procedure, rest and stress"),
-            Self::_122799 => Some("Group of symptoms heralding angina pectoris that does not include chest pain (dyspnea, diaphoresis, profuse vomiting in a diabetic patient, or arm or jaw pain)"),
+            Self::_122791 => {
+                Some("Positron Emission Tomography Perfusion Imaging procedure, rest only")
+            }
+            Self::_122792 => {
+                Some("Positron Emission Tomography Perfusion Imaging procedure, stress only")
+            }
+            Self::_122793 => {
+                Some("Positron Emission Tomography Perfusion Imaging procedure, rest and stress")
+            }
+            Self::_122795 => {
+                Some("Positron Emission Tomography Myocardial Viability procedure, rest only")
+            }
+            Self::_122796 => {
+                Some("Positron Emission Tomography Myocardial Viability procedure, stress only")
+            }
+            Self::_122797 => {
+                Some("Positron Emission Tomography Myocardial Viability procedure, rest and stress")
+            }
+            Self::_122799 => Some(
+                "Group of symptoms heralding angina pectoris that does not include chest pain (dyspnea, diaphoresis, profuse vomiting in a diabetic patient, or arm or jaw pain)",
+            ),
             Self::_123001 => Some("Active ingredient (molecular) used for radioactive tracing"),
-            Self::_123003 => Some("Time of radiopharmaceutical administration to the patient for imaging purposes"),
-            Self::_123004 => Some("Ending time of radiopharmaceutical administration to the patient for imaging purposes"),
+            Self::_123003 => Some(
+                "Time of radiopharmaceutical administration to the patient for imaging purposes",
+            ),
+            Self::_123004 => Some(
+                "Ending time of radiopharmaceutical administration to the patient for imaging purposes",
+            ),
             Self::_123005 => Some("Volume of radiopharmaceutical administered to the patient"),
-            Self::_123006 => Some("Total amount of radionuclide administered to the patient at Radiopharmaceutical Start Time"),
-            Self::_123007 => Some("Activity per unit mass of the radiopharmaceutical at Radiopharmaceutical Start Time"),
+            Self::_123006 => Some(
+                "Total amount of radionuclide administered to the patient at Radiopharmaceutical Start Time",
+            ),
+            Self::_123007 => Some(
+                "Activity per unit mass of the radiopharmaceutical at Radiopharmaceutical Start Time",
+            ),
             Self::_123009 => Some("Pre-injection syringe acquisition count rate"),
             Self::_123010 => Some("Syringe acquisition count rate following patient injection"),
             Self::_123011 => Some("Contrast or bolus agent"),
-            Self::_123012 => Some("Medication to be administered at the beginning of the Scheduled Procedure Step"),
+            Self::_123012 => Some(
+                "Medication to be administered at the beginning of the Scheduled Procedure Step",
+            ),
             Self::_123014 => Some("Anatomic Region to be imaged"),
-            Self::_123015 => Some("Direction of imaging (includes view, transducer orientation, patient orientation, and/or projection)"),
-            Self::_123016 => Some("Imaging condition for refinement of protocol (includes secondary posture, instruction, X-Ray / electron beam energy or nuclide, and ultrasound modes), as used in JJ1017 v3.0"),
-            Self::_123019 => Some("Caudal 10 degree distal-cranioproximal oblique radiographic projection, defined per Smallwood et al"),
-            Self::_123101 => Some("Surface processing utilizing predefined weighting factors (i.e., kernels) applied to different data values depending on their location relative to other data values within the data domain. Includes Low Pass, High Pass, Gaussian, Laplacian, etc."),
-            Self::_123102 => Some("Surface processing applied non-uniformly utilizing a priori knowledge of the system and/or relative locations of the data values within the data domain. Example: Neighborhood analysis where weighting factors are modified continuously based on predefined criteria"),
-            Self::_123103 => Some("Surface processing through the exploitation of discontinuities in the data values within their domain. Includes Gradient filters"),
-            Self::_123104 => Some("Surface processing based on the connectivity of values based on the shape or structure of the data values within their domain. Includes erode, dilate, etc."),
-            Self::_123105 => Some("Surface processing applied to the distribution of the data values. Includes thresholding, Bayesian Classification, etc."),
-            Self::_123106 => Some("Surface processing accomplished through varying the data domain size. Include deformable models"),
-            Self::_123107 => Some("Surface processing accomplished by combining data values based on their relative location within their domain or value distribution. Includes K- and C-means, Fuzzy Analysis, Watershed, Seed Growing, etc."),
-            Self::_123108 => Some("Surface processing accomplished through the weighted combination of multiple data sets. Includes Principle Component Analysis, linear and non-linear weighed combinations, etc."),
-            Self::_123109 => Some("Surface processing accomplished through human interaction. Region drawing"),
-            Self::_123110 => Some("Surface processing using Artificial Intelligence techniques, such as Machine Learning, Neural Networks, etc."),
-            Self::_123111 => Some("Surface processing using Deformable Model techniques, such as Point Distribution Models, Level Sets, Simplex Meshes, etc."),
+            Self::_123015 => Some(
+                "Direction of imaging (includes view, transducer orientation, patient orientation, and/or projection)",
+            ),
+            Self::_123016 => Some(
+                "Imaging condition for refinement of protocol (includes secondary posture, instruction, X-Ray / electron beam energy or nuclide, and ultrasound modes), as used in JJ1017 v3.0",
+            ),
+            Self::_123019 => Some(
+                "Caudal 10 degree distal-cranioproximal oblique radiographic projection, defined per Smallwood et al",
+            ),
+            Self::_123101 => Some(
+                "Surface processing utilizing predefined weighting factors (i.e., kernels) applied to different data values depending on their location relative to other data values within the data domain. Includes Low Pass, High Pass, Gaussian, Laplacian, etc.",
+            ),
+            Self::_123102 => Some(
+                "Surface processing applied non-uniformly utilizing a priori knowledge of the system and/or relative locations of the data values within the data domain. Example: Neighborhood analysis where weighting factors are modified continuously based on predefined criteria",
+            ),
+            Self::_123103 => Some(
+                "Surface processing through the exploitation of discontinuities in the data values within their domain. Includes Gradient filters",
+            ),
+            Self::_123104 => Some(
+                "Surface processing based on the connectivity of values based on the shape or structure of the data values within their domain. Includes erode, dilate, etc.",
+            ),
+            Self::_123105 => Some(
+                "Surface processing applied to the distribution of the data values. Includes thresholding, Bayesian Classification, etc.",
+            ),
+            Self::_123106 => Some(
+                "Surface processing accomplished through varying the data domain size. Include deformable models",
+            ),
+            Self::_123107 => Some(
+                "Surface processing accomplished by combining data values based on their relative location within their domain or value distribution. Includes K- and C-means, Fuzzy Analysis, Watershed, Seed Growing, etc.",
+            ),
+            Self::_123108 => Some(
+                "Surface processing accomplished through the weighted combination of multiple data sets. Includes Principle Component Analysis, linear and non-linear weighed combinations, etc.",
+            ),
+            Self::_123109 => {
+                Some("Surface processing accomplished through human interaction. Region drawing")
+            }
+            Self::_123110 => Some(
+                "Surface processing using Artificial Intelligence techniques, such as Machine Learning, Neural Networks, etc.",
+            ),
+            Self::_123111 => Some(
+                "Surface processing using Deformable Model techniques, such as Point Distribution Models, Level Sets, Simplex Meshes, etc.",
+            ),
             Self::_125000 => Some("Document Title of OB-GYN procedure report"),
-            Self::_125001 => Some("Report section for assessment of fetal growth using ratios and indexes"),
+            Self::_125001 => {
+                Some("Report section for assessment of fetal growth using ratios and indexes")
+            }
             Self::_125002 => Some("Report section for assessment of fetal growth"),
-            Self::_125003 => Some("Report section for assessment of fetal growth by long bone measurements"),
+            Self::_125003 => {
+                Some("Report section for assessment of fetal growth by long bone measurements")
+            }
             Self::_125004 => Some("Report section for assessment of fetal cranium growth"),
             Self::_125005 => Some("Biometric assessment of"),
-            Self::_125006 => Some("Report section for assessment of biophysical observations that evaluate fetal well-being according to Manning, Antepartum Fetal Evaluation: Development of a Fetal Biophysical Profile Score, Am. J Obstet Gynecol, 1980;136:787"),
-            Self::_125007 => Some("A grouping of related measurements and calculations that share a common context"),
-            Self::_125008 => Some("Report section for fetus specific procedure summary observations"),
+            Self::_125006 => Some(
+                "Report section for assessment of biophysical observations that evaluate fetal well-being according to Manning, Antepartum Fetal Evaluation: Development of a Fetal Biophysical Profile Score, Am. J Obstet Gynecol, 1980;136:787",
+            ),
+            Self::_125007 => Some(
+                "A grouping of related measurements and calculations that share a common context",
+            ),
+            Self::_125008 => {
+                Some("Report section for fetus specific procedure summary observations")
+            }
             Self::_125009 => Some("Report section for assessment of early gestation fetus"),
-            Self::_125010 => Some("A name to differentiate between multiple instances of some item"),
+            Self::_125010 => {
+                Some("A name to differentiate between multiple instances of some item")
+            }
             Self::_125011 => Some("Report section for assessment of pelvis and uterus"),
-            Self::_125012 => Some("The rank of a measured growth indicator relative to a normal distribution expressed as a percentage"),
-            Self::_125013 => Some("The rank of a measured growth indicator relative to a normal distribution expressed as the dimensionless quantity z = (x-m) /s where (x-m) is the deviation of the value x, from the distribution mean, m, and s is the standard deviation of the distribution"),
+            Self::_125012 => Some(
+                "The rank of a measured growth indicator relative to a normal distribution expressed as a percentage",
+            ),
+            Self::_125013 => Some(
+                "The rank of a measured growth indicator relative to a normal distribution expressed as the dimensionless quantity z = (x-m) /s where (x-m) is the deviation of the value x, from the distribution mean, m, and s is the standard deviation of the distribution",
+            ),
             Self::_125015 => Some("Fetus characteristics (findings section title)"),
             Self::_125016 => Some("Fetal Measurements (findings section title)"),
-            Self::_125021 => Some("There is a defined equivalence between the Frame of Reference of the Registration SOP instance and the Frame of Reference of the referenced images"),
-            Self::_125022 => Some("The registration is based on fiducials that represent patient or specimen features identified in each data set"),
-            Self::_125023 => Some("Registration based on a-priori knowledge of the acquisition geometry. This is not an object registration as in fiducial registration. Rather, it specifies a known spatial relationship"),
+            Self::_125021 => Some(
+                "There is a defined equivalence between the Frame of Reference of the Registration SOP instance and the Frame of Reference of the referenced images",
+            ),
+            Self::_125022 => Some(
+                "The registration is based on fiducials that represent patient or specimen features identified in each data set",
+            ),
+            Self::_125023 => Some(
+                "Registration based on a-priori knowledge of the acquisition geometry. This is not an object registration as in fiducial registration. Rather, it specifies a known spatial relationship",
+            ),
             Self::_125024 => Some("Computed registration based on global image information"),
             Self::_125025 => Some("Registration by visually guided manipulation"),
-            Self::_125030 => Some("A plane fiducial that specifies the location of the plane separating the two hemispheres of the brain"),
-            Self::_125031 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the anterior limit of the right brain hemisphere"),
-            Self::_125032 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the posterior limit of the right brain hemisphere"),
-            Self::_125033 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the superior limit of the right brain hemisphere"),
-            Self::_125034 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the inferior limit of the Right brain hemisphere"),
-            Self::_125035 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the anterior limit of the left brain hemisphere"),
-            Self::_125036 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the posterior limit of the left brain hemisphere"),
-            Self::_125037 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the superior limit of the left brain hemisphere"),
-            Self::_125038 => Some("A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the inferior limit of the left brain hemisphere"),
+            Self::_125030 => Some(
+                "A plane fiducial that specifies the location of the plane separating the two hemispheres of the brain",
+            ),
+            Self::_125031 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the anterior limit of the right brain hemisphere",
+            ),
+            Self::_125032 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the posterior limit of the right brain hemisphere",
+            ),
+            Self::_125033 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the superior limit of the right brain hemisphere",
+            ),
+            Self::_125034 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the inferior limit of the Right brain hemisphere",
+            ),
+            Self::_125035 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the anterior limit of the left brain hemisphere",
+            ),
+            Self::_125036 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the posterior limit of the left brain hemisphere",
+            ),
+            Self::_125037 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the superior limit of the left brain hemisphere",
+            ),
+            Self::_125038 => Some(
+                "A point fiducial that specifies the location in the plane perpendicular to the Anterior- Posterior-Commissure axis and tangential to the inferior limit of the left brain hemisphere",
+            ),
             Self::_125040 => Some("That which is not part of an object"),
-            Self::_125041 => Some("A segment for use as an input to an image registration process; e.g. to specify the bounding region for determining a Frame of Reference Transformation Matrix"),
-            Self::_125100 => Some("Root Document Title for ultrasound vascular evidence reports (worksheets)"),
-            Self::_125101 => Some("The particular vessel branch, such as the inferior, medial or lateral"),
+            Self::_125041 => Some(
+                "A segment for use as an input to an image registration process; e.g. to specify the bounding region for determining a Frame of Reference Transformation Matrix",
+            ),
+            Self::_125100 => {
+                Some("Root Document Title for ultrasound vascular evidence reports (worksheets)")
+            }
+            Self::_125101 => {
+                Some("The particular vessel branch, such as the inferior, medial or lateral")
+            }
             Self::_125102 => Some("A descriptor or elaboration of the type of graft"),
-            Self::_125105 => Some("A modifier to a 2D distance measurement to describe its orientation; e.g. a vascular distance measurement for a vessel plague could have a modifier Transverse or Longitudinal"),
-            Self::_125106 => Some("The angle formed between the Doppler beam line and the direction of blood flow within a region of interest in the body defined by the sample volume"),
-            Self::_125107 => Some("The depth of the center of the Doppler sample volume measured from skin line along the Doppler line"),
+            Self::_125105 => Some(
+                "A modifier to a 2D distance measurement to describe its orientation; e.g. a vascular distance measurement for a vessel plague could have a modifier Transverse or Longitudinal",
+            ),
+            Self::_125106 => Some(
+                "The angle formed between the Doppler beam line and the direction of blood flow within a region of interest in the body defined by the sample volume",
+            ),
+            Self::_125107 => Some(
+                "The depth of the center of the Doppler sample volume measured from skin line along the Doppler line",
+            ),
             Self::_125195 => Some("Pediatric Cardiac Ultrasound Report (document title)"),
             Self::_125196 => Some("Fetal Cardiac Ultrasound Report (document title)"),
             Self::_125197 => Some("Adult Congenital Cardiac Ultrasound Report (document title)"),
-            Self::_125200 => Some("Document title of adult echocardiography procedure (evidence) report"),
-            Self::_125201 => Some("An image that is a pictorial representation of findings. The concept is typically used as a purpose of reference to an image, such as a depiction of myocardium segments depicting wall motion function"),
-            Self::_125202 => Some("The average of all scored (non-zero) Left Ventricle segment wall motion scores"),
-            Self::_125203 => Some("A type of clinical acquisition protocol for creating images or image-derived measurements. Acquisition protocols may be specific to a manufacturer\'s product"),
-            Self::_125204 => Some("Method for calculating left ventricular volume from two orthogonal views containing the true long axis (usually the apical 4 and 2 chamber views). Volume = [pL1 / 6] * [(4A1) \u{f7} (pL1) ] * [(4A2) \u{f7} (pL2) ]"),
-            Self::_125205 => Some("Method for calculating left ventricular volume from a view containing the true long axis (usually the apical 4-chamber view). Volume = [8(A)2]\u{f7}[3pL]"),
-            Self::_125206 => Some("Method (formula) for calculating left ventricle volumes and function derivatives (EF, SV, SI, etc.) that estimates the volume as the cube of diameter"),
-            Self::_125207 => Some("Method of calculating volume based on the summation of disk volumes. The disk axis is parallel to the left ventricular long axis and using a disk diameter averaged from the two chamber and four chamber views"),
-            Self::_125208 => Some("Method of calculating volume based on the summation of disk volumes. The disk axis is parallel to the left ventricular long axis with disk diameter taken from the four-chamber view"),
-            Self::_125209 => Some("Method (formula) for calculating left ventricle volumes and function derivatives (EF, SV, SI, etc.) Volume = [7.0/(2.4+D) ]*D3"),
-            Self::_125210 => Some("Mitral valve area (cm2) by Pressure Half-time = 220 (cm2.ms) / PHT (ms)"),
-            Self::_125211 => Some("Area = P/4 X d1 X d2 d1 = anterior/posterior axis d2 = medial/lateral axis Hagen-Ansert, Sandra L., Textbook of Diagnostic Ultrasound, ed. 3, The C.V.Mosby Co., 1989, p. 73. "),
-            Self::_125212 => Some("For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the velocity"),
-            Self::_125213 => Some("For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the mean velocity"),
-            Self::_125214 => Some("For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the peak velocity"),
-            Self::_125215 => Some("For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the velocity time integral"),
-            Self::_125216 => Some("Utilizes aliasing velocity (by color Doppler) of flow into an orifice (often regurgitant or stenotic) to measure instantaneous flow rate, orifice area, and flow volume. The instantaneous flow rate = (2\u{3c0}r2vav ) * (\u{3b1} / \u{3c0}) where vav is the constant velocity known as aliasing velocity at radius r, vp is the peak velocity at the orifice, and \u{3b1} is the angle in radians of the constant velocity surface. Estimated Orifice area = Flow rate / vp , where vp is the peak velocity at the orifice and the flow rate is the PISA peak flow rate. The volume flow is then the product of the orifice area and Velocity Time Integral"),
+            Self::_125200 => {
+                Some("Document title of adult echocardiography procedure (evidence) report")
+            }
+            Self::_125201 => Some(
+                "An image that is a pictorial representation of findings. The concept is typically used as a purpose of reference to an image, such as a depiction of myocardium segments depicting wall motion function",
+            ),
+            Self::_125202 => Some(
+                "The average of all scored (non-zero) Left Ventricle segment wall motion scores",
+            ),
+            Self::_125203 => Some(
+                "A type of clinical acquisition protocol for creating images or image-derived measurements. Acquisition protocols may be specific to a manufacturer\'s product",
+            ),
+            Self::_125204 => Some(
+                "Method for calculating left ventricular volume from two orthogonal views containing the true long axis (usually the apical 4 and 2 chamber views). Volume = [pL1 / 6] * [(4A1) \u{f7} (pL1) ] * [(4A2) \u{f7} (pL2) ]",
+            ),
+            Self::_125205 => Some(
+                "Method for calculating left ventricular volume from a view containing the true long axis (usually the apical 4-chamber view). Volume = [8(A)2]\u{f7}[3pL]",
+            ),
+            Self::_125206 => Some(
+                "Method (formula) for calculating left ventricle volumes and function derivatives (EF, SV, SI, etc.) that estimates the volume as the cube of diameter",
+            ),
+            Self::_125207 => Some(
+                "Method of calculating volume based on the summation of disk volumes. The disk axis is parallel to the left ventricular long axis and using a disk diameter averaged from the two chamber and four chamber views",
+            ),
+            Self::_125208 => Some(
+                "Method of calculating volume based on the summation of disk volumes. The disk axis is parallel to the left ventricular long axis with disk diameter taken from the four-chamber view",
+            ),
+            Self::_125209 => Some(
+                "Method (formula) for calculating left ventricle volumes and function derivatives (EF, SV, SI, etc.) Volume = [7.0/(2.4+D) ]*D3",
+            ),
+            Self::_125210 => {
+                Some("Mitral valve area (cm2) by Pressure Half-time = 220 (cm2.ms) / PHT (ms)")
+            }
+            Self::_125211 => Some(
+                "Area = P/4 X d1 X d2 d1 = anterior/posterior axis d2 = medial/lateral axis Hagen-Ansert, Sandra L., Textbook of Diagnostic Ultrasound, ed. 3, The C.V.Mosby Co., 1989, p. 73. ",
+            ),
+            Self::_125212 => Some(
+                "For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the velocity",
+            ),
+            Self::_125213 => Some(
+                "For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the mean velocity",
+            ),
+            Self::_125214 => Some(
+                "For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the peak velocity",
+            ),
+            Self::_125215 => Some(
+                "For conduits in series (\"in continuity\"), volume flow is equal: A1*V1 = A2*V2. where V is the velocity time integral",
+            ),
+            Self::_125216 => Some(
+                "Utilizes aliasing velocity (by color Doppler) of flow into an orifice (often regurgitant or stenotic) to measure instantaneous flow rate, orifice area, and flow volume. The instantaneous flow rate = (2\u{3c0}r2vav ) * (\u{3b1} / \u{3c0}) where vav is the constant velocity known as aliasing velocity at radius r, vp is the peak velocity at the orifice, and \u{3b1} is the angle in radians of the constant velocity surface. Estimated Orifice area = Flow rate / vp , where vp is the peak velocity at the orifice and the flow rate is the PISA peak flow rate. The volume flow is then the product of the orifice area and Velocity Time Integral",
+            ),
             Self::_125217 => Some("\u{394}P = 4*(V12 - V22)"),
             Self::_125218 => Some("\u{394}P = 4*V2"),
             Self::_125219 => Some("Volume flow = Conduit CSA * (Velocity Time Integral)"),
-            Self::_125220 => Some("Direct measurement of an area by tracing an irregular perimeter"),
-            Self::_125221 => Some("Mass = 1.04 * [(ST+LVID+PWT)3 - LVID3] * 0.8+ 0.6. Mass unit is grams and length in cm"),
-            Self::_125222 => Some("Mass = 1.05P ((b + t)2 X (2/3 (a + t) + d - d3 /3(a + t)2) - b2 (2/3a + d - d3 /3a2)) a = Semi-major axis from widest minor axis radius to apex. b = Short axis radius calculated from short axis cavity area t = Myocardial thickness calculated from short axis epicardial and cavity areas d = Truncated semi-major axis from widest short axis diameter to plane of mitral annulus. Mass unit is grams and length in cm. Schiller NB et al: Recommendations for quantification of the left ventricle by two-dimensional echocardiography, American Society of Echocardiography 2:364, 1989. "),
-            Self::_125223 => Some("A four point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989"),
-            Self::_125224 => Some("A five point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989"),
-            Self::_125225 => Some("A five point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology, with severity of hypokinesis graded. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989"),
-            Self::_125226 => Some("Method of estimating volume from a planar ellipse. Equivalent to Biplane Ellipse with an assumption that the ellipse in the orthogonal plane has identical major and minor diameters"),
-            Self::_125227 => Some("Modified Simpson\'s Method of estimating ventricular volume, based on the method of disks with paired apical views. Schiller NB, et al. \"Recommendations for quantitation of the left ventricle by two-dimensional echocardiography. American Society of Echocardiography Committee on Standards, Subcommittee on Quantitation of Two-Dimensional Echocardiograms\". J Am Soc Echocardiogr.1989 2(5):358-367. Sep-Oct"),
-            Self::_125228 => Some("Bullet method of estimating ventricular volume. Volume = 5/6 * L * S L: Left ventricle long axis length S: Left ventricle area, SAX view at level of Mitral Valve"),
-            Self::_125230 => Some("Color coded ultrasound images of blood flow, which depict the amplitude, or power, of Doppler signals"),
+            Self::_125220 => {
+                Some("Direct measurement of an area by tracing an irregular perimeter")
+            }
+            Self::_125221 => Some(
+                "Mass = 1.04 * [(ST+LVID+PWT)3 - LVID3] * 0.8+ 0.6. Mass unit is grams and length in cm",
+            ),
+            Self::_125222 => Some(
+                "Mass = 1.05P ((b + t)2 X (2/3 (a + t) + d - d3 /3(a + t)2) - b2 (2/3a + d - d3 /3a2)) a = Semi-major axis from widest minor axis radius to apex. b = Short axis radius calculated from short axis cavity area t = Myocardial thickness calculated from short axis epicardial and cavity areas d = Truncated semi-major axis from widest short axis diameter to plane of mitral annulus. Mass unit is grams and length in cm. Schiller NB et al: Recommendations for quantification of the left ventricle by two-dimensional echocardiography, American Society of Echocardiography 2:364, 1989. ",
+            ),
+            Self::_125223 => Some(
+                "A four point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989",
+            ),
+            Self::_125224 => Some(
+                "A five point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989",
+            ),
+            Self::_125225 => Some(
+                "A five point, echocardiographic numeric scoring scheme of myocardium segments based on evaluation of wall motion and ventricle morphology, with severity of hypokinesis graded. Recommendations for Quantitation of the Left Ventricle by Two-Dimensional Echocardiography, Journal of the American Society of Echocardiography, 2:358-367, 1989",
+            ),
+            Self::_125226 => Some(
+                "Method of estimating volume from a planar ellipse. Equivalent to Biplane Ellipse with an assumption that the ellipse in the orthogonal plane has identical major and minor diameters",
+            ),
+            Self::_125227 => Some(
+                "Modified Simpson\'s Method of estimating ventricular volume, based on the method of disks with paired apical views. Schiller NB, et al. \"Recommendations for quantitation of the left ventricle by two-dimensional echocardiography. American Society of Echocardiography Committee on Standards, Subcommittee on Quantitation of Two-Dimensional Echocardiograms\". J Am Soc Echocardiogr.1989 2(5):358-367. Sep-Oct",
+            ),
+            Self::_125228 => Some(
+                "Bullet method of estimating ventricular volume. Volume = 5/6 * L * S L: Left ventricle long axis length S: Left ventricle area, SAX view at level of Mitral Valve",
+            ),
+            Self::_125230 => Some(
+                "Color coded ultrasound images of blood flow, which depict the amplitude, or power, of Doppler signals",
+            ),
             Self::_125231 => Some("Volumetric ultrasound imaging"),
             Self::_125233 => Some("Onset of administration of dose of a drug"),
             Self::_125234 => Some("Onset of contrast agent administration"),
-            Self::_125235 => Some("Destruction of ultrasonic contrast microbubbles by a high-energy ultrasound pulse"),
+            Self::_125235 => Some(
+                "Destruction of ultrasonic contrast microbubbles by a high-energy ultrasound pulse",
+            ),
             Self::_125236 => Some("Instant at which exercise begins"),
             Self::_125237 => Some("Instant at which exercise ends"),
             Self::_125238 => Some("Instant at which stimulation begins"),
             Self::_125239 => Some("Instant at which stimulation ends"),
-            Self::_125240 => Some("Ultrasound transducer scan pattern in which information is gathered along a line"),
-            Self::_125241 => Some("Ultrasound transducer scan pattern in which information is gathered within a plane"),
-            Self::_125242 => Some("Ultrasound transducer scan pattern in which information is gathered within a volume"),
-            Self::_125251 => Some("Ultrasound transducer geometry characterized by a single scan line used for PW or CW Doppler scanning"),
+            Self::_125240 => Some(
+                "Ultrasound transducer scan pattern in which information is gathered along a line",
+            ),
+            Self::_125241 => Some(
+                "Ultrasound transducer scan pattern in which information is gathered within a plane",
+            ),
+            Self::_125242 => Some(
+                "Ultrasound transducer scan pattern in which information is gathered within a volume",
+            ),
+            Self::_125251 => Some(
+                "Ultrasound transducer geometry characterized by a single scan line used for PW or CW Doppler scanning",
+            ),
             Self::_125252 => Some("Ultrasonic transducer geometry characterized by parallel lines"),
-            Self::_125253 => Some("Ultrasonic transducer geometry characterized by radial lines normal to the outside of a curved surface"),
-            Self::_125254 => Some("Ultrasonic transducer geometry characterized by lines originating from a common apex"),
-            Self::_125255 => Some("Ultrasonic transducer geometry characterized by lines emanating radially from a single point"),
-            Self::_125256 => Some("Ultrasonic transducer geometry characterized by a circular ring of transducer elements"),
-            Self::_125257 => Some("Ultrasonic steering technique consisting of a single beam normal to the transducer face steered by the orientation of the probe"),
-            Self::_125258 => Some("Ultrasonic steering technique consisting of mechanically directing the beam"),
-            Self::_125259 => Some("Ultrasonic steering technique consisting of electronically-steered beams"),
-            Self::_125261 => Some("Transducer is designed to be placed onto the surface of the subject"),
+            Self::_125253 => Some(
+                "Ultrasonic transducer geometry characterized by radial lines normal to the outside of a curved surface",
+            ),
+            Self::_125254 => Some(
+                "Ultrasonic transducer geometry characterized by lines originating from a common apex",
+            ),
+            Self::_125255 => Some(
+                "Ultrasonic transducer geometry characterized by lines emanating radially from a single point",
+            ),
+            Self::_125256 => Some(
+                "Ultrasonic transducer geometry characterized by a circular ring of transducer elements",
+            ),
+            Self::_125257 => Some(
+                "Ultrasonic steering technique consisting of a single beam normal to the transducer face steered by the orientation of the probe",
+            ),
+            Self::_125258 => {
+                Some("Ultrasonic steering technique consisting of mechanically directing the beam")
+            }
+            Self::_125259 => {
+                Some("Ultrasonic steering technique consisting of electronically-steered beams")
+            }
+            Self::_125261 => {
+                Some("Transducer is designed to be placed onto the surface of the subject")
+            }
             Self::_125262 => Some("Transducer is designed for insertion into the esophagus"),
             Self::_125263 => Some("Transducer is designed for insertion into the vagina"),
             Self::_125264 => Some("Transducer is designed for insertion into the rectum"),
             Self::_125265 => Some("Transducer is designed for insertion via a catheter"),
-            Self::_125270 => Some("method to measure the mass of the Left Ventricle via the ASE area-length method at end diastole. LV Mass = 1.05*(5/6*(A1*(L+t)) - 5/6*(A2*L)) A1 = Left Ventricle epicardial SAX area at the level of the papillary muscle tips at end diastole. A2 = Left Ventricle endocardial SAX area cavity area at the level of the papillary muscle tips at end diastole. L = Left Ventricle apical view long axis length at end diastole. t = Myocardial thickness can be computed as: t = sqrt (A1/3.14) - sqrt (A2/3.14) Reference: 1) Schiller, N.B., et al. \"Recommendations for Quantification of the LV by Two-dimensional Echocardiography.\" J Am Soc Echo, Vol. 2, No. 5: 358-367, Sep-Oct 1989. 2) Reichek, N., et al. \"Anatomic Validation of Left Ventricular Mass Estimates from Clinical Two-dimensional Echocardiography: Initial Results.\" Circulation, Vol. 67, No. 2: 348-52, February 1983"),
-            Self::_125271 => Some("Equation = Left Ventricle Mass by M-mode (in gram) / (Height (in meter)) ^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio"),
-            Self::_125272 => Some("Equation = Left Ventricle Mass by Truncated Ellipse / Height^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio"),
-            Self::_125273 => Some("Equation = Left Ventricle Mass by Area Length / Height^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio"),
-            Self::_125901 => Some("CARDIOsphere\u{99} ultrasonic contrast agent produced by POINT Biomedical"),
-            Self::_125902 => Some("Echovist\u{ae} ultrasonic contrast agent produced by Schering AG"),
-            Self::_125903 => Some("Imagify\u{99} ultrasonic contrast agent produced by Accusphere Inc"),
-            Self::_125904 => Some("Levovist\u{ae} ultrasonic contrast agent produced by Schering AG"),
-            Self::_125905 => Some("Sonazoid\u{99} ultrasonic contrast agent produced by Daiichi Pharmaceutical / General Electric"),
-            Self::_125906 => Some("SonoVue\u{99} ultrasonic contrast agent produced by Bracco Diagnostics"),
-            Self::_125907 => Some("Targestar\u{99}-B ultrasonic contrast agent produced by Targeson LLC"),
-            Self::_125908 => Some("Targestar\u{99}-P ultrasonic contrast agent produced by Targeson LLC"),
-            Self::_126000 => Some("A structured report containing the quantitative results of human or machine analysis of images"),
-            Self::_126001 => Some("A structured report containing the quantitative results of human or machine analysis of images for oncology evaluation"),
-            Self::_126002 => Some("A structured report containing the quantitative results of human or machine analysis of DCE-MR"),
-            Self::_126003 => Some("A structured report containing the quantitative results of human or machine analysis of PET images"),
+            Self::_125270 => Some(
+                "method to measure the mass of the Left Ventricle via the ASE area-length method at end diastole. LV Mass = 1.05*(5/6*(A1*(L+t)) - 5/6*(A2*L)) A1 = Left Ventricle epicardial SAX area at the level of the papillary muscle tips at end diastole. A2 = Left Ventricle endocardial SAX area cavity area at the level of the papillary muscle tips at end diastole. L = Left Ventricle apical view long axis length at end diastole. t = Myocardial thickness can be computed as: t = sqrt (A1/3.14) - sqrt (A2/3.14) Reference: 1) Schiller, N.B., et al. \"Recommendations for Quantification of the LV by Two-dimensional Echocardiography.\" J Am Soc Echo, Vol. 2, No. 5: 358-367, Sep-Oct 1989. 2) Reichek, N., et al. \"Anatomic Validation of Left Ventricular Mass Estimates from Clinical Two-dimensional Echocardiography: Initial Results.\" Circulation, Vol. 67, No. 2: 348-52, February 1983",
+            ),
+            Self::_125271 => Some(
+                "Equation = Left Ventricle Mass by M-mode (in gram) / (Height (in meter)) ^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio",
+            ),
+            Self::_125272 => Some(
+                "Equation = Left Ventricle Mass by Truncated Ellipse / Height^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio",
+            ),
+            Self::_125273 => Some(
+                "Equation = Left Ventricle Mass by Area Length / Height^2.7 Reference: Giovanni De Simone, et al. \"Effect of Growth on Variability of Left Ventricular Mass: Assessment of Allometric Signals in Adults and Children and Their Capacity to Predict Cardiovascular Risk\". New York, New York and Cincinnati, Ohio",
+            ),
+            Self::_125901 => {
+                Some("CARDIOsphere\u{99} ultrasonic contrast agent produced by POINT Biomedical")
+            }
+            Self::_125902 => {
+                Some("Echovist\u{ae} ultrasonic contrast agent produced by Schering AG")
+            }
+            Self::_125903 => {
+                Some("Imagify\u{99} ultrasonic contrast agent produced by Accusphere Inc")
+            }
+            Self::_125904 => {
+                Some("Levovist\u{ae} ultrasonic contrast agent produced by Schering AG")
+            }
+            Self::_125905 => Some(
+                "Sonazoid\u{99} ultrasonic contrast agent produced by Daiichi Pharmaceutical / General Electric",
+            ),
+            Self::_125906 => {
+                Some("SonoVue\u{99} ultrasonic contrast agent produced by Bracco Diagnostics")
+            }
+            Self::_125907 => {
+                Some("Targestar\u{99}-B ultrasonic contrast agent produced by Targeson LLC")
+            }
+            Self::_125908 => {
+                Some("Targestar\u{99}-P ultrasonic contrast agent produced by Targeson LLC")
+            }
+            Self::_126000 => Some(
+                "A structured report containing the quantitative results of human or machine analysis of images",
+            ),
+            Self::_126001 => Some(
+                "A structured report containing the quantitative results of human or machine analysis of images for oncology evaluation",
+            ),
+            Self::_126002 => Some(
+                "A structured report containing the quantitative results of human or machine analysis of DCE-MR",
+            ),
+            Self::_126003 => Some(
+                "A structured report containing the quantitative results of human or machine analysis of PET images",
+            ),
             Self::_126010 => Some("Measurements made on images"),
             Self::_126011 => Some("Measurements derived from measurements made on images"),
-            Self::_126020 => Some("An MRI procedure in which multiple parameters including diffusion, dynamic contrast and T2 are measured"),
-            Self::_126021 => Some("An MRI procedure of the prostate in which multiple parameters including diffusion, dynamic contrast and T2 are measured"),
-            Self::_126022 => Some("An MRI procedure of the whole body in which multiple parameters including diffusion, dynamic contrast and T2 are measured"),
-            Self::_126030 => Some("The volume derived by summing the volumes of all the voxels (and partial voxels if the segment contains partially occupied voxels) included in the segment"),
-            Self::_126031 => Some("Maximum average gray value that is calculated from a 1 cubic centimeter sphere placed within the region of interest. Reference Wahl et al PERCIST article"),
-            Self::_126032 => Some("The volume of a lesion (e.g. a tumor) ascertained through information about its metabolic activity (e.g. SUV on PET). Abbreviated \"MV\". Synonymous with Metabolic Tumor Volume (MTV)"),
-            Self::_126033 => Some("The total activity of a lesion obtained as the product of its volume and its glycolytic activity (on FDG-PET). The volume may be defined on the same modality (e.g. the MV on FDG-PET by some thresholding or other technique) or on another spatially registered modality (e.g. the lesion outline segmented on CT or MR). Does not apply to other radiopharmaceuticals than those involved in glucose metabolism. Abbreviated TLG. Synonymnous with \"Tumor Lesion Glycolysis\""),
-            Self::_126034 => Some("The amount glycolytic activity summed across all voxels in a defined region or within a defined range of SUV (on FDG-PET)"),
-            Self::_126035 => Some("The total activity of a lesion obtained as the product of its volume and its proliferative activity (on FLT-PET). The volume may be defined on the same modality (e.g. the MV on FDG-PET by some thresholding or other technique) or on another spatially registered modality (e.g. the lesion outline segmented on CT or MR). Does not apply to other radiopharmaceuticals than those involved in cellular proliferation. Abbreviated TLP. Synonymnous with \"Tumor Lesion Proliferation\""),
-            Self::_126036 => Some("The amount proliferative activity summed across all voxels in a defined region or within a defined range of SUV (on FLT-PET)"),
-            Self::_126037 => Some("A background-corrected, partial volume independent version of TLG. SAM is calculated by drawing a volume of interest (VOI1) around the tumour and a larger VOI (VOI2) around VOI1. Subtracting the background activity in VOI2-VOI1 from VOI1 yields SAM. See Mertens et al. \"Standardized added metabolic activity (SAM): a partial volume independent marker of total lesion glycolysis in liver metastases\". Eur J Nucl Med Mol Imaging (2012) 39:1441-1448"),
-            Self::_126038 => Some("The background value (VOI2-VOI1) used to calculate Standardized Added Metabolic Activity (SAM). SAM is calculated by drawing a volume of interest (VOI1) around the tumour and a larger VOI (VOI2) around VOI1. Subtracting the background activity in VOI2-VOI1 from VOI1 yields SAM. See Mertens et al. \"Standardized added metabolic activity (SAM): a partial volume independent marker of total lesion glycolysis in liver metastases\". Eur J Nucl Med Mol Imaging (2012) 39:1441-1448"),
-            Self::_126039 => Some("The ratio of the SUV within a tumor to the SUV of a pre-defined background region. Need reference(s). A more general concept than Tumor to Background Ratio (TBR)"),
-            Self::_126040 => Some("The SUV of a pre-defined background region used to compute Lesion to Background SUV Ratio. Need reference(s)"),
-            Self::_126050 => Some("A statistical index of complexity comparing how detail in a fractal pattern changes with the scale at which it is measured; a ratio of the change in detail to the change in scale"),
-            Self::_126051 => Some("Measure of the asymmetry of the probability distribution of a real-valued random variable about its mean"),
-            Self::_126052 => Some("Measure of the peakedness of the probability distribution of a real-valued random variable"),
-            Self::_126060 => Some("The zero order entropy of a Gray Level Co-occurrence Matrix (GLCM). A measure of disorder. See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126061 => Some("The energy (uniformity) (square root of the Angular Second Moment (ASM)) of a Gray Level Co-occurrence Matrix (GLCM). A measure of orderliness. See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126062 => Some("The Inverse Difference Moment of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126063 => Some("The sum of squares variance of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126064 => Some("The dissimilarity of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126065 => Some("The Angular Second Moment of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126066 => Some("A measure of the linear dependency of grey levels on those of neighbouring pixels of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm"),
-            Self::_126067 => Some("A tabulation of how often different combinations of pixel values (grey levels) occur in an image. See http://www.fp.ucalgary.ca/mhallbey/the_glcm.htm"),
-            Self::_126070 => Some("An identifier of a specific time point in a continuum, which is unique within an appropriate local context (such as an entire organization, system or treatment protocol), which identifies the time point for a specific patient"),
-            Self::_126071 => Some("An identifier of a specific time point in a continuum, which is unique within an appropriate local context (such as an entire organization, system or treatment protocol), which identifies the time point \"slot\" within a treatment protocol using the same value for all patients in the protocol"),
+            Self::_126020 => Some(
+                "An MRI procedure in which multiple parameters including diffusion, dynamic contrast and T2 are measured",
+            ),
+            Self::_126021 => Some(
+                "An MRI procedure of the prostate in which multiple parameters including diffusion, dynamic contrast and T2 are measured",
+            ),
+            Self::_126022 => Some(
+                "An MRI procedure of the whole body in which multiple parameters including diffusion, dynamic contrast and T2 are measured",
+            ),
+            Self::_126030 => Some(
+                "The volume derived by summing the volumes of all the voxels (and partial voxels if the segment contains partially occupied voxels) included in the segment",
+            ),
+            Self::_126031 => Some(
+                "Maximum average gray value that is calculated from a 1 cubic centimeter sphere placed within the region of interest. Reference Wahl et al PERCIST article",
+            ),
+            Self::_126032 => Some(
+                "The volume of a lesion (e.g. a tumor) ascertained through information about its metabolic activity (e.g. SUV on PET). Abbreviated \"MV\". Synonymous with Metabolic Tumor Volume (MTV)",
+            ),
+            Self::_126033 => Some(
+                "The total activity of a lesion obtained as the product of its volume and its glycolytic activity (on FDG-PET). The volume may be defined on the same modality (e.g. the MV on FDG-PET by some thresholding or other technique) or on another spatially registered modality (e.g. the lesion outline segmented on CT or MR). Does not apply to other radiopharmaceuticals than those involved in glucose metabolism. Abbreviated TLG. Synonymnous with \"Tumor Lesion Glycolysis\"",
+            ),
+            Self::_126034 => Some(
+                "The amount glycolytic activity summed across all voxels in a defined region or within a defined range of SUV (on FDG-PET)",
+            ),
+            Self::_126035 => Some(
+                "The total activity of a lesion obtained as the product of its volume and its proliferative activity (on FLT-PET). The volume may be defined on the same modality (e.g. the MV on FDG-PET by some thresholding or other technique) or on another spatially registered modality (e.g. the lesion outline segmented on CT or MR). Does not apply to other radiopharmaceuticals than those involved in cellular proliferation. Abbreviated TLP. Synonymnous with \"Tumor Lesion Proliferation\"",
+            ),
+            Self::_126036 => Some(
+                "The amount proliferative activity summed across all voxels in a defined region or within a defined range of SUV (on FLT-PET)",
+            ),
+            Self::_126037 => Some(
+                "A background-corrected, partial volume independent version of TLG. SAM is calculated by drawing a volume of interest (VOI1) around the tumour and a larger VOI (VOI2) around VOI1. Subtracting the background activity in VOI2-VOI1 from VOI1 yields SAM. See Mertens et al. \"Standardized added metabolic activity (SAM): a partial volume independent marker of total lesion glycolysis in liver metastases\". Eur J Nucl Med Mol Imaging (2012) 39:1441-1448",
+            ),
+            Self::_126038 => Some(
+                "The background value (VOI2-VOI1) used to calculate Standardized Added Metabolic Activity (SAM). SAM is calculated by drawing a volume of interest (VOI1) around the tumour and a larger VOI (VOI2) around VOI1. Subtracting the background activity in VOI2-VOI1 from VOI1 yields SAM. See Mertens et al. \"Standardized added metabolic activity (SAM): a partial volume independent marker of total lesion glycolysis in liver metastases\". Eur J Nucl Med Mol Imaging (2012) 39:1441-1448",
+            ),
+            Self::_126039 => Some(
+                "The ratio of the SUV within a tumor to the SUV of a pre-defined background region. Need reference(s). A more general concept than Tumor to Background Ratio (TBR)",
+            ),
+            Self::_126040 => Some(
+                "The SUV of a pre-defined background region used to compute Lesion to Background SUV Ratio. Need reference(s)",
+            ),
+            Self::_126050 => Some(
+                "A statistical index of complexity comparing how detail in a fractal pattern changes with the scale at which it is measured; a ratio of the change in detail to the change in scale",
+            ),
+            Self::_126051 => Some(
+                "Measure of the asymmetry of the probability distribution of a real-valued random variable about its mean",
+            ),
+            Self::_126052 => Some(
+                "Measure of the peakedness of the probability distribution of a real-valued random variable",
+            ),
+            Self::_126060 => Some(
+                "The zero order entropy of a Gray Level Co-occurrence Matrix (GLCM). A measure of disorder. See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126061 => Some(
+                "The energy (uniformity) (square root of the Angular Second Moment (ASM)) of a Gray Level Co-occurrence Matrix (GLCM). A measure of orderliness. See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126062 => Some(
+                "The Inverse Difference Moment of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126063 => Some(
+                "The sum of squares variance of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126064 => Some(
+                "The dissimilarity of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126065 => Some(
+                "The Angular Second Moment of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126066 => Some(
+                "A measure of the linear dependency of grey levels on those of neighbouring pixels of a Gray Level Co-occurrence Matrix (GLCM). See http://www.fp.ucalgary.ca/mhallbey/equations.htm",
+            ),
+            Self::_126067 => Some(
+                "A tabulation of how often different combinations of pixel values (grey levels) occur in an image. See http://www.fp.ucalgary.ca/mhallbey/the_glcm.htm",
+            ),
+            Self::_126070 => Some(
+                "An identifier of a specific time point in a continuum, which is unique within an appropriate local context (such as an entire organization, system or treatment protocol), which identifies the time point for a specific patient",
+            ),
+            Self::_126071 => Some(
+                "An identifier of a specific time point in a continuum, which is unique within an appropriate local context (such as an entire organization, system or treatment protocol), which identifies the time point \"slot\" within a treatment protocol using the same value for all patients in the protocol",
+            ),
             Self::_126072 => Some("A pre-defined type of a specific time point in a continuum"),
-            Self::_126073 => Some("A number indicating the order of a time point relative to other time points in the same continuum"),
+            Self::_126073 => Some(
+                "A number indicating the order of a time point relative to other time points in the same continuum",
+            ),
             Self::_126074 => Some("The time after the treatment of interest"),
             Self::_126075 => Some("For the purpose of determining eligibility for a protocol"),
-            Self::_126080 => Some("Response Evaluation Criteria in Solid Tumors version 1.0. See [RECIST] in Normative References"),
-            Self::_126081 => Some("Response Evaluation Criteria in Solid Tumors Version 1.1. See Eisenhauer et al. \"New Response Evaluation Criteria in Solid Tumours: Revised RECIST Guideline (version 1.1).\" European Journal of Cancer 45, no. 2 (n.d.): 228-47. doi:10.1016/j.ejca.2008.10.026."),
-            Self::_126100 => Some("A reference to the Real World Value Map applied to the stored image pixel values before their use for a measurement"),
-            Self::_126200 => Some("A container that groups common information about a set of images used as evidence to produce a report"),
+            Self::_126080 => Some(
+                "Response Evaluation Criteria in Solid Tumors version 1.0. See [RECIST] in Normative References",
+            ),
+            Self::_126081 => Some(
+                "Response Evaluation Criteria in Solid Tumors Version 1.1. See Eisenhauer et al. \"New Response Evaluation Criteria in Solid Tumours: Revised RECIST Guideline (version 1.1).\" European Journal of Cancer 45, no. 2 (n.d.): 228-47. doi:10.1016/j.ejca.2008.10.026.",
+            ),
+            Self::_126100 => Some(
+                "A reference to the Real World Value Map applied to the stored image pixel values before their use for a measurement",
+            ),
+            Self::_126200 => Some(
+                "A container that groups common information about a set of images used as evidence to produce a report",
+            ),
             Self::_126201 => Some("The date the acquisition of data started"),
             Self::_126202 => Some("The time the acquisition of data started"),
-            Self::_126203 => Some("The time between the start of injection of the PET radionuclide and the start of acquisition of the PET data"),
-            Self::_126220 => Some("Coefficient of determination, R2. An indication of goodness of fit"),
+            Self::_126203 => Some(
+                "The time between the start of injection of the PET radionuclide and the start of acquisition of the PET data",
+            ),
+            Self::_126220 => {
+                Some("Coefficient of determination, R2. An indication of goodness of fit")
+            }
             Self::_126300 => Some("Perfusion analysis by Stable Xenon CT technique"),
             Self::_126301 => Some("Perfusion analysis by IV Iodinated Contrast CT technique"),
-            Self::_126302 => Some("Perfusion analysis by Arterial Spin Labeling (ASL) MR technique"),
+            Self::_126302 => {
+                Some("Perfusion analysis by Arterial Spin Labeling (ASL) MR technique")
+            }
             Self::_126303 => Some("Perfusion analysis by Susceptibility (T2*) MR technique"),
             Self::_126310 => Some("Least Mean Square (LMS) deconvolution"),
             Self::_126311 => Some("Singular Value Decomposition (SVD) deconvolution"),
-            Self::_126312 => Some("Ktrans, the volume transfer constant of a tracer diffusion kinetic model, specifically the volume transfer constant between blood plasma and extravascular extracellular space (EES) See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999"),
-            Self::_126313 => Some("kep, the rate constant between extravascular extracellular space (EES) and blood plasma See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999"),
-            Self::_126314 => Some("ve, the fractional (not absolute) volume of extravascular extracellular space (EES) per unit volume of tissue See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999"),
-            Self::_126320 => Some("The intial area under the contrast agent concentration-time curve"),
-            Self::_126321 => Some("The intial area under the contrast agent concentration-time curve at 60 seconds after the onset time"),
-            Self::_126322 => Some("The intial area under the contrast agent concentration-time curve at 90 seconds after the onset time"),
-            Self::_126330 => Some("\u{3c4}m. The mean intracellular water lifetime (\u{3c4}i). Used in the Shutter-Speed Model (SSM) of tracer kinetics"),
-            Self::_126331 => Some("vp. The fractional (not absolute) blood plasma volume per unit volume of tissue. See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999"),
-            Self::_126340 => Some("A tracer diffusion kinetic model in which the permeability is assumed to be isodirectional. See P. Tofts, \"Modeling tracer kinetics in dynamic Gd-DTPA MR imaging\", Journal of Magnetic Resonance Imaging, vol. 7, pp. 91-101, 1997"),
-            Self::_126341 => Some("A tracer diffusion kinetic model in which the permeability is not assumed to be isodirectional, and which includes the contribution of tracer in the blood plasma to the total tissue concentration. See P. Tofts, \"Modeling tracer kinetics in dynamic Gd-DTPA MR imaging\", Journal of Magnetic Resonance Imaging, vol. 7, pp. 91-101, 1997"),
-            Self::_126342 => Some("A semiquantitative analysis of the contrast-enhancement concentration versus time curve that avoids the use of a pharmacokinetic model; e.g. integration to compute the initial area under the curve"),
-            Self::_126343 => Some("A tracer diffusion kinetic model that accounts for the tumor leakage profile during the first pass of contrast. See Li, Ka-Loh, Xiao Ping Zhu, John Waterton, and Alan Jackson. \"Improved 3D Quantitative Mapping of Blood Volume and Endothelial Permeability in Brain Tumors.\" Journal of Magnetic Resonance Imaging 12, no. 2 (2000): 347-357. doi:10.1002/1522-2586(200008)12:2<347::AID-JMRI19>3.0.CO;2-7"),
-            Self::_126344 => Some("A tracer diffusion kinetic model that does not assume that intercompartmental water molecule exchange is infinitely fast. See Li, Xin, Wei Huang, Thomas E. Yankeelov, Alina Tudorica, William D. Rooney, and Charles S. Springer. \"Shutter-Speed Analysis of Contrast Reagent Bolus-Tracking Data: Preliminary Observations in Benign and Malignant Breast Disease.\" Magnetic Resonance in Medicine 53, no. 3 (2005): 724-29. doi:10.1002/mrm.20405"),
-            Self::_126350 => Some("T1 measurement by Multiple Flip Angles (MFA) (variable saturation) method"),
+            Self::_126312 => Some(
+                "Ktrans, the volume transfer constant of a tracer diffusion kinetic model, specifically the volume transfer constant between blood plasma and extravascular extracellular space (EES) See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999",
+            ),
+            Self::_126313 => Some(
+                "kep, the rate constant between extravascular extracellular space (EES) and blood plasma See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999",
+            ),
+            Self::_126314 => Some(
+                "ve, the fractional (not absolute) volume of extravascular extracellular space (EES) per unit volume of tissue See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999",
+            ),
+            Self::_126320 => {
+                Some("The intial area under the contrast agent concentration-time curve")
+            }
+            Self::_126321 => Some(
+                "The intial area under the contrast agent concentration-time curve at 60 seconds after the onset time",
+            ),
+            Self::_126322 => Some(
+                "The intial area under the contrast agent concentration-time curve at 90 seconds after the onset time",
+            ),
+            Self::_126330 => Some(
+                "\u{3c4}m. The mean intracellular water lifetime (\u{3c4}i). Used in the Shutter-Speed Model (SSM) of tracer kinetics",
+            ),
+            Self::_126331 => Some(
+                "vp. The fractional (not absolute) blood plasma volume per unit volume of tissue. See Tofts et al, \"Estimating Kinetic Parameters From Dynamic Contrast-Enhanced T1-Weighted MRI of a Diffusable Tracer: Standardized Quantities and Symbols\", Journal of Magnetic Resonance Imaging, vol. 10, pp. 223-232, 1999",
+            ),
+            Self::_126340 => Some(
+                "A tracer diffusion kinetic model in which the permeability is assumed to be isodirectional. See P. Tofts, \"Modeling tracer kinetics in dynamic Gd-DTPA MR imaging\", Journal of Magnetic Resonance Imaging, vol. 7, pp. 91-101, 1997",
+            ),
+            Self::_126341 => Some(
+                "A tracer diffusion kinetic model in which the permeability is not assumed to be isodirectional, and which includes the contribution of tracer in the blood plasma to the total tissue concentration. See P. Tofts, \"Modeling tracer kinetics in dynamic Gd-DTPA MR imaging\", Journal of Magnetic Resonance Imaging, vol. 7, pp. 91-101, 1997",
+            ),
+            Self::_126342 => Some(
+                "A semiquantitative analysis of the contrast-enhancement concentration versus time curve that avoids the use of a pharmacokinetic model; e.g. integration to compute the initial area under the curve",
+            ),
+            Self::_126343 => Some(
+                "A tracer diffusion kinetic model that accounts for the tumor leakage profile during the first pass of contrast. See Li, Ka-Loh, Xiao Ping Zhu, John Waterton, and Alan Jackson. \"Improved 3D Quantitative Mapping of Blood Volume and Endothelial Permeability in Brain Tumors.\" Journal of Magnetic Resonance Imaging 12, no. 2 (2000): 347-357. doi:10.1002/1522-2586(200008)12:2<347::AID-JMRI19>3.0.CO;2-7",
+            ),
+            Self::_126344 => Some(
+                "A tracer diffusion kinetic model that does not assume that intercompartmental water molecule exchange is infinitely fast. See Li, Xin, Wei Huang, Thomas E. Yankeelov, Alina Tudorica, William D. Rooney, and Charles S. Springer. \"Shutter-Speed Analysis of Contrast Reagent Bolus-Tracking Data: Preliminary Observations in Benign and Malignant Breast Disease.\" Magnetic Resonance in Medicine 53, no. 3 (2005): 724-29. doi:10.1002/mrm.20405",
+            ),
+            Self::_126350 => {
+                Some("T1 measurement by Multiple Flip Angles (MFA) (variable saturation) method")
+            }
             Self::_126351 => Some("T1 measurement by Inversion Recovery (IR) method"),
-            Self::_126352 => Some("Calculation was performed using a fixed value of T1 rather than a measured value. The value could be encoded as the value of (126353, DCM, \"T1 Used For Calculation\")"),
+            Self::_126352 => Some(
+                "Calculation was performed using a fixed value of T1 rather than a measured value. The value could be encoded as the value of (126353, DCM, \"T1 Used For Calculation\")",
+            ),
             Self::_126353 => Some("The fixed value of T1 used for a calculation"),
             Self::_126360 => Some("No Arterial Input Function was used"),
             Self::_126361 => Some("A population-averaged Arterial Input Function"),
-            Self::_126362 => Some("An Arterial Input Function computed from a user-defined Region of Interest"),
-            Self::_126363 => Some("An Arterial Input Function computed from an automatically detected Region of Interest"),
-            Self::_126364 => Some("A data-driven blind source separation (BSS) algorithm that estimates AIF from individuals without any presumed AIF model and initialization. See Lin, Yu-Chun, Tsung-Han Chan, Chong-Yung Chi, Shu-Hang Ng, Hao-Li Liu, Kuo-Chen Wei, Yau-Yau Wai, Chun-Chieh Wang, and Jiun-Jie Wang. \"Blind Estimation of the Arterial Input Function in Dynamic Contrast-Enhanced MRI Using Purity Maximization.\" Magnetic Resonance in Medicine 68, no. 5 (November 1, 2012): 1439-49. doi:10.1002/mrm.24144"),
-            Self::_126370 => Some("The time at which the concentration-time curve achieves its peak for the first time. Used as a concept name for a value or as a method; e.g. used as a method of calculation for BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669"),
-            Self::_126371 => Some("The nominal time at which arrival of a contrast bolus is detected, which is used as a reference point for subsequent calculations. Used as a concept name for a value or as a method. No specific computational method is implied by this general definition. Abbreviated BAT"),
-            Self::_126372 => Some("The time at which the concentration-time curve achieves half of its peak density for the first time. Used as a concept name for a value or as a method; e.g. used as a method of calculation for BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669"),
-            Self::_126373 => Some("A method of determining BAT that involves computing the temporal derivative of the concentration-time curve and selecting the time when the temporal derivative exceeds a specified threshold. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669"),
-            Self::_126374 => Some("A threshold applied to the temporal derivative of the concentration-time curve; e.g. used to establish BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669"),
-            Self::_126375 => Some("The maximum rate of signal intensity change within a measured region of a time-activity curve. See Boonsirikamchai, Piyaporn, Harmeet Kaur, Deborah A. Kuban, Edward Jackson, Ping Hou, and Haesun Choi. \"Use of Maximum Slope Images Generated From Dynamic Contrast-Enhanced MRI to Detect Locally Recurrent Prostate Carcinoma After Prostatectomy: A Practical Approach.\" American Journal of Roentgenology 198, no. 3 (March 1, 2012): W228-W236. doi:10.2214/AJR.10.6387"),
-            Self::_126376 => Some("The maximum degree of signal intensity change within a measured region of a time-activity curve. See Boonsirikamchai, Piyaporn, Harmeet Kaur, Deborah A. Kuban, Edward Jackson, Ping Hou, and Haesun Choi. \"Use of Maximum Slope Images Generated From Dynamic Contrast-Enhanced MRI to Detect Locally Recurrent Prostate Carcinoma After Prostatectomy: A Practical Approach.\" American Journal of Roentgenology 198, no. 3 (March 1, 2012): W228-W236. doi:10.2214/AJR.10.6387"),
-            Self::_126377 => Some("Tracer concentration in tissue; e.g. in a DCE-MR experiment, the concentration of contrast agent in mmol/l"),
-            Self::_126380 => Some("The degree to which a paramagnetic contrast agent can enhance the proton longitudinal relaxation rate constant (R1, 1/T1), normalized to the concentration of the contrast agent. Also referred to as r1. Typically expressed in units of l/mmol/s"),
-            Self::_126390 => Some("The flow rate of blood perfusing a region as volume per mass per unit of time"),
+            Self::_126362 => {
+                Some("An Arterial Input Function computed from a user-defined Region of Interest")
+            }
+            Self::_126363 => Some(
+                "An Arterial Input Function computed from an automatically detected Region of Interest",
+            ),
+            Self::_126364 => Some(
+                "A data-driven blind source separation (BSS) algorithm that estimates AIF from individuals without any presumed AIF model and initialization. See Lin, Yu-Chun, Tsung-Han Chan, Chong-Yung Chi, Shu-Hang Ng, Hao-Li Liu, Kuo-Chen Wei, Yau-Yau Wai, Chun-Chieh Wang, and Jiun-Jie Wang. \"Blind Estimation of the Arterial Input Function in Dynamic Contrast-Enhanced MRI Using Purity Maximization.\" Magnetic Resonance in Medicine 68, no. 5 (November 1, 2012): 1439-49. doi:10.1002/mrm.24144",
+            ),
+            Self::_126370 => Some(
+                "The time at which the concentration-time curve achieves its peak for the first time. Used as a concept name for a value or as a method; e.g. used as a method of calculation for BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669",
+            ),
+            Self::_126371 => Some(
+                "The nominal time at which arrival of a contrast bolus is detected, which is used as a reference point for subsequent calculations. Used as a concept name for a value or as a method. No specific computational method is implied by this general definition. Abbreviated BAT",
+            ),
+            Self::_126372 => Some(
+                "The time at which the concentration-time curve achieves half of its peak density for the first time. Used as a concept name for a value or as a method; e.g. used as a method of calculation for BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669",
+            ),
+            Self::_126373 => Some(
+                "A method of determining BAT that involves computing the temporal derivative of the concentration-time curve and selecting the time when the temporal derivative exceeds a specified threshold. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669",
+            ),
+            Self::_126374 => Some(
+                "A threshold applied to the temporal derivative of the concentration-time curve; e.g. used to establish BAT. See Shpilfoygel Med Phys 2008. doi: 10.1118/1.1288669",
+            ),
+            Self::_126375 => Some(
+                "The maximum rate of signal intensity change within a measured region of a time-activity curve. See Boonsirikamchai, Piyaporn, Harmeet Kaur, Deborah A. Kuban, Edward Jackson, Ping Hou, and Haesun Choi. \"Use of Maximum Slope Images Generated From Dynamic Contrast-Enhanced MRI to Detect Locally Recurrent Prostate Carcinoma After Prostatectomy: A Practical Approach.\" American Journal of Roentgenology 198, no. 3 (March 1, 2012): W228-W236. doi:10.2214/AJR.10.6387",
+            ),
+            Self::_126376 => Some(
+                "The maximum degree of signal intensity change within a measured region of a time-activity curve. See Boonsirikamchai, Piyaporn, Harmeet Kaur, Deborah A. Kuban, Edward Jackson, Ping Hou, and Haesun Choi. \"Use of Maximum Slope Images Generated From Dynamic Contrast-Enhanced MRI to Detect Locally Recurrent Prostate Carcinoma After Prostatectomy: A Practical Approach.\" American Journal of Roentgenology 198, no. 3 (March 1, 2012): W228-W236. doi:10.2214/AJR.10.6387",
+            ),
+            Self::_126377 => Some(
+                "Tracer concentration in tissue; e.g. in a DCE-MR experiment, the concentration of contrast agent in mmol/l",
+            ),
+            Self::_126380 => Some(
+                "The degree to which a paramagnetic contrast agent can enhance the proton longitudinal relaxation rate constant (R1, 1/T1), normalized to the concentration of the contrast agent. Also referred to as r1. Typically expressed in units of l/mmol/s",
+            ),
+            Self::_126390 => Some(
+                "The flow rate of blood perfusing a region as volume per mass per unit of time",
+            ),
             Self::_126391 => Some("The volume of blood perfusing a region as volume per mass"),
-            Self::_126392 => Some("The percent of the oxygen removed from the blood by tissue during its passage through the capillary network. For example, as measured by blood oxygenation level dependent (BOLD) MR. See He, Xiang, and Dmitriy A. Yablonskiy. \"Quantitative BOLD: Mapping of Human Cerebral Deoxygenated Blood Volume and Oxygen Extraction Fraction: Default State.\" Magnetic Resonance in Medicine 57, no. 1 (2007): 115-26"),
-            Self::_126393 => Some("The longitiudinal relaxation rate constant. The inverse of longitudinal relaxation time, i.e., R1 = 1/T1"),
-            Self::_126394 => Some("The transverse relaxation rate constant. The inverse of transverse relaxation time, i.e., R2 = 1/T2"),
-            Self::_126400 => Some("A ratio of locally measured radioactivity concentration versus the injected radioactivity distributed evenly throughout the whole body. This general concept encompasses all specific methods of calculating the whole body volume of distribution, such as using body weight, lean body mass, body surface area, etc."),
-            Self::_126401 => Some("Standardized Uptake Value calculated using body weight. The patient size correction factor for males and females is body weight. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126402 => Some("Standardized Uptake Value calculated using lean body mass. The patient size correction factor for males is 1.10 * weight - 120 * (weight/height) ^2, and for females is 1.07 * weight - 148 * (weight/height) ^2. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126403 => Some("Standardized Uptake Value calculated using body surface area. The patient size correction factor for males and females is weight^ 0.425 * height^0.725 * 0.007184. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126404 => Some("Standardized Uptake Value calculated using ideal body weight. The patient size correction factor for males is 48.0 + 1.06 * (height - 152) and for females is 45.5 + 0.91 * (height - 152). Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126410 => Some("Method of calculating Standardized Uptake Value using body weight. The patient size correction factor for males and females is body weight. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126411 => Some("Method of calculating Standardized Uptake Value using lean body mass. The patient size correction factor for males is 1.10 * weight - 120 * (weight/height) ^2, and for females is 1.07 * weight - 148 * (weight/height) ^2. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126412 => Some("Method of calculating Standardized Uptake Value using body surface area. The patient size correction factor for males and females is weight^ 0.425 * height^0.725 * 0.007184. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126413 => Some("Method of calculating Standardized Uptake Value using ideal body weight. The patient size correction factor for males is 48.0 + 1.06 * (height - 152) and for females is 45.5 + 0.91 * (height - 152). Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521"),
-            Self::_126500 => Some("A beta-amyloid PET radiotracer that is an analog of thioflavin T"),
+            Self::_126392 => Some(
+                "The percent of the oxygen removed from the blood by tissue during its passage through the capillary network. For example, as measured by blood oxygenation level dependent (BOLD) MR. See He, Xiang, and Dmitriy A. Yablonskiy. \"Quantitative BOLD: Mapping of Human Cerebral Deoxygenated Blood Volume and Oxygen Extraction Fraction: Default State.\" Magnetic Resonance in Medicine 57, no. 1 (2007): 115-26",
+            ),
+            Self::_126393 => Some(
+                "The longitiudinal relaxation rate constant. The inverse of longitudinal relaxation time, i.e., R1 = 1/T1",
+            ),
+            Self::_126394 => Some(
+                "The transverse relaxation rate constant. The inverse of transverse relaxation time, i.e., R2 = 1/T2",
+            ),
+            Self::_126400 => Some(
+                "A ratio of locally measured radioactivity concentration versus the injected radioactivity distributed evenly throughout the whole body. This general concept encompasses all specific methods of calculating the whole body volume of distribution, such as using body weight, lean body mass, body surface area, etc.",
+            ),
+            Self::_126401 => Some(
+                "Standardized Uptake Value calculated using body weight. The patient size correction factor for males and females is body weight. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126402 => Some(
+                "Standardized Uptake Value calculated using lean body mass. The patient size correction factor for males is 1.10 * weight - 120 * (weight/height) ^2, and for females is 1.07 * weight - 148 * (weight/height) ^2. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126403 => Some(
+                "Standardized Uptake Value calculated using body surface area. The patient size correction factor for males and females is weight^ 0.425 * height^0.725 * 0.007184. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126404 => Some(
+                "Standardized Uptake Value calculated using ideal body weight. The patient size correction factor for males is 48.0 + 1.06 * (height - 152) and for females is 45.5 + 0.91 * (height - 152). Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126410 => Some(
+                "Method of calculating Standardized Uptake Value using body weight. The patient size correction factor for males and females is body weight. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126411 => Some(
+                "Method of calculating Standardized Uptake Value using lean body mass. The patient size correction factor for males is 1.10 * weight - 120 * (weight/height) ^2, and for females is 1.07 * weight - 148 * (weight/height) ^2. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126412 => Some(
+                "Method of calculating Standardized Uptake Value using body surface area. The patient size correction factor for males and females is weight^ 0.425 * height^0.725 * 0.007184. Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126413 => Some(
+                "Method of calculating Standardized Uptake Value using ideal body weight. The patient size correction factor for males is 48.0 + 1.06 * (height - 152) and for females is 45.5 + 0.91 * (height - 152). Defined in Sugawara et al. Reevaluation of the Standardized Uptake Value for FDG: Variations with Body Weight and Methods for Correction.Radiology, 1999 at http://radiology.rsna.org/content/213/2/521",
+            ),
+            Self::_126500 => {
+                Some("A beta-amyloid PET radiotracer that is an analog of thioflavin T")
+            }
             Self::_126501 => Some("A beta-amyloid PET radiotracer"),
             Self::_126502 => Some("A PHF-tau PET radiotracer"),
             Self::_126503 => Some("A nicotinic \u{3b1}4\u{3b2}2 receptor (nAChR) PET radiotracer"),
@@ -15807,17 +19617,37 @@ impl DICOMControlledTerminologyDefinitions {
             Self::_126714 => Some("An F 18 Nifene PET radiotracer"),
             Self::_126715 => Some("An I 124 cancer targeted phospholipid ether PET radiotracer"),
             Self::_126716 => Some("An I 131 cancer targeted phospholipid ether PET radiotracer"),
-            Self::_126801 => Some("Patient Support Continuous Angle in IEC PATIENT SUPPORT Coordinate System [IEC 61217]"),
-            Self::_126802 => Some("Table Top Continuous Pitch Angle in the direction of the IEC TABLE TOP Coordinate System [IEC 61217]"),
-            Self::_126803 => Some("Table Top Continuous Roll Angle in the direction of the IEC TABLE TOP Coordinate System [IEC 61217]"),
+            Self::_126801 => Some(
+                "Patient Support Continuous Angle in IEC PATIENT SUPPORT Coordinate System [IEC 61217]",
+            ),
+            Self::_126802 => Some(
+                "Table Top Continuous Pitch Angle in the direction of the IEC TABLE TOP Coordinate System [IEC 61217]",
+            ),
+            Self::_126803 => Some(
+                "Table Top Continuous Roll Angle in the direction of the IEC TABLE TOP Coordinate System [IEC 61217]",
+            ),
             Self::_126804 => Some("Table Top Eccentric Axis Distance [IEC 61217]"),
-            Self::_126805 => Some("Table Top Continuous Eccentric Angle in the direction of the IEC TABLE TOP ECCENTRIC Coordinate System [IEC 61217]"),
-            Self::_126806 => Some("Table Top Lateral Position IEC TABLE TOP Coordinate System [IEC 61217]"),
-            Self::_126807 => Some("Table Top Longitudinal Position IEC TABLE TOP Coordinate System [IEC 61217]"),
-            Self::_126808 => Some("Table Top Vertical Position in IEC TABLE TOP Coordinate System [IEC 61217]"),
-            Self::_126809 => Some("Gantry Continuous Roll Angle in degrees of the radiation source, i.e., the rotation about the Y-axis of the IEC GANTRY coordinate system [IEC 61217]"),
-            Self::_126810 => Some("Gantry Pitch Continuous Angle in degrees of the radiation source, i.e., the rotation about the X-axis of the IEC GANTRY coordinate system [IEC 61217]"),
-            Self::_126811 => Some("Gantry Yaw Continuous Angle in degrees of the radiation source, i.e., about the Z-axis of the IEC GANTRY coordinate system [IEC 61217]"),
+            Self::_126805 => Some(
+                "Table Top Continuous Eccentric Angle in the direction of the IEC TABLE TOP ECCENTRIC Coordinate System [IEC 61217]",
+            ),
+            Self::_126806 => {
+                Some("Table Top Lateral Position IEC TABLE TOP Coordinate System [IEC 61217]")
+            }
+            Self::_126807 => {
+                Some("Table Top Longitudinal Position IEC TABLE TOP Coordinate System [IEC 61217]")
+            }
+            Self::_126808 => {
+                Some("Table Top Vertical Position in IEC TABLE TOP Coordinate System [IEC 61217]")
+            }
+            Self::_126809 => Some(
+                "Gantry Continuous Roll Angle in degrees of the radiation source, i.e., the rotation about the Y-axis of the IEC GANTRY coordinate system [IEC 61217]",
+            ),
+            Self::_126810 => Some(
+                "Gantry Pitch Continuous Angle in degrees of the radiation source, i.e., the rotation about the X-axis of the IEC GANTRY coordinate system [IEC 61217]",
+            ),
+            Self::_126811 => Some(
+                "Gantry Yaw Continuous Angle in degrees of the radiation source, i.e., about the Z-axis of the IEC GANTRY coordinate system [IEC 61217]",
+            ),
         }
     }
 
@@ -22182,5 +26012,4 @@ impl DICOMControlledTerminologyDefinitions {
             })
             .unwrap_or(false)
     }
-
 }

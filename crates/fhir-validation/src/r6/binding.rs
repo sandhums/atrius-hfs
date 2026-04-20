@@ -23,11 +23,12 @@
 //! terminology servers may be required.
 
 use crate::binding::common::{
-    bindable_primitive_string_value, choice_declared_allows_kind, classify_local_outcome,
-    execute_remote_async, execute_remote_sync, get_json_values_with_instance_paths,
+    bindable_primitive_string_value, binding_issue_summary, choice_declared_allows_kind,
+    BindingCheckContextAsync, BindingCheckContextSync, get_json_values_with_instance_paths,
     prettify_remote_terminology_error, primitive_choice_target_kind, relative_binding_path,
     root_instance_path,
 };
+use crate::issue_code;
 use crate::binding::engine::{
     BindingVersionAdapter, evaluate_local_codeable_concept_binding,
     evaluate_local_codeable_reference_binding, evaluate_local_coding_binding,
@@ -36,7 +37,7 @@ use crate::binding::engine::{
 };
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
-use fhir_validation_types::{BindingDef, BindingStrength, BindingTargetKind};
+use fhir_validation_types::{BindingDef, BindingTargetKind};
 use helios_fhir::TerminologyValidationError;
 use helios_fhir::r6::terminology::index as terminology_index;
 use helios_fhir::r6::{CodeableConcept, CodeableReference, Coding, Quantity};
@@ -173,16 +174,11 @@ fn summarize_codeable_concept_codings(cc: &CodeableConcept) -> String {
 ///
 /// This is the synchronous variant.
 /// See also: `validate_primitive_code_binding_async`.
-#[allow(clippy::too_many_arguments)]
 pub fn validate_primitive_code_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     code_value: Option<&str>,
     implicit_system: Option<&str>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&str) -> Result<(), TerminologyValidationError>,
@@ -194,29 +190,25 @@ where
         return issues;
     };
     let local_outcome = evaluate_local_primitive_code_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         &code.to_string(),
         |_, _, _| local_check(code),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
             let mut req = req;
             req.system = implicit_system.map(str::to_owned);
-            execute_remote_sync(validator, fhir_path, strength, terminology, &req)
+            ctx.execute_remote_sync(&req)
         }
     }
 }
 pub fn validate_primitive_value_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     value: Option<&str>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&str) -> Result<(), TerminologyValidationError>,
@@ -228,16 +220,16 @@ where
         return issues;
     };
     let local_outcome = evaluate_local_primitive_value_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         &value.to_string(),
         |_, _, _| local_check(value),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_sync(validator, fhir_path, strength, terminology, &req)
+            ctx.execute_remote_sync(&req)
         }
     }
 }
@@ -245,16 +237,11 @@ where
 /// Async variant of `validate_primitive_code_binding`.
 ///
 /// Uses `TerminologyService` for remote terminology calls.
-#[allow(clippy::too_many_arguments)]
 pub async fn validate_primitive_code_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     code: Option<&str>,
     implicit_system: Option<&str>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&str) -> Result<(), TerminologyValidationError>,
@@ -266,29 +253,25 @@ where
         return issues;
     };
     let local_outcome = evaluate_local_primitive_code_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         &code.to_string(),
         |_, _, _| local_check(code),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
             let mut req = req;
             req.system = implicit_system.map(str::to_owned);
-            execute_remote_async(validator, fhir_path, strength, terminology, &req).await
+            ctx.execute_remote_async(&req).await
         }
     }
 }
 pub async fn validate_primitive_value_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     value: Option<&str>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&str) -> Result<(), TerminologyValidationError>,
@@ -300,16 +283,16 @@ where
         return issues;
     };
     let local_outcome = evaluate_local_primitive_value_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         &value.to_string(),
         |_, _, _| local_check(value),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_async(validator, fhir_path, strength, terminology, &req).await
+            ctx.execute_remote_async(&req).await
         }
     }
 }
@@ -318,13 +301,9 @@ where
 /// For terminology purposes, `Quantity` bindings validate the `system` + `code`
 /// pair carried by the quantity.
 pub fn validate_quantity_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     quantity: Option<&Quantity>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&Quantity) -> Result<(), TerminologyValidationError>,
@@ -341,13 +320,13 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology".to_string(),
-            fhir_path: fhir_path.to_string(),
+            code: issue_code::TERMINOLOGY.to_string(),
+            fhir_path: ctx.fhir_path.to_string(),
             instance_path: None,
-            expression: Some(valueset_url.to_string()),
+            expression: Some(ctx.valueset_url.to_string()),
             expression_kind: Some(crate::ValidationSourceKind::CanonicalUri),
             source_invariant_key: None,
-            summary: Some("Quantity code is present without a code system".to_string()),
+            summary: Some(binding_issue_summary::QUANTITY_CODE_WITHOUT_SYSTEM.to_string()),
             detail_code: Some(crate::ValidationIssueDetailCode::CodeWithoutSystem),
             diagnostics:
                 "A quantity code with no system has no defined meaning, and it cannot be validated. A system should be provided"
@@ -356,28 +335,24 @@ where
         return issues;
     }
     let local_outcome = evaluate_local_quantity_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         quantity,
         |_, _, _| local_check(quantity),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_sync(validator, fhir_path, strength, terminology, &req)
+            ctx.execute_remote_sync(&req)
         }
     }
 }
 /// Async variant of `validate_quantity_binding`.
 pub async fn validate_quantity_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     quantity: Option<&Quantity>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&Quantity) -> Result<(), TerminologyValidationError>,
@@ -394,13 +369,13 @@ where
     if code.is_some() && system.is_none() {
         issues.push(ValidationIssue {
             severity: fhir_validation_types::Severity::Warning,
-            code: "terminology".to_string(),
-            fhir_path: fhir_path.to_string(),
+            code: issue_code::TERMINOLOGY.to_string(),
+            fhir_path: ctx.fhir_path.to_string(),
             instance_path: None,
-            expression: Some(valueset_url.to_string()),
+            expression: Some(ctx.valueset_url.to_string()),
             expression_kind: Some(crate::ValidationSourceKind::CanonicalUri),
             source_invariant_key: None,
-            summary: Some("Quantity code is present without a code system".to_string()),
+            summary: Some(binding_issue_summary::QUANTITY_CODE_WITHOUT_SYSTEM.to_string()),
             detail_code: Some(crate::ValidationIssueDetailCode::CodeWithoutSystem),
             diagnostics:
                 "A quantity code with no system has no defined meaning, and it cannot be validated. A system should be provided"
@@ -409,16 +384,16 @@ where
         return issues;
     }
     let local_outcome = evaluate_local_quantity_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         quantity,
         |_, _, _| local_check(quantity),
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_async(validator, fhir_path, strength, terminology, &req).await
+            ctx.execute_remote_async(&req).await
         }
     }
 }
@@ -427,13 +402,9 @@ where
 /// Binding semantics apply to the `concept` side when present. A reference-only
 /// CodeableReference does not produce a terminology binding issue here.
 pub fn validate_codeable_reference_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     codeable_reference: Option<&CodeableReference>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
@@ -443,7 +414,7 @@ where
     };
 
     let local_outcome = evaluate_local_codeable_reference_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         cr,
         |system, code, display| {
             let mut local_cc = CodeableConcept::default();
@@ -456,31 +427,19 @@ where
         },
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
-            validate_codeable_concept_binding(
-                validator,
-                fhir_path,
-                valueset_url,
-                strength,
-                cr.concept.as_ref(),
-                local_check,
-                terminology,
-            )
+            validate_codeable_concept_binding(ctx, cr.concept.as_ref(), local_check)
         }
     }
 }
 /// Async variant of `validate_codeable_reference_binding`.
 pub async fn validate_codeable_reference_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     codeable_reference: Option<&CodeableReference>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
@@ -490,7 +449,7 @@ where
     };
 
     let local_outcome = evaluate_local_codeable_reference_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         cr,
         |system, code, display| {
             let mut local_cc = CodeableConcept::default();
@@ -503,20 +462,11 @@ where
         },
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
-            validate_codeable_concept_binding_async(
-                validator,
-                fhir_path,
-                valueset_url,
-                strength,
-                cr.concept.as_ref(),
-                local_check,
-                terminology,
-            )
-            .await
+            validate_codeable_concept_binding_async(ctx, cr.concept.as_ref(), local_check).await
         }
     }
 }
@@ -537,13 +487,9 @@ where
 /// This is the synchronous variant.
 /// See also: `validate_codeable_concept_binding_async`.
 pub fn validate_codeable_concept_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     codeable_concept: Option<&CodeableConcept>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
@@ -559,7 +505,7 @@ where
         _ => return issues,
     };
     let local_outcome = evaluate_local_codeable_concept_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         cc,
         |system, code, display| {
             let mut local_cc = cc.clone();
@@ -572,22 +518,21 @@ where
         },
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
-            let Some(terminology) = terminology else {
+            let Some(terminology) = ctx.terminology else {
                 return vec![crate::binding::common::terminology_unavailable_issue(
-                    fhir_path,
-                    valueset_url,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
                     "Remote terminology validation required but no TerminologyService was provided"
                         .to_string(),
                 )];
             };
 
             let mut any_usable_coding = false;
-            let mut any_match = false;
-            let mut last_remote_miss_message: Option<String> = None;
+            let mut scan = crate::binding::common::CodeableConceptRemoteScan::default();
 
             for coding in codings {
                 let system = coding_system(coding);
@@ -600,44 +545,44 @@ where
 
                 any_usable_coding = true;
 
-                match terminology.member_of(valueset_url, system, code, display) {
-                    Ok(outcome) if outcome.is_member => {
-                        any_match = true;
-                        break;
-                    }
-                    Ok(outcome) => {
-                        last_remote_miss_message = Some(outcome.message.unwrap_or_else(|| {
-                            if let Some(system) = system {
-                                format!(
-                                    "The provided coding {}#{} was not found in ValueSet {}",
-                                    system, code, valueset_url
-                                )
-                            } else {
-                                format!(
-                                    "The provided code '{}' was not found in ValueSet {}",
-                                    code, valueset_url
-                                )
-                            }
-                        }));
-                    }
-                    Err(e) => {
-                        return vec![crate::binding::common::terminology_validation_issue(
-                            fhir_path,
-                            valueset_url,
-                            prettify_remote_terminology_error(valueset_url, &e),
-                        )];
-                    }
+                let outcome = terminology.member_of(ctx.valueset_url, system, code, display);
+                if let Err(e) = crate::binding::common::merge_remote_member_of_for_coding(
+                    &mut scan,
+                    outcome,
+                    system,
+                    code,
+                    ctx.valueset_url,
+                ) {
+                    return vec![crate::binding::common::terminology_validation_issue(
+                        ctx.fhir_path,
+                        ctx.valueset_url,
+                        prettify_remote_terminology_error(ctx.valueset_url, &e),
+                    )];
+                }
+                if scan.any_match {
+                    break;
                 }
             }
 
-            if any_match {
+            if scan.any_match {
                 return vec![];
+            }
+
+            if scan.any_remote_undecidable {
+                return vec![crate::binding::common::terminology_membership_not_locally_verifiable_issue(
+                    ctx.fhir_path,
+                    ctx.valueset_url,
+                    ctx.strength,
+                    scan.remote_undecidable_message.unwrap_or_else(|| {
+                        "Local terminology cannot determine ValueSet membership; use a remote terminology service for a definitive validation result.".to_string()
+                    }),
+                )];
             }
 
             if !any_usable_coding {
                 return vec![crate::binding::common::value_issue(
-                    fhir_path,
-                    valueset_url,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
                     "CodeableConcept has no usable coding with a code value for terminology validation",
                     crate::ValidationIssueDetailCode::InvalidBindableValue,
                     "CodeableConcept has no usable coding with a code value for terminology validation"
@@ -645,21 +590,15 @@ where
                 )];
             }
 
-            let diagnostics = last_remote_miss_message.unwrap_or_else(|| {
+            let diagnostics = scan.last_miss_diagnostics.unwrap_or_else(|| {
                 let coding_summary = summarize_codeable_concept_codings(cc);
                 format!(
                     "The provided coding(s) {} were not found in ValueSet {}",
-                    coding_summary, valueset_url
+                    coding_summary, ctx.valueset_url
                 )
             });
 
-            match crate::binding::common::issue_for_binding_miss(
-                validator,
-                fhir_path,
-                valueset_url,
-                strength,
-                diagnostics,
-            ) {
+            match ctx.issue_for_binding_miss(diagnostics) {
                 Some(issue) => vec![issue],
                 None => vec![],
             }
@@ -671,13 +610,9 @@ where
 ///
 /// Remote terminology is awaited using `TerminologyService`.
 pub async fn validate_codeable_concept_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     codeable_concept: Option<&CodeableConcept>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&CodeableConcept) -> Result<(), TerminologyValidationError>,
@@ -693,7 +628,7 @@ where
         _ => return issues,
     };
     let local_outcome = evaluate_local_codeable_concept_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         cc,
         |system, code, display| {
             let mut local_cc = cc.clone();
@@ -706,22 +641,21 @@ where
         },
     );
 
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(_req) => {
-            let Some(terminology) = terminology else {
+            let Some(terminology) = ctx.terminology else {
                 return vec![crate::binding::common::terminology_unavailable_issue(
-                    fhir_path,
-                    valueset_url,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
                     "Remote terminology validation required but no TerminologyService was provided"
                         .to_string(),
                 )];
             };
 
             let mut any_usable_coding = false;
-            let mut any_match = false;
-            let mut last_remote_miss_message: Option<String> = None;
+            let mut scan = crate::binding::common::CodeableConceptRemoteScan::default();
 
             for coding in codings {
                 let system = coding_system(coding);
@@ -734,47 +668,46 @@ where
 
                 any_usable_coding = true;
 
-                match terminology
-                    .member_of(valueset_url, system, code, display)
-                    .await
-                {
-                    Ok(outcome) if outcome.is_member => {
-                        any_match = true;
-                        break;
-                    }
-                    Ok(outcome) => {
-                        last_remote_miss_message = Some(outcome.message.unwrap_or_else(|| {
-                            if let Some(system) = system {
-                                format!(
-                                    "The provided coding {}#{} was not found in ValueSet {}",
-                                    system, code, valueset_url
-                                )
-                            } else {
-                                format!(
-                                    "The provided code '{}' was not found in ValueSet {}",
-                                    code, valueset_url
-                                )
-                            }
-                        }));
-                    }
-                    Err(e) => {
-                        return vec![crate::binding::common::terminology_validation_issue(
-                            fhir_path,
-                            valueset_url,
-                            prettify_remote_terminology_error(valueset_url, &e),
-                        )];
-                    }
+                let outcome = terminology
+                    .member_of(ctx.valueset_url, system, code, display)
+                    .await;
+                if let Err(e) = crate::binding::common::merge_remote_member_of_for_coding(
+                    &mut scan,
+                    outcome,
+                    system,
+                    code,
+                    ctx.valueset_url,
+                ) {
+                    return vec![crate::binding::common::terminology_validation_issue(
+                        ctx.fhir_path,
+                        ctx.valueset_url,
+                        prettify_remote_terminology_error(ctx.valueset_url, &e),
+                    )];
+                }
+                if scan.any_match {
+                    break;
                 }
             }
 
-            if any_match {
+            if scan.any_match {
                 return vec![];
+            }
+
+            if scan.any_remote_undecidable {
+                return vec![crate::binding::common::terminology_membership_not_locally_verifiable_issue(
+                    ctx.fhir_path,
+                    ctx.valueset_url,
+                    ctx.strength,
+                    scan.remote_undecidable_message.unwrap_or_else(|| {
+                        "Local terminology cannot determine ValueSet membership; use a remote terminology service for a definitive validation result.".to_string()
+                    }),
+                )];
             }
 
             if !any_usable_coding {
                 return vec![crate::binding::common::value_issue(
-                    fhir_path,
-                    valueset_url,
+                    ctx.fhir_path,
+                    ctx.valueset_url,
                     "CodeableConcept has no usable coding with a code value for terminology validation",
                     crate::ValidationIssueDetailCode::InvalidBindableValue,
                     "CodeableConcept has no usable coding with a code value for terminology validation"
@@ -782,21 +715,15 @@ where
                 )];
             }
 
-            let diagnostics = last_remote_miss_message.unwrap_or_else(|| {
+            let diagnostics = scan.last_miss_diagnostics.unwrap_or_else(|| {
                 let coding_summary = summarize_codeable_concept_codings(cc);
                 format!(
                     "The provided coding(s) {} were not found in ValueSet {}",
-                    coding_summary, valueset_url
+                    coding_summary, ctx.valueset_url
                 )
             });
 
-            match crate::binding::common::issue_for_binding_miss(
-                validator,
-                fhir_path,
-                valueset_url,
-                strength,
-                diagnostics,
-            ) {
+            match ctx.issue_for_binding_miss(diagnostics) {
                 Some(issue) => vec![issue],
                 None => vec![],
             }
@@ -815,13 +742,9 @@ where
 /// This is the synchronous variant.
 /// See also: `validate_coding_binding_async`.
 pub fn validate_coding_binding<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextSync<'_>,
     coding: Option<&Coding>,
     local_check: F,
-    terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&Coding) -> Result<(), TerminologyValidationError>,
@@ -831,7 +754,7 @@ where
     };
 
     let local_outcome = evaluate_local_coding_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         coding,
         |system, code, display| {
             let mut local_coding = coding.clone();
@@ -841,24 +764,20 @@ where
             local_check(&local_coding)
         },
     );
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_sync(validator, fhir_path, strength, terminology, &req)
+            ctx.execute_remote_sync(&req)
         }
     }
 }
 
 /// Async variant of `validate_coding_binding`.
 pub async fn validate_coding_binding_async<F>(
-    validator: &Validator,
-    fhir_path: &str,
-    valueset_url: &str,
-    strength: BindingStrength,
+    ctx: &BindingCheckContextAsync<'_>,
     coding: Option<&Coding>,
     local_check: F,
-    terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue>
 where
     F: Fn(&Coding) -> Result<(), TerminologyValidationError>,
@@ -868,7 +787,7 @@ where
     };
 
     let local_outcome = evaluate_local_coding_binding::<R6BindingAdapter, _>(
-        valueset_url,
+        ctx.valueset_url,
         coding,
         |system, code, display| {
             let mut local_coding = coding.clone();
@@ -878,11 +797,11 @@ where
             local_check(&local_coding)
         },
     );
-    match classify_local_outcome(validator, fhir_path, valueset_url, strength, local_outcome) {
+    match ctx.classify_local_outcome(local_outcome) {
         crate::binding::common::LocalBindingDisposition::Valid => vec![],
         crate::binding::common::LocalBindingDisposition::Done(issues) => issues,
         crate::binding::common::LocalBindingDisposition::NeedsRemote(req) => {
-            execute_remote_async(validator, fhir_path, strength, terminology, &req).await
+            ctx.execute_remote_async(&req).await
         }
     }
 }
@@ -905,6 +824,9 @@ fn local_binding_instance_path(binding_path: &str, matched_instance_path: &str) 
 }
 
 /// Infer a concrete [`BindingTargetKind`] from instance JSON for choice `[x]` elements.
+///
+/// `declared` is [`BindingDef::choice_type_codes`](fhir_validation_types::BindingDef::choice_type_codes)
+/// when present; it restricts which shapes are considered.
 fn infer_r6_choice_kind(value: &Value, declared: Option<&[String]>) -> Option<BindingTargetKind> {
     if bindable_primitive_string_value(value).is_some() {
         let k = primitive_choice_target_kind(declared);
@@ -948,85 +870,62 @@ fn apply_r6_binding_sync_single(
     kind: BindingTargetKind,
     terminology: Option<&dyn TerminologyServiceSync>,
 ) -> Vec<ValidationIssue> {
+    let ctx = BindingCheckContextSync::from_binding(validator, binding, terminology);
     match kind {
         BindingTargetKind::Code => {
             let code_value =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
             validate_primitive_code_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 code_value,
                 implicit_system,
                 |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                terminology,
             )
         }
         BindingTargetKind::String | BindingTargetKind::Uri => {
             let text =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             validate_primitive_value_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 text,
                 |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                terminology,
             )
         }
         BindingTargetKind::Coding => {
             let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
             validate_coding_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 coding.as_ref(),
                 |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
-                terminology,
             )
         }
         BindingTargetKind::CodeableConcept => {
             let codeable_concept =
                 serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
             validate_codeable_concept_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 codeable_concept.as_ref(),
                 |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-                terminology,
             )
         }
         BindingTargetKind::Quantity => {
             let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
             validate_quantity_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 quantity.as_ref(),
                 |quantity| {
                     terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
                 },
-                terminology,
             )
         }
         BindingTargetKind::CodeableReference => {
             let codeable_reference =
                 serde_json::from_value::<CodeableReference>(field_value.clone()).ok();
             validate_codeable_reference_binding(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 codeable_reference.as_ref(),
                 |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-                terminology,
             )
         }
         BindingTargetKind::Choice | BindingTargetKind::Unsupported => vec![],
@@ -1040,20 +939,17 @@ async fn apply_r6_binding_async_single(
     kind: BindingTargetKind,
     terminology: Option<&dyn TerminologyService>,
 ) -> Vec<ValidationIssue> {
+    let ctx = BindingCheckContextAsync::from_binding(validator, binding, terminology);
     match kind {
         BindingTargetKind::Code => {
             let code_value =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
             validate_primitive_code_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 code_value,
                 implicit_system,
                 |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                terminology,
             )
             .await
         }
@@ -1061,26 +957,18 @@ async fn apply_r6_binding_async_single(
             let text =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             validate_primitive_value_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 text,
                 |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-                terminology,
             )
             .await
         }
         BindingTargetKind::Coding => {
             let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
             validate_coding_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 coding.as_ref(),
                 |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
-                terminology,
             )
             .await
         }
@@ -1088,28 +976,20 @@ async fn apply_r6_binding_async_single(
             let codeable_concept =
                 serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
             validate_codeable_concept_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 codeable_concept.as_ref(),
                 |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-                terminology,
             )
             .await
         }
         BindingTargetKind::Quantity => {
             let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
             validate_quantity_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 quantity.as_ref(),
                 |quantity| {
                     terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
                 },
-                terminology,
             )
             .await
         }
@@ -1117,13 +997,9 @@ async fn apply_r6_binding_async_single(
             let codeable_reference =
                 serde_json::from_value::<CodeableReference>(field_value.clone()).ok();
             validate_codeable_reference_binding_async(
-                validator,
-                &binding.path,
-                binding.value_set.as_str(),
-                binding.strength,
+                &ctx,
                 codeable_reference.as_ref(),
                 |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-                terminology,
             )
             .await
         }
@@ -1160,14 +1036,14 @@ where
         Err(err) => {
             issues.push(ValidationIssue {
                 severity: fhir_validation_types::Severity::Error,
-                code: "structure".to_string(),
+                code: issue_code::STRUCTURE.to_string(),
                 fhir_path: "binding".to_string(),
                 instance_path: None,
                 expression: None,
                 expression_kind: None,
                 source_invariant_key: None,
                 summary: Some(
-                    "Resource serialization failed during binding validation".to_string(),
+                    binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string(),
                 ),
                 detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!("Failed to serialize focus for binding validation: {}", err),
@@ -1246,14 +1122,14 @@ where
         Err(e) => {
             issues.push(ValidationIssue {
                 severity: fhir_validation_types::Severity::Error,
-                code: "structure".to_string(),
+                code: issue_code::STRUCTURE.to_string(),
                 fhir_path: "binding".to_string(),
                 instance_path: None,
                 expression: None,
                 expression_kind: None,
                 source_invariant_key: None,
                 summary: Some(
-                    "Resource serialization failed during binding validation".to_string(),
+                    binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string(),
                 ),
                 detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!("Failed to serialize focus for binding validation: {}", e),

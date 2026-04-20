@@ -63,12 +63,20 @@ impl DefinitionUseCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::FhirStructure => Some("This structure is defined as part of the base FHIR Specification"),
-            Self::CustomResource => Some("This structure is intended to be treated like a FHIR resource (e.g. on the FHIR API)"),
+            Self::FhirStructure => {
+                Some("This structure is defined as part of the base FHIR Specification")
+            }
+            Self::CustomResource => Some(
+                "This structure is intended to be treated like a FHIR resource (e.g. on the FHIR API)",
+            ),
             Self::Dam => Some("This structure captures an analysis of a domain"),
-            Self::WireFormat => Some("This structure represents and existing structure (e.g. CDA, HL7 v2)"),
+            Self::WireFormat => {
+                Some("This structure represents and existing structure (e.g. CDA, HL7 v2)")
+            }
             Self::Archetype => Some("This structure captures an analysis of a domain"),
-            Self::Template => Some("This structure is a template (n.b: \'template\' has many meanings)"),
+            Self::Template => {
+                Some("This structure is a template (n.b: \'template\' has many meanings)")
+            }
         }
     }
 
@@ -133,5 +141,4 @@ impl DefinitionUseCodes {
             })
             .unwrap_or(false)
     }
-
 }

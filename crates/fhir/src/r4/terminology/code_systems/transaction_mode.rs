@@ -119,5 +119,4 @@ impl TransactionMode {
             })
             .unwrap_or(false)
     }
-
 }

@@ -154,5 +154,4 @@ impl ExampleRevenueCenterCodes {
             })
             .unwrap_or(false)
     }
-
 }

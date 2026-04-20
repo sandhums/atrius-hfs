@@ -51,8 +51,12 @@ impl AccountAggregate {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Patient => Some("This (aggregated) balance is expected to be paid by the Patient"),
-            Self::Insurance => Some("This (aggregated) balance is expected to be paid by Insurance coverage(s)"),
+            Self::Patient => {
+                Some("This (aggregated) balance is expected to be paid by the Patient")
+            }
+            Self::Insurance => {
+                Some("This (aggregated) balance is expected to be paid by Insurance coverage(s)")
+            }
             Self::Total => Some("There is no aggregation on this balance"),
         }
     }
@@ -112,5 +116,4 @@ impl AccountAggregate {
             })
             .unwrap_or(false)
     }
-
 }

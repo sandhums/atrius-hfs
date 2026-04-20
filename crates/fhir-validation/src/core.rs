@@ -23,6 +23,7 @@ pub use fhir_validation_types::{
     StructureDefinitionKind, TypeDerivationRule,
 };
 
+use crate::issue_code;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::terminology::types::TerminologyRemoteError;
 use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
@@ -60,7 +61,7 @@ use crate::r6::{
 pub struct ValidationIssue {
     pub severity: Severity,
 
-    /// Internal validator category such as "value", "invariant", "structure", or "terminology".
+    /// Internal validator category; see [`crate::issue_code`] for shared string constants.
     /// This is later mapped conservatively to FHIR `OperationOutcome.issue.code`.
     pub code: String,
 
@@ -143,7 +144,7 @@ impl ValidationIssue {
     pub fn from_invariant_def(invariant: &InvariantDef) -> Self {
         Self {
             severity: invariant.severity,
-            code: "invariant".to_string(),
+            code: issue_code::INVARIANT.to_string(),
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
@@ -165,7 +166,7 @@ impl ValidationIssue {
     pub fn from_invariant_error(invariant: &InvariantDef, err: ValidationError) -> Self {
         Self {
             severity: Severity::Error,
-            code: "exception".to_string(),
+            code: issue_code::EXCEPTION.to_string(),
             fhir_path: invariant.path.to_string(),
             instance_path: None,
             expression: Some(invariant.expression.to_string()),
@@ -214,7 +215,7 @@ pub struct ValidationConfig {
     /// Emit warnings for example bindings
     pub warn_on_example_bindings: bool,
 
-    /// Debug trace
+    /// Emit verbose internal traces (intended for development; off by default).
     pub debug_trace: bool,
 
     /// Maximum recursion depth for nested `type.profile` validation.
@@ -251,7 +252,7 @@ impl Default for ValidationConfig {
             strict_extensible_bindings: true,
             warn_on_preferred_bindings: true,
             warn_on_example_bindings: true,
-            debug_trace: true,
+            debug_trace: false,
             max_profile_recursion_depth: 3,
             warn_on_profile_cycle: true,
             warn_on_profile_recursion_depth_reached: true,
@@ -275,6 +276,11 @@ pub enum ValidationError {
     FhirPath(helios_fhirpath_support::EvaluationError),
     Terminology(String),
     TerminologyRemote(TerminologyRemoteError),
+    /// `$validate-code` returned JSON that is not a usable FHIR `Parameters` result (e.g. missing
+    /// `parameter` or boolean `result`).
+    MalformedTerminologyResponse(String),
+    /// [`crate::terminology::requests::ValidateVsRequest`] failed checks before the request was sent.
+    InvalidValidateVsRequest(String),
     InvalidStructureDefinition(String),
     Other(String),
 }
@@ -285,6 +291,8 @@ impl fmt::Display for ValidationError {
             Self::FhirPath(e) => write!(f, "{}", e),
             Self::Terminology(e) => write!(f, "{}", e),
             Self::InvalidStructureDefinition(e) => write!(f, "{}", e),
+            Self::MalformedTerminologyResponse(msg) => write!(f, "{}", msg),
+            Self::InvalidValidateVsRequest(msg) => write!(f, "{}", msg),
             ValidationError::TerminologyRemote(err) => {
                 if !err.diagnostics.is_empty() {
                     write!(f, "{}", err.diagnostics.join("; "))
@@ -305,7 +313,14 @@ impl fmt::Display for ValidationError {
     }
 }
 
-impl std::error::Error for ValidationError {}
+impl std::error::Error for ValidationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::FhirPath(e) => Some(e),
+            _ => None,
+        }
+    }
+}
 
 impl From<helios_fhirpath_support::EvaluationError> for ValidationError {
     fn from(e: helios_fhirpath_support::EvaluationError) -> Self {
@@ -318,14 +333,6 @@ impl From<helios_fhirpath_support::EvaluationError> for ValidationError {
 pub struct Validator {
     pub config: ValidationConfig,
 }
-
-// impl Default for Validator {
-//     fn default() -> Self {
-//         Self {
-//             config: ValidationConfig::default(),
-//         }
-//     }
-// }
 
 impl Validator {
     /// Create a validator with the provided configuration

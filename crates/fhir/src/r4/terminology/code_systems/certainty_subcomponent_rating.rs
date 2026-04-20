@@ -24,7 +24,8 @@ pub enum CertaintySubcomponentRating {
 }
 
 impl CertaintySubcomponentRating {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/certainty-subcomponent-rating";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/certainty-subcomponent-rating";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -92,8 +93,12 @@ impl CertaintySubcomponentRating {
             Self::NoConcern => Some("no serious concern."),
             Self::SeriousConcern => Some("serious concern."),
             Self::CriticalConcern => Some("critical concern."),
-            Self::Present => Some("possible reason for increasing quality rating was checked and found to bepresent."),
-            Self::Absent => Some("possible reason for increasing quality rating was checked and found to be absent."),
+            Self::Present => Some(
+                "possible reason for increasing quality rating was checked and found to bepresent.",
+            ),
+            Self::Absent => Some(
+                "possible reason for increasing quality rating was checked and found to be absent.",
+            ),
         }
     }
 
@@ -168,5 +173,4 @@ impl CertaintySubcomponentRating {
             })
             .unwrap_or(false)
     }
-
 }

@@ -47,8 +47,12 @@ impl CodeSearchSupport {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Explicit => Some("The search for code on ValueSet only includes codes explicitly detailed on includes or expansions."),
-            Self::All => Some("The search for code on ValueSet only includes all codes based on the expansion of the value set."),
+            Self::Explicit => Some(
+                "The search for code on ValueSet only includes codes explicitly detailed on includes or expansions.",
+            ),
+            Self::All => Some(
+                "The search for code on ValueSet only includes all codes based on the expansion of the value set.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl CodeSearchSupport {
             })
             .unwrap_or(false)
     }
-
 }

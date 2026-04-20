@@ -1733,11 +1733,13 @@ impl fhir_validation::r6::R6Validatable for Library {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 LibraryVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 LibraryVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1745,7 +1747,8 @@ impl fhir_validation::r6::R6Validatable for Library {
         if let Some(choice) = &self.subject {
             match choice {
                 LibrarySubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value));
                     issues.extend(child_issues);
                 }
                 LibrarySubject::Reference(value) => {
@@ -2052,11 +2055,13 @@ impl fhir_validation::r6::R6ValidatableAsync for Library {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 LibraryVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 LibraryVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Library.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -2064,7 +2069,8 @@ impl fhir_validation::r6::R6ValidatableAsync for Library {
         if let Some(choice) = &self.subject {
             match choice {
                 LibrarySubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value)).await;
                     issues.extend(child_issues);
                 }
                 LibrarySubject::Reference(value) => {
@@ -3904,11 +3910,13 @@ impl fhir_validation::r6::R6Validatable for Measure {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 MeasureVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 MeasureVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -3916,7 +3924,8 @@ impl fhir_validation::r6::R6Validatable for Measure {
         if let Some(choice) = &self.subject {
             match choice {
                 MeasureSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "Measure.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Measure.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value));
                     issues.extend(child_issues);
                 }
                 MeasureSubject::Reference(value) => {
@@ -4234,11 +4243,13 @@ impl fhir_validation::r6::R6ValidatableAsync for Measure {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 MeasureVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Measure.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -4246,7 +4257,8 @@ impl fhir_validation::r6::R6ValidatableAsync for Measure {
         if let Some(choice) = &self.subject {
             match choice {
                 MeasureSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "Measure.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Measure.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureSubject::Reference(value) => {
@@ -4456,7 +4468,8 @@ impl fhir_validation::r6::R6Validatable for MeasureGroup {
         if let Some(choice) = &self.subject {
             match choice {
                 MeasureGroupSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "Measure.group.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Measure.group.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value));
                     issues.extend(child_issues);
                 }
                 MeasureGroupSubject::Reference(value) => {
@@ -4633,7 +4646,8 @@ impl fhir_validation::r6::R6ValidatableAsync for MeasureGroup {
         if let Some(choice) = &self.subject {
             match choice {
                 MeasureGroupSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "Measure.group.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Measure.group.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureGroupSubject::Reference(value) => {
@@ -6181,13 +6195,15 @@ impl fhir_validation::r6::R6Validatable for MeasureReportGroupStratifierStratum 
         if let Some(choice) = &self.value {
             match choice {
                 MeasureReportGroupStratifierStratumValue::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value));
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumValue::Boolean(_value) => {
                 }
                 MeasureReportGroupStratifierStratumValue::Quantity(value) => {
-                    let child_issues = fhir_validation::r6::validate_quantity_binding(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_quantity_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value));
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumValue::Range(_value) => {
@@ -6368,13 +6384,15 @@ impl fhir_validation::r6::R6ValidatableAsync for MeasureReportGroupStratifierStr
         if let Some(choice) = &self.value {
             match choice {
                 MeasureReportGroupStratifierStratumValue::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumValue::Boolean(_value) => {
                 }
                 MeasureReportGroupStratifierStratumValue::Quantity(value) => {
-                    let child_issues = fhir_validation::r6::validate_quantity_binding_async(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MeasureReport.group.stratifier.stratum.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_quantity_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumValue::Range(_value) => {
@@ -6458,13 +6476,15 @@ impl fhir_validation::r6::R6Validatable for MeasureReportGroupStratifierStratumC
         if let Some(choice) = &self.value {
             match choice {
                 MeasureReportGroupStratifierStratumComponentValue::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value));
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Boolean(_value) => {
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Quantity(value) => {
-                    let child_issues = fhir_validation::r6::validate_quantity_binding(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_quantity_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value));
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Range(_value) => {
@@ -6557,13 +6577,15 @@ impl fhir_validation::r6::R6ValidatableAsync for MeasureReportGroupStratifierStr
         if let Some(choice) = &self.value {
             match choice {
                 MeasureReportGroupStratifierStratumComponentValue::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Boolean(_value) => {
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Quantity(value) => {
-                    let child_issues = fhir_validation::r6::validate_quantity_binding_async(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MeasureReport.group.stratifier.stratum.component.value[x]", "http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_quantity_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/measurereport-stratifier-value-example", value)).await;
                     issues.extend(child_issues);
                 }
                 MeasureReportGroupStratifierStratumComponentValue::Range(_value) => {

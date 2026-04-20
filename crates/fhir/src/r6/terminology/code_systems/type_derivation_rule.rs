@@ -47,8 +47,12 @@ impl TypeDerivationRule {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Specialization => Some("This definition defines a new type that adds additional elements and optionally additional rules to the base type."),
-            Self::Constraint => Some("This definition adds additional rules to an existing concrete type."),
+            Self::Specialization => Some(
+                "This definition defines a new type that adds additional elements and optionally additional rules to the base type.",
+            ),
+            Self::Constraint => {
+                Some("This definition adds additional rules to an existing concrete type.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl TypeDerivationRule {
             })
             .unwrap_or(false)
     }
-
 }

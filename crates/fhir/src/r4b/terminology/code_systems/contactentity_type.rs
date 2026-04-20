@@ -63,10 +63,16 @@ impl ContactEntityType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::BILL => Some("Contact details for information regarding to billing/general finance enquiries."),
+            Self::BILL => Some(
+                "Contact details for information regarding to billing/general finance enquiries.",
+            ),
             Self::ADMIN => Some("Contact details for administrative enquiries."),
-            Self::HR => Some("Contact details for issues related to Human Resources, such as staff matters, OH&S etc."),
-            Self::PAYOR => Some("Contact details for dealing with issues related to insurance claims/adjudication/payment."),
+            Self::HR => Some(
+                "Contact details for issues related to Human Resources, such as staff matters, OH&S etc.",
+            ),
+            Self::PAYOR => Some(
+                "Contact details for dealing with issues related to insurance claims/adjudication/payment.",
+            ),
             Self::PATINF => Some("Generic information contact for patients."),
             Self::PRESS => Some("Dedicated contact point for matters relating to press enquiries."),
         }
@@ -133,5 +139,4 @@ impl ContactEntityType {
             })
             .unwrap_or(false)
     }
-
 }

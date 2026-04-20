@@ -17,7 +17,8 @@ pub enum BiologicallyDerivedProductPropertyTypeCodes {
 }
 
 impl BiologicallyDerivedProductPropertyTypeCodes {
-    pub const URL: &'static str = "http://hl7.org/fhir/biologicallyderived-product-property-type-codes";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/biologicallyderived-product-property-type-codes";
     pub const VERSION: &'static str = "6.0.0-ballot3";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -119,5 +120,4 @@ impl BiologicallyDerivedProductPropertyTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

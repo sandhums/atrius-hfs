@@ -133,5 +133,4 @@ impl DeviceNameType {
             })
             .unwrap_or(false)
     }
-
 }

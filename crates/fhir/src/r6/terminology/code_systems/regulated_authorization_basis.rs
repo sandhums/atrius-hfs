@@ -69,9 +69,13 @@ impl RegulatedAuthorizationBasis {
             Self::KnownSubstance => Some("Known active substance"),
             Self::SimilarBiological => Some("Similar biological application"),
             Self::WellEstablishedUse => Some("Well-established use application"),
-            Self::TraditionalUse => Some("Traditional use registration for herbal medicinal product application"),
+            Self::TraditionalUse => {
+                Some("Traditional use registration for herbal medicinal product application")
+            }
             Self::Bibliographical => Some("Bibliographical application (stand-alone)"),
-            Self::KnownHumanBlood => Some("Known human blood/plasma derived ancillary medicinal substance"),
+            Self::KnownHumanBlood => {
+                Some("Known human blood/plasma derived ancillary medicinal substance")
+            }
             Self::TemporaryUse => Some("Authorizations for temporary use"),
             Self::ParallelTrade => Some("Parallel traded products"),
         }
@@ -161,5 +165,4 @@ impl RegulatedAuthorizationBasis {
             })
             .unwrap_or(false)
     }
-
 }

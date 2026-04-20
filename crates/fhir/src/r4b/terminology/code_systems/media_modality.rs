@@ -73,7 +73,9 @@ impl MediaSubType {
         match self {
             Self::Diagram => Some("A diagram. Often used in diagnostic reports"),
             Self::Fax => Some("A digital record of a fax document"),
-            Self::Scan => Some("A digital scan of a document. This is reserved for when there is not enough metadata to create a document reference"),
+            Self::Scan => Some(
+                "A digital scan of a document. This is reserved for when there is not enough metadata to create a document reference",
+            ),
             Self::Retina => Some("A retinal image used for identification purposes"),
             Self::Fingerprint => Some("A finger print scan used for identification purposes"),
             Self::Iris => Some("An iris scan used for identification purposes"),
@@ -147,5 +149,4 @@ impl MediaSubType {
             })
             .unwrap_or(false)
     }
-
 }

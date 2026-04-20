@@ -59,11 +59,21 @@ impl PerformerRoleCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Consenter => Some("An entity or an entity\'s delegatee who is the grantee in an agreement such as a consent for services, advanced directive, or a privacy consent directive in accordance with jurisdictional, organizational, or patient policy."),
-            Self::Grantee => Some("An entity which accepts certain rights or authority from a grantor."),
-            Self::Grantor => Some("An entity which agrees to confer certain rights or authority to a grantee."),
-            Self::Delegatee => Some("A party to whom some right or authority is granted by a delegator."),
-            Self::Delegator => Some("A party that grants all or some portion its right or authority to another party."),
+            Self::Consenter => Some(
+                "An entity or an entity\'s delegatee who is the grantee in an agreement such as a consent for services, advanced directive, or a privacy consent directive in accordance with jurisdictional, organizational, or patient policy.",
+            ),
+            Self::Grantee => {
+                Some("An entity which accepts certain rights or authority from a grantor.")
+            }
+            Self::Grantor => {
+                Some("An entity which agrees to confer certain rights or authority to a grantee.")
+            }
+            Self::Delegatee => {
+                Some("A party to whom some right or authority is granted by a delegator.")
+            }
+            Self::Delegator => Some(
+                "A party that grants all or some portion its right or authority to another party.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl PerformerRoleCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl EncounterBusinessStatusType {
             })
             .unwrap_or(false)
     }
-
 }

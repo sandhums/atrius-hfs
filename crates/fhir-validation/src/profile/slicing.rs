@@ -40,9 +40,10 @@ use crate::profile::helpers::{
     parse_slice_max,
 };
 use crate::profile::types::{
-    ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile, ExtractedSlicingRules,
-    ExtractedTypeConstraint, ExtractedValueConstraint,
+    ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile, ExtractedSliceDiscriminator,
+    ExtractedSlicingRules, ExtractedTypeConstraint, ExtractedValueConstraint,
 };
+use crate::issue_code;
 use crate::profile::validate::validate_profile_with_depth;
 use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
@@ -247,16 +248,16 @@ pub fn validate_slicing_with_context<T: Serialize>(
             let matching_slice_names: Vec<String> = slices
                 .iter()
                 .filter(|slice| {
-                    matches_slice(
+                    let mut eval = SliceEvaluationCtx {
                         actual,
                         item_index,
                         slice,
-                        &slicing.discriminators,
                         profile,
-                        &slice_order,
-                        ctx,
+                        slice_order: &slice_order,
+                        validation_ctx: ctx,
                         state,
-                    )
+                    };
+                    matches_slice(&mut eval, &slicing.discriminators)
                 })
                 .filter_map(|slice| slice.slice_name.clone())
                 .collect();
@@ -264,7 +265,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
             if matching_slice_names.len() > 1 {
                 issues.push(ValidationIssue {
                     severity: Severity::Error,
-                    code: "structure".to_string(),
+                    code: issue_code::STRUCTURE.to_string(),
                     summary: Some("Repeated element matches more than one slice".to_string()),
                     expression_kind: None,
                     source_invariant_key: None,
@@ -292,7 +293,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
                         if current_order < last_order {
                             issues.push(ValidationIssue {
                                 severity: Severity::Error,
-                                code: "structure".to_string(),
+                                code: issue_code::STRUCTURE.to_string(),
                                 summary: Some(
                                     "Slice instances are not in declared order (ordered slicing)"
                                         .to_string(),
@@ -316,7 +317,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
                 if slicing.rules == ExtractedSlicingRules::OpenAtEnd && seen_open_at_end_tail {
                     issues.push(ValidationIssue {
                         severity: Severity::Error,
-                        code: "structure".to_string(),
+                        code: issue_code::STRUCTURE.to_string(),
                         summary: Some(
                             "Named slice matched after tail content (openAtEnd violation)".to_string(),
                         ),
@@ -346,7 +347,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
                 ExtractedSlicingRules::Closed => {
                     issues.push(ValidationIssue {
                         severity: Severity::Error,
-                        code: "structure".to_string(),
+                        code: issue_code::STRUCTURE.to_string(),
                         summary: Some("Element does not match any slice (closed slicing)".to_string()),
                         expression_kind: None,
                         source_invariant_key: None,
@@ -397,7 +398,7 @@ pub fn validate_slicing_with_context<T: Serialize>(
                         if count > max_value {
                             issues.push(ValidationIssue {
                                 severity: Severity::Error,
-                                code: "structure".to_string(),
+                                code: issue_code::STRUCTURE.to_string(),
                                 summary: Some("Slice exceeds maximum cardinality".to_string()),
                                 expression_kind: None,
                                 source_invariant_key: None,
@@ -422,33 +423,32 @@ pub fn validate_slicing_with_context<T: Serialize>(
     issues
 }
 
+/// Shared inputs for evaluating whether a repeated instance item belongs to a slice.
+///
+/// Discriminators are passed separately to [`matches_slice`] so callers can iterate them
+/// while holding mutable access to [`ValidationState`] (the slice rules and the state cannot
+/// live in the same borrowed struct without splitting borrows).
+struct SliceEvaluationCtx<'a, 'v> {
+    actual: &'a Value,
+    item_index: usize,
+    slice: &'a ExtractedElementRule,
+    profile: &'a ExtractedProfile,
+    slice_order: &'a HashMap<String, usize>,
+    validation_ctx: Option<&'v ValidationContext<'v>>,
+    state: &'a mut ValidationState,
+}
+
 /// Return `true` if the current repeated item satisfies all discriminator rules
 /// required for the given slice.
 ///
 /// FHIR slicing uses AND semantics when multiple discriminators are declared,
 /// so every discriminator must match for the item to belong to the slice.
-#[allow(clippy::too_many_arguments)]
 fn matches_slice(
-    actual: &Value,
-    item_index: usize,
-    slice: &ExtractedElementRule,
-    discriminators: &[crate::profile::types::ExtractedSliceDiscriminator],
-    profile: &ExtractedProfile,
-    slice_order: &HashMap<String, usize>,
-    ctx: Option<&ValidationContext<'_>>,
-    state: &mut ValidationState,
+    eval: &mut SliceEvaluationCtx<'_, '_>,
+    discriminators: &[ExtractedSliceDiscriminator],
 ) -> bool {
     discriminators.iter().all(|discriminator| {
-        matches_discriminator(
-            actual,
-            item_index,
-            slice,
-            discriminator,
-            profile,
-            slice_order,
-            ctx,
-            state,
-        )
+        matches_discriminator(eval, discriminator)
     })
 }
 
@@ -465,32 +465,32 @@ fn matches_slice(
 /// values on the nominated runtime element. When `.resolve()` is used in the
 /// discriminator path, the resolved reference target would need profile
 /// conformance checking, which is not yet implemented.
-#[allow(clippy::too_many_arguments)]
 fn matches_discriminator(
-    actual: &Value,
-    item_index: usize,
-    slice: &ExtractedElementRule,
-    discriminator: &crate::profile::types::ExtractedSliceDiscriminator,
-    profile: &ExtractedProfile,
-    slice_order: &HashMap<String, usize>,
-    ctx: Option<&ValidationContext<'_>>,
-    state: &mut ValidationState,
+    eval: &mut SliceEvaluationCtx<'_, '_>,
+    discriminator: &ExtractedSliceDiscriminator,
 ) -> bool {
     match discriminator.discriminator_type {
         ExtractedDiscriminatorType::Value | ExtractedDiscriminatorType::Pattern => {
-            matches_value_discriminator(actual, slice, discriminator, profile)
+            matches_value_discriminator(eval.actual, eval.slice, discriminator, eval.profile)
         }
         ExtractedDiscriminatorType::Type => {
-            matches_type_discriminator(actual, slice, discriminator, profile)
+            matches_type_discriminator(eval.actual, eval.slice, discriminator, eval.profile)
         }
         ExtractedDiscriminatorType::Exists => {
-            matches_exists_discriminator(actual, slice, discriminator, profile)
+            matches_exists_discriminator(eval.actual, eval.slice, discriminator, eval.profile)
         }
         ExtractedDiscriminatorType::Position => {
-            matches_position_discriminator(item_index, slice, slice_order)
+            matches_position_discriminator(eval.item_index, eval.slice, eval.slice_order)
         }
         ExtractedDiscriminatorType::Profile => {
-            matches_profile_discriminator(actual, slice, discriminator, profile, ctx, state)
+            matches_profile_discriminator(
+                eval.actual,
+                eval.slice,
+                discriminator,
+                eval.profile,
+                eval.validation_ctx,
+                eval.state,
+            )
         }
     }
 }

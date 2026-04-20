@@ -62,8 +62,12 @@ impl GoalCategory {
             Self::Dietary => Some("Goals related to the consumption of food and/or beverages."),
             Self::Safety => Some("Goals related to the personal protection of the subject."),
             Self::Behavioral => Some("Goals related to the manner in which the subject acts."),
-            Self::Nursing => Some("Goals related to the practice of nursing or established by nurses."),
-            Self::Physiotherapy => Some("Goals related to the mobility and/or motor capability of the subject."),
+            Self::Nursing => {
+                Some("Goals related to the practice of nursing or established by nurses.")
+            }
+            Self::Physiotherapy => {
+                Some("Goals related to the mobility and/or motor capability of the subject.")
+            }
         }
     }
 
@@ -126,5 +130,4 @@ impl GoalCategory {
             })
             .unwrap_or(false)
     }
-
 }

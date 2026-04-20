@@ -95,20 +95,28 @@ impl CitationSummaryStyle {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Vancouver => Some("Citation style used by International Committee of Medical Journal Editors and maintained by US National Library of Medicine."),
+            Self::Vancouver => Some(
+                "Citation style used by International Committee of Medical Journal Editors and maintained by US National Library of Medicine.",
+            ),
             Self::Ama11 => Some("Medicine."),
-            Self::Apa7 => Some("APA 7th edition (October 2019) used by Education, Psychology and Sciences."),
+            Self::Apa7 => {
+                Some("APA 7th edition (October 2019) used by Education, Psychology and Sciences.")
+            }
             Self::Apa6 => Some("APA 6th edition used by Education, Psychology and Sciences."),
             Self::Asa6 => Some("Sociology."),
             Self::Mla8 => Some("MLA 8th edition used by the Humanities."),
-            Self::Cochrane => Some("Used by Cochrane reviews, example: Huang, M, Tang T, Pang, P, Li, M, Ma R, Lu, J, et al. Treating COVID-19 with Chloroquine. J Mol Cell Biol 2020; 12(4):322\u{2013}5."),
+            Self::Cochrane => Some(
+                "Used by Cochrane reviews, example: Huang, M, Tang T, Pang, P, Li, M, Ma R, Lu, J, et al. Treating COVID-19 with Chloroquine. J Mol Cell Biol 2020; 12(4):322\u{2013}5.",
+            ),
             Self::ElsevierHarvard => Some("Biology ecology."),
             Self::Nature => Some("Biology."),
             Self::Acs => Some("Chemistry."),
             Self::ChicagoA17 => Some("Used by Business, History and the Fine Arts."),
             Self::ChicagoB17 => Some("Used by Business, History and the Fine Arts."),
             Self::Ieee => Some("IT, Engineering."),
-            Self::Comppub => Some("Citation style to report human-readable and/or machine-readable access paths, example: Alper BS, Dehnbostel J, Shahin K. 14-day mortality remdesivir vs placebo meta-analysis (ACTT-1, Wang et al, WHO SOLIDARITY).  Fast Evidence Interoperability Resources (FEvIR) Platform, entry 55, version 4. Created 2020 Dec 17. Revised 2020 Dec 21. Accessed 2021 Mar 13. Computable resource at: https://fevir.net/resources/Evidence/55."),
+            Self::Comppub => Some(
+                "Citation style to report human-readable and/or machine-readable access paths, example: Alper BS, Dehnbostel J, Shahin K. 14-day mortality remdesivir vs placebo meta-analysis (ACTT-1, Wang et al, WHO SOLIDARITY).  Fast Evidence Interoperability Resources (FEvIR) Platform, entry 55, version 4. Created 2020 Dec 17. Revised 2020 Dec 21. Accessed 2021 Mar 13. Computable resource at: https://fevir.net/resources/Evidence/55.",
+            ),
         }
     }
 
@@ -189,5 +197,4 @@ impl CitationSummaryStyle {
             })
             .unwrap_or(false)
     }
-
 }

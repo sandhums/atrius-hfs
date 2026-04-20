@@ -105,5 +105,4 @@ impl VisionEyes {
             })
             .unwrap_or(false)
     }
-
 }

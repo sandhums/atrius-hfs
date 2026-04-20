@@ -98,5 +98,4 @@ impl ContractResourceActionStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

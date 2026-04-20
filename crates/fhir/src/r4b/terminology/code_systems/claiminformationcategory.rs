@@ -98,15 +98,27 @@ impl ClaimInformationCategoryCodes {
             Self::Info => Some("Codes conveying additional situation and condition information."),
             Self::Discharge => Some("Discharge status and discharge to locations."),
             Self::Onset => Some("Period, start or end dates of aspects of the Condition."),
-            Self::Related => Some("Nature and date of the related event e.g. Last exam, service, X-ray etc."),
+            Self::Related => {
+                Some("Nature and date of the related event e.g. Last exam, service, X-ray etc.")
+            }
             Self::Exception => Some("Insurance policy exceptions."),
-            Self::Material => Some("Materials being forwarded, e.g. Models, molds, images, documents."),
+            Self::Material => {
+                Some("Materials being forwarded, e.g. Models, molds, images, documents.")
+            }
             Self::Attachment => Some("Materials attached such as images, documents and resources."),
-            Self::Missingtooth => Some("Teeth which are missing for any reason, for example: prior extraction, never developed."),
-            Self::Prosthesis => Some("The type of prosthesis and date of supply if a previously supplied prosthesis."),
+            Self::Missingtooth => Some(
+                "Teeth which are missing for any reason, for example: prior extraction, never developed.",
+            ),
+            Self::Prosthesis => Some(
+                "The type of prosthesis and date of supply if a previously supplied prosthesis.",
+            ),
             Self::Other => Some("Other information identified by the type.system."),
-            Self::Hospitalized => Some("An indication that the patient was hospitalized, the period if known otherwise a Yes/No (boolean)."),
-            Self::Employmentimpacted => Some("An indication that the patient was unable to work, the period if known otherwise a Yes/No (boolean)."),
+            Self::Hospitalized => Some(
+                "An indication that the patient was hospitalized, the period if known otherwise a Yes/No (boolean).",
+            ),
+            Self::Employmentimpacted => Some(
+                "An indication that the patient was unable to work, the period if known otherwise a Yes/No (boolean).",
+            ),
             Self::Externalcause => Some("The external cause of an illness or injury."),
             Self::Patientreasonforvisit => Some("The reason for the patient visit."),
         }
@@ -189,5 +201,4 @@ impl ClaimInformationCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

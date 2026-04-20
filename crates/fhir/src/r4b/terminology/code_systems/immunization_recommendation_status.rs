@@ -18,7 +18,8 @@ pub enum ImmunizationRecommendationStatusCodes {
 }
 
 impl ImmunizationRecommendationStatusCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/immunization-recommendation-status";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -61,9 +62,13 @@ impl ImmunizationRecommendationStatusCodes {
         match self {
             Self::Due => Some("The patient is due for their next vaccination."),
             Self::Overdue => Some("The patient is considered overdue for their next vaccination."),
-            Self::Immune => Some("The patient is immune to the target disease and further immunization against the disease is not likely to provide benefit."),
+            Self::Immune => Some(
+                "The patient is immune to the target disease and further immunization against the disease is not likely to provide benefit.",
+            ),
             Self::Contraindicated => Some("The patient is contraindicated for futher doses."),
-            Self::Complete => Some("The patient is fully protected and no further doses are recommended."),
+            Self::Complete => {
+                Some("The patient is fully protected and no further doses are recommended.")
+            }
         }
     }
 
@@ -126,5 +131,4 @@ impl ImmunizationRecommendationStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

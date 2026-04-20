@@ -295,61 +295,137 @@ impl DataType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Address => Some("An address expressed using postal conventions (as opposed to GPS or other location definition formats).  This data type may be used to convey addresses for use in delivering mail as well as for visiting locations which might not be valid for mail delivery.  There are a variety of postal address formats defined around the world."),
-            Self::Age => Some("A duration of time during which an organism (or a process) has existed."),
-            Self::Annotation => Some("A  text note which also  contains information about who made the statement and when."),
+            Self::Address => Some(
+                "An address expressed using postal conventions (as opposed to GPS or other location definition formats).  This data type may be used to convey addresses for use in delivering mail as well as for visiting locations which might not be valid for mail delivery.  There are a variety of postal address formats defined around the world.",
+            ),
+            Self::Age => {
+                Some("A duration of time during which an organism (or a process) has existed.")
+            }
+            Self::Annotation => Some(
+                "A  text note which also  contains information about who made the statement and when.",
+            ),
             Self::Attachment => Some("For referring to data content defined in other formats."),
-            Self::BackboneElement => Some("Base definition for all elements that are defined inside a resource - but not those in a data type."),
-            Self::CodeableConcept => Some("A concept that may be defined by a formal reference to a terminology or ontology or may be provided by text."),
-            Self::CodeableReference => Some("A reference to a resource (by instance), or instead, a reference to a concept defined in a terminology or ontology (by class)."),
+            Self::BackboneElement => Some(
+                "Base definition for all elements that are defined inside a resource - but not those in a data type.",
+            ),
+            Self::CodeableConcept => Some(
+                "A concept that may be defined by a formal reference to a terminology or ontology or may be provided by text.",
+            ),
+            Self::CodeableReference => Some(
+                "A reference to a resource (by instance), or instead, a reference to a concept defined in a terminology or ontology (by class).",
+            ),
             Self::Coding => Some("A reference to a code defined by a terminology system."),
-            Self::ContactDetail => Some("Specifies contact information for a person or organization."),
-            Self::ContactPoint => Some("Details for all kinds of technology mediated contact points for a person or organization, including telephone, email, etc."),
-            Self::Contributor => Some("A contributor to the content of a knowledge asset, including authors, editors, reviewers, and endorsers."),
-            Self::Count => Some("A measured amount (or an amount that can potentially be measured). Note that measured amounts include amounts that are not precisely quantified, including amounts involving arbitrary units and floating currencies."),
-            Self::DataRequirement => Some("Describes a required data item for evaluation in terms of the type of data, and optional code or date-based filters of the data."),
+            Self::ContactDetail => {
+                Some("Specifies contact information for a person or organization.")
+            }
+            Self::ContactPoint => Some(
+                "Details for all kinds of technology mediated contact points for a person or organization, including telephone, email, etc.",
+            ),
+            Self::Contributor => Some(
+                "A contributor to the content of a knowledge asset, including authors, editors, reviewers, and endorsers.",
+            ),
+            Self::Count => Some(
+                "A measured amount (or an amount that can potentially be measured). Note that measured amounts include amounts that are not precisely quantified, including amounts involving arbitrary units and floating currencies.",
+            ),
+            Self::DataRequirement => Some(
+                "Describes a required data item for evaluation in terms of the type of data, and optional code or date-based filters of the data.",
+            ),
             Self::Distance => Some("A length - a value with a unit that is a physical distance."),
-            Self::Dosage => Some("Indicates how the medication is/was taken or should be taken by the patient."),
+            Self::Dosage => {
+                Some("Indicates how the medication is/was taken or should be taken by the patient.")
+            }
             Self::Duration => Some("A length of time."),
             Self::Element => Some("Base definition for all elements in a resource."),
-            Self::ElementDefinition => Some("Captures constraints on each element within the resource, profile, or extension."),
-            Self::Expression => Some("A expression that is evaluated in a specified context and returns a value. The context of use of the expression must specify the context in which the expression is evaluated, and how the result of the expression is used."),
+            Self::ElementDefinition => Some(
+                "Captures constraints on each element within the resource, profile, or extension.",
+            ),
+            Self::Expression => Some(
+                "A expression that is evaluated in a specified context and returns a value. The context of use of the expression must specify the context in which the expression is evaluated, and how the result of the expression is used.",
+            ),
             Self::Extension => Some("Optional Extension Element - found in all resources."),
-            Self::HumanName => Some("A human\'s name with the ability to identify parts and usage."),
-            Self::Identifier => Some("An identifier - identifies some entity uniquely and unambiguously. Typically this is used for business identifiers."),
-            Self::MarketingStatus => Some("The marketing status describes the date when a medicinal product is actually put on the market or the date as of which it is no longer available."),
-            Self::Meta => Some("The metadata about a resource. This is content in the resource that is maintained by the infrastructure. Changes to the content might not always be associated with version changes to the resource."),
+            Self::HumanName => {
+                Some("A human\'s name with the ability to identify parts and usage.")
+            }
+            Self::Identifier => Some(
+                "An identifier - identifies some entity uniquely and unambiguously. Typically this is used for business identifiers.",
+            ),
+            Self::MarketingStatus => Some(
+                "The marketing status describes the date when a medicinal product is actually put on the market or the date as of which it is no longer available.",
+            ),
+            Self::Meta => Some(
+                "The metadata about a resource. This is content in the resource that is maintained by the infrastructure. Changes to the content might not always be associated with version changes to the resource.",
+            ),
             Self::Money => Some("An amount of economic utility in some recognized currency."),
             Self::MoneyQuantity => None,
-            Self::Narrative => Some("A human-readable summary of the resource conveying the essential clinical and business information for the resource."),
-            Self::ParameterDefinition => Some("The parameters to the module. This collection specifies both the input and output parameters. Input parameters are provided by the caller as part of the $evaluate operation. Output parameters are included in the GuidanceResponse."),
-            Self::Period => Some("A time period defined by a start and end date and optionally time."),
+            Self::Narrative => Some(
+                "A human-readable summary of the resource conveying the essential clinical and business information for the resource.",
+            ),
+            Self::ParameterDefinition => Some(
+                "The parameters to the module. This collection specifies both the input and output parameters. Input parameters are provided by the caller as part of the $evaluate operation. Output parameters are included in the GuidanceResponse.",
+            ),
+            Self::Period => {
+                Some("A time period defined by a start and end date and optionally time.")
+            }
             Self::Population => Some("A populatioof people with some set of grouping criteria."),
-            Self::ProdCharacteristic => Some("The marketing status describes the date when a medicinal product is actually put on the market or the date as of which it is no longer available."),
-            Self::ProductShelfLife => Some("The shelf-life and storage information for a medicinal product item or container can be described using this class."),
-            Self::Quantity => Some("A measured amount (or an amount that can potentially be measured). Note that measured amounts include amounts that are not precisely quantified, including amounts involving arbitrary units and floating currencies."),
+            Self::ProdCharacteristic => Some(
+                "The marketing status describes the date when a medicinal product is actually put on the market or the date as of which it is no longer available.",
+            ),
+            Self::ProductShelfLife => Some(
+                "The shelf-life and storage information for a medicinal product item or container can be described using this class.",
+            ),
+            Self::Quantity => Some(
+                "A measured amount (or an amount that can potentially be measured). Note that measured amounts include amounts that are not precisely quantified, including amounts involving arbitrary units and floating currencies.",
+            ),
             Self::Range => Some("A set of ordered Quantities defined by a low and high limit."),
-            Self::Ratio => Some("A relationship of two Quantity values - expressed as a numerator and a denominator."),
-            Self::RatioRange => Some("A range of ratios expressed as a low and high numerator and a denominator."),
+            Self::Ratio => Some(
+                "A relationship of two Quantity values - expressed as a numerator and a denominator.",
+            ),
+            Self::RatioRange => {
+                Some("A range of ratios expressed as a low and high numerator and a denominator.")
+            }
             Self::Reference => Some("A reference from one resource to another."),
-            Self::RelatedArtifact => Some("Related artifacts such as additional documentation, justification, or bibliographic references."),
-            Self::SampledData => Some("A series of measurements taken by a device, with upper and lower limits. There may be more than one dimension in the data."),
-            Self::Signature => Some("A signature along with supporting context. The signature may be a digital signature that is cryptographic in nature, or some other signature acceptable to the domain. This other signature may be as simple as a graphical image representing a hand-written signature, or a signature ceremony Different signature approaches have different utilities."),
+            Self::RelatedArtifact => Some(
+                "Related artifacts such as additional documentation, justification, or bibliographic references.",
+            ),
+            Self::SampledData => Some(
+                "A series of measurements taken by a device, with upper and lower limits. There may be more than one dimension in the data.",
+            ),
+            Self::Signature => Some(
+                "A signature along with supporting context. The signature may be a digital signature that is cryptographic in nature, or some other signature acceptable to the domain. This other signature may be as simple as a graphical image representing a hand-written signature, or a signature ceremony Different signature approaches have different utilities.",
+            ),
             Self::SimpleQuantity => None,
-            Self::Timing => Some("Specifies an event that may occur multiple times. Timing schedules are used to record when things are planned, expected or requested to occur. The most common usage is in dosage instructions for medications. They are also used when planning care of various kinds, and may be used for reporting the schedule to which past regular activities were carried out."),
-            Self::TriggerDefinition => Some("A description of a triggering event. Triggering events can be named events, data events, or periodic, as determined by the type element."),
-            Self::UsageContext => Some("Specifies clinical/business/etc. metadata that can be used to retrieve, index and/or categorize an artifact. This metadata can either be specific to the applicable population (e.g., age category, DRG) or the specific context of care (e.g., venue, care setting, provider of care)."),
+            Self::Timing => Some(
+                "Specifies an event that may occur multiple times. Timing schedules are used to record when things are planned, expected or requested to occur. The most common usage is in dosage instructions for medications. They are also used when planning care of various kinds, and may be used for reporting the schedule to which past regular activities were carried out.",
+            ),
+            Self::TriggerDefinition => Some(
+                "A description of a triggering event. Triggering events can be named events, data events, or periodic, as determined by the type element.",
+            ),
+            Self::UsageContext => Some(
+                "Specifies clinical/business/etc. metadata that can be used to retrieve, index and/or categorize an artifact. This metadata can either be specific to the applicable population (e.g., age category, DRG) or the specific context of care (e.g., venue, care setting, provider of care).",
+            ),
             Self::Base64Binary => Some("A stream of bytes"),
             Self::Boolean => Some("Value of \"true\" or \"false\""),
-            Self::Canonical => Some("A URI that is a reference to a canonical URL on a FHIR resource"),
-            Self::Code => Some("A string which has at least one character and no leading or trailing whitespace and where there is no whitespace other than single spaces in the contents"),
-            Self::Date => Some("A date or partial date (e.g. just year or year + month). There is no time zone. The format is a union of the schema types gYear, gYearMonth and date.  Dates SHALL be valid dates."),
-            Self::DateTime => Some("A date, date-time or partial date (e.g. just year or year + month).  If hours and minutes are specified, a time zone SHALL be populated. The format is a union of the schema types gYear, gYearMonth, date and dateTime. Seconds must be provided due to schema type constraints but may be zero-filled and may be ignored.                 Dates SHALL be valid dates."),
+            Self::Canonical => {
+                Some("A URI that is a reference to a canonical URL on a FHIR resource")
+            }
+            Self::Code => Some(
+                "A string which has at least one character and no leading or trailing whitespace and where there is no whitespace other than single spaces in the contents",
+            ),
+            Self::Date => Some(
+                "A date or partial date (e.g. just year or year + month). There is no time zone. The format is a union of the schema types gYear, gYearMonth and date.  Dates SHALL be valid dates.",
+            ),
+            Self::DateTime => Some(
+                "A date, date-time or partial date (e.g. just year or year + month).  If hours and minutes are specified, a time zone SHALL be populated. The format is a union of the schema types gYear, gYearMonth, date and dateTime. Seconds must be provided due to schema type constraints but may be zero-filled and may be ignored.                 Dates SHALL be valid dates.",
+            ),
             Self::Decimal => Some("A rational number with implicit precision"),
-            Self::Id => Some("Any combination of letters, numerals, \"-\" and \".\", with a length limit of 64 characters.  (This might be an integer, an unprefixed OID, UUID or any other identifier pattern that meets these constraints.)  Ids are case-insensitive."),
+            Self::Id => Some(
+                "Any combination of letters, numerals, \"-\" and \".\", with a length limit of 64 characters.  (This might be an integer, an unprefixed OID, UUID or any other identifier pattern that meets these constraints.)  Ids are case-insensitive.",
+            ),
             Self::Instant => Some("An instant in time - known at least to the second"),
             Self::Integer => Some("A whole number"),
-            Self::Markdown => Some("A string that may contain Github Flavored Markdown syntax for optional processing by a mark down presentation engine"),
+            Self::Markdown => Some(
+                "A string that may contain Github Flavored Markdown syntax for optional processing by a mark down presentation engine",
+            ),
             Self::Oid => Some("An OID represented as a URI"),
             Self::PositiveInt => Some("An integer with a value that is positive (e.g. >0)"),
             Self::String => Some("A sequence of Unicode characters"),
@@ -358,7 +434,9 @@ impl DataType {
             Self::Uri => Some("String of characters used to identify a name or a resource"),
             Self::Url => Some("A URI that is a literal reference"),
             Self::Uuid => Some("A UUID, represented as a URI"),
-            Self::Xhtml => Some("XHTML format, as defined by W3C, but restricted usage (mainly, no active content)"),
+            Self::Xhtml => Some(
+                "XHTML format, as defined by W3C, but restricted usage (mainly, no active content)",
+            ),
         }
     }
 
@@ -539,5 +617,4 @@ impl DataType {
             })
             .unwrap_or(false)
     }
-
 }

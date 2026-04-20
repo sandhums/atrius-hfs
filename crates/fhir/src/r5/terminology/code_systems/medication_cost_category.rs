@@ -105,5 +105,4 @@ impl MedicationCostCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

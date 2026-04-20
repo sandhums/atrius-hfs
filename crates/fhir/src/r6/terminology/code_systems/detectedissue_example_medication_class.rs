@@ -51,9 +51,15 @@ impl DetectedIssueExampleMedicationClass {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Analgesics => Some("Analgesics such as lidocaine. Common suffixes include -caine, common roots include -morph, -morphe, -morphic"),
-            Self::Antacids => Some("Antacids such as omeprazole. Common suffixes include -azole, common roots include -tidine"),
-            Self::Antibiotics => Some("Antibiotics such as levofloxacin. Common suffixes include -mycin, -floxacin, common roots include bacter-, vir-, -cidal"),
+            Self::Analgesics => Some(
+                "Analgesics such as lidocaine. Common suffixes include -caine, common roots include -morph, -morphe, -morphic",
+            ),
+            Self::Antacids => Some(
+                "Antacids such as omeprazole. Common suffixes include -azole, common roots include -tidine",
+            ),
+            Self::Antibiotics => Some(
+                "Antibiotics such as levofloxacin. Common suffixes include -mycin, -floxacin, common roots include bacter-, vir-, -cidal",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl DetectedIssueExampleMedicationClass {
             })
             .unwrap_or(false)
     }
-
 }

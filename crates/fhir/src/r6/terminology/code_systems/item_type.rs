@@ -103,22 +103,46 @@ impl QuestionnaireItemType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Group => Some("An item with no direct answer but should have at least one child item."),
-            Self::Display => Some("Text for display that will not capture an answer or have child items."),
-            Self::Question => Some("An item that defines a specific answer to be captured, and which may have child items. (the answer provided in the QuestionnaireResponse should be of the defined datatype)."),
+            Self::Group => {
+                Some("An item with no direct answer but should have at least one child item.")
+            }
+            Self::Display => {
+                Some("Text for display that will not capture an answer or have child items.")
+            }
+            Self::Question => Some(
+                "An item that defines a specific answer to be captured, and which may have child items. (the answer provided in the QuestionnaireResponse should be of the defined datatype).",
+            ),
             Self::Boolean => Some("Question with a yes/no answer (valueBoolean)."),
-            Self::Decimal => Some("Question with is a real number answer (valueDecimal).  There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to computably convey the unit of measure associated with the answer for use when performing data extraction to an element of type Quantity."),
-            Self::Integer => Some("Question with an integer answer (valueInteger).  There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to computably convey the unit of measure associated with the answer for use when performing data extraction to an element of type Quantity."),
+            Self::Decimal => Some(
+                "Question with is a real number answer (valueDecimal).  There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to computably convey the unit of measure associated with the answer for use when performing data extraction to an element of type Quantity.",
+            ),
+            Self::Integer => Some(
+                "Question with an integer answer (valueInteger).  There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to computably convey the unit of measure associated with the answer for use when performing data extraction to an element of type Quantity.",
+            ),
             Self::Date => Some("Question with a date answer (valueDate)."),
             Self::DateTime => Some("Question with a date and time answer (valueDateTime)."),
-            Self::Time => Some("Question with a time (hour:minute:second) answer independent of date. (valueTime)."),
-            Self::String => Some("Question with a short (few words to short sentence) free-text entry answer (valueString).  Strings SHOULD NOT contain carriage return or newline characters.  If multi-line answers are needed, use the \'text\' type."),
-            Self::Text => Some("Question with a long (potentially multi-paragraph) free-text entry answer (valueString)."),
+            Self::Time => Some(
+                "Question with a time (hour:minute:second) answer independent of date. (valueTime).",
+            ),
+            Self::String => Some(
+                "Question with a short (few words to short sentence) free-text entry answer (valueString).  Strings SHOULD NOT contain carriage return or newline characters.  If multi-line answers are needed, use the \'text\' type.",
+            ),
+            Self::Text => Some(
+                "Question with a long (potentially multi-paragraph) free-text entry answer (valueString).",
+            ),
             Self::Url => Some("Question with a URL (website, FTP site, etc.) answer (valueUri)."),
-            Self::Coding => Some("Question with a Coding - generally drawn from a list of possible answers (valueCoding)"),
-            Self::Attachment => Some("Question with binary content such as an image, PDF, etc. as an answer (valueAttachment)."),
-            Self::Reference => Some("Question with a reference to another resource (practitioner, organization, etc.) as an answer (valueReference)."),
-            Self::Quantity => Some("Question with a combination of a numeric value and unit as an answer (i.e. a Quantity constrained to SimpleQuantity).  There are two extensions (\'http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption\' and \'http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet\')  that can be used to define what unit should be selected for the Quantity.code and Quantity.system."),
+            Self::Coding => Some(
+                "Question with a Coding - generally drawn from a list of possible answers (valueCoding)",
+            ),
+            Self::Attachment => Some(
+                "Question with binary content such as an image, PDF, etc. as an answer (valueAttachment).",
+            ),
+            Self::Reference => Some(
+                "Question with a reference to another resource (practitioner, organization, etc.) as an answer (valueReference).",
+            ),
+            Self::Quantity => Some(
+                "Question with a combination of a numeric value and unit as an answer (i.e. a Quantity constrained to SimpleQuantity).  There are two extensions (\'http://hl7.org/fhir/StructureDefinition/questionnaire-unitOption\' and \'http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet\')  that can be used to define what unit should be selected for the Quantity.code and Quantity.system.",
+            ),
         }
     }
 
@@ -203,5 +227,4 @@ impl QuestionnaireItemType {
             })
             .unwrap_or(false)
     }
-
 }

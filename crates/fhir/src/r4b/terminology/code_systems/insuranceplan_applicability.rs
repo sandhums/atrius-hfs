@@ -51,8 +51,12 @@ impl BenefitCostApplicability {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InNetwork => Some("Provider is contracted with the health insurance company to provide services to plan members for specific pre-negotiated rates"),
-            Self::OutOfNetwork => Some("Provider is  not contracted with the health insurance company to provide services to plan members for specific pre-negotiated rates"),
+            Self::InNetwork => Some(
+                "Provider is contracted with the health insurance company to provide services to plan members for specific pre-negotiated rates",
+            ),
+            Self::OutOfNetwork => Some(
+                "Provider is  not contracted with the health insurance company to provide services to plan members for specific pre-negotiated rates",
+            ),
             Self::Other => Some("Other applicability"),
         }
     }
@@ -112,5 +116,4 @@ impl BenefitCostApplicability {
             })
             .unwrap_or(false)
     }
-
 }

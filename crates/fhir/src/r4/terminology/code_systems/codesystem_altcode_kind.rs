@@ -59,11 +59,21 @@ impl AlternativeCodeKind_22506499 {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Alternate => Some("The code is an alternative code that can be used in any of the circumstances that the primary code can be used."),
-            Self::Deprecated => Some("The code should no longer be used, but was used in the past."),
-            Self::CaseInsensitive => Some("The code is an alternative to be used when a case insensitive code is required (when the primary codes are case sensitive)."),
-            Self::CaseSensitive => Some("The code is an alternative to be used when a case sensitive code is required (when the primary codes are case insensitive)."),
-            Self::Expression => Some("The code is an alternative for the primary code that is built using the expression grammar defined by the code system."),
+            Self::Alternate => Some(
+                "The code is an alternative code that can be used in any of the circumstances that the primary code can be used.",
+            ),
+            Self::Deprecated => {
+                Some("The code should no longer be used, but was used in the past.")
+            }
+            Self::CaseInsensitive => Some(
+                "The code is an alternative to be used when a case insensitive code is required (when the primary codes are case sensitive).",
+            ),
+            Self::CaseSensitive => Some(
+                "The code is an alternative to be used when a case sensitive code is required (when the primary codes are case insensitive).",
+            ),
+            Self::Expression => Some(
+                "The code is an alternative for the primary code that is built using the expression grammar defined by the code system.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl AlternativeCodeKind_22506499 {
             })
             .unwrap_or(false)
     }
-
 }

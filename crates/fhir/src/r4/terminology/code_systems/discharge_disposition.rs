@@ -83,16 +83,26 @@ impl DischargeDisposition {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Home => Some("The patient was dicharged and has indicated that they are going to return home afterwards."),
-            Self::AltHome => Some("The patient was discharged and has indicated that they are going to return home afterwards, but not the patient\'s home - e.g. a family member\'s home."),
+            Self::Home => Some(
+                "The patient was dicharged and has indicated that they are going to return home afterwards.",
+            ),
+            Self::AltHome => Some(
+                "The patient was discharged and has indicated that they are going to return home afterwards, but not the patient\'s home - e.g. a family member\'s home.",
+            ),
             Self::OtherHcf => Some("The patient was transferred to another healthcare facility."),
             Self::Hosp => Some("The patient has been discharged into palliative care."),
-            Self::Long => Some("The patient has been discharged into long-term care where is likely to be monitored through an ongoing episode-of-care."),
+            Self::Long => Some(
+                "The patient has been discharged into long-term care where is likely to be monitored through an ongoing episode-of-care.",
+            ),
             Self::Aadvice => Some("The patient self discharged against medical advice."),
             Self::Exp => Some("The patient has deceased during this encounter."),
             Self::Psy => Some("The patient has been transferred to a psychiatric facility."),
-            Self::Rehab => Some("The patient was discharged and is to receive post acute care rehabilitation services."),
-            Self::Snf => Some("The patient has been discharged to a skilled nursing facility for the patient to receive additional care."),
+            Self::Rehab => Some(
+                "The patient was discharged and is to receive post acute care rehabilitation services.",
+            ),
+            Self::Snf => Some(
+                "The patient has been discharged to a skilled nursing facility for the patient to receive additional care.",
+            ),
             Self::Oth => Some("The discharge disposition has not otherwise defined."),
         }
     }
@@ -168,5 +178,4 @@ impl DischargeDisposition {
             })
             .unwrap_or(false)
     }
-
 }

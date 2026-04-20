@@ -68,7 +68,9 @@ impl ExampleMessageReasonCodes {
             Self::Absent => Some("The patient has temporarily left the institution."),
             Self::Return => Some("The patient has returned from a temporary absence."),
             Self::Moved => Some("The patient has been moved to a new location."),
-            Self::Edit => Some("Encounter details have been updated (e.g. to correct a coding error)."),
+            Self::Edit => {
+                Some("Encounter details have been updated (e.g. to correct a coding error).")
+            }
         }
     }
 
@@ -133,5 +135,4 @@ impl ExampleMessageReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

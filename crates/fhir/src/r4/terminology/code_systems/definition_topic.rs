@@ -112,5 +112,4 @@ impl DefinitionTopic {
             })
             .unwrap_or(false)
     }
-
 }

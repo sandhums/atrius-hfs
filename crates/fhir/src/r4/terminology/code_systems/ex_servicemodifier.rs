@@ -47,7 +47,9 @@ impl ExampleServiceModifierCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Sr => Some("Services provided on the side of the road or such other non-conventional setting."),
+            Self::Sr => Some(
+                "Services provided on the side of the road or such other non-conventional setting.",
+            ),
             Self::Ah => Some("Services provided outside or normal business hours."),
         }
     }
@@ -105,5 +107,4 @@ impl ExampleServiceModifierCodes {
             })
             .unwrap_or(false)
     }
-
 }

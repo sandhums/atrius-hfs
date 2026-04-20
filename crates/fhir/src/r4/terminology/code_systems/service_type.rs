@@ -2560,7 +2560,9 @@ impl ServiceType {
             Self::_135 => Some("Mental health assessment/triage/crisis response"),
             Self::_136 => Some("Mental health case management/continuing care"),
             Self::_137 => Some("Mental health information/referral"),
-            Self::_138 => Some("Mental health inpatient services (hospital psychiatric unit) - requires referral"),
+            Self::_138 => Some(
+                "Mental health inpatient services (hospital psychiatric unit) - requires referral",
+            ),
             Self::_139 => Some("Mental health non-residential rehabilitation"),
             Self::_140 => Some("Mental health residential rehabilitation/community care unit"),
             Self::_141 => Some("Psychiatry (requires referral)"),
@@ -2579,7 +2581,9 @@ impl ServiceType {
             Self::_154 => Some("Workplace health and/or safety inspection and/or certification"),
             Self::_155 => Some("Carer support"),
             Self::_156 => Some("Respite care"),
-            Self::_157 => Some("Anatomical Pathology (including Cytopathology & Forensic Pathology)"),
+            Self::_157 => {
+                Some("Anatomical Pathology (including Cytopathology & Forensic Pathology)")
+            }
             Self::_158 => Some("Pathology - Clinical Chemistry"),
             Self::_159 => Some("Pathology - General"),
             Self::_160 => Some("Pathology - Genetics"),
@@ -2840,9 +2844,13 @@ impl ServiceType {
             Self::_417 => Some("Psychiatric"),
             Self::_418 => Some("Psychiatric Disability Support Services - Home-Based Outreach"),
             Self::_419 => Some("Psychiatric Disability Support Services - Planned Respite"),
-            Self::_420 => Some("Psychiatric Disability Support Services - Residential Rehabilitation"),
+            Self::_420 => {
+                Some("Psychiatric Disability Support Services - Residential Rehabilitation")
+            }
             Self::_421 => Some("Psychiatric Disability Support Services Home-Based Outreach"),
-            Self::_422 => Some("Psychiatric Disability Support Services Mutual Support And Self Help"),
+            Self::_422 => {
+                Some("Psychiatric Disability Support Services Mutual Support And Self Help")
+            }
             Self::_423 => Some("Psychiatric Support"),
             Self::_424 => Some("Recreation"),
             Self::_425 => Some("Referral"),
@@ -4263,5 +4271,4 @@ impl ServiceType {
             })
             .unwrap_or(false)
     }
-
 }

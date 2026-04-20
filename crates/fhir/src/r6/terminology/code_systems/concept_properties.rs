@@ -115,25 +115,57 @@ impl ConceptProperties {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Status => Some("A code that indicates the status of the concept. Typical values are active, experimental, deprecated, and retired"),
-            Self::Inactive => Some("True if the concept is not considered active - e.g. not a valid concept any more. Property type is boolean, default value is false. Note that the status property may also be used to indicate that a concept is inactive"),
+            Self::Status => Some(
+                "A code that indicates the status of the concept. Typical values are active, experimental, deprecated, and retired",
+            ),
+            Self::Inactive => Some(
+                "True if the concept is not considered active - e.g. not a valid concept any more. Property type is boolean, default value is false. Note that the status property may also be used to indicate that a concept is inactive",
+            ),
             Self::EffectiveDate => Some("The date at which the concept status was last changed"),
-            Self::Deprecated => Some("The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime. Note that the status property may also be used to indicate that a concept is deprecated. This property is itself deprecated due to potential confusion with status - use deprecationDate instead"),
-            Self::DeprecationDate => Some("The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime. Note that the status property may also be used to indicate that a concept is deprecated"),
+            Self::Deprecated => Some(
+                "The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime. Note that the status property may also be used to indicate that a concept is deprecated. This property is itself deprecated due to potential confusion with status - use deprecationDate instead",
+            ),
+            Self::DeprecationDate => Some(
+                "The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime. Note that the status property may also be used to indicate that a concept is deprecated",
+            ),
             Self::RetirementDate => Some("The date at which a concept was retired"),
-            Self::NotSelectable => Some("The concept is not intended to be chosen by the user - only intended to be used as a selector for other concepts. Note, though, that the interpretation of this is highly contextual; all concepts are selectable in some context. Property type is boolean, default value is false"),
-            Self::Parent => Some("The concept identified in this property is a parent of the concept on which it is a property. The property type will be \'code\'. The meaning of \'parent\' is defined by the hierarchyMeaning attribute"),
-            Self::Child => Some("The concept identified in this property is a child of the concept on which it is a property. The property type will be \'code\'. The meaning of \'child\' is defined by the hierarchyMeaning attribute"),
-            Self::PartOf => Some("The concept identified in this property (by its code) contains this concept as a component (i.e. a part-of relationship rather than a subsumption relationship such as elbow is part-of arm"),
-            Self::Synonym => Some("This property contains an alternative code that may be used to identify this concept instead of the primary code. Synonyms should not be used due to the operational complexity they introduce - see alternateCode"),
-            Self::AlternateCode => Some("This property contains the code for another representation of this concept, with the same real-world meaning, in this code system."),
-            Self::Comment => Some("A string that provides additional detail pertinent to the use or understanding of the concept"),
-            Self::ItemWeight => Some("A numeric value that allows the comparison (less than, greater than) or other numerical manipulation of a concept (e.g. Adding up components of a score). Scores are usually a whole number, but occasionally decimals are encountered in scores. In questionnaires, the item weight may be represented using the [[[http://hl7.org/fhir/StructureDefinition/itemWeight]]] extension"),
+            Self::NotSelectable => Some(
+                "The concept is not intended to be chosen by the user - only intended to be used as a selector for other concepts. Note, though, that the interpretation of this is highly contextual; all concepts are selectable in some context. Property type is boolean, default value is false",
+            ),
+            Self::Parent => Some(
+                "The concept identified in this property is a parent of the concept on which it is a property. The property type will be \'code\'. The meaning of \'parent\' is defined by the hierarchyMeaning attribute",
+            ),
+            Self::Child => Some(
+                "The concept identified in this property is a child of the concept on which it is a property. The property type will be \'code\'. The meaning of \'child\' is defined by the hierarchyMeaning attribute",
+            ),
+            Self::PartOf => Some(
+                "The concept identified in this property (by its code) contains this concept as a component (i.e. a part-of relationship rather than a subsumption relationship such as elbow is part-of arm",
+            ),
+            Self::Synonym => Some(
+                "This property contains an alternative code that may be used to identify this concept instead of the primary code. Synonyms should not be used due to the operational complexity they introduce - see alternateCode",
+            ),
+            Self::AlternateCode => Some(
+                "This property contains the code for another representation of this concept, with the same real-world meaning, in this code system.",
+            ),
+            Self::Comment => Some(
+                "A string that provides additional detail pertinent to the use or understanding of the concept",
+            ),
+            Self::ItemWeight => Some(
+                "A numeric value that allows the comparison (less than, greater than) or other numerical manipulation of a concept (e.g. Adding up components of a score). Scores are usually a whole number, but occasionally decimals are encountered in scores. In questionnaires, the item weight may be represented using the [[[http://hl7.org/fhir/StructureDefinition/itemWeight]]] extension",
+            ),
             Self::Order => Some("Order of the concept amongst sibling concepts as a decimal value"),
-            Self::Definition => Some("A numeric value that allows the comparison (less than, greater than) or other numerical manipulation of a concept (e.g. Adding up components of a score). Scores are usually a whole number, but occasionally decimals are encountered in scores. In questionnaires, the item weight may be represented using the [[[http://hl7.org/fhir/StructureDefinition/itemWeight]]] extension"),
-            Self::LastVersionActive => Some("If the code is not active (properties inActive or based on status), then this property conveys in what code system version it was last an active code."),
-            Self::ReplacedByCode => Some("This property identifies a concept in this code system that is considered to replace the use of this concept.  This property is generally only used on deprecated, withdrawn or inactive concepts."),
-            Self::ReplacedByCoding => Some("This property identifies a concept in another code system that is considered to replace the use of this concept.  This property is generally only used on deprecated, withdrawn or inactive concepts."),
+            Self::Definition => Some(
+                "A numeric value that allows the comparison (less than, greater than) or other numerical manipulation of a concept (e.g. Adding up components of a score). Scores are usually a whole number, but occasionally decimals are encountered in scores. In questionnaires, the item weight may be represented using the [[[http://hl7.org/fhir/StructureDefinition/itemWeight]]] extension",
+            ),
+            Self::LastVersionActive => Some(
+                "If the code is not active (properties inActive or based on status), then this property conveys in what code system version it was last an active code.",
+            ),
+            Self::ReplacedByCode => Some(
+                "This property identifies a concept in this code system that is considered to replace the use of this concept.  This property is generally only used on deprecated, withdrawn or inactive concepts.",
+            ),
+            Self::ReplacedByCoding => Some(
+                "This property identifies a concept in another code system that is considered to replace the use of this concept.  This property is generally only used on deprecated, withdrawn or inactive concepts.",
+            ),
         }
     }
 
@@ -224,5 +256,4 @@ impl ConceptProperties {
             })
             .unwrap_or(false)
     }
-
 }

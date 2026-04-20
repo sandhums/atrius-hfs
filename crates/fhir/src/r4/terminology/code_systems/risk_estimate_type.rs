@@ -63,10 +63,16 @@ impl RiskEstimateType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Proportion => Some("dichotomous measure (present or absent) reported as a ratio compared to the denominator of 1 (A percentage is a proportion with denominator of 100)."),
-            Self::DerivedProportion => Some("A special use case where the proportion is derived from a formula rather than derived from summary evidence."),
+            Self::Proportion => Some(
+                "dichotomous measure (present or absent) reported as a ratio compared to the denominator of 1 (A percentage is a proportion with denominator of 100).",
+            ),
+            Self::DerivedProportion => Some(
+                "A special use case where the proportion is derived from a formula rather than derived from summary evidence.",
+            ),
             Self::Mean => Some("continuous numerical measure reported as an average."),
-            Self::Median => Some("continuous numerical measure reported as the middle of the range."),
+            Self::Median => {
+                Some("continuous numerical measure reported as the middle of the range.")
+            }
             Self::Count => Some("descriptive measure reported as total number of items."),
             Self::Descriptive => Some("descriptive measure reported as narrative."),
         }
@@ -133,5 +139,4 @@ impl RiskEstimateType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -55,10 +55,18 @@ impl AuditEventOutcome {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::_0 => Some("The operation completed successfully (whether with warnings or not)."),
-            Self::_4 => Some("The action was not successful due to some kind of minor failure (often equivalent to an HTTP 400 response)."),
-            Self::_8 => Some("The action was not successful due to some kind of unexpected error (often equivalent to an HTTP 500 response)."),
-            Self::_12 => Some("An error of such magnitude occurred that the system is no longer available for use (i.e. the system died)."),
+            Self::_0 => {
+                Some("The operation completed successfully (whether with warnings or not).")
+            }
+            Self::_4 => Some(
+                "The action was not successful due to some kind of minor failure (often equivalent to an HTTP 400 response).",
+            ),
+            Self::_8 => Some(
+                "The action was not successful due to some kind of unexpected error (often equivalent to an HTTP 500 response).",
+            ),
+            Self::_12 => Some(
+                "An error of such magnitude occurred that the system is no longer available for use (i.e. the system died).",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl AuditEventOutcome {
             })
             .unwrap_or(false)
     }
-
 }

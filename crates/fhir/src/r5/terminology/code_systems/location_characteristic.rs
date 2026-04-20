@@ -63,7 +63,9 @@ impl LocationCharacteristic {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Wheelchair => Some("The location is accessible to thosre requiring wheelchair access"),
+            Self::Wheelchair => {
+                Some("The location is accessible to thosre requiring wheelchair access")
+            }
             Self::HasTranslation => Some("The location has translation services available"),
             Self::HasOxyNitro => Some("The location has oxygen and nitrogen services available"),
             Self::HasNegPress => Some("The location has negative pressure rooms available"),
@@ -133,5 +135,4 @@ impl LocationCharacteristic {
             })
             .unwrap_or(false)
     }
-
 }

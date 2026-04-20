@@ -10,11 +10,13 @@
 //! only primitive `code` / `system` / `display`).
 use crate::ValidationError;
 use crate::backend::TerminologyBackend;
-use crate::helpers::build_remote_terminology_error;
+use crate::helpers::terminology_remote_from_fhir_path_error;
 use crate::requests::ValidateVsRequest;
 use async_trait::async_trait;
 use helios_fhir::FhirVersion;
+use helios_fhirpath::error::FhirPathError;
 use helios_fhirpath::terminology_client::TerminologyClient;
+use tracing::instrument;
 
 pub struct HeliosTerminologyBackend {
     client: TerminologyClient,
@@ -40,22 +42,21 @@ impl HeliosTerminologyBackend {
 
 #[async_trait]
 impl TerminologyBackend for HeliosTerminologyBackend {
+    #[instrument(skip(self, req), fields(valueset_url = %req.valueset_url))]
     async fn validate_vs(
         &self,
         req: &ValidateVsRequest,
     ) -> Result<serde_json::Value, ValidationError> {
         if let Err(e) = req.validate() {
-            return Err(ValidationError::TerminologyRemote(
-                build_remote_terminology_error(&e),
-            ));
+            return Err(ValidationError::InvalidValidateVsRequest(e));
         }
 
         let body = req.to_parameters_json();
         self.client
             .validate_code_with_parameters(&req.valueset_url, body)
             .await
-            .map_err(|e| {
-                ValidationError::TerminologyRemote(build_remote_terminology_error(&e.to_string()))
+            .map_err(|e: FhirPathError| {
+                ValidationError::TerminologyRemote(terminology_remote_from_fhir_path_error(&e))
             })
     }
 }

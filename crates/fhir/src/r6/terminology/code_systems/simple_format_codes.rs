@@ -51,9 +51,15 @@ impl SimpleFormatCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Xml => Some("The XML format described by the FHIR specification. The formal Mime Type is application/fhir+xml"),
-            Self::Json => Some("The JSON format described by the FHIR specification. The formal Mime Type is application/fhir+json"),
-            Self::Ttl => Some("The RDF format described by the FHIR specification. The formal Mime Type is application/fhir+turtle"),
+            Self::Xml => Some(
+                "The XML format described by the FHIR specification. The formal Mime Type is application/fhir+xml",
+            ),
+            Self::Json => Some(
+                "The JSON format described by the FHIR specification. The formal Mime Type is application/fhir+json",
+            ),
+            Self::Ttl => Some(
+                "The RDF format described by the FHIR specification. The formal Mime Type is application/fhir+turtle",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl SimpleFormatCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -161,5 +161,4 @@ impl WarningType {
             })
             .unwrap_or(false)
     }
-
 }

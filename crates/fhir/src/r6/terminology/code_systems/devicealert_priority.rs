@@ -55,8 +55,12 @@ impl DeviceAlertPriority {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::High => Some("The alert is about a potentially life-threatening condition that should be addressed immediately."),
-            Self::Medium => Some("The alert is about a significant condition that should be addressed promptly."),
+            Self::High => Some(
+                "The alert is about a potentially life-threatening condition that should be addressed immediately.",
+            ),
+            Self::Medium => Some(
+                "The alert is about a significant condition that should be addressed promptly.",
+            ),
             Self::Low => Some("The alert is about a condition that should be addressed."),
             Self::Info => Some("The alert is about a condition that does not need addressing."),
         }
@@ -119,5 +123,4 @@ impl DeviceAlertPriority {
             })
             .unwrap_or(false)
     }
-
 }

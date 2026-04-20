@@ -76,14 +76,24 @@ impl CitedArtifactPartType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Pages => Some("Denotes specific page or pages of an article or artifact."),
-            Self::Sections => Some("Denotes specific section or sections of an article or artifact."),
-            Self::Paragraphs => Some("Denotes specific paragraph or paragraphs of an article or artifact."),
+            Self::Sections => {
+                Some("Denotes specific section or sections of an article or artifact.")
+            }
+            Self::Paragraphs => {
+                Some("Denotes specific paragraph or paragraphs of an article or artifact.")
+            }
             Self::Lines => Some("Denotes specific line or lines of an article or artifact."),
             Self::Tables => Some("Denotes specific table or tables of an article or artifact."),
             Self::Figures => Some("Denotes specific figure or figures of an article or artifact."),
-            Self::Supplement => Some("Used to denote a supplementary file, appendix, or additional part that is not a subpart of the primary article."),
-            Self::SupplementSubpart => Some("Used to denote a subpart within a supplementary file or appendix."),
-            Self::ArticleSet => Some("Used to distinguish an individual article within an article set where the article set is a base citation."),
+            Self::Supplement => Some(
+                "Used to denote a supplementary file, appendix, or additional part that is not a subpart of the primary article.",
+            ),
+            Self::SupplementSubpart => {
+                Some("Used to denote a subpart within a supplementary file or appendix.")
+            }
+            Self::ArticleSet => Some(
+                "Used to distinguish an individual article within an article set where the article set is a base citation.",
+            ),
         }
     }
 
@@ -154,5 +164,4 @@ impl CitedArtifactPartType {
             })
             .unwrap_or(false)
     }
-
 }

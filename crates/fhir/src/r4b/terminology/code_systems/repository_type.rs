@@ -50,20 +50,34 @@ impl RepositoryType {
     pub fn display(self) -> Option<&'static str> {
         match self {
             Self::Directlink => Some("Click and see"),
-            Self::Openapi => Some("The URL is the RESTful or other kind of API that can access to the result."),
+            Self::Openapi => {
+                Some("The URL is the RESTful or other kind of API that can access to the result.")
+            }
             Self::Login => Some("Result cannot be access unless an account is logged in"),
-            Self::Oauth => Some("Result need to be fetched with API and need LOGIN( or cookies are required when visiting the link of resource)"),
-            Self::Other => Some("Some other complicated or particular way to get resource from URL."),
+            Self::Oauth => Some(
+                "Result need to be fetched with API and need LOGIN( or cookies are required when visiting the link of resource)",
+            ),
+            Self::Other => {
+                Some("Some other complicated or particular way to get resource from URL.")
+            }
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Directlink => Some("When URL is clicked, the resource can be seen directly (by webpage or by download link format)."),
-            Self::Openapi => Some("When the API method (e.g. [base_url]/[parameter]) related with the URL of the website is executed, the resource can be seen directly (usually in JSON or XML format)."),
+            Self::Directlink => Some(
+                "When URL is clicked, the resource can be seen directly (by webpage or by download link format).",
+            ),
+            Self::Openapi => Some(
+                "When the API method (e.g. [base_url]/[parameter]) related with the URL of the website is executed, the resource can be seen directly (usually in JSON or XML format).",
+            ),
             Self::Login => Some("When logged into the website, the resource can be seen."),
-            Self::Oauth => Some("When logged in and  follow the API in the website related with URL, the resource can be seen."),
-            Self::Other => Some("Some other complicated or particular way to get resource from URL."),
+            Self::Oauth => Some(
+                "When logged in and  follow the API in the website related with URL, the resource can be seen.",
+            ),
+            Self::Other => {
+                Some("Some other complicated or particular way to get resource from URL.")
+            }
         }
     }
 
@@ -126,5 +140,4 @@ impl RepositoryType {
             })
             .unwrap_or(false)
     }
-
 }

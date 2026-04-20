@@ -56,8 +56,12 @@ impl DeviceMetricCategory {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Measurement => Some("Observations generated for this DeviceMetric are measured."),
-            Self::Setting => Some("Observations generated for this DeviceMetric is a setting that will influence the behavior of the Device."),
-            Self::Calculation => Some("Observations generated for this DeviceMetric are calculated."),
+            Self::Setting => Some(
+                "Observations generated for this DeviceMetric is a setting that will influence the behavior of the Device.",
+            ),
+            Self::Calculation => {
+                Some("Observations generated for this DeviceMetric are calculated.")
+            }
             Self::Unspecified => Some("The category of this DeviceMetric is unspecified."),
         }
     }
@@ -119,5 +123,4 @@ impl DeviceMetricCategory {
             })
             .unwrap_or(false)
     }
-
 }

@@ -105,5 +105,4 @@ impl CharacteristicCombination {
             })
             .unwrap_or(false)
     }
-
 }

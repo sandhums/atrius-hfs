@@ -105,5 +105,4 @@ impl FormCodes {
             })
             .unwrap_or(false)
     }
-
 }

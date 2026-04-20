@@ -259,5 +259,4 @@ impl ChromosomeHuman {
             })
             .unwrap_or(false)
     }
-
 }

@@ -60,10 +60,16 @@ impl DiscriminatorType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Value => Some("The slices have different values in the nominated element."),
-            Self::Exists => Some("The slices are differentiated by the presence or absence of the nominated element."),
-            Self::Pattern => Some("The slices have different values in the nominated element, as determined by testing them against the applicable ElementDefinition.pattern[x]."),
+            Self::Exists => Some(
+                "The slices are differentiated by the presence or absence of the nominated element.",
+            ),
+            Self::Pattern => Some(
+                "The slices have different values in the nominated element, as determined by testing them against the applicable ElementDefinition.pattern[x].",
+            ),
             Self::Type_ => Some("The slices are differentiated by type of the nominated element."),
-            Self::Profile => Some("The slices are differentiated by conformance of the nominated element to a specified profile. Note that if the path specifies .resolve() then the profile is the target profile on the reference. In this case, validation by the possible profiles is required to differentiate the slices."),
+            Self::Profile => Some(
+                "The slices are differentiated by conformance of the nominated element to a specified profile. Note that if the path specifies .resolve() then the profile is the target profile on the reference. In this case, validation by the possible profiles is required to differentiate the slices.",
+            ),
         }
     }
 
@@ -126,5 +132,4 @@ impl DiscriminatorType {
             })
             .unwrap_or(false)
     }
-
 }

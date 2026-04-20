@@ -112,5 +112,4 @@ impl ArtifactContributionInstanceType {
             })
             .unwrap_or(false)
     }
-
 }

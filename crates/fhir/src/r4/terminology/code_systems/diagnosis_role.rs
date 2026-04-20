@@ -140,5 +140,4 @@ impl DiagnosisRole {
             })
             .unwrap_or(false)
     }
-
 }

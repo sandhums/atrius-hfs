@@ -59,11 +59,21 @@ impl ReferenceHandlingPolicy {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Literal => Some("The server supports and populates Literal references (i.e. using Reference.reference) where they are known (this code does not guarantee that all references are literal; see \'enforced\')."),
-            Self::Logical => Some("The server allows logical references (i.e. using Reference.identifier)."),
-            Self::Resolves => Some("The server will attempt to resolve logical references to literal references - i.e. converting Reference.identifier to Reference.reference (if resolution fails, the server may still accept resources; see logical)."),
-            Self::Enforced => Some("The server enforces that references have integrity - e.g. it ensures that references can always be resolved. This is typically the case for clinical record systems, but often not the case for middleware/proxy systems."),
-            Self::Local => Some("The server does not support references that point to other servers."),
+            Self::Literal => Some(
+                "The server supports and populates Literal references (i.e. using Reference.reference) where they are known (this code does not guarantee that all references are literal; see \'enforced\').",
+            ),
+            Self::Logical => {
+                Some("The server allows logical references (i.e. using Reference.identifier).")
+            }
+            Self::Resolves => Some(
+                "The server will attempt to resolve logical references to literal references - i.e. converting Reference.identifier to Reference.reference (if resolution fails, the server may still accept resources; see logical).",
+            ),
+            Self::Enforced => Some(
+                "The server enforces that references have integrity - e.g. it ensures that references can always be resolved. This is typically the case for clinical record systems, but often not the case for middleware/proxy systems.",
+            ),
+            Self::Local => {
+                Some("The server does not support references that point to other servers.")
+            }
         }
     }
 
@@ -126,5 +136,4 @@ impl ReferenceHandlingPolicy {
             })
             .unwrap_or(false)
     }
-
 }

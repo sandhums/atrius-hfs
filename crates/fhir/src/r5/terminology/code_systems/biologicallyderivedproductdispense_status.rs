@@ -73,12 +73,18 @@ impl BiologicallyDerivedProductDispense {
         match self {
             Self::Preparation => Some("The dispense process has started but not yet completed."),
             Self::InProgress => Some("The dispense process is in progress."),
-            Self::Allocated => Some("The requested product has been allocated and is ready for transport."),
+            Self::Allocated => {
+                Some("The requested product has been allocated and is ready for transport.")
+            }
             Self::Issued => Some("The dispensed product has been picked up."),
             Self::Unfulfilled => Some("The dispense could not be completed."),
             Self::Returned => Some("The dispensed product was returned."),
-            Self::EnteredInError => Some("The dispense was entered in error and therefore nullified."),
-            Self::Unknown => Some("The authoring system does not know which of the status values applies for this dispense. Note: this concept is not to be used for other - one of the listed statuses is presumed to apply, it\'s just not known which one."),
+            Self::EnteredInError => {
+                Some("The dispense was entered in error and therefore nullified.")
+            }
+            Self::Unknown => Some(
+                "The authoring system does not know which of the status values applies for this dispense. Note: this concept is not to be used for other - one of the listed statuses is presumed to apply, it\'s just not known which one.",
+            ),
         }
     }
 
@@ -147,5 +153,4 @@ impl BiologicallyDerivedProductDispense {
             })
             .unwrap_or(false)
     }
-
 }

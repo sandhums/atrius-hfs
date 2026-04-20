@@ -168,5 +168,4 @@ impl AssertionOperatorType {
             })
             .unwrap_or(false)
     }
-
 }

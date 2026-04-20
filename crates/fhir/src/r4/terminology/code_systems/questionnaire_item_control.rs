@@ -141,28 +141,68 @@ impl QuestionnaireItemUIControlCodes {
         match self {
             Self::Group => Some("UI controls relevant to organizing groups of questions"),
             Self::List => Some("Questions within the group should be listed sequentially"),
-            Self::Table => Some("Questions within the group are rows in the table with possible answers as columns.  Used for \'choice\' questions."),
-            Self::Htable => Some("Questions within the group are columns in the table with possible answers as rows.  Used for \'choice\' questions."),
-            Self::Gtable => Some("Questions within the group are columns in the table with each group repetition as a row.  Used for single-answer questions."),
-            Self::Atable => Some("This table has one row - for the question.  Permitted answers are columns.  Used for choice questions."),
-            Self::Header => Some("The group is to be continuously visible at the top of the questionnaire"),
-            Self::Footer => Some("The group is to be continuously visible at the bottom of the questionnaire"),
+            Self::Table => Some(
+                "Questions within the group are rows in the table with possible answers as columns.  Used for \'choice\' questions.",
+            ),
+            Self::Htable => Some(
+                "Questions within the group are columns in the table with possible answers as rows.  Used for \'choice\' questions.",
+            ),
+            Self::Gtable => Some(
+                "Questions within the group are columns in the table with each group repetition as a row.  Used for single-answer questions.",
+            ),
+            Self::Atable => Some(
+                "This table has one row - for the question.  Permitted answers are columns.  Used for choice questions.",
+            ),
+            Self::Header => {
+                Some("The group is to be continuously visible at the top of the questionnaire")
+            }
+            Self::Footer => {
+                Some("The group is to be continuously visible at the bottom of the questionnaire")
+            }
             Self::Text => Some("UI controls relevant to rendering questionnaire text items"),
-            Self::Inline => Some("Text is displayed as a paragraph in a sequential position between sibling items (default behavior)"),
-            Self::Prompt => Some("Text is displayed immediately below or within the answer-entry area of the containing question item (typically as a guide for what to enter)"),
-            Self::Unit => Some("Text is displayed adjacent (horizontally or vertically) to the answer space for the parent question, typically to indicate a unit of measure"),
-            Self::Lower => Some("Text is displayed to the left of the set of answer choices or a scaling control for the parent question item to indicate the meaning of the \'lower\' bound.  E.g. \'Strongly disagree\'"),
-            Self::Upper => Some("Text is displayed to the right of the set of answer choices or a scaling control for the parent question item to indicate the meaning of the \'upper\' bound.  E.g. \'Strongly agree\'"),
-            Self::Flyover => Some("Text is temporarily visible over top of an item if the mouse is positioned over top of the text for the containing item"),
-            Self::Help => Some("Text is displayed in a dialog box or similar control if invoked by pushing a button or some other UI-appropriate action to request \'help\' for a question, group or the questionnaire as a whole (depending what the text is nested within)"),
+            Self::Inline => Some(
+                "Text is displayed as a paragraph in a sequential position between sibling items (default behavior)",
+            ),
+            Self::Prompt => Some(
+                "Text is displayed immediately below or within the answer-entry area of the containing question item (typically as a guide for what to enter)",
+            ),
+            Self::Unit => Some(
+                "Text is displayed adjacent (horizontally or vertically) to the answer space for the parent question, typically to indicate a unit of measure",
+            ),
+            Self::Lower => Some(
+                "Text is displayed to the left of the set of answer choices or a scaling control for the parent question item to indicate the meaning of the \'lower\' bound.  E.g. \'Strongly disagree\'",
+            ),
+            Self::Upper => Some(
+                "Text is displayed to the right of the set of answer choices or a scaling control for the parent question item to indicate the meaning of the \'upper\' bound.  E.g. \'Strongly agree\'",
+            ),
+            Self::Flyover => Some(
+                "Text is temporarily visible over top of an item if the mouse is positioned over top of the text for the containing item",
+            ),
+            Self::Help => Some(
+                "Text is displayed in a dialog box or similar control if invoked by pushing a button or some other UI-appropriate action to request \'help\' for a question, group or the questionnaire as a whole (depending what the text is nested within)",
+            ),
             Self::Question => Some("UI controls relevant to capturing question data"),
-            Self::Autocomplete => Some("A control which provides a list of potential matches based on text entered into a control.  Used for large choice sets where text-matching is an appropriate discovery mechanism."),
-            Self::DropDown => Some("A control where an item (or multiple items) can be selected from a list that is only displayed when the user is editing the field."),
-            Self::CheckBox => Some("A control where choices are listed with a box beside them.  The box can be toggled to select or de-select a given choice.  Multiple selections may be possible."),
-            Self::Lookup => Some("A control where editing an item spawns a separate dialog box or screen permitting a user to navigate, filter or otherwise discover an appropriate match.  Useful for large choice sets where text matching is not an appropriate discovery mechanism.  Such screens must generally be tuned for the specific choice list structure."),
-            Self::RadioButton => Some("A control where choices are listed with a button beside them.  The button can be toggled to select or de-select a given choice.  Selecting one item deselects all others."),
-            Self::Slider => Some("A control where an axis is displayed between the high and low values and the control can be visually manipulated to select a value anywhere on the axis."),
-            Self::Spinner => Some("A control where a list of numeric or other ordered values can be scrolled through via arrows."),
+            Self::Autocomplete => Some(
+                "A control which provides a list of potential matches based on text entered into a control.  Used for large choice sets where text-matching is an appropriate discovery mechanism.",
+            ),
+            Self::DropDown => Some(
+                "A control where an item (or multiple items) can be selected from a list that is only displayed when the user is editing the field.",
+            ),
+            Self::CheckBox => Some(
+                "A control where choices are listed with a box beside them.  The box can be toggled to select or de-select a given choice.  Multiple selections may be possible.",
+            ),
+            Self::Lookup => Some(
+                "A control where editing an item spawns a separate dialog box or screen permitting a user to navigate, filter or otherwise discover an appropriate match.  Useful for large choice sets where text matching is not an appropriate discovery mechanism.  Such screens must generally be tuned for the specific choice list structure.",
+            ),
+            Self::RadioButton => Some(
+                "A control where choices are listed with a button beside them.  The button can be toggled to select or de-select a given choice.  Selecting one item deselects all others.",
+            ),
+            Self::Slider => Some(
+                "A control where an axis is displayed between the high and low values and the control can be visually manipulated to select a value anywhere on the axis.",
+            ),
+            Self::Spinner => Some(
+                "A control where a list of numeric or other ordered values can be scrolled through via arrows.",
+            ),
             Self::TextBox => Some("A control where a user can type in their answer freely."),
         }
     }
@@ -266,5 +306,4 @@ impl QuestionnaireItemUIControlCodes {
             })
             .unwrap_or(false)
     }
-
 }

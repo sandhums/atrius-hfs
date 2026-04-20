@@ -70,10 +70,16 @@ impl EffectEstimateType {
             Self::RelativeRR => Some("relative risk (a type of relative effect estimate)."),
             Self::RelativeOR => Some("odds ratio (a type of relative effect estimate)."),
             Self::RelativeHR => Some("hazard ratio (a type of relative effect estimate)."),
-            Self::AbsoluteARD => Some("absolute risk difference (a type of absolute effect estimate)."),
+            Self::AbsoluteARD => {
+                Some("absolute risk difference (a type of absolute effect estimate).")
+            }
             Self::AbsoluteMeanDiff => Some("mean difference (a type of absolute effect estimate)."),
-            Self::AbsoluteSMD => Some("standardized mean difference (a type of absolute effect estimate)."),
-            Self::AbsoluteMedianDiff => Some("median difference (a type of absolute effect estimate)."),
+            Self::AbsoluteSMD => {
+                Some("standardized mean difference (a type of absolute effect estimate).")
+            }
+            Self::AbsoluteMedianDiff => {
+                Some("median difference (a type of absolute effect estimate).")
+            }
         }
     }
 
@@ -140,5 +146,4 @@ impl EffectEstimateType {
             })
             .unwrap_or(false)
     }
-
 }

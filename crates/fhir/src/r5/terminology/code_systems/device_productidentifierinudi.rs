@@ -133,5 +133,4 @@ impl DeviceProductionIdentifierInUDI {
             })
             .unwrap_or(false)
     }
-
 }

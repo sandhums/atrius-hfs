@@ -85,8 +85,12 @@ impl SmartCapabilities {
             Self::ContextPassthroughStyle => Some("Allows \"Smart Style Style\""),
             Self::ContextEhrPatient => Some("Allows \"Patient Level Launch Context (EHR)\""),
             Self::ContextEhrEncounter => Some("Allows \"Encounter Level Launch Context (EHR)\""),
-            Self::ContextStandalonePatient => Some("Allows \"Patient Level Launch Context (STANDALONE)\""),
-            Self::ContextStandaloneEncounter => Some("Allows \"Encounter Level Launch Context (STANDALONE)\""),
+            Self::ContextStandalonePatient => {
+                Some("Allows \"Patient Level Launch Context (STANDALONE)\"")
+            }
+            Self::ContextStandaloneEncounter => {
+                Some("Allows \"Encounter Level Launch Context (STANDALONE)\"")
+            }
             Self::PermissionOffline => Some("Supports Refresh Token"),
             Self::PermissionPatient => Some("Supports Patient Level Scopes"),
             Self::PermissionUser => Some("Supports User Level Scopes"),
@@ -97,18 +101,40 @@ impl SmartCapabilities {
         match self {
             Self::LaunchEhr => Some("support for SMART\u{2019}s EHR Launch mode."),
             Self::LaunchStandalone => Some("support for SMART\u{2019}s Standalone Launch mode."),
-            Self::ClientPublic => Some("support for SMART\u{2019}s public client profile (no client authentication)."),
-            Self::ClientConfidentialSymmetric => Some("support for SMART\u{2019}s confidential client profile (symmetric client secret authentication)."),
+            Self::ClientPublic => {
+                Some("support for SMART\u{2019}s public client profile (no client authentication).")
+            }
+            Self::ClientConfidentialSymmetric => Some(
+                "support for SMART\u{2019}s confidential client profile (symmetric client secret authentication).",
+            ),
             Self::SsoOpenidConnect => Some("support for SMART\u{2019}s OpenID Connect profile."),
-            Self::ContextPassthroughBanner => Some("support for \u{201c}need patient banner\u{201d} launch context (conveyed via need_patient_banner token parameter)."),
-            Self::ContextPassthroughStyle => Some("support for \u{201c}SMART style URL\u{201d} launch context (conveyed via smart_style_url token parameter)."),
-            Self::ContextEhrPatient => Some("support for patient-level launch context (requested by launch/patient scope, conveyed via patient token parameter)."),
-            Self::ContextEhrEncounter => Some("support for encounter-level launch context (requested by launch/encounter scope, conveyed via encounter token parameter)."),
-            Self::ContextStandalonePatient => Some("support for patient-level launch context (requested by launch/patient scope, conveyed via patient token parameter)."),
-            Self::ContextStandaloneEncounter => Some("support for encounter-level launch context (requested by launch/encounter scope, conveyed via encounter token parameter)."),
-            Self::PermissionOffline => Some("support for refresh tokens (requested by offline_access scope)."),
-            Self::PermissionPatient => Some("support for patient-level scopes (e.g. patient/Observation.read)."),
-            Self::PermissionUser => Some("support for user-level scopes (e.g. user/Appointment.read)."),
+            Self::ContextPassthroughBanner => Some(
+                "support for \u{201c}need patient banner\u{201d} launch context (conveyed via need_patient_banner token parameter).",
+            ),
+            Self::ContextPassthroughStyle => Some(
+                "support for \u{201c}SMART style URL\u{201d} launch context (conveyed via smart_style_url token parameter).",
+            ),
+            Self::ContextEhrPatient => Some(
+                "support for patient-level launch context (requested by launch/patient scope, conveyed via patient token parameter).",
+            ),
+            Self::ContextEhrEncounter => Some(
+                "support for encounter-level launch context (requested by launch/encounter scope, conveyed via encounter token parameter).",
+            ),
+            Self::ContextStandalonePatient => Some(
+                "support for patient-level launch context (requested by launch/patient scope, conveyed via patient token parameter).",
+            ),
+            Self::ContextStandaloneEncounter => Some(
+                "support for encounter-level launch context (requested by launch/encounter scope, conveyed via encounter token parameter).",
+            ),
+            Self::PermissionOffline => {
+                Some("support for refresh tokens (requested by offline_access scope).")
+            }
+            Self::PermissionPatient => {
+                Some("support for patient-level scopes (e.g. patient/Observation.read).")
+            }
+            Self::PermissionUser => {
+                Some("support for user-level scopes (e.g. user/Appointment.read).")
+            }
         }
     }
 
@@ -189,5 +215,4 @@ impl SmartCapabilities {
             })
             .unwrap_or(false)
     }
-
 }

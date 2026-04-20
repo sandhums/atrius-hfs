@@ -57,8 +57,12 @@ impl EncounterBusinessStatusEmergency {
         match self {
             Self::Arrived => Some("The patient has arrived at the emergency department."),
             Self::Triaged => Some("The patient has been triaged."),
-            Self::Dismissed => Some("The patient has been dismissed from the emergency department."),
-            Self::Unknown => Some("The emergency business status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\"."),
+            Self::Dismissed => {
+                Some("The patient has been dismissed from the emergency department.")
+            }
+            Self::Unknown => Some(
+                "The emergency business status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\".",
+            ),
         }
     }
 
@@ -119,5 +123,4 @@ impl EncounterBusinessStatusEmergency {
             })
             .unwrap_or(false)
     }
-
 }

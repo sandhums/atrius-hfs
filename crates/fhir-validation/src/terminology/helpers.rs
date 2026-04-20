@@ -1,5 +1,6 @@
 use crate::ValidationError;
 use crate::types::{TerminologyMembershipOutcome, TerminologyRemoteError};
+use helios_fhirpath::error::FhirPathError;
 
 fn extract_operation_outcome_diagnostics(body: &str) -> Vec<String> {
     let Ok(json) = serde_json::from_str::<serde_json::Value>(body) else {
@@ -31,7 +32,60 @@ fn extract_operation_outcome_diagnostics(body: &str) -> Vec<String> {
     out
 }
 
+/// Known prefix produced by [`helios_fhirpath::terminology_client::TerminologyClient`] on HTTP errors.
+const VALIDATE_CODE_FAILURE_PREFIX: &str = "ValueSet validation failed with status ";
+
+fn parse_validate_code_client_terminology_message(msg: &str) -> TerminologyRemoteError {
+    if let Some(rest) = msg.strip_prefix(VALIDATE_CODE_FAILURE_PREFIX) {
+        if let Some((status_and_suffix, body)) = rest.split_once(": ") {
+            let status = status_and_suffix
+                .split_whitespace()
+                .next()
+                .and_then(|s| s.parse::<u16>().ok());
+            let diagnostics = extract_operation_outcome_diagnostics(body);
+            return TerminologyRemoteError {
+                status,
+                diagnostics,
+                raw_body: Some(body.to_string()),
+            };
+        }
+    }
+
+    TerminologyRemoteError {
+        status: None,
+        diagnostics: Vec::new(),
+        raw_body: Some(msg.to_string()),
+    }
+}
+
+/// Convert a [`FhirPathError`] from the terminology HTTP client into structured remote metadata.
+pub fn terminology_remote_from_fhir_path_error(err: &FhirPathError) -> TerminologyRemoteError {
+    match err {
+        FhirPathError::HttpError(code, body) => TerminologyRemoteError {
+            status: Some(*code),
+            diagnostics: extract_operation_outcome_diagnostics(body),
+            raw_body: Some(body.clone()),
+        },
+        FhirPathError::TerminologyError(msg) => parse_validate_code_client_terminology_message(msg),
+        FhirPathError::NetworkError(msg) | FhirPathError::ParseError(msg) => TerminologyRemoteError {
+            status: None,
+            diagnostics: Vec::new(),
+            raw_body: Some(msg.clone()),
+        },
+        other => TerminologyRemoteError {
+            status: None,
+            diagnostics: vec![other.to_string()],
+            raw_body: None,
+        },
+    }
+}
+
+/// Best-effort parsing of legacy string diagnostics (e.g. tests or older callers).
 pub fn build_remote_terminology_error(msg: &str) -> TerminologyRemoteError {
+    if msg.contains(VALIDATE_CODE_FAILURE_PREFIX) {
+        return parse_validate_code_client_terminology_message(msg);
+    }
+
     let status = msg
         .split("status ")
         .nth(1)
@@ -61,14 +115,18 @@ pub fn build_remote_terminology_error(msg: &str) -> TerminologyRemoteError {
 /// preserving the membership result together with any server-provided message
 /// and basic terminology metadata such as code, system, version, and display.
 ///
-/// Malformed `Parameters` payloads produce `ValidationError::Terminology(...)`.
+/// Malformed `Parameters` payloads produce [`ValidationError::MalformedTerminologyResponse`].
 pub fn parse_validate_vs_result(
     body: &serde_json::Value,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
     let params = body
         .get("parameter")
         .and_then(|p| p.as_array())
-        .ok_or_else(|| ValidationError::Terminology("Missing Parameters.parameter".to_string()))?;
+        .ok_or_else(|| {
+            ValidationError::MalformedTerminologyResponse(
+                "Expected FHIR Parameters resource with a `parameter` array".to_string(),
+            )
+        })?;
 
     let mut result = None;
     let mut message = None;
@@ -123,6 +181,7 @@ pub fn parse_validate_vs_result(
     match result {
         Some(is_member) => Ok(TerminologyMembershipOutcome {
             is_member,
+            remote_validation_required: false,
             message,
             diagnostics,
             code,
@@ -130,8 +189,8 @@ pub fn parse_validate_vs_result(
             version,
             display,
         }),
-        None => Err(ValidationError::Terminology(
-            "Terminology server response missing result".to_string(),
+        None => Err(ValidationError::MalformedTerminologyResponse(
+            "$validate-code Parameters response did not include a boolean `result`".to_string(),
         )),
     }
 }

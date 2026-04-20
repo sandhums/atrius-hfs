@@ -112,5 +112,4 @@ impl PushTypeAvailable {
             })
             .unwrap_or(false)
     }
-
 }

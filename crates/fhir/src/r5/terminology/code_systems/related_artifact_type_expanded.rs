@@ -47,8 +47,12 @@ impl RelatedArtifactTypeExpanded {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Reprint => Some("A copy of the artifact in a publication with a different artifact identifier."),
-            Self::ReprintOf => Some("The original version of record for which the current artifact is a copy."),
+            Self::Reprint => Some(
+                "A copy of the artifact in a publication with a different artifact identifier.",
+            ),
+            Self::ReprintOf => {
+                Some("The original version of record for which the current artifact is a copy.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl RelatedArtifactTypeExpanded {
             })
             .unwrap_or(false)
     }
-
 }

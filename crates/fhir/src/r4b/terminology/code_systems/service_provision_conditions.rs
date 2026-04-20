@@ -16,7 +16,8 @@ pub enum ServiceProvisionConditions {
 }
 
 impl ServiceProvisionConditions {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/service-provision-conditions";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/service-provision-conditions";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -52,7 +53,9 @@ impl ServiceProvisionConditions {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Free => Some("This service is available for no patient cost."),
-            Self::Disc => Some("There are discounts available on this service for qualifying patients."),
+            Self::Disc => {
+                Some("There are discounts available on this service for qualifying patients.")
+            }
             Self::Cost => Some("Fees apply for this service."),
         }
     }
@@ -112,5 +115,4 @@ impl ServiceProvisionConditions {
             })
             .unwrap_or(false)
     }
-
 }

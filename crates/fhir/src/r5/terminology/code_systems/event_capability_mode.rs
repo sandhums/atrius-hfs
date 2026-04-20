@@ -105,5 +105,4 @@ impl EventCapabilityMode {
             })
             .unwrap_or(false)
     }
-
 }

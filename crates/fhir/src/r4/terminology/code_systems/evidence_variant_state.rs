@@ -112,5 +112,4 @@ impl EvidenceVariantState {
             })
             .unwrap_or(false)
     }
-
 }

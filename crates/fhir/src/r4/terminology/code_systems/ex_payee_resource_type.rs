@@ -119,5 +119,4 @@ impl ClaimPayeeResourceType {
             })
             .unwrap_or(false)
     }
-
 }

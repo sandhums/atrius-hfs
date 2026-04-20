@@ -3097,7 +3097,8 @@ impl fhir_validation::r4::R4Validatable for CoverageEligibilityRequestItemDiagno
         if let Some(choice) = &self.diagnosis {
             match choice {
                 CoverageEligibilityRequestItemDiagnosisDiagnosis::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "CoverageEligibilityRequest.item.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CoverageEligibilityRequest.item.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value));
                     issues.extend(child_issues);
                 }
                 CoverageEligibilityRequestItemDiagnosisDiagnosis::Reference(value) => {
@@ -3176,7 +3177,8 @@ impl fhir_validation::r4::R4ValidatableAsync for CoverageEligibilityRequestItemD
         if let Some(choice) = &self.diagnosis {
             match choice {
                 CoverageEligibilityRequestItemDiagnosisDiagnosis::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "CoverageEligibilityRequest.item.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CoverageEligibilityRequest.item.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value)).await;
                     issues.extend(child_issues);
                 }
                 CoverageEligibilityRequestItemDiagnosisDiagnosis::Reference(value) => {

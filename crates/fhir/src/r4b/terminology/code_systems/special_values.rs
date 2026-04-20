@@ -65,8 +65,12 @@ impl SpecialValues {
         match self {
             Self::True => Some("Boolean true."),
             Self::False => Some("Boolean false."),
-            Self::Trace => Some("The content is greater than zero, but too small to be quantified."),
-            Self::Sufficient => Some("The specific quantity is not known, but is known to be non-zero and is not specified because it makes up the bulk of the material."),
+            Self::Trace => {
+                Some("The content is greater than zero, but too small to be quantified.")
+            }
+            Self::Sufficient => Some(
+                "The specific quantity is not known, but is known to be non-zero and is not specified because it makes up the bulk of the material.",
+            ),
             Self::Withdrawn => Some("The value is no longer available."),
             Self::NilKnown => Some("The are no known applicable values in this context."),
         }
@@ -133,5 +137,4 @@ impl SpecialValues {
             })
             .unwrap_or(false)
     }
-
 }

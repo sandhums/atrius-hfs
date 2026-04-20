@@ -95,20 +95,46 @@ impl EndpointConnectionType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::IheXcpd => Some("IHE Cross Community Patient Discovery Profile (XCPD) - http://wiki.ihe.net/index.php/Cross-Community_Patient_Discovery"),
-            Self::IheXca => Some("IHE Cross Community Access Profile (XCA) - http://wiki.ihe.net/index.php/Cross-Community_Access"),
-            Self::IheXdr => Some("IHE Cross-Enterprise Document Reliable Exchange (XDR) - http://wiki.ihe.net/index.php/Cross-enterprise_Document_Reliable_Interchange"),
-            Self::IheXds => Some("IHE Cross-Enterprise Document Sharing (XDS) - http://wiki.ihe.net/index.php/Cross-Enterprise_Document_Sharing"),
-            Self::IheIid => Some("IHE Invoke Image Display (IID) - http://wiki.ihe.net/index.php/Invoke_Image_Display"),
-            Self::DicomWadoRs => Some("DICOMweb RESTful Image Retrieve - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.5.html"),
-            Self::DicomQidoRs => Some("DICOMweb RESTful Image query - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.7.html"),
-            Self::DicomStowRs => Some("DICOMweb RESTful image sending and storage - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.6.html"),
-            Self::DicomWadoUri => Some("DICOMweb Image Retrieve - http://dicom.nema.org/dicom/2013/output/chtml/part18/sect_6.3.html"),
-            Self::Hl7FhirRest => Some("Interact with the server interface using FHIR\'s RESTful interface. For details on its version/capabilities you should connect the value in Endpoint.address and retrieve the FHIR CapabilityStatement."),
-            Self::Hl7FhirMsg => Some("Use the servers FHIR Messaging interface. Details can be found on the messaging.html page in the FHIR Specification. The FHIR server\'s base address is specified in the Endpoint.address property."),
+            Self::IheXcpd => Some(
+                "IHE Cross Community Patient Discovery Profile (XCPD) - http://wiki.ihe.net/index.php/Cross-Community_Patient_Discovery",
+            ),
+            Self::IheXca => Some(
+                "IHE Cross Community Access Profile (XCA) - http://wiki.ihe.net/index.php/Cross-Community_Access",
+            ),
+            Self::IheXdr => Some(
+                "IHE Cross-Enterprise Document Reliable Exchange (XDR) - http://wiki.ihe.net/index.php/Cross-enterprise_Document_Reliable_Interchange",
+            ),
+            Self::IheXds => Some(
+                "IHE Cross-Enterprise Document Sharing (XDS) - http://wiki.ihe.net/index.php/Cross-Enterprise_Document_Sharing",
+            ),
+            Self::IheIid => Some(
+                "IHE Invoke Image Display (IID) - http://wiki.ihe.net/index.php/Invoke_Image_Display",
+            ),
+            Self::DicomWadoRs => Some(
+                "DICOMweb RESTful Image Retrieve - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.5.html",
+            ),
+            Self::DicomQidoRs => Some(
+                "DICOMweb RESTful Image query - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.7.html",
+            ),
+            Self::DicomStowRs => Some(
+                "DICOMweb RESTful image sending and storage - http://dicom.nema.org/medical/dicom/current/output/chtml/part18/sect_6.6.html",
+            ),
+            Self::DicomWadoUri => Some(
+                "DICOMweb Image Retrieve - http://dicom.nema.org/dicom/2013/output/chtml/part18/sect_6.3.html",
+            ),
+            Self::Hl7FhirRest => Some(
+                "Interact with the server interface using FHIR\'s RESTful interface. For details on its version/capabilities you should connect the value in Endpoint.address and retrieve the FHIR CapabilityStatement.",
+            ),
+            Self::Hl7FhirMsg => Some(
+                "Use the servers FHIR Messaging interface. Details can be found on the messaging.html page in the FHIR Specification. The FHIR server\'s base address is specified in the Endpoint.address property.",
+            ),
             Self::Hl7v2Mllp => Some("HL7v2 messages over an LLP TCP connection"),
-            Self::SecureEmail => Some("Email delivery using a digital certificate to encrypt the content using the public key, receiver must have the private key to decrypt the content"),
-            Self::DirectProject => Some("Direct Project information - http://wiki.directproject.org/"),
+            Self::SecureEmail => Some(
+                "Email delivery using a digital certificate to encrypt the content using the public key, receiver must have the private key to decrypt the content",
+            ),
+            Self::DirectProject => {
+                Some("Direct Project information - http://wiki.directproject.org/")
+            }
         }
     }
 
@@ -189,5 +215,4 @@ impl EndpointConnectionType {
             })
             .unwrap_or(false)
     }
-
 }

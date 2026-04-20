@@ -103,12 +103,24 @@ impl DiagnosticReportRelevantInformationTypes {
             Self::AOE => Some("Ask at Order Entry"),
             Self::ASC => Some("Ask at Specimen Collection"),
             Self::RSLT => Some("Result"),
-            Self::MCS => Some("Sub-type of RSLT (Result) This term identifies observations that give overall culture outcome, when no specific organism is being named."),
-            Self::MID => Some("Sub-type of RSLT (Result) This term identifies any other observations about the isolate."),
-            Self::MIG => Some("Sub-type of RSLT (Result) This term identifies growth levels of an isolate \u{2013} can be numeric or categorical."),
-            Self::MIN => Some("NSub-type of RSLT (Result) This term identifies observations that name a specific organism either at the species or the genus level."),
-            Self::MOD => Some("Sub-type of RSLT (Result) This term identifies observations that do not fit the culture status, but is not at the isolate level."),
-            Self::MSS => Some("Sub-type of RSLT (Result) This term identifies observations on gram stains (and other stains or smears) on the clinical sample."),
+            Self::MCS => Some(
+                "Sub-type of RSLT (Result) This term identifies observations that give overall culture outcome, when no specific organism is being named.",
+            ),
+            Self::MID => Some(
+                "Sub-type of RSLT (Result) This term identifies any other observations about the isolate.",
+            ),
+            Self::MIG => Some(
+                "Sub-type of RSLT (Result) This term identifies growth levels of an isolate \u{2013} can be numeric or categorical.",
+            ),
+            Self::MIN => Some(
+                "NSub-type of RSLT (Result) This term identifies observations that name a specific organism either at the species or the genus level.",
+            ),
+            Self::MOD => Some(
+                "Sub-type of RSLT (Result) This term identifies observations that do not fit the culture status, but is not at the isolate level.",
+            ),
+            Self::MSS => Some(
+                "Sub-type of RSLT (Result) This term identifies observations on gram stains (and other stains or smears) on the clinical sample.",
+            ),
             Self::SUP => Some("Supplemental Result"),
             Self::SUR => Some("Susceptibility Related"),
             Self::UNSP => Some("Unspecified"),
@@ -196,5 +208,4 @@ impl DiagnosticReportRelevantInformationTypes {
             })
             .unwrap_or(false)
     }
-
 }

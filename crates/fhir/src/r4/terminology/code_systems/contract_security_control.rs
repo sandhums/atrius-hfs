@@ -98,5 +98,4 @@ impl ContractResourceSecurityControlCodes {
             })
             .unwrap_or(false)
     }
-
 }

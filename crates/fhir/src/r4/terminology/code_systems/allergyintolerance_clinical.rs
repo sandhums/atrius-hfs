@@ -16,7 +16,8 @@ pub enum AllergyIntoleranceClinicalStatusCodes {
 }
 
 impl AllergyIntoleranceClinicalStatusCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl AllergyIntoleranceClinicalStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The subject is currently experiencing, or is at risk of, a reaction to the identified substance."),
-            Self::Inactive => Some("The subject is no longer at risk of a reaction to the identified substance."),
-            Self::Resolved => Some("A reaction to the identified substance has been clinically reassessed by testing or re-exposure and is considered no longer to be present. Re-exposure could be accidental, unplanned, or outside of any clinical setting."),
+            Self::Active => Some(
+                "The subject is currently experiencing, or is at risk of, a reaction to the identified substance.",
+            ),
+            Self::Inactive => {
+                Some("The subject is no longer at risk of a reaction to the identified substance.")
+            }
+            Self::Resolved => Some(
+                "A reaction to the identified substance has been clinically reassessed by testing or re-exposure and is considered no longer to be present. Re-exposure could be accidental, unplanned, or outside of any clinical setting.",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl AllergyIntoleranceClinicalStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

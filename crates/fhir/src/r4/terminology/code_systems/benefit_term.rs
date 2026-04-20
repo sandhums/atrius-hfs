@@ -112,5 +112,4 @@ impl BenefitTermCodes {
             })
             .unwrap_or(false)
     }
-
 }

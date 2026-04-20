@@ -12,8 +12,8 @@ mod common {
 }
 
 use crate::common::fhir_json_examples::{
-    count_severities, fhir_json_dir, is_invariant_like_issue, list_r5_json_filenames,
-    load_r5_fhir_resource, read_fhir_example_json, resource_type_of_json, R5_CURATED,
+    R5_CURATED, count_severities, fhir_json_dir, is_invariant_like_issue, list_r5_json_filenames,
+    load_r5_fhir_resource, read_fhir_example_json, resource_type_of_json,
 };
 use crate::common::fixtures::local_terminology_r5;
 use fhir_validation::{R5FhirPathEvaluator, Validator};

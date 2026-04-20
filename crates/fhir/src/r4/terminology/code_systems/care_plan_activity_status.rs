@@ -75,14 +75,28 @@ impl CarePlanActivityStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NotStarted => Some("Care plan activity is planned but no action has yet been taken."),
-            Self::Scheduled => Some("Appointment or other booking has occurred but activity has not yet begun."),
-            Self::InProgress => Some("Care plan activity has been started but is not yet complete."),
-            Self::OnHold => Some("Care plan activity was started but has temporarily ceased with an expectation of resumption at a future time."),
-            Self::Completed => Some("Care plan activity has been completed (more or less) as planned."),
+            Self::NotStarted => {
+                Some("Care plan activity is planned but no action has yet been taken.")
+            }
+            Self::Scheduled => {
+                Some("Appointment or other booking has occurred but activity has not yet begun.")
+            }
+            Self::InProgress => {
+                Some("Care plan activity has been started but is not yet complete.")
+            }
+            Self::OnHold => Some(
+                "Care plan activity was started but has temporarily ceased with an expectation of resumption at a future time.",
+            ),
+            Self::Completed => {
+                Some("Care plan activity has been completed (more or less) as planned.")
+            }
             Self::Cancelled => Some("The planned care plan activity has been withdrawn."),
-            Self::Stopped => Some("The planned care plan activity has been ended prior to completion after the activity was started."),
-            Self::Unknown => Some("The current state of the care plan activity is not known.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which one."),
+            Self::Stopped => Some(
+                "The planned care plan activity has been ended prior to completion after the activity was started.",
+            ),
+            Self::Unknown => Some(
+                "The current state of the care plan activity is not known.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which one.",
+            ),
             Self::EnteredInError => Some("Care plan activity was entered in error and voided."),
         }
     }
@@ -154,5 +168,4 @@ impl CarePlanActivityStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl BiologicallyDerivedProductStorageScale {
             })
             .unwrap_or(false)
     }
-
 }

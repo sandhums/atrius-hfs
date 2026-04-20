@@ -105,5 +105,4 @@ impl SpecimenCombined {
             })
             .unwrap_or(false)
     }
-
 }

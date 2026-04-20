@@ -161,5 +161,4 @@ impl InsurancePlanType {
             })
             .unwrap_or(false)
     }
-
 }

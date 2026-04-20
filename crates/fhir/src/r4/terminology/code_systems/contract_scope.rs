@@ -98,5 +98,4 @@ impl ContractResourceScopeCodes_e61894f2 {
             })
             .unwrap_or(false)
     }
-
 }

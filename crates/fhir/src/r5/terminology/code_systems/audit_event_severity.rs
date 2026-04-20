@@ -71,14 +71,30 @@ impl AuditEventSeverity {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Emergency => Some("System is unusable. e.g., This level should only be reported by infrastructure and should not be used by applications."),
-            Self::Alert => Some("Notification should be sent to trigger action be taken. e.g., Loss of the primary network connection needing attention."),
-            Self::Critical => Some("Critical conditions. e.g., A failure in the system\'s primary application that will reset automatically."),
-            Self::Error => Some("Error conditions. e.g., An application has exceeded its file storage limit and attempts to write are failing. "),
-            Self::Warning => Some("Warning conditions. May indicate that an error will occur if action is not taken. e.g., A non-root file system has only 2GB remaining."),
-            Self::Notice => Some("Notice messages. Normal but significant condition. Events that are unusual, but not error conditions."),
-            Self::Informational => Some("Normal operational messages that require no action. e.g., An application has started, paused, or ended successfully."),
-            Self::Debug => Some("Debug-level messages. Information useful to developers for debugging the application."),
+            Self::Emergency => Some(
+                "System is unusable. e.g., This level should only be reported by infrastructure and should not be used by applications.",
+            ),
+            Self::Alert => Some(
+                "Notification should be sent to trigger action be taken. e.g., Loss of the primary network connection needing attention.",
+            ),
+            Self::Critical => Some(
+                "Critical conditions. e.g., A failure in the system\'s primary application that will reset automatically.",
+            ),
+            Self::Error => Some(
+                "Error conditions. e.g., An application has exceeded its file storage limit and attempts to write are failing. ",
+            ),
+            Self::Warning => Some(
+                "Warning conditions. May indicate that an error will occur if action is not taken. e.g., A non-root file system has only 2GB remaining.",
+            ),
+            Self::Notice => Some(
+                "Notice messages. Normal but significant condition. Events that are unusual, but not error conditions.",
+            ),
+            Self::Informational => Some(
+                "Normal operational messages that require no action. e.g., An application has started, paused, or ended successfully.",
+            ),
+            Self::Debug => Some(
+                "Debug-level messages. Information useful to developers for debugging the application.",
+            ),
         }
     }
 
@@ -147,5 +163,4 @@ impl AuditEventSeverity {
             })
             .unwrap_or(false)
     }
-
 }

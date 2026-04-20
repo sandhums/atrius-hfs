@@ -12,9 +12,10 @@ mod common {
 }
 
 use crate::common::fhir_json_examples::{
-    count_severities, fhir_json_dir, is_binding_like_issue, load_r5_fhir_resource, R5_CURATED,
+    R5_CURATED, count_severities, fhir_json_dir, is_binding_like_issue, load_r5_fhir_resource,
 };
 use crate::common::fixtures::{assert_no_errors, local_terminology_r5};
+use fhir_validation::issue_to_op_outcome::validation_issues_to_r5_operation_outcome;
 use fhir_validation::{R5FhirPathEvaluator, Validator};
 use helios_fhir::FhirResource;
 
@@ -72,4 +73,16 @@ fn patient_genomic_binding_example_no_errors() {
     let term = local_terminology_r5();
     let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);
     assert_no_errors(&issues);
+}
+
+#[test]
+fn coverage_eligibility_request_example() {
+    let resource = load_r5_fhir_resource("coverageeligibilityrequest-example.json");
+    let evaluator = evaluator_for(&resource);
+    let term = local_terminology_r5();
+    let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);
+    let op_outcome = validation_issues_to_r5_operation_outcome(&issues).unwrap();
+    let ser_op_outcome = serde_json::to_string_pretty(&op_outcome).unwrap();
+    println!("{:?}", issues);
+    println!("{}", ser_op_outcome);
 }

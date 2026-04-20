@@ -56,9 +56,15 @@ impl ConceptSubsumptionOutcome {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Equivalent => Some("The two concepts are equivalent (have the same properties)."),
-            Self::Subsumes => Some("Coding/code \"A\" subsumes Coding/code \"B\" (e.g. B has all the properties A has, and some of it\'s own)."),
-            Self::SubsumedBy => Some("Coding/code \"A\" is subsumed by Coding/code \"B\" (e.g. A has all the properties B has, and some of it\'s own)."),
-            Self::NotSubsumed => Some("Coding/code \"A\" and Coding/code \"B\" are disjoint (e.g. each has propeties that the other doesn\'t have)."),
+            Self::Subsumes => Some(
+                "Coding/code \"A\" subsumes Coding/code \"B\" (e.g. B has all the properties A has, and some of it\'s own).",
+            ),
+            Self::SubsumedBy => Some(
+                "Coding/code \"A\" is subsumed by Coding/code \"B\" (e.g. A has all the properties B has, and some of it\'s own).",
+            ),
+            Self::NotSubsumed => Some(
+                "Coding/code \"A\" and Coding/code \"B\" are disjoint (e.g. each has propeties that the other doesn\'t have).",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl ConceptSubsumptionOutcome {
             })
             .unwrap_or(false)
     }
-
 }

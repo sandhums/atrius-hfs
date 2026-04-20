@@ -63,12 +63,24 @@ impl ImagingStudyStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Registered => Some("The existence of the imaging study is registered, but there are no images."),
-            Self::Available => Some("At least one instance has been associated with this imaging study."),
-            Self::Cancelled => Some("The imaging study is unavailable because the imaging study was not started or not completed (also sometimes called \"aborted\")."),
-            Self::EnteredInError => Some("The imaging study has been withdrawn after previously being available.  This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".)."),
-            Self::Unknown => Some("The system does not know which of the status values currently applies for this ImagingStudy. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, it\'s just not known which one."),
-            Self::Inactive => Some("The resource describes information that is no longer valid. This MAY include an ImagingStudy that was removed for retention policy reasons."),
+            Self::Registered => {
+                Some("The existence of the imaging study is registered, but there are no images.")
+            }
+            Self::Available => {
+                Some("At least one instance has been associated with this imaging study.")
+            }
+            Self::Cancelled => Some(
+                "The imaging study is unavailable because the imaging study was not started or not completed (also sometimes called \"aborted\").",
+            ),
+            Self::EnteredInError => Some(
+                "The imaging study has been withdrawn after previously being available.  This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".).",
+            ),
+            Self::Unknown => Some(
+                "The system does not know which of the status values currently applies for this ImagingStudy. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, it\'s just not known which one.",
+            ),
+            Self::Inactive => Some(
+                "The resource describes information that is no longer valid. This MAY include an ImagingStudy that was removed for retention policy reasons.",
+            ),
         }
     }
 
@@ -133,5 +145,4 @@ impl ImagingStudyStatus {
             })
             .unwrap_or(false)
     }
-
 }

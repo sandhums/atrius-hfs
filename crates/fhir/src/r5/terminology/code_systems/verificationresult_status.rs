@@ -73,7 +73,9 @@ impl Status {
             Self::ReqRevalid => Some("***TODO***"),
             Self::ValFail => Some("***TODO***"),
             Self::RevalFail => Some("***TODO***"),
-            Self::EnteredInError => Some("The VerificationResult record was created erroneously and is not appropriated for use."),
+            Self::EnteredInError => Some(
+                "The VerificationResult record was created erroneously and is not appropriated for use.",
+            ),
         }
     }
 
@@ -140,5 +142,4 @@ impl Status {
             })
             .unwrap_or(false)
     }
-
 }

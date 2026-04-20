@@ -140,5 +140,4 @@ impl FHIRDeviceSpecializationCategory {
             })
             .unwrap_or(false)
     }
-
 }

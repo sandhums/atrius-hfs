@@ -47,8 +47,12 @@ impl MeasureDataUsage {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SupplementalData => Some("The data is intended to be provided as additional information alongside the measure results."),
-            Self::RiskAdjustmentFactor => Some("The data is intended to be used to calculate and apply a risk adjustment model for the measure."),
+            Self::SupplementalData => Some(
+                "The data is intended to be provided as additional information alongside the measure results.",
+            ),
+            Self::RiskAdjustmentFactor => Some(
+                "The data is intended to be used to calculate and apply a risk adjustment model for the measure.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl MeasureDataUsage {
             })
             .unwrap_or(false)
     }
-
 }

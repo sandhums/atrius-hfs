@@ -55,10 +55,16 @@ impl VerificationresultCommunicationMethod {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Manual => Some("The information is submitted/retrieved manually (e.g. by phone, fax, paper-based)"),
+            Self::Manual => Some(
+                "The information is submitted/retrieved manually (e.g. by phone, fax, paper-based)",
+            ),
             Self::Portal => Some("The information is submitted/retrieved via a portal"),
-            Self::Pull => Some("The information is retrieved (i.e. pulled) from a source (e.g. over an API)"),
-            Self::Push => Some("The information is sent (i.e. pushed) from a source (e.g. over an API, asynchronously, secure messaging)"),
+            Self::Pull => {
+                Some("The information is retrieved (i.e. pulled) from a source (e.g. over an API)")
+            }
+            Self::Push => Some(
+                "The information is sent (i.e. pushed) from a source (e.g. over an API, asynchronously, secure messaging)",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl VerificationresultCommunicationMethod {
             })
             .unwrap_or(false)
     }
-
 }

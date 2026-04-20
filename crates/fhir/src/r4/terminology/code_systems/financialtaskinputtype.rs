@@ -69,11 +69,17 @@ impl FinancialTaskInputTypeCodes {
         match self {
             Self::Include => Some("The name of a resource to include in a selection."),
             Self::Exclude => Some("The name of a resource to not include in a selection."),
-            Self::Origresponse => Some("A reference to the response resource to the original processing of a resource."),
-            Self::Reference => Some("A reference value which must be quoted to authorize an action."),
+            Self::Origresponse => Some(
+                "A reference to the response resource to the original processing of a resource.",
+            ),
+            Self::Reference => {
+                Some("A reference value which must be quoted to authorize an action.")
+            }
             Self::Item => Some("The sequence number associated with an item for reprocessing."),
             Self::Period => Some("The reference period for the action being requested."),
-            Self::Status => Some("The processing status from a check on the processing status of a resource such as the adjudication of a claim."),
+            Self::Status => Some(
+                "The processing status from a check on the processing status of a resource such as the adjudication of a claim.",
+            ),
         }
     }
 
@@ -140,5 +146,4 @@ impl FinancialTaskInputTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

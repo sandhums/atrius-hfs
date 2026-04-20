@@ -98,5 +98,4 @@ impl ContractResourceDecisionModeCodes {
             })
             .unwrap_or(false)
     }
-
 }

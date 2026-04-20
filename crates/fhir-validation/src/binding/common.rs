@@ -15,12 +15,14 @@
 //! precise instance locations.
 
 use crate::binding::engine::LocalBindingOutcome;
+use crate::issue_code;
 use crate::service::{TerminologyService, TerminologyServiceSync};
 use crate::types::TerminologyMembershipOutcome;
 use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
 use crate::{ValidationError, ValidationIssue, Validator};
 use fhir_validation_types::{
-    binding_target_kind_for_element_type_code, BindingStrength, BindingTargetKind, Severity,
+    BindingDef, BindingStrength, BindingTargetKind, Severity,
+    binding_target_kind_for_element_type_code,
 };
 use helios_fhir::TerminologyValidationError;
 use serde_json::Value;
@@ -65,7 +67,7 @@ pub(crate) fn primitive_choice_target_kind(declared: Option<&[String]>) -> Bindi
 pub(crate) fn bindable_primitive_string_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get("value").and_then(|v| v.as_str()),
+        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
         _ => None,
     }
 }
@@ -85,7 +87,7 @@ pub fn issue_for_binding_miss(
         .binding_miss_severity(strength)
         .map(|severity| ValidationIssue {
             severity,
-            code: "value".to_string(),
+            code: issue_code::VALUE.to_string(),
             fhir_path: fhir_path.to_string(),
             instance_path: None,
             expression: Some(valueset_url.to_string()),
@@ -108,7 +110,7 @@ pub fn terminology_validation_issue(
 ) -> ValidationIssue {
     ValidationIssue {
         severity: Severity::Error,
-        code: "terminology".to_string(),
+        code: issue_code::TERMINOLOGY.to_string(),
         fhir_path: fhir_path.to_string(),
         instance_path: None,
         expression: Some(valueset_url.to_string()),
@@ -127,7 +129,7 @@ pub fn terminology_unavailable_issue(
 ) -> ValidationIssue {
     ValidationIssue {
         severity: Severity::Error,
-        code: "terminology".to_string(),
+        code: issue_code::TERMINOLOGY.to_string(),
         fhir_path: fhir_path.to_string(),
         instance_path: None,
         expression: Some(valueset_url.to_string()),
@@ -139,6 +141,83 @@ pub fn terminology_unavailable_issue(
         ),
         diagnostics,
     }
+}
+
+/// Local terminology cannot prove or disprove ValueSet membership (e.g. composed ValueSets not
+/// expanded in-process). This is **not** a binding-strength “miss” against a fully evaluated set.
+pub fn terminology_membership_not_locally_verifiable_issue(
+    fhir_path: &str,
+    valueset_url: &str,
+    strength: BindingStrength,
+    diagnostics: String,
+) -> ValidationIssue {
+    let severity = match strength {
+        BindingStrength::Required => Severity::Error,
+        BindingStrength::Extensible | BindingStrength::Preferred | BindingStrength::Example => {
+            Severity::Warning
+        }
+    };
+    ValidationIssue {
+        severity,
+        code: issue_code::TERMINOLOGY.to_string(),
+        fhir_path: fhir_path.to_string(),
+        instance_path: None,
+        expression: Some(valueset_url.to_string()),
+        expression_kind: Some(ValidationSourceKind::CanonicalUri),
+        source_invariant_key: None,
+        detail_code: Some(ValidationIssueDetailCode::TerminologyValidationFailed),
+        summary: Some(
+            "ValueSet membership could not be verified with local terminology alone".to_string(),
+        ),
+        diagnostics,
+    }
+}
+
+/// Tracks `member_of` scans over multiple codings in the CodeableConcept “NeedsRemote” path.
+#[derive(Default)]
+pub struct CodeableConceptRemoteScan {
+    pub any_match: bool,
+    pub any_remote_undecidable: bool,
+    pub remote_undecidable_message: Option<String>,
+    pub last_miss_diagnostics: Option<String>,
+}
+
+/// Merge one [`TerminologyServiceSync::member_of`] / async `member_of` result into [`CodeableConceptRemoteScan`].
+pub fn merge_remote_member_of_for_coding(
+    scan: &mut CodeableConceptRemoteScan,
+    outcome: Result<TerminologyMembershipOutcome, ValidationError>,
+    system: Option<&str>,
+    code: &str,
+    valueset_url: &str,
+) -> Result<(), ValidationError> {
+    match outcome {
+        Ok(o) if o.is_member => {
+            scan.any_match = true;
+        }
+        Ok(o) if o.remote_validation_required => {
+            scan.any_remote_undecidable = true;
+            if scan.remote_undecidable_message.is_none() {
+                scan.remote_undecidable_message = o.message;
+            }
+        }
+        Ok(o) => {
+            scan.last_miss_diagnostics = Some(o.message.unwrap_or_else(|| {
+                if let Some(system) = system {
+                    format!(
+                        "The provided coding {}#{} was not found in ValueSet {}",
+                        system, code, valueset_url
+                    )
+                } else {
+                    format!(
+                        "The provided code '{}' was not found in ValueSet {}",
+                        code, valueset_url
+                    )
+                }
+            }));
+        }
+        Err(e) => return Err(e),
+    }
+    Ok(())
 }
 /// Construct a value-shape validation issue.
 ///
@@ -153,7 +232,7 @@ pub fn value_issue(
 ) -> ValidationIssue {
     ValidationIssue {
         severity: Severity::Error,
-        code: "value".to_string(),
+        code: issue_code::VALUE.to_string(),
         fhir_path: fhir_path.to_string(),
         instance_path: None,
         expression: Some(valueset_url.to_string()),
@@ -196,13 +275,18 @@ pub fn local_error_to_issues(
         }
 
         TerminologyValidationError::MissingSystem(msg) => {
-            vec![value_issue(
-                fhir_path,
-                valueset_url,
-                "Code cannot be validated without a system",
-                ValidationIssueDetailCode::CodeWithoutSystem,
-                msg,
-            )]
+            vec![ValidationIssue {
+                severity: Severity::Warning,
+                code: issue_code::TERMINOLOGY.to_string(),
+                fhir_path: fhir_path.to_string(),
+                instance_path: None,
+                expression: Some(valueset_url.to_string()),
+                expression_kind: Some(ValidationSourceKind::CanonicalUri),
+                source_invariant_key: None,
+                summary: Some("Code cannot be validated without a system".to_string()),
+                detail_code: Some(ValidationIssueDetailCode::CodeWithoutSystem),
+                diagnostics: msg,
+            }]
         }
 
         TerminologyValidationError::UnknownCode { system, code } => {
@@ -243,10 +327,18 @@ pub fn local_error_to_issues(
             )]
         }
 
-        TerminologyValidationError::RemoteValidationRequired(_) => {
-            unreachable!(
-                "Terminal local error conversion should not receive RemoteValidationRequired; use NeedsRemote instead"
-            )
+        TerminologyValidationError::RemoteValidationRequired(msg) => {
+            tracing::warn!(
+                fhir_path,
+                valueset_url,
+                "RemoteValidationRequired reached local_error_to_issues; treating as not locally verifiable"
+            );
+            vec![terminology_membership_not_locally_verifiable_issue(
+                fhir_path,
+                valueset_url,
+                strength,
+                msg,
+            )]
         }
     }
 }
@@ -361,6 +453,13 @@ pub(crate) fn prettify_remote_terminology_error(
     err: &crate::ValidationError,
 ) -> String {
     match err {
+        crate::ValidationError::InvalidValidateVsRequest(msg)
+        | crate::ValidationError::MalformedTerminologyResponse(msg) => {
+            format!(
+                "Remote terminology validation failed for ValueSet '{}': {}",
+                valueset_url, msg
+            )
+        }
         crate::ValidationError::TerminologyRemote(remote) => {
             if !remote.diagnostics.is_empty() {
                 return format!(
@@ -392,12 +491,165 @@ pub(crate) fn prettify_remote_terminology_error(
     }
 }
 
+
 #[derive(Debug, Clone)]
 pub struct RemoteMembershipRequest {
     pub valueset_url: String,
     pub system: Option<String>,
     pub code: String,
     pub display: Option<String>,
+}
+
+/// Shared inputs for ValueSet binding checks (path, ValueSet, strength, terminology).
+///
+/// Version-specific `validate_*_binding` helpers take this instead of repeating
+/// `validator`, `fhir_path`, `valueset_url`, `strength`, and `terminology`.
+pub struct BindingCheckContextSync<'a> {
+    pub validator: &'a Validator,
+    pub fhir_path: &'a str,
+    pub valueset_url: &'a str,
+    pub strength: BindingStrength,
+    pub terminology: Option<&'a dyn TerminologyServiceSync>,
+}
+
+impl<'a> BindingCheckContextSync<'a> {
+    pub fn new(
+        validator: &'a Validator,
+        fhir_path: &'a str,
+        valueset_url: &'a str,
+        strength: BindingStrength,
+        terminology: Option<&'a dyn TerminologyServiceSync>,
+    ) -> Self {
+        Self {
+            validator,
+            fhir_path,
+            valueset_url,
+            strength,
+            terminology,
+        }
+    }
+
+    pub fn from_binding(
+        validator: &'a Validator,
+        binding: &'a BindingDef,
+        terminology: Option<&'a dyn TerminologyServiceSync>,
+    ) -> Self {
+        Self {
+            validator,
+            fhir_path: binding.path.as_str(),
+            valueset_url: binding.value_set.as_str(),
+            strength: binding.strength,
+            terminology,
+        }
+    }
+
+    pub fn classify_local_outcome(
+        &self,
+        outcome: LocalBindingOutcome,
+    ) -> LocalBindingDisposition {
+        classify_local_outcome(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+            outcome,
+        )
+    }
+
+    pub fn execute_remote_sync(&self, req: &RemoteMembershipRequest) -> Vec<ValidationIssue> {
+        execute_remote_sync(
+            self.validator,
+            self.fhir_path,
+            self.strength,
+            self.terminology,
+            req,
+        )
+    }
+
+    pub fn issue_for_binding_miss(&self, diagnostics: String) -> Option<ValidationIssue> {
+        issue_for_binding_miss(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+            diagnostics,
+        )
+    }
+}
+
+/// Async terminology variant of [`BindingCheckContextSync`].
+pub struct BindingCheckContextAsync<'a> {
+    pub validator: &'a Validator,
+    pub fhir_path: &'a str,
+    pub valueset_url: &'a str,
+    pub strength: BindingStrength,
+    pub terminology: Option<&'a dyn TerminologyService>,
+}
+
+impl<'a> BindingCheckContextAsync<'a> {
+    pub fn new(
+        validator: &'a Validator,
+        fhir_path: &'a str,
+        valueset_url: &'a str,
+        strength: BindingStrength,
+        terminology: Option<&'a dyn TerminologyService>,
+    ) -> Self {
+        Self {
+            validator,
+            fhir_path,
+            valueset_url,
+            strength,
+            terminology,
+        }
+    }
+
+    pub fn from_binding(
+        validator: &'a Validator,
+        binding: &'a BindingDef,
+        terminology: Option<&'a dyn TerminologyService>,
+    ) -> Self {
+        Self {
+            validator,
+            fhir_path: binding.path.as_str(),
+            valueset_url: binding.value_set.as_str(),
+            strength: binding.strength,
+            terminology,
+        }
+    }
+
+    pub fn classify_local_outcome(
+        &self,
+        outcome: LocalBindingOutcome,
+    ) -> LocalBindingDisposition {
+        classify_local_outcome(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+            outcome,
+        )
+    }
+
+    pub async fn execute_remote_async(&self, req: &RemoteMembershipRequest) -> Vec<ValidationIssue> {
+        execute_remote_async(
+            self.validator,
+            self.fhir_path,
+            self.strength,
+            self.terminology,
+            req,
+        )
+        .await
+    }
+
+    pub fn issue_for_binding_miss(&self, diagnostics: String) -> Option<ValidationIssue> {
+        issue_for_binding_miss(
+            self.validator,
+            self.fhir_path,
+            self.valueset_url,
+            self.strength,
+            diagnostics,
+        )
+    }
 }
 
 pub enum LocalBindingDisposition {
@@ -466,6 +718,18 @@ pub fn remote_result_to_issues(
 
     match outcome {
         Ok(outcome) if outcome.is_member => issues,
+        Ok(outcome) if outcome.remote_validation_required => {
+            let diagnostics = outcome.message.unwrap_or_else(|| {
+                "Local terminology cannot determine ValueSet membership; use a remote terminology service for a definitive validation result.".to_string()
+            });
+            issues.push(terminology_membership_not_locally_verifiable_issue(
+                fhir_path,
+                valueset_url,
+                strength,
+                diagnostics,
+            ));
+            issues
+        }
         Ok(outcome) => {
             let diagnostics = outcome.message.unwrap_or_else(|| {
                 if let Some(system) = &req.system {
@@ -568,6 +832,14 @@ pub async fn execute_remote_async(
         req,
         outcome,
     )
+}
+
+/// Shared [`ValidationIssue::summary`] text for binding validation across FHIR versions.
+pub mod binding_issue_summary {
+    pub const QUANTITY_CODE_WITHOUT_SYSTEM: &str =
+        "Quantity code is present without a code system";
+    pub const RESOURCE_SERIALIZATION_FAILED: &str =
+        "Resource serialization failed during binding validation";
 }
 
 fn binding_miss_summary(strength: BindingStrength) -> &'static str {

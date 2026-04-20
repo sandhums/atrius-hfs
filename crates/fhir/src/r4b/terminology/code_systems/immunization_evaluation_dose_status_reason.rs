@@ -18,7 +18,8 @@ pub enum ImmunizationEvaluationDoseStatusReasonCodes {
 }
 
 impl ImmunizationEvaluationDoseStatusReasonCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status-reason";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -59,11 +60,21 @@ impl ImmunizationEvaluationDoseStatusReasonCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Advstorage => Some("The product was stored in a manner inconsistent with manufacturer guidelines potentially reducing the effectiveness of the product."),
-            Self::Coldchbrk => Some("The product was stored at a temperature inconsistent with manufacturer guidelines potentially reducing the effectiveness of the product."),
-            Self::Explot => Some("The product was administered after the expiration date associated with lot of vaccine."),
-            Self::Outsidesched => Some("The product was administered at a time inconsistent with the documented schedule."),
-            Self::Prodrecall => Some("The product administered has been recalled by the manufacturer."),
+            Self::Advstorage => Some(
+                "The product was stored in a manner inconsistent with manufacturer guidelines potentially reducing the effectiveness of the product.",
+            ),
+            Self::Coldchbrk => Some(
+                "The product was stored at a temperature inconsistent with manufacturer guidelines potentially reducing the effectiveness of the product.",
+            ),
+            Self::Explot => Some(
+                "The product was administered after the expiration date associated with lot of vaccine.",
+            ),
+            Self::Outsidesched => Some(
+                "The product was administered at a time inconsistent with the documented schedule.",
+            ),
+            Self::Prodrecall => {
+                Some("The product administered has been recalled by the manufacturer.")
+            }
         }
     }
 
@@ -126,5 +137,4 @@ impl ImmunizationEvaluationDoseStatusReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

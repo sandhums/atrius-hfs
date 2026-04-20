@@ -112,5 +112,4 @@ impl PriorityCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -47,7 +47,9 @@ impl DoseAndRateType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Calculated => Some("The dose specified is calculated by the prescriber or the system."),
+            Self::Calculated => {
+                Some("The dose specified is calculated by the prescriber or the system.")
+            }
             Self::Ordered => Some("The dose specified is as ordered by the prescriber."),
         }
     }
@@ -105,5 +107,4 @@ impl DoseAndRateType {
             })
             .unwrap_or(false)
     }
-
 }

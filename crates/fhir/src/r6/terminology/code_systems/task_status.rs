@@ -89,16 +89,28 @@ impl TaskStatus {
         match self {
             Self::Draft => Some("The task is not yet ready to be acted upon."),
             Self::Requested => Some("The task is ready to be acted upon and action is sought."),
-            Self::Received => Some("A potential performer has claimed ownership of the task and is evaluating whether to perform it."),
-            Self::Accepted => Some("The potential performer has agreed to execute the task but has not yet started work."),
-            Self::Rejected => Some("The potential performer who claimed ownership of the task has decided not to execute it prior to performing any action."),
-            Self::Ready => Some("The task is ready to be performed, but no action has yet been taken.  Used in place of requested/received/accepted/rejected when request assignment and acceptance is a given."),
+            Self::Received => Some(
+                "A potential performer has claimed ownership of the task and is evaluating whether to perform it.",
+            ),
+            Self::Accepted => Some(
+                "The potential performer has agreed to execute the task but has not yet started work.",
+            ),
+            Self::Rejected => Some(
+                "The potential performer who claimed ownership of the task has decided not to execute it prior to performing any action.",
+            ),
+            Self::Ready => Some(
+                "The task is ready to be performed, but no action has yet been taken.  Used in place of requested/received/accepted/rejected when request assignment and acceptance is a given.",
+            ),
             Self::Cancelled => Some("The task was not completed."),
             Self::InProgress => Some("The task has been started but is not yet complete."),
             Self::OnHold => Some("The task has been started but work has been paused."),
-            Self::Failed => Some("The task was attempted but was not successful.  No further activity will occur for this task."),
+            Self::Failed => Some(
+                "The task was attempted but was not successful.  No further activity will occur for this task.",
+            ),
             Self::Completed => Some("The task has been completed."),
-            Self::EnteredInError => Some("The task should never have existed and is retained only because of the possibility it may have used."),
+            Self::EnteredInError => Some(
+                "The task should never have existed and is retained only because of the possibility it may have used.",
+            ),
         }
     }
 
@@ -175,5 +187,4 @@ impl TaskStatus {
             })
             .unwrap_or(false)
     }
-
 }

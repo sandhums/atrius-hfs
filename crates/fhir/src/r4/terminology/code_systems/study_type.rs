@@ -140,5 +140,4 @@ impl StudyType {
             })
             .unwrap_or(false)
     }
-
 }

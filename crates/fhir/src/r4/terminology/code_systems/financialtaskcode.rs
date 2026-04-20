@@ -59,11 +59,19 @@ impl FinancialTaskCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Cancel => Some("Cancel or reverse a resource, such as a claim or preauthorization, which is in-process or complete."),
+            Self::Cancel => Some(
+                "Cancel or reverse a resource, such as a claim or preauthorization, which is in-process or complete.",
+            ),
             Self::Poll => Some("Retrieve selected or all queued resources or messages."),
-            Self::Release => Some("Release any reserved funds or material obligations associated with a resource. For example, any unused but reserved funds or treatment allowance associated with a preauthorization once treatment is complete."),
-            Self::Reprocess => Some("Indication that the processing of a resource, such as a claim, for some or all of the required work is now being requested."),
-            Self::Status => Some("Check on the processing status of a resource such as the adjudication of a claim."),
+            Self::Release => Some(
+                "Release any reserved funds or material obligations associated with a resource. For example, any unused but reserved funds or treatment allowance associated with a preauthorization once treatment is complete.",
+            ),
+            Self::Reprocess => Some(
+                "Indication that the processing of a resource, such as a claim, for some or all of the required work is now being requested.",
+            ),
+            Self::Status => Some(
+                "Check on the processing status of a resource such as the adjudication of a claim.",
+            ),
         }
     }
 
@@ -126,5 +134,4 @@ impl FinancialTaskCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl ClinicalUseDefinitionCategory {
             })
             .unwrap_or(false)
     }
-
 }

@@ -47,8 +47,12 @@ impl ServiceRequestStatusReasonCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NoLongerClinicallyNecessary => Some("The service is no longer clinically necessary or relevant for the patient\'s care."),
-            Self::PreApprovalDenied => Some("Pre-authorization or approval for the service was denied by the payer or authorization entity."),
+            Self::NoLongerClinicallyNecessary => Some(
+                "The service is no longer clinically necessary or relevant for the patient\'s care.",
+            ),
+            Self::PreApprovalDenied => Some(
+                "Pre-authorization or approval for the service was denied by the payer or authorization entity.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ServiceRequestStatusReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

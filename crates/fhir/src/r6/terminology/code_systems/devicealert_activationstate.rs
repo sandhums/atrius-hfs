@@ -51,9 +51,15 @@ impl DeviceAlertActivationState {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::On => Some("The intended system function (e.g., detecting or signaling) is activated"),
-            Self::Off => Some("The intended system function (e.g., detecting or signaling) is deactivated"),
-            Self::Paused => Some("The intended system function (e.g., detecting or signaling) is temporarily suppressed"),
+            Self::On => {
+                Some("The intended system function (e.g., detecting or signaling) is activated")
+            }
+            Self::Off => {
+                Some("The intended system function (e.g., detecting or signaling) is deactivated")
+            }
+            Self::Paused => Some(
+                "The intended system function (e.g., detecting or signaling) is temporarily suppressed",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl DeviceAlertActivationState {
             })
             .unwrap_or(false)
     }
-
 }

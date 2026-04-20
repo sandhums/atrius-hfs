@@ -245,5 +245,4 @@ impl FeedingDeviceCodes {
             })
             .unwrap_or(false)
     }
-
 }

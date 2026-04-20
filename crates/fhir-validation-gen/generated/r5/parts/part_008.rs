@@ -4899,11 +4899,13 @@ impl fhir_validation::r5::R5Validatable for DocumentReferenceContentProfile {
         if let Some(choice) = &self.value {
             match choice {
                 DocumentReferenceContentProfileValue::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value));
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Uri(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value));
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Canonical(_value) => {
@@ -4980,11 +4982,13 @@ impl fhir_validation::r5::R5ValidatableAsync for DocumentReferenceContentProfile
         if let Some(choice) = &self.value {
             match choice {
                 DocumentReferenceContentProfileValue::Coding(value) => {
-                    let child_issues = fhir_validation::r5::validate_coding_binding_async(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r5::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value)).await;
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Uri(value) => {
-                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r5::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r5::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value)).await;
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Canonical(_value) => {

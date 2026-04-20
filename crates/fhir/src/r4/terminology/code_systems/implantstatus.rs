@@ -119,5 +119,4 @@ impl ImplantStatus {
             })
             .unwrap_or(false)
     }
-
 }

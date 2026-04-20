@@ -37,7 +37,8 @@ pub enum CitationArtifactClassifier {
 }
 
 impl CitationArtifactClassifier {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/citation-artifact-classifier";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/citation-artifact-classifier";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -142,23 +143,43 @@ impl CitationArtifactClassifier {
             Self::D016425 => Some("Published Erratum"),
             Self::ExecutableApp => Some("Executable app"),
             Self::D000076942 => Some("Scientific manuscript made available prior to PEER REVIEW."),
-            Self::D019991 => Some("A structured file of information or a set of logically related data stored and retrieved using computer-based means."),
-            Self::D001877 => Some("Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers."),
-            Self::D064886 => Some("Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing."),
-            Self::_68059040 => Some("Used with articles which include video files or clips, or for articles which are entirely video."),
+            Self::D019991 => Some(
+                "A structured file of information or a set of logically related data stored and retrieved using computer-based means.",
+            ),
+            Self::D001877 => Some(
+                "Non-periodical written or printed works consisting of sheets of pages fastened or bound together within covers.",
+            ),
+            Self::D064886 => Some(
+                "Works consisting of organized collections of data, which have been stored permanently in a formalized manner suitable for communication, interpretation, or processing.",
+            ),
+            Self::_68059040 => Some(
+                "Used with articles which include video files or clips, or for articles which are entirely video.",
+            ),
             Self::Audio => Some("The article cited is an audio file."),
             Self::Image => Some("The article cited is an audio file."),
             Self::MachineCode => Some("The article cited is machine code."),
-            Self::Protocol => Some("The article cited is the protocol of an activity and not the results or findings."),
+            Self::Protocol => Some(
+                "The article cited is the protocol of an activity and not the results or findings.",
+            ),
             Self::FhirResource => Some("The article cited is a FHIR resource."),
             Self::Print => Some("the journal is published in print format only"),
-            Self::PrintElectronic => Some("the journal is published in both print and electronic format"),
+            Self::PrintElectronic => {
+                Some("the journal is published in both print and electronic format")
+            }
             Self::Electronic => Some("the journal is published in electronic format only"),
-            Self::ElectronicPrint => Some("the journal is published first in electronic format followed by print (this value is currently used for just one journal, Nucleic Acids Research)"),
-            Self::ElectronicECollection => Some("used for electronic-only journals that publish individual articles first and then later collect them into an \"issue\" date that is typically called an eCollection."),
+            Self::ElectronicPrint => Some(
+                "the journal is published first in electronic format followed by print (this value is currently used for just one journal, Nucleic Acids Research)",
+            ),
+            Self::ElectronicECollection => Some(
+                "used for electronic-only journals that publish individual articles first and then later collect them into an \"issue\" date that is typically called an eCollection.",
+            ),
             Self::MedlineBase => Some("Citation Resource containing only data from Medline"),
-            Self::CommonShare => Some("Citation Resource containing value added data that is openly shared"),
-            Self::ProjectSpecific => Some("Citation Resource containing value added data specific to a project"),
+            Self::CommonShare => {
+                Some("Citation Resource containing value added data that is openly shared")
+            }
+            Self::ProjectSpecific => {
+                Some("Citation Resource containing value added data specific to a project")
+            }
         }
     }
 
@@ -259,5 +280,4 @@ impl CitationArtifactClassifier {
             })
             .unwrap_or(false)
     }
-
 }

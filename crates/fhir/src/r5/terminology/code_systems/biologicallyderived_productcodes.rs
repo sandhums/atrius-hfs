@@ -65,9 +65,13 @@ impl BiologicallyDerivedProductCodes {
             Self::S1128 => Some("HPC, APHERESIS/Citrate/XX/refg/Mobilized"),
             Self::S1194 => Some("HPC, APHERESIS|NS/XX/<=-120C|10% DMSO|Cryopreserved|Mobilized"),
             Self::S1195 => Some("HPC, APHERESIS|NS/XX/<=-120C|5% DMSO|Cryopreserved|Mobilized"),
-            Self::S1310 => Some("HPC, APHERESIS|None/XX/refg|3rd Party Comp:Yes|Other Additives:Yes|Mobilized|CD34 enriched"),
+            Self::S1310 => Some(
+                "HPC, APHERESIS|None/XX/refg|3rd Party Comp:Yes|Other Additives:Yes|Mobilized|CD34 enriched",
+            ),
             Self::S1398 => Some("HPC, MARROW|NS/XX/rt|Plasma reduced"),
-            Self::S2598 => Some("HPC, MARROW|NS/XX/<=-150C|10% DMSO|3rd Party Comp:Yes|Cryopreserved|RBC reduced"),
+            Self::S2598 => Some(
+                "HPC, MARROW|NS/XX/<=-150C|10% DMSO|3rd Party Comp:Yes|Cryopreserved|RBC reduced",
+            ),
             Self::E4377 => Some("Apheresis RED BLOOD CELLS|ACD-A/XX/refg|Irradiated|1st container"),
             Self::T1396 => Some("BONE, FEMUR|Frozen|Right|Radiation sterilization"),
         }
@@ -77,13 +81,25 @@ impl BiologicallyDerivedProductCodes {
         match self {
             Self::E0398 => Some("RED BLOOD CELLS|CPD>AS5/450mL/refg|Irr|ResLeu"),
             Self::S1128 => Some("HPC, APHERESIS/Citrate/XX/refg/Mobilized"),
-            Self::S1194 => Some("HPC, Apheresis product, 10% DMSO, mobilized, cryopreserved at <=-120C"),
-            Self::S1195 => Some("HPC, Apheresis product, 5% DMSO, mobilized, cryopreserved at <=-120C"),
-            Self::S1310 => Some("HPC, Apheresis product, third party components added, other additives added, mobilized, CD34 enriched, stored at refrigeration temperatures"),
+            Self::S1194 => {
+                Some("HPC, Apheresis product, 10% DMSO, mobilized, cryopreserved at <=-120C")
+            }
+            Self::S1195 => {
+                Some("HPC, Apheresis product, 5% DMSO, mobilized, cryopreserved at <=-120C")
+            }
+            Self::S1310 => Some(
+                "HPC, Apheresis product, third party components added, other additives added, mobilized, CD34 enriched, stored at refrigeration temperatures",
+            ),
             Self::S1398 => Some("HPC, Marrow, plasma reduced, stored at room temperature"),
-            Self::S2598 => Some("HPC, MARROW|NS/XX/<=-150C|10% DMSO|3rd Party Comp:Yes|Cryopreserved|RBC reduced"),
-            Self::E4377 => Some("RED BLOOD CELLS Apheresis product, ACD-A, Irradiated,1st container, stored at refrigeration temperatures"),
-            Self::T1396 => Some("BONE, FEMUR, Right, sterilized by radiation, stored at frozen temperatures"),
+            Self::S2598 => Some(
+                "HPC, MARROW|NS/XX/<=-150C|10% DMSO|3rd Party Comp:Yes|Cryopreserved|RBC reduced",
+            ),
+            Self::E4377 => Some(
+                "RED BLOOD CELLS Apheresis product, ACD-A, Irradiated,1st container, stored at refrigeration temperatures",
+            ),
+            Self::T1396 => {
+                Some("BONE, FEMUR, Right, sterilized by radiation, stored at frozen temperatures")
+            }
         }
     }
 
@@ -154,5 +170,4 @@ impl BiologicallyDerivedProductCodes {
             })
             .unwrap_or(false)
     }
-
 }

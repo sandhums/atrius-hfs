@@ -16,7 +16,8 @@ pub enum ImmunizationEventSubpotentReason {
 }
 
 impl ImmunizationEventSubpotentReason {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/immunization-subpotent-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/immunization-subpotent-reason";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,7 +52,9 @@ impl ImmunizationEventSubpotentReason {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Partial => Some("The full volume of the dose was not administered to the patient."),
+            Self::Partial => {
+                Some("The full volume of the dose was not administered to the patient.")
+            }
             Self::Coldchainbreak => Some("The vaccine experienced a cold chain break."),
             Self::Recall => Some("The vaccine was recalled by the manufacturer."),
         }
@@ -112,5 +115,4 @@ impl ImmunizationEventSubpotentReason {
             })
             .unwrap_or(false)
     }
-
 }

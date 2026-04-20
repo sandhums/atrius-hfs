@@ -55,10 +55,16 @@ impl DevicePropertyType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Material => Some("Describes the substance used in the construction of the device."),
+            Self::Material => {
+                Some("Describes the substance used in the construction of the device.")
+            }
             Self::Size => Some("Describes the specific dimensions or the measurement of a device."),
-            Self::Storage => Some("Describes the specific environmental factors needed for the device."),
-            Self::Color => Some("Describes the range of colors that may be displayed or expressed on a device."),
+            Self::Storage => {
+                Some("Describes the specific environmental factors needed for the device.")
+            }
+            Self::Color => Some(
+                "Describes the range of colors that may be displayed or expressed on a device.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl DevicePropertyType {
             })
             .unwrap_or(false)
     }
-
 }

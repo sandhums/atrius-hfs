@@ -20,7 +20,8 @@ pub enum MedicationKnowledgeCharacteristicCodes {
 }
 
 impl MedicationKnowledgeCharacteristicCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationknowledge-characteristic";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationknowledge-characteristic";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -140,5 +141,4 @@ impl MedicationKnowledgeCharacteristicCodes {
             })
             .unwrap_or(false)
     }
-
 }

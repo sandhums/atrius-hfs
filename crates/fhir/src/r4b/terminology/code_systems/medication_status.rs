@@ -110,5 +110,4 @@ impl MedicationStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -87,17 +87,35 @@ impl ExampleDiagnosisTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Admitting => Some("The diagnosis given as the reason why the patient was admitted to the hospital."),
-            Self::Clinical => Some("A diagnosis made on the basis of medical signs and patient-reported symptoms, rather than diagnostic tests."),
-            Self::Differential => Some("One of a set of the possible diagnoses that could be connected to the signs, symptoms, and lab findings."),
-            Self::Discharge => Some("The diagnosis given when the patient is discharged from the hospital."),
-            Self::Laboratory => Some("A diagnosis based significantly on laboratory reports or test results, rather than the physical examination of the patient."),
-            Self::Nursing => Some("A diagnosis which identifies people\'s responses to situations in their lives, such as a readiness to change or a willingness to accept assistance."),
+            Self::Admitting => Some(
+                "The diagnosis given as the reason why the patient was admitted to the hospital.",
+            ),
+            Self::Clinical => Some(
+                "A diagnosis made on the basis of medical signs and patient-reported symptoms, rather than diagnostic tests.",
+            ),
+            Self::Differential => Some(
+                "One of a set of the possible diagnoses that could be connected to the signs, symptoms, and lab findings.",
+            ),
+            Self::Discharge => {
+                Some("The diagnosis given when the patient is discharged from the hospital.")
+            }
+            Self::Laboratory => Some(
+                "A diagnosis based significantly on laboratory reports or test results, rather than the physical examination of the patient.",
+            ),
+            Self::Nursing => Some(
+                "A diagnosis which identifies people\'s responses to situations in their lives, such as a readiness to change or a willingness to accept assistance.",
+            ),
             Self::Prenatal => Some("A diagnosis determined prior to birth."),
-            Self::Principal => Some("The single medical diagnosis that is most relevant to the patient\'s chief complaint or need for treatment."),
-            Self::Radiology => Some("A diagnosis based primarily on the results from medical imaging studies."),
+            Self::Principal => Some(
+                "The single medical diagnosis that is most relevant to the patient\'s chief complaint or need for treatment.",
+            ),
+            Self::Radiology => {
+                Some("A diagnosis based primarily on the results from medical imaging studies.")
+            }
             Self::Remote => Some("A diagnosis determined using telemedicine techniques."),
-            Self::Retrospective => Some("The labeling of an illness in a specific historical event using modern knowledge, methods and disease classifications."),
+            Self::Retrospective => Some(
+                "The labeling of an illness in a specific historical event using modern knowledge, methods and disease classifications.",
+            ),
             Self::Self_ => Some("A diagnosis determined by the patient."),
         }
     }
@@ -175,5 +193,4 @@ impl ExampleDiagnosisTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

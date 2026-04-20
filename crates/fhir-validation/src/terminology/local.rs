@@ -31,6 +31,7 @@ impl LocalTerminologyService {
     fn not_member() -> TerminologyMembershipOutcome {
         TerminologyMembershipOutcome {
             is_member: false,
+            remote_validation_required: false,
             message: None,
             diagnostics: Vec::new(),
             system: None,
@@ -44,6 +45,7 @@ impl LocalTerminologyService {
     fn member() -> TerminologyMembershipOutcome {
         TerminologyMembershipOutcome {
             is_member: true,
+            remote_validation_required: false,
             message: None,
             diagnostics: Vec::new(),
             system: None,
@@ -60,9 +62,20 @@ fn map_validation_error(
     match err {
         TerminologyValidationError::InvalidInput(msg) => Err(ValidationError::Terminology(msg)),
         TerminologyValidationError::MissingSystem(_) => Ok(LocalTerminologyService::not_member()),
+        TerminologyValidationError::RemoteValidationRequired(msg) => {
+            Ok(TerminologyMembershipOutcome {
+                is_member: false,
+                remote_validation_required: true,
+                message: Some(msg),
+                diagnostics: Vec::new(),
+                system: None,
+                code: None,
+                version: None,
+                display: None,
+            })
+        }
         TerminologyValidationError::UnknownCode { .. }
-        | TerminologyValidationError::NotInValueSet { .. }
-        | TerminologyValidationError::RemoteValidationRequired(_) => {
+        | TerminologyValidationError::NotInValueSet { .. } => {
             Ok(LocalTerminologyService::not_member())
         }
         TerminologyValidationError::WrongDisplay { .. } => {

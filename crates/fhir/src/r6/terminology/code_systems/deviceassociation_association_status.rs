@@ -21,7 +21,8 @@ pub enum DeviceAssociationAssociationStatusCodes {
 }
 
 impl DeviceAssociationAssociationStatusCodes {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/deviceassociation-association-status";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/deviceassociation-association-status";
     pub const VERSION: &'static str = "6.0.0-ballot3";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -72,13 +73,21 @@ impl DeviceAssociationAssociationStatusCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Implanted => Some("The device is implanted in the patient."),
-            Self::Explanted => Some("The device is no longer implanted in the patient. Note that this is not the value to be used for devices that have never been implanted. In those cases, no value or a specific value can be used."),
-            Self::Attached => Some("The device is attached to the patient but not implanted in the patient."),
+            Self::Explanted => Some(
+                "The device is no longer implanted in the patient. Note that this is not the value to be used for devices that have never been implanted. In those cases, no value or a specific value can be used.",
+            ),
+            Self::Attached => {
+                Some("The device is attached to the patient but not implanted in the patient.")
+            }
             Self::On => Some("The device is powered on / operationally active."),
             Self::Off => Some("The device is powered off / not operationally active."),
-            Self::Standby => Some("The device is powered and available but not currently in active operation."),
+            Self::Standby => {
+                Some("The device is powered and available but not currently in active operation.")
+            }
             Self::Defective => Some("The device is defective."),
-            Self::Abandoned => Some("The implanted device remains in the patient\'s body and is no longer in use."),
+            Self::Abandoned => {
+                Some("The implanted device remains in the patient\'s body and is no longer in use.")
+            }
         }
     }
 
@@ -147,5 +156,4 @@ impl DeviceAssociationAssociationStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -55,10 +55,18 @@ impl EvidenceDirectness {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Low => Some("Low matching quality between observed and intended variable, so very serious concern for indirectness in evidence interpretation."),
-            Self::Moderate => Some("Moderate matching quality between observed and intended variable, so serious concern for indirectness in evidence interpretation."),
-            Self::High => Some("High matching quality between observed and intended variable, so little concern for indirectness in evidence interpretation."),
-            Self::Exact => Some("Exact matching quality between observed and intended variable, so no concern for indirectness in evidence interpretation."),
+            Self::Low => Some(
+                "Low matching quality between observed and intended variable, so very serious concern for indirectness in evidence interpretation.",
+            ),
+            Self::Moderate => Some(
+                "Moderate matching quality between observed and intended variable, so serious concern for indirectness in evidence interpretation.",
+            ),
+            Self::High => Some(
+                "High matching quality between observed and intended variable, so little concern for indirectness in evidence interpretation.",
+            ),
+            Self::Exact => Some(
+                "Exact matching quality between observed and intended variable, so no concern for indirectness in evidence interpretation.",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl EvidenceDirectness {
             })
             .unwrap_or(false)
     }
-
 }

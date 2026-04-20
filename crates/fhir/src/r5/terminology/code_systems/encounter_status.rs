@@ -76,14 +76,26 @@ impl EncounterStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Planned => Some("The Encounter has not yet started."),
-            Self::InProgress => Some("The Encounter has begun and the patient is present / the practitioner and the patient are meeting."),
-            Self::OnHold => Some("The Encounter has begun, but is currently on hold, e.g. because the patient is temporarily on leave."),
-            Self::Discharged => Some("The Encounter has been clinically completed, the patient has been discharged from the facility or the visit has ended, and the patient may have departed (refer to subjectStatus). While the encounter is in this status, administrative activities are usually performed, collating all required documentation and charge information before being released for billing, at which point the status will move to completed."),
+            Self::InProgress => Some(
+                "The Encounter has begun and the patient is present / the practitioner and the patient are meeting.",
+            ),
+            Self::OnHold => Some(
+                "The Encounter has begun, but is currently on hold, e.g. because the patient is temporarily on leave.",
+            ),
+            Self::Discharged => Some(
+                "The Encounter has been clinically completed, the patient has been discharged from the facility or the visit has ended, and the patient may have departed (refer to subjectStatus). While the encounter is in this status, administrative activities are usually performed, collating all required documentation and charge information before being released for billing, at which point the status will move to completed.",
+            ),
             Self::Completed => Some("The Encounter has ended."),
             Self::Cancelled => Some("The Encounter has ended before it has begun."),
-            Self::Discontinued => Some("The Encounter has started, but was not able to be completed. Further action may need to be performed, such as rescheduling appointments related to this encounter."),
-            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
-            Self::Unknown => Some("The encounter status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\"."),
+            Self::Discontinued => Some(
+                "The Encounter has started, but was not able to be completed. Further action may need to be performed, such as rescheduling appointments related to this encounter.",
+            ),
+            Self::EnteredInError => {
+                Some("This instance should not have been part of this patient\'s medical record.")
+            }
+            Self::Unknown => Some(
+                "The encounter status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\".",
+            ),
         }
     }
 
@@ -154,5 +166,4 @@ impl EncounterStatus {
             })
             .unwrap_or(false)
     }
-
 }

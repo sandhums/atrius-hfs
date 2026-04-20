@@ -2,9 +2,8 @@
 use crate::r4b::*;
 
 /// FHIR primitive type for character sequences
-/// 
+///
 /// Base StructureDefinition for string Type: A sequence of Unicode characters
-/// 
+///
 /// See: [string](http://hl7.org/fhir/StructureDefinition/string)
 pub type String = Element<std::string::String, Extension>;
-

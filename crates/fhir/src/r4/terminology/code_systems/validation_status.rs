@@ -112,5 +112,4 @@ impl ValidationStatus {
             })
             .unwrap_or(false)
     }
-
 }

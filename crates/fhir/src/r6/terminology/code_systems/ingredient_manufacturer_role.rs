@@ -112,5 +112,4 @@ impl IngredientManufacturerRole {
             })
             .unwrap_or(false)
     }
-
 }

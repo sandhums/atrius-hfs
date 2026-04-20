@@ -105,5 +105,4 @@ impl ConsentProvisionType {
             })
             .unwrap_or(false)
     }
-
 }

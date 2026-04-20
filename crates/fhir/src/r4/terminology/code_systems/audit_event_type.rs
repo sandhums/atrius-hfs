@@ -98,5 +98,4 @@ impl AuditEventID {
             })
             .unwrap_or(false)
     }
-
 }

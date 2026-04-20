@@ -55,10 +55,16 @@ impl InventoryReportStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Draft => Some("The existence of the report is registered, but it is still without content or only some preliminary content."),
-            Self::Requested => Some("The inventory report has been requested but there is no data available."),
+            Self::Draft => Some(
+                "The existence of the report is registered, but it is still without content or only some preliminary content.",
+            ),
+            Self::Requested => {
+                Some("The inventory report has been requested but there is no data available.")
+            }
             Self::Active => Some("This report is submitted as current."),
-            Self::EnteredInError => Some("The report has been withdrawn following a previous final release.  This electronic record should never have existed, though it is possible that real-world decisions were based on it."),
+            Self::EnteredInError => Some(
+                "The report has been withdrawn following a previous final release.  This electronic record should never have existed, though it is possible that real-world decisions were based on it.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl InventoryReportStatus {
             })
             .unwrap_or(false)
     }
-
 }

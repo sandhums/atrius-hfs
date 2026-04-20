@@ -47,8 +47,12 @@ impl EndpointPayloadType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Any => Some("Any payload type can be used with this endpoint, it is either a payload agnostic infrastructure (such as a storage repository), or some other type of endpoint where payload considerations are internally handled, and not available"),
-            Self::None => Some("This endpoint does not require any content to be sent; simply connecting to the endpoint is enough notification. This can be used as a \'ping\' to wakeup a service to retrieve content, which could be to ensure security considerations are correctly handled"),
+            Self::Any => Some(
+                "Any payload type can be used with this endpoint, it is either a payload agnostic infrastructure (such as a storage repository), or some other type of endpoint where payload considerations are internally handled, and not available",
+            ),
+            Self::None => Some(
+                "This endpoint does not require any content to be sent; simply connecting to the endpoint is enough notification. This can be used as a \'ping\' to wakeup a service to retrieve content, which could be to ensure security considerations are correctly handled",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl EndpointPayloadType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -105,5 +105,4 @@ impl OrientationType {
             })
             .unwrap_or(false)
     }
-
 }

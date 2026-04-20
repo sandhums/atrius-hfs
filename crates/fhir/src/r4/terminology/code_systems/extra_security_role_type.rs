@@ -59,10 +59,18 @@ impl SecurityRoleType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Authserver => Some("An entity providing authorization services to enable the electronic sharing of health-related information based on resource owner\'s preapproved permissions. For example, an UMA Authorization Server[UMA]"),
-            Self::Datacollector => Some("An entity that collects information over which the data subject may have certain rights under policy or law to control that information\'s management and distribution by data collectors, including the right to access, retrieve, distribute, or delete that information. "),
-            Self::Dataprocessor => Some("An entity that processes collected information over which the data subject may have certain rights under policy or law to control that information\'s management and distribution by data processors, including the right to access, retrieve, distribute, or delete that information."),
-            Self::Datasubject => Some("A person whose personal information is collected or processed, and who may have certain rights under policy or law to control that information\'s management and distribution by data collectors or processors, including the right to access, retrieve, distribute, or delete that information."),
+            Self::Authserver => Some(
+                "An entity providing authorization services to enable the electronic sharing of health-related information based on resource owner\'s preapproved permissions. For example, an UMA Authorization Server[UMA]",
+            ),
+            Self::Datacollector => Some(
+                "An entity that collects information over which the data subject may have certain rights under policy or law to control that information\'s management and distribution by data collectors, including the right to access, retrieve, distribute, or delete that information. ",
+            ),
+            Self::Dataprocessor => Some(
+                "An entity that processes collected information over which the data subject may have certain rights under policy or law to control that information\'s management and distribution by data processors, including the right to access, retrieve, distribute, or delete that information.",
+            ),
+            Self::Datasubject => Some(
+                "A person whose personal information is collected or processed, and who may have certain rights under policy or law to control that information\'s management and distribution by data collectors or processors, including the right to access, retrieve, distribute, or delete that information.",
+            ),
             Self::Humanuser => Some("The human user that has participated."),
         }
     }
@@ -126,5 +134,4 @@ impl SecurityRoleType {
             })
             .unwrap_or(false)
     }
-
 }

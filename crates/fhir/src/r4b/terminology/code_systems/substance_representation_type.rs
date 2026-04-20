@@ -110,5 +110,4 @@ impl SubstanceRepresentationType {
             })
             .unwrap_or(false)
     }
-
 }

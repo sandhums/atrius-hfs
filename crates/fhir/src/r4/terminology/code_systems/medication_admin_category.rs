@@ -51,9 +51,15 @@ impl MedicationAdministrationCategoryCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Inpatient => Some("Includes administrations in an inpatient or acute care setting"),
-            Self::Outpatient => Some("Includes administrations in an outpatient setting (for example, Emergency Department, Outpatient Clinic, Outpatient Surgery, Doctor\'s office)"),
-            Self::Community => Some("Includes administrations by the patient in their home (this would include long term care or nursing homes, hospices, etc.)"),
+            Self::Inpatient => {
+                Some("Includes administrations in an inpatient or acute care setting")
+            }
+            Self::Outpatient => Some(
+                "Includes administrations in an outpatient setting (for example, Emergency Department, Outpatient Clinic, Outpatient Surgery, Doctor\'s office)",
+            ),
+            Self::Community => Some(
+                "Includes administrations by the patient in their home (this would include long term care or nursing homes, hospices, etc.)",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl MedicationAdministrationCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

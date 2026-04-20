@@ -133,5 +133,4 @@ impl ProcedureProgressStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

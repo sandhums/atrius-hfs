@@ -63,11 +63,21 @@ impl ConditionVerificationStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Unconfirmed => Some("There is not sufficient diagnostic and/or clinical evidence to treat this as a confirmed condition."),
-            Self::Provisional => Some("This is a tentative diagnosis - still a candidate that is under consideration."),
-            Self::Differential => Some("One of a set of potential (and typically mutually exclusive) diagnoses asserted to further guide the diagnostic process and preliminary treatment."),
-            Self::Confirmed => Some("There is sufficient diagnostic and/or clinical evidence to treat this as a confirmed condition."),
-            Self::Refuted => Some("This condition has been ruled out by diagnostic and clinical evidence."),
+            Self::Unconfirmed => Some(
+                "There is not sufficient diagnostic and/or clinical evidence to treat this as a confirmed condition.",
+            ),
+            Self::Provisional => Some(
+                "This is a tentative diagnosis - still a candidate that is under consideration.",
+            ),
+            Self::Differential => Some(
+                "One of a set of potential (and typically mutually exclusive) diagnoses asserted to further guide the diagnostic process and preliminary treatment.",
+            ),
+            Self::Confirmed => Some(
+                "There is sufficient diagnostic and/or clinical evidence to treat this as a confirmed condition.",
+            ),
+            Self::Refuted => {
+                Some("This condition has been ruled out by diagnostic and clinical evidence.")
+            }
             Self::EnteredInError => Some("The statement was entered in error and is not valid."),
         }
     }
@@ -133,5 +143,4 @@ impl ConditionVerificationStatus {
             })
             .unwrap_or(false)
     }
-
 }

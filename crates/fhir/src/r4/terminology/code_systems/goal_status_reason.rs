@@ -76,14 +76,24 @@ impl GoalStatusReason {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Surgery => Some("Goal suspended or ended because of a surgical procedure."),
-            Self::LifeEvent => Some("Goal suspended or ended because of a significant life event (marital change, bereavement, etc.)."),
+            Self::LifeEvent => Some(
+                "Goal suspended or ended because of a significant life event (marital change, bereavement, etc.).",
+            ),
             Self::Replaced => Some("Goal has been superseded by a new goal."),
-            Self::PatientRequest => Some("Patient wishes the goal to be set aside, at least temporarily."),
+            Self::PatientRequest => {
+                Some("Patient wishes the goal to be set aside, at least temporarily.")
+            }
             Self::TempNotAttainable => Some("Goal cannot be reached temporarily."),
             Self::PermanentNotAttainable => Some("Goal cannot be reached permanently."),
-            Self::FinancialBarrier => Some("Goal cannot be reached due to financial barrier or reason."),
-            Self::LackOfTransportation => Some("Goal cannot be reached due to a lack of transportation."),
-            Self::LackOfSocialSupport => Some("Goal cannot be reached due to a lack of social support."),
+            Self::FinancialBarrier => {
+                Some("Goal cannot be reached due to financial barrier or reason.")
+            }
+            Self::LackOfTransportation => {
+                Some("Goal cannot be reached due to a lack of transportation.")
+            }
+            Self::LackOfSocialSupport => {
+                Some("Goal cannot be reached due to a lack of social support.")
+            }
         }
     }
 
@@ -154,5 +164,4 @@ impl GoalStatusReason {
             })
             .unwrap_or(false)
     }
-
 }

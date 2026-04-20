@@ -112,5 +112,4 @@ impl DeviceAlertSignalType {
             })
             .unwrap_or(false)
     }
-
 }

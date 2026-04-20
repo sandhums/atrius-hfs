@@ -63,12 +63,16 @@ impl PriceComponentType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Base => Some("the amount is the base price used for calculating the total price before applying surcharges, discount or taxes."),
+            Self::Base => Some(
+                "the amount is the base price used for calculating the total price before applying surcharges, discount or taxes.",
+            ),
             Self::Surcharge => Some("the amount is a surcharge applied on the base price."),
             Self::Deduction => Some("the amount is a deduction applied on the base price."),
             Self::Discount => Some("the amount is a discount applied on the base price."),
             Self::Tax => Some("the amount is the tax component of the total price."),
-            Self::Informational => Some("the amount is of informational character, it has not been applied in the calculation of the total price."),
+            Self::Informational => Some(
+                "the amount is of informational character, it has not been applied in the calculation of the total price.",
+            ),
         }
     }
 
@@ -133,5 +137,4 @@ impl PriceComponentType {
             })
             .unwrap_or(false)
     }
-
 }

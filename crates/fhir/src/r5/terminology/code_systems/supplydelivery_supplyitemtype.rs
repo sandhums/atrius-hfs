@@ -53,7 +53,9 @@ impl SupplyDeliverySupplyItemType {
         match self {
             Self::Medication => Some("Supply is a kind of medication."),
             Self::Device => Some("What is supplied (or requested) is a device."),
-            Self::Biologicallyderivedproduct => Some("Supply is a kind of biologically derived product."),
+            Self::Biologicallyderivedproduct => {
+                Some("Supply is a kind of biologically derived product.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl SupplyDeliverySupplyItemType {
             })
             .unwrap_or(false)
     }
-
 }

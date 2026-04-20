@@ -112,5 +112,4 @@ impl AdverseEventSeverity {
             })
             .unwrap_or(false)
     }
-
 }

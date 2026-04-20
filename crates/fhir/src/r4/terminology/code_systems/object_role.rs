@@ -135,30 +135,72 @@ impl AuditEventEntityRole {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::_1 => Some("This object is the patient that is the subject of care related to this event.  It is identifiable by patient ID or equivalent.  The patient may be either human or animal."),
-            Self::_2 => Some("This is a location identified as related to the event.  This is usually the location where the event took place.  Note that for shipping, the usual events are arrival at a location or departure from a location."),
-            Self::_3 => Some("This object is any kind of persistent document created as a result of the event.  This could be a paper report, film, electronic report, DICOM Study, etc.  Issues related to medical records life cycle management are conveyed elsewhere."),
-            Self::_4 => Some("A logical object related to a health record event.  This is any healthcare  specific resource (object) not restricted to FHIR defined Resources."),
-            Self::_5 => Some("This is any configurable file used to control creation of documents.  Examples include the objects maintained by the HL7 Master File transactions, Value Sets, etc."),
-            Self::_6 => Some("A human participant not otherwise identified by some other category."),
+            Self::_1 => Some(
+                "This object is the patient that is the subject of care related to this event.  It is identifiable by patient ID or equivalent.  The patient may be either human or animal.",
+            ),
+            Self::_2 => Some(
+                "This is a location identified as related to the event.  This is usually the location where the event took place.  Note that for shipping, the usual events are arrival at a location or departure from a location.",
+            ),
+            Self::_3 => Some(
+                "This object is any kind of persistent document created as a result of the event.  This could be a paper report, film, electronic report, DICOM Study, etc.  Issues related to medical records life cycle management are conveyed elsewhere.",
+            ),
+            Self::_4 => Some(
+                "A logical object related to a health record event.  This is any healthcare  specific resource (object) not restricted to FHIR defined Resources.",
+            ),
+            Self::_5 => Some(
+                "This is any configurable file used to control creation of documents.  Examples include the objects maintained by the HL7 Master File transactions, Value Sets, etc.",
+            ),
+            Self::_6 => {
+                Some("A human participant not otherwise identified by some other category.")
+            }
             Self::_7 => Some("(deprecated)."),
-            Self::_8 => Some("Typically, a licensed person who is providing or performing care related to the event, generally a physician.   The key distinction between doctor and practitioner is with regards to their role, not the licensing.  The doctor is the human who actually performed the work.  The practitioner is the human or organization that is responsible for the work."),
-            Self::_9 => Some("A person or system that is being notified as part of the event.  This is relevant in situations where automated systems provide notifications to other parties when an event took place."),
-            Self::_10 => Some("Insurance company, or any other organization who accepts responsibility for paying for the healthcare event."),
-            Self::_11 => Some("A person or active system object involved in the event with a security role."),
-            Self::_12 => Some("A person or system object involved in the event with the authority to modify security roles of other objects."),
-            Self::_13 => Some("A passive object, such as a role table, that is relevant to the event."),
+            Self::_8 => Some(
+                "Typically, a licensed person who is providing or performing care related to the event, generally a physician.   The key distinction between doctor and practitioner is with regards to their role, not the licensing.  The doctor is the human who actually performed the work.  The practitioner is the human or organization that is responsible for the work.",
+            ),
+            Self::_9 => Some(
+                "A person or system that is being notified as part of the event.  This is relevant in situations where automated systems provide notifications to other parties when an event took place.",
+            ),
+            Self::_10 => Some(
+                "Insurance company, or any other organization who accepts responsibility for paying for the healthcare event.",
+            ),
+            Self::_11 => {
+                Some("A person or active system object involved in the event with a security role.")
+            }
+            Self::_12 => Some(
+                "A person or system object involved in the event with the authority to modify security roles of other objects.",
+            ),
+            Self::_13 => {
+                Some("A passive object, such as a role table, that is relevant to the event.")
+            }
             Self::_14 => Some("(deprecated)  Relevant to certain RBAC security methodologies."),
-            Self::_15 => Some("Any person or organization responsible for providing care.  This encompasses all forms of care, licensed or otherwise, and all sorts of teams and care groups. Note the distinction between practitioner and the doctor that actually provided the care to the patient."),
-            Self::_16 => Some("The source or destination for data transfer, when it does not match some other role."),
-            Self::_17 => Some("A source or destination for data transfer that acts as an archive, database, or similar role."),
-            Self::_18 => Some("An object that holds schedule information.  This could be an appointment book, availability information, etc."),
-            Self::_19 => Some("An organization or person that is the recipient of services.  This could be an organization that is buying services for a patient, or a person that is buying services for an animal."),
-            Self::_20 => Some("An order, task, work item, procedure step, or other description of work to be performed; e.g. a particular instance of an MPPS."),
-            Self::_21 => Some("A list of jobs or a system that provides lists of jobs; e.g. an MWL SCP."),
+            Self::_15 => Some(
+                "Any person or organization responsible for providing care.  This encompasses all forms of care, licensed or otherwise, and all sorts of teams and care groups. Note the distinction between practitioner and the doctor that actually provided the care to the patient.",
+            ),
+            Self::_16 => Some(
+                "The source or destination for data transfer, when it does not match some other role.",
+            ),
+            Self::_17 => Some(
+                "A source or destination for data transfer that acts as an archive, database, or similar role.",
+            ),
+            Self::_18 => Some(
+                "An object that holds schedule information.  This could be an appointment book, availability information, etc.",
+            ),
+            Self::_19 => Some(
+                "An organization or person that is the recipient of services.  This could be an organization that is buying services for a patient, or a person that is buying services for an animal.",
+            ),
+            Self::_20 => Some(
+                "An order, task, work item, procedure step, or other description of work to be performed; e.g. a particular instance of an MPPS.",
+            ),
+            Self::_21 => {
+                Some("A list of jobs or a system that provides lists of jobs; e.g. an MWL SCP.")
+            }
             Self::_22 => Some("(Deprecated)."),
-            Self::_23 => Some("An object that specifies or controls the routing or delivery of items.  For example, a distribution list is the routing criteria for mail.  The items delivered may be documents, jobs, or other objects."),
-            Self::_24 => Some("The contents of a query.  This is used to capture the contents of any kind of query.  For security surveillance purposes knowing the queries being made is very important."),
+            Self::_23 => Some(
+                "An object that specifies or controls the routing or delivery of items.  For example, a distribution list is the routing criteria for mail.  The items delivered may be documents, jobs, or other objects.",
+            ),
+            Self::_24 => Some(
+                "The contents of a query.  This is used to capture the contents of any kind of query.  For security surveillance purposes knowing the queries being made is very important.",
+            ),
         }
     }
 
@@ -259,5 +301,4 @@ impl AuditEventEntityRole {
             })
             .unwrap_or(false)
     }
-
 }

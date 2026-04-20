@@ -57,7 +57,9 @@ impl DeviceMetricOperationalStatus {
         match self {
             Self::On => Some("The metric is operating and could generate observations."),
             Self::Off => Some("The metric is not operating."),
-            Self::Standby => Some("The metric is operating, but is not expected to currently generate observations."),
+            Self::Standby => Some(
+                "The metric is operating, but is not expected to currently generate observations.",
+            ),
             Self::Unknown => Some("The metric\'s operational status is currently unknown."),
         }
     }
@@ -119,5 +121,4 @@ impl DeviceMetricOperationalStatus {
             })
             .unwrap_or(false)
     }
-
 }

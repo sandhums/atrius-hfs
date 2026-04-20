@@ -15,7 +15,8 @@ pub enum ImmunizationEvaluationDoseStatusCodes {
 }
 
 impl ImmunizationEvaluationDoseStatusCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/immunization-evaluation-dose-status";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -47,8 +48,12 @@ impl ImmunizationEvaluationDoseStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Valid => Some("The dose counts toward fulfilling a path to immunity for a patient, providing protection against the target disease."),
-            Self::Notvalid => Some("The dose does not count toward fulfilling a path to immunity for a patient."),
+            Self::Valid => Some(
+                "The dose counts toward fulfilling a path to immunity for a patient, providing protection against the target disease.",
+            ),
+            Self::Notvalid => {
+                Some("The dose does not count toward fulfilling a path to immunity for a patient.")
+            }
         }
     }
 
@@ -105,5 +110,4 @@ impl ImmunizationEvaluationDoseStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

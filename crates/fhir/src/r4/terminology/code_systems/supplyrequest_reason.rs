@@ -47,8 +47,12 @@ impl SupplyRequestReason {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::PatientCare => Some("The supply has been requested for use in direct patient care."),
-            Self::WardStock => Some("The supply has been requested for creating or replenishing ward stock."),
+            Self::PatientCare => {
+                Some("The supply has been requested for use in direct patient care.")
+            }
+            Self::WardStock => {
+                Some("The supply has been requested for creating or replenishing ward stock.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl SupplyRequestReason {
             })
             .unwrap_or(false)
     }
-
 }

@@ -2,9 +2,8 @@
 use crate::r6::*;
 
 /// FHIR primitive type for time of day values
-/// 
+///
 /// time Type: A time during the day, with no date specified
-/// 
+///
 /// See: [time](http://hl7.org/fhir/StructureDefinition/time)
 pub type Time = Element<crate::PrecisionTime, Extension>;
-

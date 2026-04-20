@@ -105,5 +105,4 @@ impl ContractSubtypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

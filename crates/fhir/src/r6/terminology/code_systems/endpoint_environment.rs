@@ -59,11 +59,17 @@ impl EndpointEnvironment {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Prod => Some("Production environment and is expected to contain real data and should be protected appropriately"),
-            Self::Staging => Some("Staging environment typically used while preparing for a release to production"),
+            Self::Prod => Some(
+                "Production environment and is expected to contain real data and should be protected appropriately",
+            ),
+            Self::Staging => Some(
+                "Staging environment typically used while preparing for a release to production",
+            ),
             Self::Dev => Some("Development environment used while building systems"),
             Self::Test => Some("Test environment, it is not intended for production usage."),
-            Self::Train => Some("Training environment, it is not intended for production usage and typically contains data specifically prepared for training usage."),
+            Self::Train => Some(
+                "Training environment, it is not intended for production usage and typically contains data specifically prepared for training usage.",
+            ),
         }
     }
 
@@ -126,5 +132,4 @@ impl EndpointEnvironment {
             })
             .unwrap_or(false)
     }
-
 }

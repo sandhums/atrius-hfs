@@ -739,11 +739,13 @@ impl fhir_validation::r6::R6Validatable for DeviceDefinition {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 DeviceDefinitionVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 DeviceDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1164,11 +1166,13 @@ impl fhir_validation::r6::R6ValidatableAsync for DeviceDefinition {
         if let Some(choice) = &self.version_algorithm {
             match choice {
                 DeviceDefinitionVersionAlgorithm::String(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 DeviceDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -1772,7 +1776,8 @@ impl fhir_validation::r6::R6Validatable for DeviceDefinitionHasPart {
                 DeviceDefinitionHasPartDefinition::Canonical(_value) => {
                 }
                 DeviceDefinitionHasPartDefinition::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "DeviceDefinition.hasPart.definition[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceDefinition.hasPart.definition[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1847,7 +1852,8 @@ impl fhir_validation::r6::R6ValidatableAsync for DeviceDefinitionHasPart {
                 DeviceDefinitionHasPartDefinition::Canonical(_value) => {
                 }
                 DeviceDefinitionHasPartDefinition::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "DeviceDefinition.hasPart.definition[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceDefinition.hasPart.definition[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -2363,7 +2369,8 @@ impl fhir_validation::r6::R6Validatable for DeviceDefinitionLink {
                 DeviceDefinitionLinkRelatedDevice::Canonical(_value) => {
                 }
                 DeviceDefinitionLinkRelatedDevice::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "DeviceDefinition.link.relatedDevice[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceDefinition.link.relatedDevice[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value));
                     issues.extend(child_issues);
                 }
             }
@@ -2440,7 +2447,8 @@ impl fhir_validation::r6::R6ValidatableAsync for DeviceDefinitionLink {
                 DeviceDefinitionLinkRelatedDevice::Canonical(_value) => {
                 }
                 DeviceDefinitionLinkRelatedDevice::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "DeviceDefinition.link.relatedDevice[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceDefinition.link.relatedDevice[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -3465,7 +3473,8 @@ impl fhir_validation::r6::R6Validatable for DeviceRequest {
         if let Some(choice) = &self.product {
             match choice {
                 DeviceRequestProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(validator, "DeviceRequest.product[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceRequest.product[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value));
                     issues.extend(child_issues);
                 }
                 DeviceRequestProduct::Reference(value) => {
@@ -3795,7 +3804,8 @@ impl fhir_validation::r6::R6ValidatableAsync for DeviceRequest {
         if let Some(choice) = &self.product {
             match choice {
                 DeviceRequestProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(validator, "DeviceRequest.product[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceRequest.product[x]", "http://hl7.org/fhir/ValueSet/device-type", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-type", value)).await;
                     issues.extend(child_issues);
                 }
                 DeviceRequestProduct::Reference(value) => {
@@ -5608,11 +5618,13 @@ impl fhir_validation::r6::R6Validatable for DocumentReferenceContentProfile {
         if let Some(choice) = &self.value {
             match choice {
                 DocumentReferenceContentProfileValue::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value));
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Uri(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value));
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Canonical(_value) => {
@@ -5689,11 +5701,13 @@ impl fhir_validation::r6::R6ValidatableAsync for DocumentReferenceContentProfile
         if let Some(choice) = &self.value {
             match choice {
                 DocumentReferenceContentProfileValue::Coding(value) => {
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value)).await;
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Uri(value) => {
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DocumentReference.content.profile.value[x]", "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", fhir_validation_types::BindingStrength::Preferred, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes", value)).await;
                     issues.extend(child_issues);
                 }
                 DocumentReferenceContentProfileValue::Canonical(_value) => {

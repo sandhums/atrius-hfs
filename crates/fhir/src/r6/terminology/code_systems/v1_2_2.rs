@@ -3,7 +3,7 @@
 
 //! ETSI Signature Type Codes
 //!
-//! The ETSI TS 101 733 V2.2.1 (2013-04) - Electronic Signatures and Infrastructures (ESI) - defines a set of Commitment Types (Purpose of Signature). ETSI TS 101 903 V1.2.2 defines vocabulary identifiers for these Commitment Types. Digital Signature Purposes, an indication of the reason an entity signs a document. This is included in the signed information and can be used when determining accountability for various actions concerning the document. 
+//! The ETSI TS 101 733 V2.2.1 (2013-04) - Electronic Signatures and Infrastructures (ESI) - defines a set of Commitment Types (Purpose of Signature). ETSI TS 101 903 V1.2.2 defines vocabulary identifiers for these Commitment Types. Digital Signature Purposes, an indication of the reason an entity signs a document. This is included in the signed information and can be used when determining accountability for various actions concerning the document.
 
 use super::super::super::{CodeableConcept, Coding};
 
@@ -63,12 +63,24 @@ impl ETSISignatureTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::ProofOfOrigin => Some("indicates that the signer recognizes to have created, approved and sent the signed data object."),
-            Self::ProofOfReceipt => Some("indicates that signer recognizes to have received the content of the signed data object."),
-            Self::ProofOfDelivery => Some("indicates that the TSP providing that indication has delivered a signed data object in a local store accessible to the recipient of the signed data object."),
-            Self::ProofOfSender => Some("indicates that the entity providing that indication has sent the signed data object (but not necessarily created it)."),
-            Self::ProofOfapproval => Some("indicates that the signer has approved the content of the signed data object."),
-            Self::ProofOfCreation => Some("indicates that the signer has created the signed data object (but not necessarily approved, nor sent it)."),
+            Self::ProofOfOrigin => Some(
+                "indicates that the signer recognizes to have created, approved and sent the signed data object.",
+            ),
+            Self::ProofOfReceipt => Some(
+                "indicates that signer recognizes to have received the content of the signed data object.",
+            ),
+            Self::ProofOfDelivery => Some(
+                "indicates that the TSP providing that indication has delivered a signed data object in a local store accessible to the recipient of the signed data object.",
+            ),
+            Self::ProofOfSender => Some(
+                "indicates that the entity providing that indication has sent the signed data object (but not necessarily created it).",
+            ),
+            Self::ProofOfapproval => Some(
+                "indicates that the signer has approved the content of the signed data object.",
+            ),
+            Self::ProofOfCreation => Some(
+                "indicates that the signer has created the signed data object (but not necessarily approved, nor sent it).",
+            ),
         }
     }
 
@@ -133,5 +145,4 @@ impl ETSISignatureTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

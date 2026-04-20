@@ -83,7 +83,9 @@ impl AuditEventSourceType {
             Self::_6 => Some("Security server, e.g. a domain controller."),
             Self::_7 => Some("ISO level 1-3 network component."),
             Self::_8 => Some("ISO level 4-6 operating software."),
-            Self::_9 => Some("Other kind of device (defined by DICOM, but some other code/system can be used)."),
+            Self::_9 => Some(
+                "Other kind of device (defined by DICOM, but some other code/system can be used).",
+            ),
         }
     }
 
@@ -154,5 +156,4 @@ impl AuditEventSourceType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -119,5 +119,4 @@ impl QualityOfEvidenceRating {
             })
             .unwrap_or(false)
     }
-
 }

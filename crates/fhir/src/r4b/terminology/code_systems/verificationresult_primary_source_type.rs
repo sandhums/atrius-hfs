@@ -154,5 +154,4 @@ impl PrimarySourceType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -60,10 +60,18 @@ impl EncounterReasonUse {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::CC => Some("Patient\'s stated reason for seeking care."),
-            Self::HC => Some("An identified issue, risk, or concern requiring monitoring or management."),
-            Self::AD => Some("Diagnosis (often provisional) documented as the reason for admission to the facility."),
-            Self::RV => Some("Provider-recognized reason for the encounter (may differ from chief complaint)."),
-            Self::HM => Some("Preventive or routine services (e.g., screening, immunization) performed to maintain health."),
+            Self::HC => {
+                Some("An identified issue, risk, or concern requiring monitoring or management.")
+            }
+            Self::AD => Some(
+                "Diagnosis (often provisional) documented as the reason for admission to the facility.",
+            ),
+            Self::RV => Some(
+                "Provider-recognized reason for the encounter (may differ from chief complaint).",
+            ),
+            Self::HM => Some(
+                "Preventive or routine services (e.g., screening, immunization) performed to maintain health.",
+            ),
         }
     }
 
@@ -126,5 +134,4 @@ impl EncounterReasonUse {
             })
             .unwrap_or(false)
     }
-
 }

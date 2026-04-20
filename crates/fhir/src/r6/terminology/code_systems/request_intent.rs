@@ -83,17 +83,39 @@ impl RequestIntent {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Proposal => Some("The request is a suggestion made by someone/something that does not have an intention to ensure it occurs and without providing an authorization to act."),
-            Self::SolicitOffer => Some("The request is a solicitation from one party for an offer from another party for a service (e.g. a request for a provider to offer their services or a request to quote a price)."),
-            Self::OfferResponse => Some("The request is a response to a solicitation from another party for an offer for a service (e.g. a provider offering their services or providing a quote for a service)."),
-            Self::Plan => Some("The request represents an intention to ensure something occurs without providing an authorization for others to act."),
-            Self::Directive => Some("The request represents an instruction authored by a Patient or RelatedPerson."),
-            Self::Order => Some("The request represents a request/demand and authorization for action by the requestor."),
-            Self::OriginalOrder => Some("The request represents an original authorization for action."),
-            Self::ReflexOrder => Some("The request represents an automatically generated supplemental authorization for action based on a parent authorization together with initial results of the action taken against that parent authorization."),
-            Self::FillerOrder => Some("The request represents the view of an authorization instantiated by a fulfilling system representing the details of the fulfiller\'s intention to act upon a submitted order."),
-            Self::InstanceOrder => Some("An order created in fulfillment of a broader order that represents the authorization for a single activity occurrence.  E.g. The administration of a single dose of a drug."),
-            Self::Option => Some("The request represents a component or option for a RequestOrchestration that establishes timing, conditionality and/or other constraints among a set of requests.  Refer to [[[RequestOrchestration]]] for additional information on how this status is used."),
+            Self::Proposal => Some(
+                "The request is a suggestion made by someone/something that does not have an intention to ensure it occurs and without providing an authorization to act.",
+            ),
+            Self::SolicitOffer => Some(
+                "The request is a solicitation from one party for an offer from another party for a service (e.g. a request for a provider to offer their services or a request to quote a price).",
+            ),
+            Self::OfferResponse => Some(
+                "The request is a response to a solicitation from another party for an offer for a service (e.g. a provider offering their services or providing a quote for a service).",
+            ),
+            Self::Plan => Some(
+                "The request represents an intention to ensure something occurs without providing an authorization for others to act.",
+            ),
+            Self::Directive => Some(
+                "The request represents an instruction authored by a Patient or RelatedPerson.",
+            ),
+            Self::Order => Some(
+                "The request represents a request/demand and authorization for action by the requestor.",
+            ),
+            Self::OriginalOrder => {
+                Some("The request represents an original authorization for action.")
+            }
+            Self::ReflexOrder => Some(
+                "The request represents an automatically generated supplemental authorization for action based on a parent authorization together with initial results of the action taken against that parent authorization.",
+            ),
+            Self::FillerOrder => Some(
+                "The request represents the view of an authorization instantiated by a fulfilling system representing the details of the fulfiller\'s intention to act upon a submitted order.",
+            ),
+            Self::InstanceOrder => Some(
+                "An order created in fulfillment of a broader order that represents the authorization for a single activity occurrence.  E.g. The administration of a single dose of a drug.",
+            ),
+            Self::Option => Some(
+                "The request represents a component or option for a RequestOrchestration that establishes timing, conditionality and/or other constraints among a set of requests.  Refer to [[[RequestOrchestration]]] for additional information on how this status is used.",
+            ),
         }
     }
 
@@ -168,5 +190,4 @@ impl RequestIntent {
             })
             .unwrap_or(false)
     }
-
 }

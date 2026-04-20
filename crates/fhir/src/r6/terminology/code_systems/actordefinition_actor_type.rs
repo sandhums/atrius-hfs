@@ -56,7 +56,9 @@ impl ActorDefinitionActorType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Person => Some("A human being acting directly."),
-            Self::System => Some("A software application or collection of such applications functioning as or represented as a single entity.  (This would be instantiated in FHIR as a Device.)"),
+            Self::System => Some(
+                "A software application or collection of such applications functioning as or represented as a single entity.  (This would be instantiated in FHIR as a Device.)",
+            ),
             Self::Collective => Some("A group of people or animals"),
             Self::Other => Some("Some other kind of actor"),
         }
@@ -119,5 +121,4 @@ impl ActorDefinitionActorType {
             })
             .unwrap_or(false)
     }
-
 }

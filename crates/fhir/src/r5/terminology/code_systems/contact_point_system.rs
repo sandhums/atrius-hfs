@@ -67,13 +67,25 @@ impl ContactPointSystem {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Phone => Some("The value is a telephone number used for voice calls. Use of full international numbers starting with + is recommended to enable automatic dialing support but not required."),
-            Self::Fax => Some("The value is a fax machine. Use of full international numbers starting with + is recommended to enable automatic dialing support but not required."),
+            Self::Phone => Some(
+                "The value is a telephone number used for voice calls. Use of full international numbers starting with + is recommended to enable automatic dialing support but not required.",
+            ),
+            Self::Fax => Some(
+                "The value is a fax machine. Use of full international numbers starting with + is recommended to enable automatic dialing support but not required.",
+            ),
             Self::Email => Some("The value is an email address."),
-            Self::Pager => Some("The value is a pager number. These may be local pager numbers that are only usable on a particular pager system."),
-            Self::Url => Some("A contact that is not a phone, fax, pager or email address and is expressed as a URL.  This is intended for various institutional or personal contacts including web sites, blogs, Skype, Twitter, Facebook, etc. Do not use for email addresses."),
-            Self::Sms => Some("A contact that can be used for sending a sms message (e.g. mobile phones, some landlines)."),
-            Self::Other => Some("A contact that is not a phone, fax, page or email address and is not expressible as a URL.  E.g. Internal mail address.  This SHOULD NOT be used for contacts that are expressible as a URL (e.g. Skype, Twitter, Facebook, etc.)  Extensions may be used to distinguish \"other\" contact types."),
+            Self::Pager => Some(
+                "The value is a pager number. These may be local pager numbers that are only usable on a particular pager system.",
+            ),
+            Self::Url => Some(
+                "A contact that is not a phone, fax, pager or email address and is expressed as a URL.  This is intended for various institutional or personal contacts including web sites, blogs, Skype, Twitter, Facebook, etc. Do not use for email addresses.",
+            ),
+            Self::Sms => Some(
+                "A contact that can be used for sending a sms message (e.g. mobile phones, some landlines).",
+            ),
+            Self::Other => Some(
+                "A contact that is not a phone, fax, page or email address and is not expressible as a URL.  E.g. Internal mail address.  This SHOULD NOT be used for contacts that are expressible as a URL (e.g. Skype, Twitter, Facebook, etc.)  Extensions may be used to distinguish \"other\" contact types.",
+            ),
         }
     }
 
@@ -140,5 +152,4 @@ impl ContactPointSystem {
             })
             .unwrap_or(false)
     }
-
 }

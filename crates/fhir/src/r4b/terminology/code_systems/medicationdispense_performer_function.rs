@@ -15,7 +15,8 @@ pub enum MedicationDispensePerformerFunctionCodes {
 }
 
 impl MedicationDispensePerformerFunctionCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationdispense-performer-function";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationdispense-performer-function";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -56,7 +57,9 @@ impl MedicationDispensePerformerFunctionCodes {
             Self::Dataenterer => Some("Recorded the details of the request"),
             Self::Packager => Some("Prepared the medication."),
             Self::Checker => Some("Performed initial quality assurance on the prepared medication"),
-            Self::Finalchecker => Some("Performed the final quality assurance on the prepared medication against the request. Typically, this is a pharmacist function."),
+            Self::Finalchecker => Some(
+                "Performed the final quality assurance on the prepared medication against the request. Typically, this is a pharmacist function.",
+            ),
         }
     }
 
@@ -117,5 +120,4 @@ impl MedicationDispensePerformerFunctionCodes {
             })
             .unwrap_or(false)
     }
-
 }

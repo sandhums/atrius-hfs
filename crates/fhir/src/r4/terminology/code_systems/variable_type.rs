@@ -53,7 +53,9 @@ impl EvidenceVariableType {
         match self {
             Self::Dichotomous => Some("The variable is dichotomous, such as present or absent."),
             Self::Continuous => Some("The variable is a continuous result such as a quantity."),
-            Self::Descriptive => Some("The variable is described narratively rather than quantitatively."),
+            Self::Descriptive => {
+                Some("The variable is described narratively rather than quantitatively.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl EvidenceVariableType {
             })
             .unwrap_or(false)
     }
-
 }

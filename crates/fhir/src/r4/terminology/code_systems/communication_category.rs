@@ -119,5 +119,4 @@ impl CommunicationCategory {
             })
             .unwrap_or(false)
     }
-
 }

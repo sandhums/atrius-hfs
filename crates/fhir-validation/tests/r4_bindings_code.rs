@@ -8,6 +8,7 @@ mod tests {
     use crate::common::fixtures::{
         assert_has_binding_issue, assert_has_error, load_resource, local_terminology_r4,
     };
+    use fhir_validation::binding::common::BindingCheckContextSync;
     use fhir_validation::r4::binding::validate_primitive_code_binding;
     use fhir_validation::{LocalTerminologyService, R4FhirPathEvaluator};
     use fhir_validation::{ValidationConfig, Validator};
@@ -25,32 +26,30 @@ mod tests {
 
     #[test]
     fn absent_code_produces_no_issue() {
-        let issues = validate_primitive_code_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.gender",
             "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Required,
             None,
-            None,
-            |_| Ok(()),
-            None,
         );
+        let issues = validate_primitive_code_binding(&ctx, None, None, |_| Ok(()));
 
         assert!(issues.is_empty());
     }
 
     #[test]
     fn local_success_produces_no_issue() {
-        let issues = validate_primitive_code_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.gender",
             "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Required,
-            Some("male"),
-            None,
-            |_| Ok(()),
             None,
         );
+        let issues = validate_primitive_code_binding(&ctx, Some("male"), None, |_| Ok(()));
 
         assert!(issues.is_empty());
     }
@@ -59,11 +58,16 @@ mod tests {
     fn remote_false_produces_warning_for_extensible_binding() {
         let term = LocalTerminologyService::new(FhirVersion::R4);
 
-        let issues = validate_primitive_code_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.language",
             "http://hl7.org/fhir/ValueSet/languages",
             BindingStrength::Extensible,
+            Some(&term),
+        );
+        let issues = validate_primitive_code_binding(
+            &ctx,
             Some("xx"),
             Some("remote required"),
             |_| {
@@ -71,21 +75,29 @@ mod tests {
                     "remote required".to_string(),
                 ))
             },
-            Some(&term),
         );
 
         assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].severity, Severity::Error);
-        assert_eq!(issues[0].code, "value");
+        assert_eq!(issues[0].severity, Severity::Warning);
+        assert_eq!(issues[0].code, "terminology");
+        assert_eq!(
+            issues[0].detail_code,
+            Some(fhir_validation::ValidationIssueDetailCode::TerminologyValidationFailed)
+        );
     }
 
     #[test]
     fn remote_required_without_service_produces_terminology_error() {
-        let issues = validate_primitive_code_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.language",
             "http://hl7.org/fhir/ValueSet/languages",
             BindingStrength::Required,
+            None,
+        );
+        let issues = validate_primitive_code_binding(
+            &ctx,
             Some("en"),
             Some("remote required"),
             |_| {
@@ -93,7 +105,6 @@ mod tests {
                     "remote required".to_string(),
                 ))
             },
-            None,
         );
 
         assert_eq!(issues.len(), 1);

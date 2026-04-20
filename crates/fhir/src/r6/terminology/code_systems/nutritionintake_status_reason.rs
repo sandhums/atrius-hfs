@@ -67,12 +67,24 @@ impl NutritionIntakeStatusReason {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::IncompleteData => Some("Data needed to safely act on the intake which was expected to become available independent of the intake is not yet available."),
-            Self::UnableToProvideCare => Some("Fulfiller not able to provide appropriate care associated with fulfilling the intake."),
-            Self::RequestClarification => Some("Clarification is required before the intake can be acted upon."),
-            Self::Allergy => Some("The patient/subject is believed to be allergic to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm."),
-            Self::SuspectedIntolerance => Some("The patient/subject is believed to have an intolerance to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm."),
-            Self::ScheduledForSurgery => Some("Patient/subject is receiving surgery and/or the subject is scheduled to be admitted for surgery in the near future. The intake will be resumed when the subject has sufficiently recovered from the surgery."),
+            Self::IncompleteData => Some(
+                "Data needed to safely act on the intake which was expected to become available independent of the intake is not yet available.",
+            ),
+            Self::UnableToProvideCare => Some(
+                "Fulfiller not able to provide appropriate care associated with fulfilling the intake.",
+            ),
+            Self::RequestClarification => {
+                Some("Clarification is required before the intake can be acted upon.")
+            }
+            Self::Allergy => Some(
+                "The patient/subject is believed to be allergic to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm.",
+            ),
+            Self::SuspectedIntolerance => Some(
+                "The patient/subject is believed to have an intolerance to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm.",
+            ),
+            Self::ScheduledForSurgery => Some(
+                "Patient/subject is receiving surgery and/or the subject is scheduled to be admitted for surgery in the near future. The intake will be resumed when the subject has sufficiently recovered from the surgery.",
+            ),
             Self::ProductNotAvailable => Some("Cannot supply product."),
         }
     }
@@ -140,5 +152,4 @@ impl NutritionIntakeStatusReason {
             })
             .unwrap_or(false)
     }
-
 }

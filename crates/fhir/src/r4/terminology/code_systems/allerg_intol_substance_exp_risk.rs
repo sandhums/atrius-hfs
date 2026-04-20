@@ -15,7 +15,8 @@ pub enum AllergyIntoleranceSubstanceExposureRisk {
 }
 
 impl AllergyIntoleranceSubstanceExposureRisk {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/allerg-intol-substance-exp-risk";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/allerg-intol-substance-exp-risk";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -47,8 +48,12 @@ impl AllergyIntoleranceSubstanceExposureRisk {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::KnownReactionRisk => Some("Known risk of allergy or intolerance reaction upon exposure to the specified substance."),
-            Self::NoKnownReactionRisk => Some("No known risk of allergy or intolerance reaction upon exposure to the specified substance."),
+            Self::KnownReactionRisk => Some(
+                "Known risk of allergy or intolerance reaction upon exposure to the specified substance.",
+            ),
+            Self::NoKnownReactionRisk => Some(
+                "No known risk of allergy or intolerance reaction upon exposure to the specified substance.",
+            ),
         }
     }
 
@@ -105,5 +110,4 @@ impl AllergyIntoleranceSubstanceExposureRisk {
             })
             .unwrap_or(false)
     }
-
 }

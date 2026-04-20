@@ -1498,5 +1498,4 @@ impl ManufacturedDoseForm {
             })
             .unwrap_or(false)
     }
-
 }

@@ -47,8 +47,12 @@ impl ConditionCategoryCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::ProblemListItem => Some("An item on a problem list that can be managed over time and can be expressed by a practitioner (e.g. physician, nurse), patient, or related person."),
-            Self::EncounterDiagnosis => Some("A point in time diagnosis (e.g. from a physician or nurse) in context of an encounter."),
+            Self::ProblemListItem => Some(
+                "An item on a problem list that can be managed over time and can be expressed by a practitioner (e.g. physician, nurse), patient, or related person.",
+            ),
+            Self::EncounterDiagnosis => Some(
+                "A point in time diagnosis (e.g. from a physician or nurse) in context of an encounter.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ConditionCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -53,7 +53,9 @@ impl ConceptMapGroupUnmappedMode {
         match self {
             Self::Provided => Some("Use the code as provided in the $translate request."),
             Self::Fixed => Some("Use the code explicitly provided in the group.unmapped."),
-            Self::OtherMap => Some("Use the map identified by the canonical URL in the url element."),
+            Self::OtherMap => {
+                Some("Use the map identified by the canonical URL in the url element.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl ConceptMapGroupUnmappedMode {
             })
             .unwrap_or(false)
     }
-
 }

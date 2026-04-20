@@ -24,7 +24,8 @@ pub enum MedicationRequestStatusReasonCodes {
 }
 
 impl MedicationRequestStatusReasonCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationrequest-status-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationrequest-status-reason";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -89,19 +90,43 @@ impl MedicationRequestStatusReasonCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Altchoice => Some("This therapy has been ordered as a backup to a preferred therapy. This order will be released when and if the preferred therapy is unsuccessful."),
+            Self::Altchoice => Some(
+                "This therapy has been ordered as a backup to a preferred therapy. This order will be released when and if the preferred therapy is unsuccessful.",
+            ),
             Self::Clarif => Some("Clarification is required before the order can be acted upon."),
-            Self::Drughigh => Some("The current level of the medication in the patient\'s system is too high. The medication is suspended to allow the level to subside to a safer level."),
-            Self::Hospadm => Some("The patient has been admitted to a care facility and their community medications are suspended until hospital discharge."),
-            Self::Labint => Some("The therapy would interfere with a planned lab test and the therapy is being withdrawn until the test is completed."),
-            Self::NonAvail => Some("Patient not available for a period of time due to a scheduled therapy, leave of absence or other reason."),
-            Self::Preg => Some("The patient is pregnant or breast feeding. The therapy will be resumed when the pregnancy is complete and the patient is no longer breastfeeding."),
-            Self::Salg => Some("The patient is believed to be allergic to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm."),
-            Self::Sddi => Some("The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete."),
-            Self::Sdupther => Some("The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete."),
-            Self::Sintol => Some("The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete."),
-            Self::Surg => Some("The drug is contraindicated for patients receiving surgery and the patient is scheduled to be admitted for surgery in the near future. The drug will be resumed when the patient has sufficiently recovered from the surgery."),
-            Self::Washout => Some("The patient was previously receiving a medication contraindicated with the current medication. The current medication will remain on hold until the prior medication has been cleansed from their system."),
+            Self::Drughigh => Some(
+                "The current level of the medication in the patient\'s system is too high. The medication is suspended to allow the level to subside to a safer level.",
+            ),
+            Self::Hospadm => Some(
+                "The patient has been admitted to a care facility and their community medications are suspended until hospital discharge.",
+            ),
+            Self::Labint => Some(
+                "The therapy would interfere with a planned lab test and the therapy is being withdrawn until the test is completed.",
+            ),
+            Self::NonAvail => Some(
+                "Patient not available for a period of time due to a scheduled therapy, leave of absence or other reason.",
+            ),
+            Self::Preg => Some(
+                "The patient is pregnant or breast feeding. The therapy will be resumed when the pregnancy is complete and the patient is no longer breastfeeding.",
+            ),
+            Self::Salg => Some(
+                "The patient is believed to be allergic to a substance that is part of the therapy and the therapy is being temporarily withdrawn to confirm.",
+            ),
+            Self::Sddi => Some(
+                "The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete.",
+            ),
+            Self::Sdupther => Some(
+                "The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete.",
+            ),
+            Self::Sintol => Some(
+                "The drug interacts with a short-term treatment that is more urgently required. This order will be resumed when the short-term treatment is complete.",
+            ),
+            Self::Surg => Some(
+                "The drug is contraindicated for patients receiving surgery and the patient is scheduled to be admitted for surgery in the near future. The drug will be resumed when the patient has sufficiently recovered from the surgery.",
+            ),
+            Self::Washout => Some(
+                "The patient was previously receiving a medication contraindicated with the current medication. The current medication will remain on hold until the prior medication has been cleansed from their system.",
+            ),
         }
     }
 
@@ -180,5 +205,4 @@ impl MedicationRequestStatusReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

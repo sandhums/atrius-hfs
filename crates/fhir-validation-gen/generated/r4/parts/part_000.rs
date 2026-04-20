@@ -880,7 +880,8 @@ impl fhir_validation::r4::R4Validatable for DataRequirement {
         if let Some(choice) = &self.subject {
             match choice {
                 DataRequirementSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "DataRequirement.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DataRequirement.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 DataRequirementSubject::Reference(value) => {
@@ -997,7 +998,8 @@ impl fhir_validation::r4::R4ValidatableAsync for DataRequirement {
         if let Some(choice) = &self.subject {
             match choice {
                 DataRequirementSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "DataRequirement.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DataRequirement.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 DataRequirementSubject::Reference(value) => {
@@ -1449,7 +1451,8 @@ impl fhir_validation::r4::R4Validatable for Dosage {
                 DosageAsNeeded::Boolean(_value) => {
                 }
                 DosageAsNeeded::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "Dosage.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Dosage.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1592,7 +1595,8 @@ impl fhir_validation::r4::R4ValidatableAsync for Dosage {
                 DosageAsNeeded::Boolean(_value) => {
                 }
                 DosageAsNeeded::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "Dosage.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Dosage.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value)).await;
                     issues.extend(child_issues);
                 }
             }

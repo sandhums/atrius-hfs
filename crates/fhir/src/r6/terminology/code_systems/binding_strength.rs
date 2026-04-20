@@ -59,11 +59,21 @@ impl BindingStrength {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Required => Some("To be conformant, the concept in this element SHALL be from the specified value set."),
-            Self::Extensible => Some("To be conformant, the concept in this element SHALL be from the specified value set if any of the codes within the value set can apply to the concept being communicated.  If the value set does not cover the concept (based on human review), alternate codings (or, data type allowing, text) may be included instead."),
-            Self::Preferred => Some("Instances are encouraged to draw from the specified codes for interoperability purposes but are not required to do so to be considered conformant."),
-            Self::Example => Some("Instances are not expected or even encouraged to draw from the specified value set.  The value set merely provides examples of the types of concepts intended to be included."),
-            Self::Descriptive => Some("There is no constraint on the allowed set of codes at the root level, though there may be additional bindings that apply in certain contexts.  The root binding element will be a description that gives guidance on potential downstream constraint of the allowed codes and/or highlights the presence of additional bindings."),
+            Self::Required => Some(
+                "To be conformant, the concept in this element SHALL be from the specified value set.",
+            ),
+            Self::Extensible => Some(
+                "To be conformant, the concept in this element SHALL be from the specified value set if any of the codes within the value set can apply to the concept being communicated.  If the value set does not cover the concept (based on human review), alternate codings (or, data type allowing, text) may be included instead.",
+            ),
+            Self::Preferred => Some(
+                "Instances are encouraged to draw from the specified codes for interoperability purposes but are not required to do so to be considered conformant.",
+            ),
+            Self::Example => Some(
+                "Instances are not expected or even encouraged to draw from the specified value set.  The value set merely provides examples of the types of concepts intended to be included.",
+            ),
+            Self::Descriptive => Some(
+                "There is no constraint on the allowed set of codes at the root level, though there may be additional bindings that apply in certain contexts.  The root binding element will be a description that gives guidance on potential downstream constraint of the allowed codes and/or highlights the presence of additional bindings.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl BindingStrength {
             })
             .unwrap_or(false)
     }
-
 }

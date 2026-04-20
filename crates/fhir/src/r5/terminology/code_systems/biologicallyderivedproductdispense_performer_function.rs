@@ -20,7 +20,8 @@ pub enum BiologicallyDerivedProductDispensePerformerFunction {
 }
 
 impl BiologicallyDerivedProductDispensePerformerFunction {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-performer-function";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/biologicallyderivedproductdispense-performer-function";
     pub const VERSION: &'static str = "5.0.0";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -72,7 +73,9 @@ impl BiologicallyDerivedProductDispensePerformerFunction {
             Self::AntibodyIdentification => Some("Antibody identification procedure"),
             Self::Crossmatch => Some("Serological or electronic crossmatch procedure"),
             Self::Release => Some("Approval for release for clinical application"),
-            Self::Transport => Some("Transfer of product from the supply department to the site of clinical use"),
+            Self::Transport => {
+                Some("Transfer of product from the supply department to the site of clinical use")
+            }
             Self::Receipt => Some("Receipt of product for clinical application"),
         }
     }
@@ -140,5 +143,4 @@ impl BiologicallyDerivedProductDispensePerformerFunction {
             })
             .unwrap_or(false)
     }
-
 }

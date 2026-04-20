@@ -16,7 +16,8 @@ pub enum MedicationAdministrationPerformerFunctionCodes {
 }
 
 impl MedicationAdministrationPerformerFunctionCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/med-admin-perform-function";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/med-admin-perform-function";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl MedicationAdministrationPerformerFunctionCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Performer => Some("A person, non-person living subject, organization or device that who actually and principally carries out the action"),
-            Self::Verifier => Some("A person who verifies the correctness and appropriateness of the service (plan, order, event, etc.) and hence takes on accountability."),
-            Self::Witness => Some("A person witnessing the action happening without doing anything. A witness is not necessarily aware, much less approves of anything stated in the service event. Example for a witness is students watching an operation or an advanced directive witness."),
+            Self::Performer => Some(
+                "A person, non-person living subject, organization or device that who actually and principally carries out the action",
+            ),
+            Self::Verifier => Some(
+                "A person who verifies the correctness and appropriateness of the service (plan, order, event, etc.) and hence takes on accountability.",
+            ),
+            Self::Witness => Some(
+                "A person witnessing the action happening without doing anything. A witness is not necessarily aware, much less approves of anything stated in the service event. Example for a witness is students watching an operation or an advanced directive witness.",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl MedicationAdministrationPerformerFunctionCodes {
             })
             .unwrap_or(false)
     }
-
 }

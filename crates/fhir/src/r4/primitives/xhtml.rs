@@ -2,9 +2,8 @@
 use crate::r4::*;
 
 /// FHIR primitive type for XHTML-formatted text with limited subset
-/// 
+///
 /// Base StructureDefinition for xhtml Type
-/// 
+///
 /// See: [xhtml](http://hl7.org/fhir/StructureDefinition/xhtml)
 pub type Xhtml = Element<std::string::String, Extension>;
-

@@ -1498,5 +1498,4 @@ impl AdministrableDoseForm {
             })
             .unwrap_or(false)
     }
-
 }

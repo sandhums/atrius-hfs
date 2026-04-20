@@ -133,5 +133,4 @@ impl AdverseEventOutcome {
             })
             .unwrap_or(false)
     }
-
 }

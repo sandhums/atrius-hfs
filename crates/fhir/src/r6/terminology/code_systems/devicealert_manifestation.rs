@@ -53,7 +53,9 @@ impl DeviceAlertManifestation {
         match self {
             Self::Auditory => Some("The signal is annunciated using sound (e.g. a chime)"),
             Self::Vibratory => Some("The signal is annunciated using a vibrating tactile method"),
-            Self::Visual => Some("The signal is annunciated using light (e.g. an illuminated icon, flashing light, or text message)"),
+            Self::Visual => Some(
+                "The signal is annunciated using light (e.g. an illuminated icon, flashing light, or text message)",
+            ),
         }
     }
 
@@ -112,5 +114,4 @@ impl DeviceAlertManifestation {
             })
             .unwrap_or(false)
     }
-
 }

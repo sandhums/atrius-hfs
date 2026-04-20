@@ -67,13 +67,19 @@ impl ConceptMapPropertyType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Coding => Some("The property  value is a code defined in an external code system. This may be used for translations, but is not the intent."),
+            Self::Coding => Some(
+                "The property  value is a code defined in an external code system. This may be used for translations, but is not the intent.",
+            ),
             Self::String => Some("The property value is a string."),
-            Self::Integer => Some("The property value is an integer (often used to assign ranking values to concepts for supporting score assessments)."),
+            Self::Integer => Some(
+                "The property value is an integer (often used to assign ranking values to concepts for supporting score assessments).",
+            ),
             Self::Boolean => Some("The property value is a boolean true | false."),
             Self::DateTime => Some("The property is a date or a date + time."),
             Self::Decimal => Some("The property value is a decimal number."),
-            Self::Code => Some("The property value is a code as defined in the CodeSystem in ConceptMap.property.system."),
+            Self::Code => Some(
+                "The property value is a code as defined in the CodeSystem in ConceptMap.property.system.",
+            ),
         }
     }
 
@@ -140,5 +146,4 @@ impl ConceptMapPropertyType {
             })
             .unwrap_or(false)
     }
-
 }

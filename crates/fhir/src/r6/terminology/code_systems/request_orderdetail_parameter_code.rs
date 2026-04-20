@@ -119,5 +119,4 @@ impl RequestOrderDetailParameterCode {
             })
             .unwrap_or(false)
     }
-
 }

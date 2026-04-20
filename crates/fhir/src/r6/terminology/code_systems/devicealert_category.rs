@@ -112,5 +112,4 @@ impl DeviceAlertCategory {
             })
             .unwrap_or(false)
     }
-
 }

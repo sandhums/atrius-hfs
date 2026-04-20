@@ -52,8 +52,12 @@ impl DatesEventTypeCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::CardIssued => Some("The date when an insurance card was issued."),
-            Self::ClaimReceived => Some("The date when an insurer nreceived a claim, pre-authorization or predetermination."),
-            Self::ServiceExpected => Some("The date or period on or during which the services are expected to be performed."),
+            Self::ClaimReceived => Some(
+                "The date when an insurer nreceived a claim, pre-authorization or predetermination.",
+            ),
+            Self::ServiceExpected => Some(
+                "The date or period on or during which the services are expected to be performed.",
+            ),
         }
     }
 
@@ -112,5 +116,4 @@ impl DatesEventTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

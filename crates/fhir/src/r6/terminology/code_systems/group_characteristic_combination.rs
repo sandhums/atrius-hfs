@@ -73,11 +73,21 @@ impl GroupCharacteristicCombination {
         match self {
             Self::AllOf => Some("Combine characteristics with AND."),
             Self::AnyOf => Some("Combine characteristics with OR."),
-            Self::AtLeast => Some("Meet at least the threshold number of characteristics for definition."),
-            Self::AtMost => Some("Meet at most the threshold number of characteristics for definition."),
-            Self::ExceptSubset => Some("Meet the inclusion criteria under the condition that the basis does not match the exclusion criteria."),
-            Self::Statistical => Some("Combine characteristics statistically. Use method to specify the statistical method."),
-            Self::NetEffect => Some("Combine characteristics by addition of benefits and subtraction of harms."),
+            Self::AtLeast => {
+                Some("Meet at least the threshold number of characteristics for definition.")
+            }
+            Self::AtMost => {
+                Some("Meet at most the threshold number of characteristics for definition.")
+            }
+            Self::ExceptSubset => Some(
+                "Meet the inclusion criteria under the condition that the basis does not match the exclusion criteria.",
+            ),
+            Self::Statistical => Some(
+                "Combine characteristics statistically. Use method to specify the statistical method.",
+            ),
+            Self::NetEffect => {
+                Some("Combine characteristics by addition of benefits and subtraction of harms.")
+            }
             Self::Dataset => Some("Combine characteristics as a collection used as the dataset."),
         }
     }
@@ -147,5 +157,4 @@ impl GroupCharacteristicCombination {
             })
             .unwrap_or(false)
     }
-
 }

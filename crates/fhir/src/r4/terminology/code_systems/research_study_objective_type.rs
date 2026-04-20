@@ -16,7 +16,8 @@ pub enum ResearchStudyObjectiveType {
 }
 
 impl ResearchStudyObjectiveType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/research-study-objective-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/research-study-objective-type";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,8 +52,12 @@ impl ResearchStudyObjectiveType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Primary => Some("The main question to be answered, and the one that drives any statistical planning for the study\u{2014}e.g., calculation of the sample size to provide the appropriate power for statistical testing."),
-            Self::Secondary => Some("Question to be answered in the study that is of lesser importance than the primary objective."),
+            Self::Primary => Some(
+                "The main question to be answered, and the one that drives any statistical planning for the study\u{2014}e.g., calculation of the sample size to provide the appropriate power for statistical testing.",
+            ),
+            Self::Secondary => Some(
+                "Question to be answered in the study that is of lesser importance than the primary objective.",
+            ),
             Self::Exploratory => Some("Exploratory questions to be answered in the study."),
         }
     }
@@ -112,5 +117,4 @@ impl ResearchStudyObjectiveType {
             })
             .unwrap_or(false)
     }
-
 }

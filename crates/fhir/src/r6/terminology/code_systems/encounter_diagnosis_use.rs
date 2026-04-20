@@ -47,8 +47,12 @@ impl EncounterDiagnosisUse {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Working => Some("Provisional diagnosis used during the encounter or episode of care that may be refined or changed."),
-            Self::Final => Some("Final diagnosis established at the end of the encounter or episode of care."),
+            Self::Working => Some(
+                "Provisional diagnosis used during the encounter or episode of care that may be refined or changed.",
+            ),
+            Self::Final => {
+                Some("Final diagnosis established at the end of the encounter or episode of care.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl EncounterDiagnosisUse {
             })
             .unwrap_or(false)
     }
-
 }

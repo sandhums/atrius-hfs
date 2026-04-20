@@ -47,8 +47,12 @@ impl CatalogEntryRelationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Triggers => Some("the related entry represents an activity that may be triggered by the current item."),
-            Self::IsReplacedBy => Some("the related entry represents an item that replaces the current retired item."),
+            Self::Triggers => Some(
+                "the related entry represents an activity that may be triggered by the current item.",
+            ),
+            Self::IsReplacedBy => {
+                Some("the related entry represents an item that replaces the current retired item.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl CatalogEntryRelationType {
             })
             .unwrap_or(false)
     }
-
 }

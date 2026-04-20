@@ -196,5 +196,4 @@ impl DICOMAuditMessageRecordLifecycleEvents {
             })
             .unwrap_or(false)
     }
-
 }

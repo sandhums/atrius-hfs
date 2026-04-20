@@ -98,5 +98,4 @@ impl AdditionalMonitoring {
             })
             .unwrap_or(false)
     }
-
 }

@@ -19,7 +19,8 @@ pub enum CommunicationNotDoneReason {
 }
 
 impl CommunicationNotDoneReason {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/communication-not-done-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/communication-not-done-reason";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -65,10 +66,18 @@ impl CommunicationNotDoneReason {
         match self {
             Self::Unknown => Some("The communication was not done due to an unknown reason."),
             Self::SystemError => Some("The communication was not done due to a system error."),
-            Self::InvalidPhoneNumber => Some("The communication was not done due to an invalid phone number."),
-            Self::RecipientUnavailable => Some("The communication was not done due to the recipient being unavailable."),
-            Self::FamilyObjection => Some("The communication was not done due to a family objection."),
-            Self::PatientObjection => Some("The communication was not done due to a patient objection."),
+            Self::InvalidPhoneNumber => {
+                Some("The communication was not done due to an invalid phone number.")
+            }
+            Self::RecipientUnavailable => {
+                Some("The communication was not done due to the recipient being unavailable.")
+            }
+            Self::FamilyObjection => {
+                Some("The communication was not done due to a family objection.")
+            }
+            Self::PatientObjection => {
+                Some("The communication was not done due to a patient objection.")
+            }
         }
     }
 
@@ -133,5 +142,4 @@ impl CommunicationNotDoneReason {
             })
             .unwrap_or(false)
     }
-
 }

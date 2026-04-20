@@ -147,5 +147,4 @@ impl DeviceMetricColor {
             })
             .unwrap_or(false)
     }
-
 }

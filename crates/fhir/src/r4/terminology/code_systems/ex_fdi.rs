@@ -315,5 +315,4 @@ impl TeethCodes {
             })
             .unwrap_or(false)
     }
-
 }

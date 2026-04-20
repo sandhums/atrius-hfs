@@ -15,7 +15,8 @@ pub enum ExampleCoverageFinancialExceptionCodes {
 }
 
 impl ExampleCoverageFinancialExceptionCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/ex-coverage-financial-exception";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/ex-coverage-financial-exception";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -48,7 +49,9 @@ impl ExampleCoverageFinancialExceptionCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Retired => Some("Retired persons have all copays and deductibles reduced."),
-            Self::Foster => Some("Children in the foster care have all copays and deductibles waived."),
+            Self::Foster => {
+                Some("Children in the foster care have all copays and deductibles waived.")
+            }
         }
     }
 
@@ -105,5 +108,4 @@ impl ExampleCoverageFinancialExceptionCodes {
             })
             .unwrap_or(false)
     }
-
 }

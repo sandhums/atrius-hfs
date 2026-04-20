@@ -51,9 +51,15 @@ impl NamingSystemType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Codesystem => Some("The naming system is used to define concepts and symbols to represent those concepts; e.g. UCUM, LOINC, NDC code, local lab codes, etc."),
-            Self::Identifier => Some("The naming system is used to manage identifiers (e.g. license numbers, order numbers, etc.)."),
-            Self::Root => Some("The naming system is used as the root for other identifiers and naming systems."),
+            Self::Codesystem => Some(
+                "The naming system is used to define concepts and symbols to represent those concepts; e.g. UCUM, LOINC, NDC code, local lab codes, etc.",
+            ),
+            Self::Identifier => Some(
+                "The naming system is used to manage identifiers (e.g. license numbers, order numbers, etc.).",
+            ),
+            Self::Root => Some(
+                "The naming system is used as the root for other identifiers and naming systems.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl NamingSystemType {
             })
             .unwrap_or(false)
     }
-
 }

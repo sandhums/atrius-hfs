@@ -47,8 +47,12 @@ impl ContractTermTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Statutory => Some("Based on specialized statutes that deal with particular subjects."),
-            Self::SubjectTo => Some("Execution of the term in the contract is conditional on the execution of other actions."),
+            Self::Statutory => {
+                Some("Based on specialized statutes that deal with particular subjects.")
+            }
+            Self::SubjectTo => Some(
+                "Execution of the term in the contract is conditional on the execution of other actions.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ContractTermTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -55,9 +55,15 @@ impl ConsentScopeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Adr => Some("Actions to be taken if they are no longer able to make decisions for themselves"),
-            Self::Research => Some("Consent to participate in research protocol and information sharing required"),
-            Self::PatientPrivacy => Some("Agreement to collect, access, use or disclose (share) information"),
+            Self::Adr => Some(
+                "Actions to be taken if they are no longer able to make decisions for themselves",
+            ),
+            Self::Research => {
+                Some("Consent to participate in research protocol and information sharing required")
+            }
+            Self::PatientPrivacy => {
+                Some("Agreement to collect, access, use or disclose (share) information")
+            }
             Self::Treatment => Some("Consent to undergo a specific treatment"),
         }
     }
@@ -119,5 +125,4 @@ impl ConsentScopeCodes {
             })
             .unwrap_or(false)
     }
-
 }

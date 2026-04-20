@@ -57,7 +57,9 @@ impl MeasureScoring {
         match self {
             Self::Proportion => Some("The measure score is defined using a proportion."),
             Self::Ratio => Some("The measure score is defined using a ratio."),
-            Self::ContinuousVariable => Some("The score is defined by a calculation of some quantity."),
+            Self::ContinuousVariable => {
+                Some("The score is defined by a calculation of some quantity.")
+            }
             Self::Cohort => Some("The measure is a cohort definition."),
         }
     }
@@ -119,5 +121,4 @@ impl MeasureScoring {
             })
             .unwrap_or(false)
     }
-
 }

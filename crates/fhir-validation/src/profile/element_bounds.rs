@@ -15,6 +15,7 @@
 //!   generated R5), **integer64** — [`Element<i64, _>`](helios_fhir::Element): JSON may be a bare number
 //!   or `{"value": …}`; we deserialize accordingly.
 
+use crate::issue_code;
 use crate::profile::cardinality::relative_profile_path;
 use crate::profile::helpers::get_values_with_paths_at_relative_path;
 use crate::profile::types::ExtractedElementRule;
@@ -111,7 +112,7 @@ fn check_max_length(
     }
     vec![ValidationIssue {
         severity: Severity::Error,
-        code: "structure".to_string(),
+        code: issue_code::STRUCTURE.to_string(),
         summary: Some("Element value exceeds maxLength".to_string()),
         expression_kind: None,
         source_invariant_key: None,
@@ -189,7 +190,7 @@ fn violation_issue(
 ) -> Vec<ValidationIssue> {
     vec![ValidationIssue {
         severity: Severity::Error,
-        code: "structure".to_string(),
+        code: issue_code::STRUCTURE.to_string(),
         summary: Some(format!("Element value is {direction} {label}")),
         expression_kind: None,
         source_invariant_key: None,
@@ -213,7 +214,7 @@ fn indeterminate_issue(
 ) -> Vec<ValidationIssue> {
     vec![ValidationIssue {
         severity: Severity::Warning,
-        code: "structure".to_string(),
+        code: issue_code::STRUCTURE.to_string(),
         summary: Some(format!("{label} check was inconclusive ({key})")),
         expression_kind: None,
         source_invariant_key: None,
@@ -234,7 +235,7 @@ fn single_bound_key_value<'a>(bound: &'a Value, prefix: &str) -> Option<(&'a str
 fn primitive_string_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get("value").and_then(|v| v.as_str()),
+        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
         _ => None,
     }
 }
@@ -279,7 +280,7 @@ fn compare_by_bound_key(bound_key: &str, actual: &Value, bound: &Value) -> Compa
 fn extract_string_for_primitive(v: &Value) -> Option<String> {
     match v {
         Value::String(s) => Some(s.clone()),
-        Value::Object(m) => match m.get("value")? {
+        Value::Object(m) => match m.get(issue_code::FHIR_JSON_VALUE)? {
             Value::String(s) => Some(s.clone()),
             _ => None,
         },
@@ -444,7 +445,7 @@ fn compare_unsigned_int_pair(actual: &Value, bound: &Value) -> CompareOutcome {
 
 fn quantity_value_precise(q: &Value) -> Option<PreciseDecimal> {
     let obj = q.as_object()?;
-    precise_decimal_from_value(obj.get("value")?)
+    precise_decimal_from_value(obj.get(issue_code::FHIR_JSON_VALUE)?)
 }
 
 fn quantity_unit_key(q: &Value) -> Option<(Option<String>, Option<String>)> {

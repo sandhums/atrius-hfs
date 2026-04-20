@@ -15,7 +15,8 @@ pub enum MeasureImprovementNotation {
 }
 
 impl MeasureImprovementNotation {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/measure-improvement-notation";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/measure-improvement-notation";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -47,8 +48,12 @@ impl MeasureImprovementNotation {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Increase => Some("Improvement is indicated as an increase in the score or measurement (e.g. Higher score indicates better quality)."),
-            Self::Decrease => Some("Improvement is indicated as a decrease in the score or measurement (e.g. Lower score indicates better quality)."),
+            Self::Increase => Some(
+                "Improvement is indicated as an increase in the score or measurement (e.g. Higher score indicates better quality).",
+            ),
+            Self::Decrease => Some(
+                "Improvement is indicated as a decrease in the score or measurement (e.g. Lower score indicates better quality).",
+            ),
         }
     }
 
@@ -105,5 +110,4 @@ impl MeasureImprovementNotation {
             })
             .unwrap_or(false)
     }
-
 }

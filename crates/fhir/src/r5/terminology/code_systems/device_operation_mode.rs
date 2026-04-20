@@ -59,11 +59,21 @@ impl FHIRDeviceOperationMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Normal => Some("The device operates in a mode that supports the fulfillment of its clinical functions."),
-            Self::Demo => Some("The device operates in a mode that is intended for demonstration purposes only. Arbitrary values are generated."),
-            Self::Service => Some("The device operates in a mode that is intended for correcting a functional problem of the device only. Arbitrary values may be generated."),
-            Self::Maintenance => Some("The device operates in a mode that is intended for preventative and/or scheduled maintenance purposes only."),
-            Self::Test => Some("The device operates in a test mode that is not intended to be used for production/operational purposes."),
+            Self::Normal => Some(
+                "The device operates in a mode that supports the fulfillment of its clinical functions.",
+            ),
+            Self::Demo => Some(
+                "The device operates in a mode that is intended for demonstration purposes only. Arbitrary values are generated.",
+            ),
+            Self::Service => Some(
+                "The device operates in a mode that is intended for correcting a functional problem of the device only. Arbitrary values may be generated.",
+            ),
+            Self::Maintenance => Some(
+                "The device operates in a mode that is intended for preventative and/or scheduled maintenance purposes only.",
+            ),
+            Self::Test => Some(
+                "The device operates in a test mode that is not intended to be used for production/operational purposes.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl FHIRDeviceOperationMode {
             })
             .unwrap_or(false)
     }
-
 }

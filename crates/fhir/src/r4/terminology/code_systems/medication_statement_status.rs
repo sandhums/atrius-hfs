@@ -73,10 +73,16 @@ impl MedicationStatusCodes {
         match self {
             Self::Active => Some("The medication is still being taken."),
             Self::Completed => Some("The medication is no longer being taken."),
-            Self::EnteredInError => Some("Some of the actions that are implied by the medication statement may have occurred.  For example, the patient may have taken some of the medication.  Clinical decision support systems should take this status into account."),
+            Self::EnteredInError => Some(
+                "Some of the actions that are implied by the medication statement may have occurred.  For example, the patient may have taken some of the medication.  Clinical decision support systems should take this status into account.",
+            ),
             Self::Intended => Some("The medication may be taken at some time in the future."),
-            Self::Stopped => Some("Actions implied by the statement have been permanently halted, before all of them occurred. This should not be used if the statement was entered in error."),
-            Self::OnHold => Some("Actions implied by the statement have been temporarily halted, but are expected to continue later. May also be called \'suspended\'."),
+            Self::Stopped => Some(
+                "Actions implied by the statement have been permanently halted, before all of them occurred. This should not be used if the statement was entered in error.",
+            ),
+            Self::OnHold => Some(
+                "Actions implied by the statement have been temporarily halted, but are expected to continue later. May also be called \'suspended\'.",
+            ),
             Self::Unknown => Some("The state of the medication use is not currently known."),
             Self::NotTaken => Some("The medication was not consumed by the patient"),
         }
@@ -147,5 +153,4 @@ impl MedicationStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

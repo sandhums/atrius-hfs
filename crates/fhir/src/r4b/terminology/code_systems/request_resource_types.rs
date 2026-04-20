@@ -99,21 +99,33 @@ impl RequestResourceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Appointment => Some("A booking of a healthcare event among patient(s), practitioner(s), related person(s) and/or device(s) for a specific date/time. This may result in one or more Encounter(s)."),
-            Self::AppointmentResponse => Some("A reply to an appointment request for a patient and/or practitioner(s), such as a confirmation or rejection."),
+            Self::Appointment => Some(
+                "A booking of a healthcare event among patient(s), practitioner(s), related person(s) and/or device(s) for a specific date/time. This may result in one or more Encounter(s).",
+            ),
+            Self::AppointmentResponse => Some(
+                "A reply to an appointment request for a patient and/or practitioner(s), such as a confirmation or rejection.",
+            ),
             Self::CarePlan => Some("Healthcare plan for patient or group."),
             Self::Claim => Some("Claim, Pre-determination or Pre-authorization."),
-            Self::CommunicationRequest => Some("A request for information to be sent to a receiver."),
+            Self::CommunicationRequest => {
+                Some("A request for information to be sent to a receiver.")
+            }
             Self::Contract => Some("Legal Agreement."),
             Self::DeviceRequest => Some("Medical device request."),
             Self::EnrollmentRequest => Some("Enrollment request."),
-            Self::ImmunizationRecommendation => Some("Guidance or advice relating to an immunization."),
+            Self::ImmunizationRecommendation => {
+                Some("Guidance or advice relating to an immunization.")
+            }
             Self::MedicationRequest => Some("Ordering of medication for patient or group."),
             Self::NutritionOrder => Some("Diet, formula or nutritional supplement request."),
-            Self::ServiceRequest => Some("A record of a request for service such as diagnostic investigations, treatments, or operations to be performed."),
+            Self::ServiceRequest => Some(
+                "A record of a request for service such as diagnostic investigations, treatments, or operations to be performed.",
+            ),
             Self::SupplyRequest => Some("Request for a medication, substance or device."),
             Self::Task => Some("A task to be performed."),
-            Self::VisionPrescription => Some("Prescription for vision correction products for a patient."),
+            Self::VisionPrescription => {
+                Some("Prescription for vision correction products for a patient.")
+            }
         }
     }
 
@@ -196,5 +208,4 @@ impl RequestResourceType {
             })
             .unwrap_or(false)
     }
-
 }

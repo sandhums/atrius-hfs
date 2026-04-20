@@ -133,13 +133,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DecimalElement, Element};
 
-pub mod primitives;
 pub mod complex_types;
+pub mod primitives;
 pub mod resources;
 pub mod terminology;
 
-pub use primitives::*;
 pub use complex_types::*;
+pub use primitives::*;
 pub use resources::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FhirPath)]
@@ -283,7 +283,9 @@ impl PartialEq for Resource {
             (Self::Account(a), Self::Account(b)) => a == b,
             (Self::ActivityDefinition(a), Self::ActivityDefinition(b)) => a == b,
             (Self::ActorDefinition(a), Self::ActorDefinition(b)) => a == b,
-            (Self::AdministrableProductDefinition(a), Self::AdministrableProductDefinition(b)) => a == b,
+            (Self::AdministrableProductDefinition(a), Self::AdministrableProductDefinition(b)) => {
+                a == b
+            }
             (Self::AdverseEvent(a), Self::AdverseEvent(b)) => a == b,
             (Self::AllergyIntolerance(a), Self::AllergyIntolerance(b)) => a == b,
             (Self::Appointment(a), Self::Appointment(b)) => a == b,
@@ -675,7 +677,8 @@ pub mod type_hierarchy {
 
     /// Gets all subtypes of a given parent type
     pub fn get_subtypes(parent: &str) -> Vec<&'static str> {
-        get_type_parents().iter()
+        get_type_parents()
+            .iter()
             .filter_map(|(child, p)| {
                 if p.eq_ignore_ascii_case(parent) {
                     Some(*child)
@@ -686,7 +689,6 @@ pub mod type_hierarchy {
             .collect()
     }
 }
-
 
 // --- Complex Types Provider ---
 /// Marker struct for complex type information
@@ -919,7 +921,10 @@ pub fn get_summary_fields(resource_type: &str) -> &'static [&'static str] {
 /// let params = get_compartment_params("Patient", "Observation");
 /// assert_eq!(params, &["subject", "performer"]);
 /// ```
-pub fn get_compartment_params(compartment_type: &str, resource_type: &str) -> &'static [&'static str] {
+pub fn get_compartment_params(
+    compartment_type: &str,
+    resource_type: &str,
+) -> &'static [&'static str] {
     match compartment_type {
         "Device" => match resource_type {
             "Account" => &["subject"],
@@ -1046,12 +1051,19 @@ pub fn get_compartment_params(compartment_type: &str, resource_type: &str) -> &'
             "Claim" => &["subject", "payee"],
             "ClaimResponse" => &["subject"],
             "Communication" => &["subject", "sender", "recipient"],
-            "CommunicationRequest" => &["subject", "information-provider", "recipient", "requester"],
+            "CommunicationRequest" => {
+                &["subject", "information-provider", "recipient", "requester"]
+            }
             "Composition" => &["subject", "author", "attester"],
             "Condition" => &["patient", "asserter"],
             "Consent" => &["subject"],
             "Contract" => &["patient"],
-            "Coverage" => &["policy-holder", "subscriber", "beneficiary", "paymentby-party"],
+            "Coverage" => &[
+                "policy-holder",
+                "subscriber",
+                "beneficiary",
+                "paymentby-party",
+            ],
             "CoverageEligibilityRequest" => &["patient"],
             "CoverageEligibilityResponse" => &["patient"],
             "DetectedIssue" => &["patient"],

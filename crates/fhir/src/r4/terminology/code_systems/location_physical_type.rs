@@ -95,20 +95,40 @@ impl LocationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Si => Some("A collection of buildings or other locations such as a site or a campus."),
-            Self::Bu => Some("Any Building or structure. This may contain rooms, corridors, wings, etc. It might not have walls, or a roof, but is considered a defined/allocated space."),
-            Self::Wi => Some("A Wing within a Building, this often contains levels, rooms and corridors."),
-            Self::Wa => Some("A Ward is a section of a medical facility that may contain rooms and other types of location."),
+            Self::Si => {
+                Some("A collection of buildings or other locations such as a site or a campus.")
+            }
+            Self::Bu => Some(
+                "Any Building or structure. This may contain rooms, corridors, wings, etc. It might not have walls, or a roof, but is considered a defined/allocated space.",
+            ),
+            Self::Wi => {
+                Some("A Wing within a Building, this often contains levels, rooms and corridors.")
+            }
+            Self::Wa => Some(
+                "A Ward is a section of a medical facility that may contain rooms and other types of location.",
+            ),
             Self::Lvl => Some("A Level in a multi-level Building/Structure."),
             Self::Co => Some("Any corridor within a Building, that may connect rooms."),
-            Self::Ro => Some("A space that is allocated as a room, it may have walls/roof etc., but does not require these."),
-            Self::Bd => Some("A space that is allocated for sleeping/laying on. This is not the physical bed/trolley that may be moved about, but the space it may occupy."),
+            Self::Ro => Some(
+                "A space that is allocated as a room, it may have walls/roof etc., but does not require these.",
+            ),
+            Self::Bd => Some(
+                "A space that is allocated for sleeping/laying on. This is not the physical bed/trolley that may be moved about, but the space it may occupy.",
+            ),
             Self::Ve => Some("A means of transportation."),
-            Self::Ho => Some("A residential dwelling. Usually used to reference a location that a person/patient may reside."),
-            Self::Ca => Some("A container that can store goods, equipment, medications or other items."),
+            Self::Ho => Some(
+                "A residential dwelling. Usually used to reference a location that a person/patient may reside.",
+            ),
+            Self::Ca => {
+                Some("A container that can store goods, equipment, medications or other items.")
+            }
             Self::Rd => Some("A defined path to travel between 2 points that has a known name."),
-            Self::Area => Some("A defined physical boundary of something, such as a flood risk zone, region, postcode"),
-            Self::Jdn => Some("A wide scope that covers a conceptual domain, such as a Nation (Country wide community or Federal Government - e.g. Ministry of Health),  Province or State (community or Government), Business (throughout the enterprise), Nation with a business scope of an agency (e.g. CDC, FDA etc.) or a Business segment (UK Pharmacy), not just an physical boundary"),
+            Self::Area => Some(
+                "A defined physical boundary of something, such as a flood risk zone, region, postcode",
+            ),
+            Self::Jdn => Some(
+                "A wide scope that covers a conceptual domain, such as a Nation (Country wide community or Federal Government - e.g. Ministry of Health),  Province or State (community or Government), Business (throughout the enterprise), Nation with a business scope of an agency (e.g. CDC, FDA etc.) or a Business segment (UK Pharmacy), not just an physical boundary",
+            ),
         }
     }
 
@@ -189,5 +209,4 @@ impl LocationType {
             })
             .unwrap_or(false)
     }
-
 }

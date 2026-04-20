@@ -48,7 +48,9 @@ impl UnitTypeCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Individual => Some("A single individual"),
-            Self::Family => Some("A family, typically includes self, spouse(s) and children to a defined age"),
+            Self::Family => {
+                Some("A family, typically includes self, spouse(s) and children to a defined age")
+            }
         }
     }
 
@@ -105,5 +107,4 @@ impl UnitTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

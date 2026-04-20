@@ -87,18 +87,42 @@ impl SearchModifierCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Missing => Some("The search parameter returns resources that have a value or not."),
-            Self::Exact => Some("The search parameter returns resources that have a value that exactly matches the supplied parameter (the whole string, including casing and accents)."),
-            Self::Contains => Some("The search parameter returns resources that include the supplied parameter value anywhere within the field being searched."),
-            Self::Not => Some("The search parameter returns resources that do not contain a match."),
-            Self::Text => Some("The search parameter is processed as a string that searches text associated with the code/value - either CodeableConcept.text, Coding.display, or Identifier.type.text."),
-            Self::In_ => Some("The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is in the specified value set."),
-            Self::NotIn => Some("The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is not in the specified value set."),
-            Self::Below => Some("The search parameter tests whether the value in a resource is subsumed by the specified value (is-a, or hierarchical relationships)."),
-            Self::Above => Some("The search parameter tests whether the value in a resource subsumes the specified value (is-a, or hierarchical relationships)."),
-            Self::Type_ => Some("The search parameter only applies to the Resource Type specified as a modifier (e.g. the modifier is not actually :type, but :Patient etc.)."),
-            Self::Identifier => Some("The search parameter applies to the identifier on the resource, not the reference."),
-            Self::OfType => Some("The search parameter has the format system|code|value, where the system and code refer to an Identifier.type.coding.system and .code, and match if any of the type codes match. All 3 parts must be present."),
+            Self::Missing => {
+                Some("The search parameter returns resources that have a value or not.")
+            }
+            Self::Exact => Some(
+                "The search parameter returns resources that have a value that exactly matches the supplied parameter (the whole string, including casing and accents).",
+            ),
+            Self::Contains => Some(
+                "The search parameter returns resources that include the supplied parameter value anywhere within the field being searched.",
+            ),
+            Self::Not => {
+                Some("The search parameter returns resources that do not contain a match.")
+            }
+            Self::Text => Some(
+                "The search parameter is processed as a string that searches text associated with the code/value - either CodeableConcept.text, Coding.display, or Identifier.type.text.",
+            ),
+            Self::In_ => Some(
+                "The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is in the specified value set.",
+            ),
+            Self::NotIn => Some(
+                "The search parameter is a URI (relative or absolute) that identifies a value set, and the search parameter tests whether the coding is not in the specified value set.",
+            ),
+            Self::Below => Some(
+                "The search parameter tests whether the value in a resource is subsumed by the specified value (is-a, or hierarchical relationships).",
+            ),
+            Self::Above => Some(
+                "The search parameter tests whether the value in a resource subsumes the specified value (is-a, or hierarchical relationships).",
+            ),
+            Self::Type_ => Some(
+                "The search parameter only applies to the Resource Type specified as a modifier (e.g. the modifier is not actually :type, but :Patient etc.).",
+            ),
+            Self::Identifier => Some(
+                "The search parameter applies to the identifier on the resource, not the reference.",
+            ),
+            Self::OfType => Some(
+                "The search parameter has the format system|code|value, where the system and code refer to an Identifier.type.coding.system and .code, and match if any of the type codes match. All 3 parts must be present.",
+            ),
         }
     }
 
@@ -175,5 +199,4 @@ impl SearchModifierCode {
             })
             .unwrap_or(false)
     }
-
 }

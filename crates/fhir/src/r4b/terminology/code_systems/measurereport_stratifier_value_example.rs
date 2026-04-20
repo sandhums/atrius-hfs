@@ -17,7 +17,8 @@ pub enum MeasureReportStratifierValueExample {
 }
 
 impl MeasureReportStratifierValueExample {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/measurereport-stratifier-value-example";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/measurereport-stratifier-value-example";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -119,5 +120,4 @@ impl MeasureReportStratifierValueExample {
             })
             .unwrap_or(false)
     }
-
 }

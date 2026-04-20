@@ -51,8 +51,12 @@ impl Kind {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Insurance => Some("The Coverage provides the identifiers and card-level details of an insurance policy."),
-            Self::SelfPay => Some("One or more persons and/or organizations are paying for the services rendered."),
+            Self::Insurance => Some(
+                "The Coverage provides the identifiers and card-level details of an insurance policy.",
+            ),
+            Self::SelfPay => Some(
+                "One or more persons and/or organizations are paying for the services rendered.",
+            ),
             Self::Other => Some("Some other organization is paying for the service."),
         }
     }
@@ -112,5 +116,4 @@ impl Kind {
             })
             .unwrap_or(false)
     }
-
 }

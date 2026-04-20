@@ -1,3 +1,4 @@
+use crate::issue_code;
 use crate::profile::types::ExtractedElementRule;
 use crate::{Severity, ValidationIssue, ValidationIssueDetailCode};
 use serde::Serialize;
@@ -141,7 +142,7 @@ fn validate_max_cardinality_from_json(
 
         issues.push(ValidationIssue {
             severity: Severity::Error,
-            code: "structure".to_string(),
+            code: issue_code::STRUCTURE.to_string(),
             summary: Some("Element exceeds maximum cardinality for this profile".to_string()),
             expression_kind: None,
             source_invariant_key: None,

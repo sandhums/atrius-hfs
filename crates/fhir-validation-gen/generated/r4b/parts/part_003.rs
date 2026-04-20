@@ -113,7 +113,8 @@ impl fhir_validation::r4b::R4BValidatable for CarePlanActivityDetail {
         if let Some(choice) = &self.product {
             match choice {
                 CarePlanActivityDetailProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(validator, "CarePlan.activity.detail.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CarePlan.activity.detail.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
                 CarePlanActivityDetailProduct::Reference(value) => {
@@ -322,7 +323,8 @@ impl fhir_validation::r4b::R4BValidatableAsync for CarePlanActivityDetail {
         if let Some(choice) = &self.product {
             match choice {
                 CarePlanActivityDetailProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(validator, "CarePlan.activity.detail.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CarePlan.activity.detail.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
                 CarePlanActivityDetailProduct::Reference(value) => {
@@ -1416,7 +1418,8 @@ impl fhir_validation::r4b::R4BValidatable for ChargeItem {
                     issues.extend(validator.rebase_instance_paths(child_issues, "ChargeItem.product[x]"));
                 }
                 ChargeItemProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(validator, "ChargeItem.product[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ChargeItem.product[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1761,7 +1764,8 @@ impl fhir_validation::r4b::R4BValidatableAsync for ChargeItem {
                     issues.extend(validator.rebase_instance_paths(child_issues, "ChargeItem.product[x]"));
                 }
                 ChargeItemProduct::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(validator, "ChargeItem.product[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ChargeItem.product[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value)).await;
                     issues.extend(child_issues);
                 }
             }

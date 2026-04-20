@@ -293,7 +293,9 @@ impl StudyDesign {
             Self::SEVCO01026 => Some("Real world data collection"),
             Self::SEVCO01039 => Some("Real world data collection from healthcare records"),
             Self::SEVCO01050 => Some("Real world data collection from personal health records"),
-            Self::SEVCO01040 => Some("Real world data collection from healthcare financing records"),
+            Self::SEVCO01040 => {
+                Some("Real world data collection from healthcare financing records")
+            }
             Self::SEVCO01048 => Some("Real world data collection from testing procedures"),
             Self::SEVCO01046 => Some("Real world data collection from monitoring procedures"),
             Self::SEVCO01049 => Some("Secondary data collection from prior research"),
@@ -327,78 +329,216 @@ impl StudyDesign {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SEVCO01001 => Some("A study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by the investigator to evaluate a response in the dependent variable (an effect or outcome)."),
-            Self::SEVCO01003 => Some("An interventional study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by random chance to separate groups."),
-            Self::SEVCO01006 => Some("A randomized assignment in which each participant has the same prespecified likelihood of being assigned to a group as all other participants, independent of the assignment of any other participant."),
-            Self::SEVCO01007 => Some("A randomized assignment in which participants are stratified into groups based on prognostic variables and then randomized into balanced treatment groups"),
-            Self::SEVCO01008 => Some("A randomized assignment in which a pre-specified number of subjects is assigned to a block containing the same pre-specified ratio of group assignments in random order."),
-            Self::SEVCO01009 => Some("A randomized assignment in which a participant\u{2019}s group assignment probability is adjusted based on any factor such that the likelihood of assignment is not the same for all participants."),
-            Self::SEVCO01005 => Some("An interventional study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by methods other than random chance to separate groups."),
-            Self::SEVCO01004 => Some("An interventional study design with a method of allocation that is not limited to random chance but is intended to produce similar baseline groups for experimentation."),
-            Self::SEVCO01029 => Some("Interventional research in which one or more healthcare-related actions (i.e., a diagnostic, prognostic, therapeutic, preventive or screening method or intervention) is evaluated for effects on health-related biomedical or behavioral processes and/or outcomes."),
-            Self::SEVCO01041 => Some("A clinical trial conducted under conditions of routine clinical practice."),
-            Self::SEVCO01038 => Some("A clinical trial that provides a means for obtaining an experimental drug or device for patients who are not adequately treated by existing therapy, who do not meet the eligibility criteria for enrollment, or who are otherwise unable to participate in another clinical study. "),
-            Self::SEVCO01030 => Some("A clinical trial to gather initial evidence in humans to support further investigation of an intervention."),
-            Self::SEVCO01031 => Some("A clinical trial that is conducted early in phase 1, involves very limited human exposure, and has no therapeutic or diagnostic intent (e.g., screening studies, microdose studies). "),
-            Self::SEVCO01032 => Some(" A clinical trial with a component meeting the definition of phase 1 trial and a component meeting the definition of phase 2 trial."),
-            Self::SEVCO01033 => Some("A clinical trial to gather evidence of effectiveness and safety for an intervention in patients with the disease or condition under study, but not intended to provide an adequate basis for regulatory approval for clinical use."),
-            Self::SEVCO01034 => Some("A clinical trial with a component meeting the definition of phase 2 trial and a component meeting the definition of phase 3 trial."),
-            Self::SEVCO01035 => Some("A clinical trial to gather the evidence of effectiveness and safety of an intervention, intended to provide an adequate basis for regulatory approval for clinical use."),
-            Self::SEVCO01036 => Some("A clinical trial to gather additional evidence of effectiveness and safety of an intervention for an already approved clinical use."),
-            Self::SEVCO01002 => Some("A study design in which the independent variables (exposures or interventions) are not prospectively assigned or modified by the investigator. "),
-            Self::SEVCO01037 => Some("An observational study to identify adverse events related to the use of an approved clinical intervention."),
+            Self::SEVCO01001 => Some(
+                "A study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by the investigator to evaluate a response in the dependent variable (an effect or outcome).",
+            ),
+            Self::SEVCO01003 => Some(
+                "An interventional study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by random chance to separate groups.",
+            ),
+            Self::SEVCO01006 => Some(
+                "A randomized assignment in which each participant has the same prespecified likelihood of being assigned to a group as all other participants, independent of the assignment of any other participant.",
+            ),
+            Self::SEVCO01007 => Some(
+                "A randomized assignment in which participants are stratified into groups based on prognostic variables and then randomized into balanced treatment groups",
+            ),
+            Self::SEVCO01008 => Some(
+                "A randomized assignment in which a pre-specified number of subjects is assigned to a block containing the same pre-specified ratio of group assignments in random order.",
+            ),
+            Self::SEVCO01009 => Some(
+                "A randomized assignment in which a participant\u{2019}s group assignment probability is adjusted based on any factor such that the likelihood of assignment is not the same for all participants.",
+            ),
+            Self::SEVCO01005 => Some(
+                "An interventional study design in which an independent variable (an exposure or intervention) is prospectively assigned or modified by methods other than random chance to separate groups.",
+            ),
+            Self::SEVCO01004 => Some(
+                "An interventional study design with a method of allocation that is not limited to random chance but is intended to produce similar baseline groups for experimentation.",
+            ),
+            Self::SEVCO01029 => Some(
+                "Interventional research in which one or more healthcare-related actions (i.e., a diagnostic, prognostic, therapeutic, preventive or screening method or intervention) is evaluated for effects on health-related biomedical or behavioral processes and/or outcomes.",
+            ),
+            Self::SEVCO01041 => {
+                Some("A clinical trial conducted under conditions of routine clinical practice.")
+            }
+            Self::SEVCO01038 => Some(
+                "A clinical trial that provides a means for obtaining an experimental drug or device for patients who are not adequately treated by existing therapy, who do not meet the eligibility criteria for enrollment, or who are otherwise unable to participate in another clinical study. ",
+            ),
+            Self::SEVCO01030 => Some(
+                "A clinical trial to gather initial evidence in humans to support further investigation of an intervention.",
+            ),
+            Self::SEVCO01031 => Some(
+                "A clinical trial that is conducted early in phase 1, involves very limited human exposure, and has no therapeutic or diagnostic intent (e.g., screening studies, microdose studies). ",
+            ),
+            Self::SEVCO01032 => Some(
+                " A clinical trial with a component meeting the definition of phase 1 trial and a component meeting the definition of phase 2 trial.",
+            ),
+            Self::SEVCO01033 => Some(
+                "A clinical trial to gather evidence of effectiveness and safety for an intervention in patients with the disease or condition under study, but not intended to provide an adequate basis for regulatory approval for clinical use.",
+            ),
+            Self::SEVCO01034 => Some(
+                "A clinical trial with a component meeting the definition of phase 2 trial and a component meeting the definition of phase 3 trial.",
+            ),
+            Self::SEVCO01035 => Some(
+                "A clinical trial to gather the evidence of effectiveness and safety of an intervention, intended to provide an adequate basis for regulatory approval for clinical use.",
+            ),
+            Self::SEVCO01036 => Some(
+                "A clinical trial to gather additional evidence of effectiveness and safety of an intervention for an already approved clinical use.",
+            ),
+            Self::SEVCO01002 => Some(
+                "A study design in which the independent variables (exposures or interventions) are not prospectively assigned or modified by the investigator. ",
+            ),
+            Self::SEVCO01037 => Some(
+                "An observational study to identify adverse events related to the use of an approved clinical intervention.",
+            ),
             Self::SEVCO01010 => Some("A study design in which two or more groups are compared."),
-            Self::SEVCO01011 => Some("A comparative study design in which the groups are compared concurrently and participants are expected to remain in the groups being compared for the entire duration of participation in the study."),
-            Self::SEVCO01012 => Some("A comparative study design in which participants receive two or more alternative exposures during separate periods of time."),
-            Self::SEVCO01024 => Some("A crossover cohort design in which two or more cohorts have different orders of exposures."),
-            Self::SEVCO01025 => Some("A crossover cohort design in which all participants are in a single cohort with the same order of exposures."),
-            Self::SEVCO01013 => Some("A comparative study design in which the groups being compared are defined by outcome presence (case) or absence (control)."),
-            Self::SEVCO01014 => Some("A comparative study design in which individual participants in different groups being compared are paired or matched into sets based on selected attributes for within-set analysis."),
-            Self::SEVCO01020 => Some("A matched study design in which related or non-related family members are compared."),
+            Self::SEVCO01011 => Some(
+                "A comparative study design in which the groups are compared concurrently and participants are expected to remain in the groups being compared for the entire duration of participation in the study.",
+            ),
+            Self::SEVCO01012 => Some(
+                "A comparative study design in which participants receive two or more alternative exposures during separate periods of time.",
+            ),
+            Self::SEVCO01024 => Some(
+                "A crossover cohort design in which two or more cohorts have different orders of exposures.",
+            ),
+            Self::SEVCO01025 => Some(
+                "A crossover cohort design in which all participants are in a single cohort with the same order of exposures.",
+            ),
+            Self::SEVCO01013 => Some(
+                "A comparative study design in which the groups being compared are defined by outcome presence (case) or absence (control).",
+            ),
+            Self::SEVCO01014 => Some(
+                "A comparative study design in which individual participants in different groups being compared are paired or matched into sets based on selected attributes for within-set analysis.",
+            ),
+            Self::SEVCO01020 => Some(
+                "A matched study design in which related or non-related family members are compared.",
+            ),
             Self::SEVCO01021 => Some("A family study design in which twin siblings are compared."),
-            Self::SEVCO01015 => Some("A comparative study design in which participants are allocated to exposures (interventions) by their membership in groups (called clusters) rather than by individualized assignments."),
-            Self::SEVCO01023 => Some("A study design with no comparisons between groups with different exposures and no comparisons between groups with different outcomes."),
-            Self::SEVCO01016 => Some("A non-comparative study design in which two or more participants are evaluated in a single group (or cohort)."),
-            Self::SEVCO01017 => Some("A non-comparative study design in which a single participant is evaluated."),
-            Self::SEVCO01022 => Some("A study design in which the unit of observation is a population or community. "),
-            Self::SEVCO01044 => Some("A study design in which the unit of observation is a population or community defined by social relationships or physical surroundings. "),
-            Self::SEVCO01027 => Some("A study design process in which data is collected at a single point in time."),
-            Self::SEVCO01028 => Some("A study design process in which data is collected at two or more points in time."),
-            Self::SEVCO01018 => Some("A longitudinal data collection which includes a set of time-ordered observations."),
-            Self::SEVCO01019 => Some("A time series design which includes comparisons of observations before and after an event or exposure."),
-            Self::SEVCO01045 => Some("A study design process in which the data are recorded and collected during the study for the purpose of the same study."),
-            Self::SEVCO01026 => Some("A study design process in which the study data are obtained from a source of data collected during a routine process in the natural environment rather than using a process designed or controlled by the researcher."),
-            Self::SEVCO01039 => Some("Real world data collection from data obtained routinely for a purpose of recording healthcare delivery in a record controlled by a healthcare professional."),
-            Self::SEVCO01050 => Some("Real world data collection from data obtained routinely for a purpose of recording data related to personal health in a record controlled by the person, guardian, or caretaker."),
-            Self::SEVCO01040 => Some("Real world data collection from data obtained routinely for a purpose of recording healthcare financing."),
-            Self::SEVCO01048 => Some("Real world data collection from data obtained routinely for a purpose of testing, such as diagnostic testing or screening examination."),
-            Self::SEVCO01046 => Some("Real world data collection from data obtained routinely for a purpose of repeated testing."),
-            Self::SEVCO01049 => Some("A study design process in which the data are collected from data obtained during a different study than the current study."),
-            Self::SEVCO01042 => Some("A study design process in which the data are collected from a system organized to obtain and maintain uniform data for discovery and analysis, and this system is organized prior to the current study."),
-            Self::SEVCO01051 => Some("A study design process in which data are collected from two or more geographic locations."),
-            Self::SEVCO01086 => Some("A study design process in which data are analyzed with mathematical or statistical methods and formulas."),
-            Self::SEVCO01087 => Some("A study design process in which data are analyzed, without primary reliance on mathematical or statistical techniques, by coding and organizing data to provide interpretation or understanding of experiences or hypotheses."),
-            Self::SEVCO01060 => Some("A study design process in which study participants are not informed of their intervention assignment."),
-            Self::SEVCO01061 => Some("A study design process in which the people administering the intervention are not informed of the intervention assignment."),
-            Self::SEVCO01062 => Some("A study design process in which the people determining the outcome are not informed of the intervention assignment."),
-            Self::SEVCO01063 => Some("A study design process in which the people managing or processing the data and statistical analysis are not informed of the intervention assignment."),
-            Self::SEVCO01064 => Some("A study design process in which all parties influencing study enrollment and allocation to study groups are unaware of the group assignment for the study participant at the time of enrollment and allocation."),
-            Self::SEVCO01043 => Some("A study design feature in which two or more institutions are responsible for the conduct of the study."),
-            Self::SEVCO01052 => Some("A study design feature in which one or more outcomes are reported directly from the patient without interpretation by a clinician or researcher."),
-            Self::SEVCO01053 => Some("A study design feature in which one or more measures are outcomes that patients directly care about, i.e. outcomes that are directly related to patients\' experience of their life."),
-            Self::SEVCO01054 => Some("A study design feature in which one or more measures are outcomes that relate to a health or illness condition but are not outcomes which patients directly care about."),
-            Self::SEVCO01085 => Some("A study design feature in which one or more outcomes are actions or behaviors of a healthcare professional or care team."),
+            Self::SEVCO01015 => Some(
+                "A comparative study design in which participants are allocated to exposures (interventions) by their membership in groups (called clusters) rather than by individualized assignments.",
+            ),
+            Self::SEVCO01023 => Some(
+                "A study design with no comparisons between groups with different exposures and no comparisons between groups with different outcomes.",
+            ),
+            Self::SEVCO01016 => Some(
+                "A non-comparative study design in which two or more participants are evaluated in a single group (or cohort).",
+            ),
+            Self::SEVCO01017 => {
+                Some("A non-comparative study design in which a single participant is evaluated.")
+            }
+            Self::SEVCO01022 => Some(
+                "A study design in which the unit of observation is a population or community. ",
+            ),
+            Self::SEVCO01044 => Some(
+                "A study design in which the unit of observation is a population or community defined by social relationships or physical surroundings. ",
+            ),
+            Self::SEVCO01027 => {
+                Some("A study design process in which data is collected at a single point in time.")
+            }
+            Self::SEVCO01028 => Some(
+                "A study design process in which data is collected at two or more points in time.",
+            ),
+            Self::SEVCO01018 => Some(
+                "A longitudinal data collection which includes a set of time-ordered observations.",
+            ),
+            Self::SEVCO01019 => Some(
+                "A time series design which includes comparisons of observations before and after an event or exposure.",
+            ),
+            Self::SEVCO01045 => Some(
+                "A study design process in which the data are recorded and collected during the study for the purpose of the same study.",
+            ),
+            Self::SEVCO01026 => Some(
+                "A study design process in which the study data are obtained from a source of data collected during a routine process in the natural environment rather than using a process designed or controlled by the researcher.",
+            ),
+            Self::SEVCO01039 => Some(
+                "Real world data collection from data obtained routinely for a purpose of recording healthcare delivery in a record controlled by a healthcare professional.",
+            ),
+            Self::SEVCO01050 => Some(
+                "Real world data collection from data obtained routinely for a purpose of recording data related to personal health in a record controlled by the person, guardian, or caretaker.",
+            ),
+            Self::SEVCO01040 => Some(
+                "Real world data collection from data obtained routinely for a purpose of recording healthcare financing.",
+            ),
+            Self::SEVCO01048 => Some(
+                "Real world data collection from data obtained routinely for a purpose of testing, such as diagnostic testing or screening examination.",
+            ),
+            Self::SEVCO01046 => Some(
+                "Real world data collection from data obtained routinely for a purpose of repeated testing.",
+            ),
+            Self::SEVCO01049 => Some(
+                "A study design process in which the data are collected from data obtained during a different study than the current study.",
+            ),
+            Self::SEVCO01042 => Some(
+                "A study design process in which the data are collected from a system organized to obtain and maintain uniform data for discovery and analysis, and this system is organized prior to the current study.",
+            ),
+            Self::SEVCO01051 => Some(
+                "A study design process in which data are collected from two or more geographic locations.",
+            ),
+            Self::SEVCO01086 => Some(
+                "A study design process in which data are analyzed with mathematical or statistical methods and formulas.",
+            ),
+            Self::SEVCO01087 => Some(
+                "A study design process in which data are analyzed, without primary reliance on mathematical or statistical techniques, by coding and organizing data to provide interpretation or understanding of experiences or hypotheses.",
+            ),
+            Self::SEVCO01060 => Some(
+                "A study design process in which study participants are not informed of their intervention assignment.",
+            ),
+            Self::SEVCO01061 => Some(
+                "A study design process in which the people administering the intervention are not informed of the intervention assignment.",
+            ),
+            Self::SEVCO01062 => Some(
+                "A study design process in which the people determining the outcome are not informed of the intervention assignment.",
+            ),
+            Self::SEVCO01063 => Some(
+                "A study design process in which the people managing or processing the data and statistical analysis are not informed of the intervention assignment.",
+            ),
+            Self::SEVCO01064 => Some(
+                "A study design process in which all parties influencing study enrollment and allocation to study groups are unaware of the group assignment for the study participant at the time of enrollment and allocation.",
+            ),
+            Self::SEVCO01043 => Some(
+                "A study design feature in which two or more institutions are responsible for the conduct of the study.",
+            ),
+            Self::SEVCO01052 => Some(
+                "A study design feature in which one or more outcomes are reported directly from the patient without interpretation by a clinician or researcher.",
+            ),
+            Self::SEVCO01053 => Some(
+                "A study design feature in which one or more measures are outcomes that patients directly care about, i.e. outcomes that are directly related to patients\' experience of their life.",
+            ),
+            Self::SEVCO01054 => Some(
+                "A study design feature in which one or more measures are outcomes that relate to a health or illness condition but are not outcomes which patients directly care about.",
+            ),
+            Self::SEVCO01085 => Some(
+                "A study design feature in which one or more outcomes are actions or behaviors of a healthcare professional or care team.",
+            ),
             Self::SEVCO01089 => Some("A study design feature specifying the intent of the study."),
-            Self::SEVCO01096 => Some("A study goal to assess the efficiency, effectiveness, and impact of a given program, process, person or piece of equipment."),
-            Self::SEVCO01097 => Some("A study goal with the intent to generate a predictive algorithm."),
-            Self::SEVCO01098 => Some("A study goal with the intent to determine the reliability and/or performance of a procedure for a specific predictive, classification, measurement, or communication purpose."),
-            Self::SEVCO01088 => Some("A study design feature in which the study intent is to compare two or more interventions or exposures."),
-            Self::SEVCO01091 => Some("A study design feature in which the study intent is to compare two or more interventions with respect to benefits and/or harms."),
-            Self::SEVCO01090 => Some("A study design feature in which the study intent is to compare two or more interventions with respect to effectiveness in ideal conditions."),
-            Self::SEVCO01092 => Some("A study design feature in which the study intent is to compare two or more interventions with respect to harms."),
-            Self::SEVCO01093 => Some("A study goal with the intent to compare two or more interventions or exposures and determine that any difference in effects is within a prespecified range representing absence of a meaningful difference."),
-            Self::SEVCO01094 => Some("A study goal with the intent to compare two or more interventions or exposures and determine that any difference in effects is below a prespecified value representing a threshold between a meaningful difference and absence of a meaningful difference."),
-            Self::SEVCO01095 => Some("A study goal with the intent to compare two or more interventions or exposures and detect a difference in effects."),
+            Self::SEVCO01096 => Some(
+                "A study goal to assess the efficiency, effectiveness, and impact of a given program, process, person or piece of equipment.",
+            ),
+            Self::SEVCO01097 => {
+                Some("A study goal with the intent to generate a predictive algorithm.")
+            }
+            Self::SEVCO01098 => Some(
+                "A study goal with the intent to determine the reliability and/or performance of a procedure for a specific predictive, classification, measurement, or communication purpose.",
+            ),
+            Self::SEVCO01088 => Some(
+                "A study design feature in which the study intent is to compare two or more interventions or exposures.",
+            ),
+            Self::SEVCO01091 => Some(
+                "A study design feature in which the study intent is to compare two or more interventions with respect to benefits and/or harms.",
+            ),
+            Self::SEVCO01090 => Some(
+                "A study design feature in which the study intent is to compare two or more interventions with respect to effectiveness in ideal conditions.",
+            ),
+            Self::SEVCO01092 => Some(
+                "A study design feature in which the study intent is to compare two or more interventions with respect to harms.",
+            ),
+            Self::SEVCO01093 => Some(
+                "A study goal with the intent to compare two or more interventions or exposures and determine that any difference in effects is within a prespecified range representing absence of a meaningful difference.",
+            ),
+            Self::SEVCO01094 => Some(
+                "A study goal with the intent to compare two or more interventions or exposures and determine that any difference in effects is below a prespecified value representing a threshold between a meaningful difference and absence of a meaningful difference.",
+            ),
+            Self::SEVCO01095 => Some(
+                "A study goal with the intent to compare two or more interventions or exposures and detect a difference in effects.",
+            ),
         }
     }
 
@@ -595,5 +735,4 @@ impl StudyDesign {
             })
             .unwrap_or(false)
     }
-
 }

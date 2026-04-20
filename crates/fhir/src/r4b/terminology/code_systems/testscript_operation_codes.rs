@@ -58,7 +58,8 @@ pub enum TestScriptOperationCodes {
 }
 
 impl TestScriptOperationCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/testscript-operation-codes";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/testscript-operation-codes";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -222,26 +223,44 @@ impl TestScriptOperationCodes {
             Self::Read => Some("Read the current state of the resource."),
             Self::Vread => Some("Read the state of a specific version of the resource."),
             Self::Update => Some("Update an existing resource by its id."),
-            Self::UpdateCreate => Some("Update an existing resource by its id (or create it if it is new)."),
+            Self::UpdateCreate => {
+                Some("Update an existing resource by its id (or create it if it is new).")
+            }
             Self::Patch => Some("Patch an existing resource by its id."),
             Self::Delete => Some("Delete a resource."),
-            Self::DeleteCondSingle => Some("Conditionally delete a single resource based on search parameters."),
-            Self::DeleteCondMultiple => Some("Conditionally delete one or more resources based on search parameters."),
-            Self::History => Some("Retrieve the change history for a particular resource or resource type."),
+            Self::DeleteCondSingle => {
+                Some("Conditionally delete a single resource based on search parameters.")
+            }
+            Self::DeleteCondMultiple => {
+                Some("Conditionally delete one or more resources based on search parameters.")
+            }
+            Self::History => {
+                Some("Retrieve the change history for a particular resource or resource type.")
+            }
             Self::Create => Some("Create a new resource with a server assigned id."),
             Self::Search => Some("Search based on some filter criteria."),
-            Self::Batch => Some("Update, create or delete a set of resources as independent actions."),
-            Self::Transaction => Some("Update, create or delete a set of resources as a single transaction."),
+            Self::Batch => {
+                Some("Update, create or delete a set of resources as independent actions.")
+            }
+            Self::Transaction => {
+                Some("Update, create or delete a set of resources as a single transaction.")
+            }
             Self::Capabilities => Some("Get a capability statement for the system."),
             Self::Apply => Some("Realizes an ActivityDefinition in a specific context"),
             Self::Closure => Some("Closure Table Maintenance"),
             Self::FindMatches => Some("Finding Codes based on supplied properties"),
             Self::Conforms => Some("Compare two systems CapabilityStatements"),
-            Self::DataRequirements => Some("Aggregates and returns the parameters and data requirements for a resource and all its dependencies as a single module definition"),
+            Self::DataRequirements => Some(
+                "Aggregates and returns the parameters and data requirements for a resource and all its dependencies as a single module definition",
+            ),
             Self::Document => Some("Generate a Document"),
-            Self::Evaluate => Some("Request clinical decision support guidance based on a specific decision support module"),
+            Self::Evaluate => Some(
+                "Request clinical decision support guidance based on a specific decision support module",
+            ),
             Self::EvaluateMeasure => Some("Invoke an eMeasure and obtain the results"),
-            Self::Everything => Some("Return all the related information as described in the Encounter or Patient"),
+            Self::Everything => {
+                Some("Return all the related information as described in the Encounter or Patient")
+            }
             Self::Expand => Some("Value Set Expansion"),
             Self::Find => Some("Find a functional list"),
             Self::Graphql => Some("Invoke a GraphQL query"),
@@ -406,5 +425,4 @@ impl TestScriptOperationCodes {
             })
             .unwrap_or(false)
     }
-
 }

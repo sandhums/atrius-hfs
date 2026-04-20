@@ -17,7 +17,8 @@ pub enum MedicationRequestDispenserInstructions {
 }
 
 impl MedicationRequestDispenserInstructions {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/medicationrequest-dispenser-instructions";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/medicationrequest-dispenser-instructions";
     pub const VERSION: &'static str = "6.0.0-ballot3";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -55,10 +56,14 @@ impl MedicationRequestDispenserInstructions {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::DispenseAsWritten => Some("Medication should be dispensed exactly as indicated in the request."),
+            Self::DispenseAsWritten => {
+                Some("Medication should be dispensed exactly as indicated in the request.")
+            }
             Self::SplitPackAllowed => Some("Split pack allowed."),
             Self::CounselPatient => Some("Dispenser should provide counseling to the patient."),
-            Self::AdditionalMonitoringRequired => Some("Flag that extra monitoring is needed when dispensing."),
+            Self::AdditionalMonitoringRequired => {
+                Some("Flag that extra monitoring is needed when dispensing.")
+            }
         }
     }
 
@@ -119,5 +124,4 @@ impl MedicationRequestDispenserInstructions {
             })
             .unwrap_or(false)
     }
-
 }

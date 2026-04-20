@@ -76,14 +76,30 @@ impl FilterOperator {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Code => Some("The specified property of the code equals the provided value."),
-            Self::IsA => Some("Includes all concept ids that have a transitive is-a relationship with the concept Id provided as the value, including the provided concept itself (include descendant codes and self)."),
-            Self::DescendentOf => Some("Includes all concept ids that have a transitive is-a relationship with the concept Id provided as the value, excluding the provided concept itself i.e. include descendant codes only)."),
-            Self::IsNotA => Some("The specified property of the code does not have an is-a relationship with the provided value."),
-            Self::Regex => Some("The specified property of the code  matches the regex specified in the provided value."),
-            Self::In_ => Some("The specified property of the code is in the set of codes or concepts specified in the provided value (comma separated list)."),
-            Self::NotIn => Some("The specified property of the code is not in the set of codes or concepts specified in the provided value (comma separated list)."),
-            Self::Generalizes => Some("Includes all concept ids that have a transitive is-a relationship from the concept Id provided as the value, including the provided concept itself (i.e. include ancestor codes and self)."),
-            Self::Exists => Some("The specified property of the code has at least one value (if the specified value is true; if the specified value is false, then matches when the specified property of the code has no values)."),
+            Self::IsA => Some(
+                "Includes all concept ids that have a transitive is-a relationship with the concept Id provided as the value, including the provided concept itself (include descendant codes and self).",
+            ),
+            Self::DescendentOf => Some(
+                "Includes all concept ids that have a transitive is-a relationship with the concept Id provided as the value, excluding the provided concept itself i.e. include descendant codes only).",
+            ),
+            Self::IsNotA => Some(
+                "The specified property of the code does not have an is-a relationship with the provided value.",
+            ),
+            Self::Regex => Some(
+                "The specified property of the code  matches the regex specified in the provided value.",
+            ),
+            Self::In_ => Some(
+                "The specified property of the code is in the set of codes or concepts specified in the provided value (comma separated list).",
+            ),
+            Self::NotIn => Some(
+                "The specified property of the code is not in the set of codes or concepts specified in the provided value (comma separated list).",
+            ),
+            Self::Generalizes => Some(
+                "Includes all concept ids that have a transitive is-a relationship from the concept Id provided as the value, including the provided concept itself (i.e. include ancestor codes and self).",
+            ),
+            Self::Exists => Some(
+                "The specified property of the code has at least one value (if the specified value is true; if the specified value is false, then matches when the specified property of the code has no values).",
+            ),
         }
     }
 
@@ -154,5 +170,4 @@ impl FilterOperator {
             })
             .unwrap_or(false)
     }
-
 }

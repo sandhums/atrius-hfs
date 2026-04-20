@@ -15,7 +15,8 @@ pub enum EvidenceVariableUnacceptableDataHandling {
 }
 
 impl EvidenceVariableUnacceptableDataHandling {
-    pub const URL: &'static str = "http://hl7.org/fhir/evidence-variable-unacceptable-data-handling";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/evidence-variable-unacceptable-data-handling";
     pub const VERSION: &'static str = "6.0.0-ballot3";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -105,5 +106,4 @@ impl EvidenceVariableUnacceptableDataHandling {
             })
             .unwrap_or(false)
     }
-
 }

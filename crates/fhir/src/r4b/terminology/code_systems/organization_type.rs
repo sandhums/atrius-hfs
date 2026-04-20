@@ -88,16 +88,34 @@ impl OrganizationType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Prov => Some("An organization that provides healthcare services."),
-            Self::Dept => Some("A department or ward within a hospital (Generally is not applicable to top level organizations)"),
-            Self::Team => Some("An organizational team is usually a grouping of practitioners that perform a specific function within an organization (which could be a top level organization, or a department)."),
-            Self::Govt => Some("A political body, often used when including organization records for government bodies such as a Federal Government, State or Local Government."),
-            Self::Ins => Some("A company that provides insurance to its subscribers that may include healthcare related policies."),
-            Self::Pay => Some("A company, charity, or governmental organization, which processes claims and/or issues payments to providers on behalf of patients or groups of patients."),
-            Self::Edu => Some("An educational institution that provides education or research facilities."),
-            Self::Reli => Some("An organization that is identified as a part of a religious institution."),
-            Self::Crs => Some("An organization that is identified as a Pharmaceutical/Clinical Research Sponsor."),
+            Self::Dept => Some(
+                "A department or ward within a hospital (Generally is not applicable to top level organizations)",
+            ),
+            Self::Team => Some(
+                "An organizational team is usually a grouping of practitioners that perform a specific function within an organization (which could be a top level organization, or a department).",
+            ),
+            Self::Govt => Some(
+                "A political body, often used when including organization records for government bodies such as a Federal Government, State or Local Government.",
+            ),
+            Self::Ins => Some(
+                "A company that provides insurance to its subscribers that may include healthcare related policies.",
+            ),
+            Self::Pay => Some(
+                "A company, charity, or governmental organization, which processes claims and/or issues payments to providers on behalf of patients or groups of patients.",
+            ),
+            Self::Edu => {
+                Some("An educational institution that provides education or research facilities.")
+            }
+            Self::Reli => {
+                Some("An organization that is identified as a part of a religious institution.")
+            }
+            Self::Crs => Some(
+                "An organization that is identified as a Pharmaceutical/Clinical Research Sponsor.",
+            ),
             Self::Cg => Some("An un-incorporated community group."),
-            Self::Bus => Some("An organization that is a registered business or corporation but not identified by other types."),
+            Self::Bus => Some(
+                "An organization that is a registered business or corporation but not identified by other types.",
+            ),
             Self::Other => Some("Other type of organization not already specified."),
         }
     }
@@ -175,5 +193,4 @@ impl OrganizationType {
             })
             .unwrap_or(false)
     }
-
 }

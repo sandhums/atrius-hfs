@@ -51,9 +51,15 @@ impl ResearchElementType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Population => Some("The element defines the population that forms the basis for research."),
-            Self::Exposure => Some("The element defines an exposure within the population that is being researched."),
-            Self::Outcome => Some("The element defines an outcome within the population that is being researched."),
+            Self::Population => {
+                Some("The element defines the population that forms the basis for research.")
+            }
+            Self::Exposure => Some(
+                "The element defines an exposure within the population that is being researched.",
+            ),
+            Self::Outcome => Some(
+                "The element defines an outcome within the population that is being researched.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl ResearchElementType {
             })
             .unwrap_or(false)
     }
-
 }

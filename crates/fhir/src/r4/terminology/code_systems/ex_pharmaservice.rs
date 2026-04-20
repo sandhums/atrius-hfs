@@ -67,8 +67,12 @@ impl ExamplePharmacyServiceCodes {
             Self::Flushot => Some("Flu Shot"),
             Self::Drugcost => Some("The wholesale price of the medication."),
             Self::Markup => Some("The additional cost assessed on the drug."),
-            Self::Dispensefee => Some("The professional fee charged for dispensing the product or service."),
-            Self::Compoundfee => Some("The professional fee charged for compounding the medication."),
+            Self::Dispensefee => {
+                Some("The professional fee charged for dispensing the product or service.")
+            }
+            Self::Compoundfee => {
+                Some("The professional fee charged for compounding the medication.")
+            }
         }
     }
 
@@ -133,5 +137,4 @@ impl ExamplePharmacyServiceCodes {
             })
             .unwrap_or(false)
     }
-
 }

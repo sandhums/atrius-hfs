@@ -16,7 +16,8 @@ pub enum ObservationInterpretationContextCodes {
 }
 
 impl ObservationInterpretationContextCodes {
-    pub const URL: &'static str = "http://hl7.org/fhir/CodeSystem/observation-interpretation-context";
+    pub const URL: &'static str =
+        "http://hl7.org/fhir/CodeSystem/observation-interpretation-context";
     pub const VERSION: &'static str = "6.0.0-ballot3";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl ObservationInterpretationContextCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Diabetic => Some("The patient has diabetes mellitus, which may affect interpretation of glucose and other metabolic observations."),
-            Self::Fasting => Some("The patient was fasting at the time of the observation, which affects interpretation of metabolic and nutritional observations."),
-            Self::Paraplegic => Some("The patient has paraplegia, which may affect interpretation of mobility, neurological, and other physical observations."),
+            Self::Diabetic => Some(
+                "The patient has diabetes mellitus, which may affect interpretation of glucose and other metabolic observations.",
+            ),
+            Self::Fasting => Some(
+                "The patient was fasting at the time of the observation, which affects interpretation of metabolic and nutritional observations.",
+            ),
+            Self::Paraplegic => Some(
+                "The patient has paraplegia, which may affect interpretation of mobility, neurological, and other physical observations.",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl ObservationInterpretationContextCodes {
             })
             .unwrap_or(false)
     }
-
 }

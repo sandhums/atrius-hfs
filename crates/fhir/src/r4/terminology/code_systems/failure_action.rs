@@ -119,5 +119,4 @@ impl FailureAction {
             })
             .unwrap_or(false)
     }
-
 }

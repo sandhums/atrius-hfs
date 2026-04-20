@@ -98,5 +98,4 @@ impl UDICodes {
             })
             .unwrap_or(false)
     }
-
 }

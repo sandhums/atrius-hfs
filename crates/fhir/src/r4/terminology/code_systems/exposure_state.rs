@@ -47,8 +47,12 @@ impl ExposureState {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Exposure => Some("used when the results by exposure is describing the results for the primary exposure of interest."),
-            Self::ExposureAlternative => Some("used when the results by exposure is describing the results for the alternative exposure state, control state or comparator state."),
+            Self::Exposure => Some(
+                "used when the results by exposure is describing the results for the primary exposure of interest.",
+            ),
+            Self::ExposureAlternative => Some(
+                "used when the results by exposure is describing the results for the alternative exposure state, control state or comparator state.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ExposureState {
             })
             .unwrap_or(false)
     }
-
 }

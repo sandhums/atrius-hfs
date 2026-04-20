@@ -51,7 +51,9 @@ impl PaymentTypeCodes_26a07112 {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Payment => Some("The amount is partial or complete settlement of the amounts due."),
+            Self::Payment => {
+                Some("The amount is partial or complete settlement of the amounts due.")
+            }
             Self::Adjustment => Some("The amount is an adjustment regarding claims already paid."),
             Self::Advance => Some("The amount is an advance against future claims."),
         }
@@ -112,5 +114,4 @@ impl PaymentTypeCodes_26a07112 {
             })
             .unwrap_or(false)
     }
-
 }

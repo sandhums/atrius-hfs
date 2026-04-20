@@ -998,7 +998,8 @@ impl fhir_validation::r4b::R4BValidatable for DeviceRequest {
                     issues.extend(validator.rebase_instance_paths(child_issues, "DeviceRequest.code[x]"));
                 }
                 DeviceRequestCode::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1338,7 +1339,8 @@ impl fhir_validation::r4b::R4BValidatableAsync for DeviceRequest {
                     issues.extend(validator.rebase_instance_paths(child_issues, "DeviceRequest.code[x]"));
                 }
                 DeviceRequestCode::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -6279,7 +6281,8 @@ impl fhir_validation::r4b::R4BValidatable for EventDefinition {
         if let Some(choice) = &self.subject {
             match choice {
                 EventDefinitionSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(validator, "EventDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "EventDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 EventDefinitionSubject::Reference(value) => {
@@ -6540,7 +6543,8 @@ impl fhir_validation::r4b::R4BValidatableAsync for EventDefinition {
         if let Some(choice) = &self.subject {
             match choice {
                 EventDefinitionSubject::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(validator, "EventDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "EventDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 EventDefinitionSubject::Reference(value) => {

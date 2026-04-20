@@ -47,8 +47,12 @@ impl ExamplePaymentTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Complete => Some("Complete (final) payment of the benefit under the Claim less any adjustments."),
-            Self::Partial => Some("Partial payment of the benefit under the Claim less any adjustments."),
+            Self::Complete => Some(
+                "Complete (final) payment of the benefit under the Claim less any adjustments.",
+            ),
+            Self::Partial => {
+                Some("Partial payment of the benefit under the Claim less any adjustments.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl ExamplePaymentTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

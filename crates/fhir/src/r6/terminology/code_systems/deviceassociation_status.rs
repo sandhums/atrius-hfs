@@ -119,5 +119,4 @@ impl DeviceAssociation_38a0673f {
             })
             .unwrap_or(false)
     }
-
 }

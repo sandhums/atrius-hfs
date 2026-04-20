@@ -62,8 +62,12 @@ impl QuestionnaireItemUsageMode {
             Self::CaptureDisplay => Some("Render the item regardless of usage mode."),
             Self::Capture => Some("Render the item only when capturing data."),
             Self::Display => Some("Render the item only when displaying a completed form."),
-            Self::DisplayNonEmpty => Some("Render the item only when displaying a completed form and the item has been answered (or has child items that have been answered)."),
-            Self::CaptureDisplayNonEmpty => Some("Render the item when capturing data or when displaying a completed form and the item has been answered (or has child items that have been answered)."),
+            Self::DisplayNonEmpty => Some(
+                "Render the item only when displaying a completed form and the item has been answered (or has child items that have been answered).",
+            ),
+            Self::CaptureDisplayNonEmpty => Some(
+                "Render the item when capturing data or when displaying a completed form and the item has been answered (or has child items that have been answered).",
+            ),
         }
     }
 
@@ -126,5 +130,4 @@ impl QuestionnaireItemUsageMode {
             })
             .unwrap_or(false)
     }
-
 }

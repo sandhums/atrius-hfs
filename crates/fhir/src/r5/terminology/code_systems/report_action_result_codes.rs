@@ -63,7 +63,9 @@ impl TestReportActionResult {
             Self::Skip => Some("The action was skipped."),
             Self::Fail => Some("The action failed."),
             Self::Warning => Some("The action passed but with warnings."),
-            Self::Error => Some("The action encountered a fatal error and the engine was unable to process."),
+            Self::Error => {
+                Some("The action encountered a fatal error and the engine was unable to process.")
+            }
         }
     }
 
@@ -126,5 +128,4 @@ impl TestReportActionResult {
             })
             .unwrap_or(false)
     }
-
 }

@@ -55,10 +55,18 @@ impl MatchGrade {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Certain => Some("This record meets the matching criteria to be automatically considered as a full match."),
-            Self::Probable => Some("This record is a close match, but not a certain match. Additional review (e.g. by a human) may be required before using this as a match."),
-            Self::Possible => Some("This record may be a matching one. Additional review (e.g. by a human) SHOULD be performed before using this as a match."),
-            Self::CertainlyNot => Some("This record is known not to be a match. Note that usually non-matching records are not returned, but in some cases records previously or likely considered as a match may specifically be negated by the matching engine."),
+            Self::Certain => Some(
+                "This record meets the matching criteria to be automatically considered as a full match.",
+            ),
+            Self::Probable => Some(
+                "This record is a close match, but not a certain match. Additional review (e.g. by a human) may be required before using this as a match.",
+            ),
+            Self::Possible => Some(
+                "This record may be a matching one. Additional review (e.g. by a human) SHOULD be performed before using this as a match.",
+            ),
+            Self::CertainlyNot => Some(
+                "This record is known not to be a match. Note that usually non-matching records are not returned, but in some cases records previously or likely considered as a match may specifically be negated by the matching engine.",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl MatchGrade {
             })
             .unwrap_or(false)
     }
-
 }

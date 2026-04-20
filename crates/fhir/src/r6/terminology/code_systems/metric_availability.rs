@@ -51,9 +51,15 @@ impl DeviceMetricAvailability {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Intr => Some("Stopping or ceasing for a time; alternately ceasing and beginning again."),
-            Self::Cont => Some("Without break, cessation, or interruption; without intervening time."),
-            Self::Unknown => Some("The availability of the means of derivation of the metric is unknown."),
+            Self::Intr => {
+                Some("Stopping or ceasing for a time; alternately ceasing and beginning again.")
+            }
+            Self::Cont => {
+                Some("Without break, cessation, or interruption; without intervening time.")
+            }
+            Self::Unknown => {
+                Some("The availability of the means of derivation of the metric is unknown.")
+            }
         }
     }
 
@@ -112,5 +118,4 @@ impl DeviceMetricAvailability {
             })
             .unwrap_or(false)
     }
-
 }

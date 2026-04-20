@@ -126,5 +126,4 @@ impl ProductIntendedUse {
             })
             .unwrap_or(false)
     }
-
 }

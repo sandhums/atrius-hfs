@@ -83,12 +83,24 @@ impl CoverageCoPayTypeCodes {
             Self::Spvisit => Some("An office visit for a specialist practitioner of a discipline"),
             Self::Emergency => Some("An episode in an emergency department."),
             Self::Inpthosp => Some("An episode of an Inpatient hospital stay."),
-            Self::Televisit => Some("A visit held where the patient is remote relative to the practitioner, e.g. by phone, computer or video conference."),
-            Self::Urgentcare => Some("A visit to an urgent care facility - typically a community care clinic."),
-            Self::Copaypct => Some("A standard percentage applied to all classes or service or product not otherwise specified."),
-            Self::Copay => Some("A standard fixed currency amount applied to all classes or service or product not otherwise specified."),
-            Self::Deductible => Some("The accumulated amount of patient payment before the coverage begins to pay for services."),
-            Self::Maxoutofpocket => Some("The maximum amout of payment for services which a patient, or family, is expected to incur - typically annually."),
+            Self::Televisit => Some(
+                "A visit held where the patient is remote relative to the practitioner, e.g. by phone, computer or video conference.",
+            ),
+            Self::Urgentcare => {
+                Some("A visit to an urgent care facility - typically a community care clinic.")
+            }
+            Self::Copaypct => Some(
+                "A standard percentage applied to all classes or service or product not otherwise specified.",
+            ),
+            Self::Copay => Some(
+                "A standard fixed currency amount applied to all classes or service or product not otherwise specified.",
+            ),
+            Self::Deductible => Some(
+                "The accumulated amount of patient payment before the coverage begins to pay for services.",
+            ),
+            Self::Maxoutofpocket => Some(
+                "The maximum amout of payment for services which a patient, or family, is expected to incur - typically annually.",
+            ),
         }
     }
 
@@ -161,5 +173,4 @@ impl CoverageCoPayTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

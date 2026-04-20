@@ -79,9 +79,15 @@ impl ExampleUseCodesForList {
             Self::Adverserxns => Some("A list of part adverse reactions."),
             Self::Allergies => Some("A list of Allergies for the patient."),
             Self::Medications => Some("A list of medication statements for the patient."),
-            Self::Problems => Some("A list of problems that the patient is known of have (or have had in the past)."),
-            Self::Worklist => Some("A list of items that constitute a set of work to be performed (typically this code would be specialized for more specific uses, such as a ward round list)."),
-            Self::Waiting => Some("A list of items waiting for an event (perhaps a surgical patient waiting list)."),
+            Self::Problems => Some(
+                "A list of problems that the patient is known of have (or have had in the past).",
+            ),
+            Self::Worklist => Some(
+                "A list of items that constitute a set of work to be performed (typically this code would be specialized for more specific uses, such as a ward round list).",
+            ),
+            Self::Waiting => Some(
+                "A list of items waiting for an event (perhaps a surgical patient waiting list).",
+            ),
             Self::Protocols => Some("A set of protocols to be followed."),
             Self::Plans => Some("A set of care plans that apply in a particular context of care."),
         }
@@ -154,5 +160,4 @@ impl ExampleUseCodesForList {
             })
             .unwrap_or(false)
     }
-
 }

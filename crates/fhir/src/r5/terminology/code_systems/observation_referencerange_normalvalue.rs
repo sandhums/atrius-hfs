@@ -105,5 +105,4 @@ impl ObservationReferenceRangeNormalValue {
             })
             .unwrap_or(false)
     }
-
 }

@@ -63,7 +63,9 @@ impl AuditEventAction {
             Self::R => Some("Display or print data, such as a doctor census."),
             Self::U => Some("Update data, such as revise patient information."),
             Self::D => Some("Delete items, such as a doctor master file record."),
-            Self::E => Some("Perform a system or application function such as log-on, program execution or use of an object\'s method, or perform a query/search operation."),
+            Self::E => Some(
+                "Perform a system or application function such as log-on, program execution or use of an object\'s method, or perform a query/search operation.",
+            ),
         }
     }
 
@@ -126,5 +128,4 @@ impl AuditEventAction {
             })
             .unwrap_or(false)
     }
-
 }

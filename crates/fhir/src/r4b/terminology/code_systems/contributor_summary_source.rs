@@ -17,7 +17,8 @@ pub enum ContributorSummarySource {
 }
 
 impl ContributorSummarySource {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/contributor-summary-source";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/contributor-summary-source";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -119,5 +120,4 @@ impl ContributorSummarySource {
             })
             .unwrap_or(false)
     }
-
 }

@@ -56,9 +56,15 @@ impl ServiceMode {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::InPerson => Some("The service will be provided in person"),
-            Self::Telephone => Some("The service will be provided by a teleconferencing facility or regular telephone"),
-            Self::Videoconference => Some("The service will be provided over a video-conference facility"),
-            Self::Chat => Some("This service will be provided via a realtime chat/messaging conversation"),
+            Self::Telephone => Some(
+                "The service will be provided by a teleconferencing facility or regular telephone",
+            ),
+            Self::Videoconference => {
+                Some("The service will be provided over a video-conference facility")
+            }
+            Self::Chat => {
+                Some("This service will be provided via a realtime chat/messaging conversation")
+            }
         }
     }
 
@@ -119,5 +125,4 @@ impl ServiceMode {
             })
             .unwrap_or(false)
     }
-
 }

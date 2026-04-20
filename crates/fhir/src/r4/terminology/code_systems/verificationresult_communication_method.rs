@@ -17,7 +17,8 @@ pub enum VerificationresultCommunicationMethod {
 }
 
 impl VerificationresultCommunicationMethod {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/verificationresult-communication-method";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/verificationresult-communication-method";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "active";
     pub const CONTENT: &'static str = "complete";
@@ -55,10 +56,16 @@ impl VerificationresultCommunicationMethod {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Manual => Some("The information is submitted/retrieved manually (e.g. by phone, fax, paper-based)"),
+            Self::Manual => Some(
+                "The information is submitted/retrieved manually (e.g. by phone, fax, paper-based)",
+            ),
             Self::Portal => Some("The information is submitted/retrieved via a portal"),
-            Self::Pull => Some("The information is retrieved (i.e. pulled) from a source (e.g. over an API)"),
-            Self::Push => Some("The information is sent (i.e. pushed) from a source (e.g. over an API, asynchronously, secure messaging)"),
+            Self::Pull => {
+                Some("The information is retrieved (i.e. pulled) from a source (e.g. over an API)")
+            }
+            Self::Push => Some(
+                "The information is sent (i.e. pushed) from a source (e.g. over an API, asynchronously, secure messaging)",
+            ),
         }
     }
 
@@ -119,5 +126,4 @@ impl VerificationresultCommunicationMethod {
             })
             .unwrap_or(false)
     }
-
 }

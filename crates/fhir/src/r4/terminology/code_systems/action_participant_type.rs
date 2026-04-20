@@ -56,9 +56,13 @@ impl ActionParticipantType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Patient => Some("The participant is the patient under evaluation."),
-            Self::Practitioner => Some("The participant is a practitioner involved in the patient\'s care."),
+            Self::Practitioner => {
+                Some("The participant is a practitioner involved in the patient\'s care.")
+            }
             Self::RelatedPerson => Some("The participant is a person related to the patient."),
-            Self::Device => Some("The participant is a system or device used in the care of the patient."),
+            Self::Device => {
+                Some("The participant is a system or device used in the care of the patient.")
+            }
         }
     }
 
@@ -119,5 +123,4 @@ impl ActionParticipantType {
             })
             .unwrap_or(false)
     }
-
 }

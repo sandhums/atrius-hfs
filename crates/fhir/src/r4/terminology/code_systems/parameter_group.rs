@@ -154,5 +154,4 @@ impl DeviceDefinitionParameterGroup {
             })
             .unwrap_or(false)
     }
-
 }

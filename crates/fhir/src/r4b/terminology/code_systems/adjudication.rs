@@ -71,11 +71,17 @@ impl AdjudicationCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Submitted => Some("The total submitted amount for the claim or group or line item."),
+            Self::Submitted => {
+                Some("The total submitted amount for the claim or group or line item.")
+            }
             Self::Copay => Some("Patient Co-Payment"),
             Self::Eligible => Some("Amount of the change which is considered for adjudication."),
-            Self::Deductible => Some("Amount deducted from the eligible amount prior to adjudication."),
-            Self::Unallocdeduct => Some("The amount of deductible which could not allocated to other line items."),
+            Self::Deductible => {
+                Some("Amount deducted from the eligible amount prior to adjudication.")
+            }
+            Self::Unallocdeduct => {
+                Some("The amount of deductible which could not allocated to other line items.")
+            }
             Self::Eligpercent => Some("Eligible Percentage."),
             Self::Tax => Some("The amount of tax."),
             Self::Benefit => Some("Amount payable under the coverage"),
@@ -147,5 +153,4 @@ impl AdjudicationCodes {
             })
             .unwrap_or(false)
     }
-
 }

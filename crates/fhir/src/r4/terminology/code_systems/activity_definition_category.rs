@@ -16,7 +16,8 @@ pub enum ActivityDefinitionCategory {
 }
 
 impl ActivityDefinitionCategory {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/activity-definition-category";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/activity-definition-category";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl ActivityDefinitionCategory {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Treatment => Some("The activity is intended to provide or is related to treatment of the patient."),
-            Self::Education => Some("The activity is intended to provide or is related to education of the patient."),
-            Self::Assessment => Some("The activity is intended to perform or is related to assessment of the patient."),
+            Self::Treatment => Some(
+                "The activity is intended to provide or is related to treatment of the patient.",
+            ),
+            Self::Education => Some(
+                "The activity is intended to provide or is related to education of the patient.",
+            ),
+            Self::Assessment => Some(
+                "The activity is intended to perform or is related to assessment of the patient.",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl ActivityDefinitionCategory {
             })
             .unwrap_or(false)
     }
-
 }

@@ -70,10 +70,14 @@ impl SubscriberRelationshipCodes {
             Self::Child => Some("The Beneficiary is a child of the Subscriber"),
             Self::Parent => Some("The Beneficiary is a parent of the Subscriber"),
             Self::Spouse => Some("The Beneficiary is a spouse or equivalent of the Subscriber"),
-            Self::Common => Some("The Beneficiary is a common law spouse or equivalent of the Subscriber"),
+            Self::Common => {
+                Some("The Beneficiary is a common law spouse or equivalent of the Subscriber")
+            }
             Self::Other => Some("The Beneficiary has some other relationship the Subscriber"),
             Self::Self_ => Some("The Beneficiary is the Subscriber"),
-            Self::Injured => Some("The Beneficiary is covered under insurance of the subscriber due to an injury."),
+            Self::Injured => Some(
+                "The Beneficiary is covered under insurance of the subscriber due to an injury.",
+            ),
         }
     }
 
@@ -140,5 +144,4 @@ impl SubscriberRelationshipCodes {
             })
             .unwrap_or(false)
     }
-
 }

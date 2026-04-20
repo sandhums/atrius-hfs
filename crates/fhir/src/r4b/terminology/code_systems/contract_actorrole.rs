@@ -47,8 +47,12 @@ impl ContractActorRoleCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Practitioner => Some("Someone who provides health care related services to people or animals including both clinical and support services."),
-            Self::Patient => Some("A receiver, human or animal, of health care related goods and services."),
+            Self::Practitioner => Some(
+                "Someone who provides health care related services to people or animals including both clinical and support services.",
+            ),
+            Self::Patient => {
+                Some("A receiver, human or animal, of health care related goods and services.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl ContractActorRoleCodes {
             })
             .unwrap_or(false)
     }
-
 }

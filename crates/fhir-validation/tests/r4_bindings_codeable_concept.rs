@@ -5,6 +5,7 @@ mod common {
 #[cfg(test)]
 mod tests {
     use fhir_validation::LocalTerminologyService;
+    use fhir_validation::binding::common::BindingCheckContextSync;
     use fhir_validation::r4::binding::validate_codeable_concept_binding;
     use fhir_validation::{ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
@@ -60,15 +61,15 @@ mod tests {
 
     #[test]
     fn absent_codeable_concept_produces_no_issue() {
-        let issues = validate_codeable_concept_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.maritalStatus",
             "http://hl7.org/fhir/ValueSet/marital-status",
             BindingStrength::Extensible,
             None,
-            |_| Ok(()),
-            None,
         );
+        let issues = validate_codeable_concept_binding(&ctx, None, |_| Ok(()));
 
         assert!(issues.is_empty());
     }
@@ -77,15 +78,15 @@ mod tests {
     fn local_success_produces_no_issue() {
         let cc = cc_with_one_coding("http://terminology.hl7.org/CodeSystem/v3-NullFlavor", "UNK");
 
-        let issues = validate_codeable_concept_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.maritalStatus",
             "http://hl7.org/fhir/ValueSet/marital-status",
             BindingStrength::Extensible,
-            Some(&cc),
-            |_| Ok(()),
             None,
         );
+        let issues = validate_codeable_concept_binding(&ctx, Some(&cc), |_| Ok(()));
 
         assert!(issues.is_empty());
     }
@@ -104,19 +105,19 @@ mod tests {
 
         let term = LocalTerminologyService::new(FhirVersion::R4);
 
-        let issues = validate_codeable_concept_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.gender",
             "http://hl7.org/fhir/ValueSet/administrative-gender",
             BindingStrength::Extensible,
-            Some(&cc),
-            |_| {
-                Err(TerminologyValidationError::RemoteValidationRequired(
-                    "remote required".to_string(),
-                ))
-            },
             Some(&term),
         );
+        let issues = validate_codeable_concept_binding(&ctx, Some(&cc), |_| {
+            Err(TerminologyValidationError::RemoteValidationRequired(
+                "remote required".to_string(),
+            ))
+        });
         assert!(issues.is_empty());
     }
 
@@ -125,42 +126,42 @@ mod tests {
         let cc = cc_with_one_coding("http://example.org/system", "X");
         let term = LocalTerminologyService::new(FhirVersion::R4);
 
-        let issues = validate_codeable_concept_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.maritalStatus",
             "http://hl7.org/fhir/ValueSet/marital-status",
             BindingStrength::Extensible,
-            Some(&cc),
-            |_| {
-                Err(TerminologyValidationError::RemoteValidationRequired(
-                    "remote required".to_string(),
-                ))
-            },
             Some(&term),
         );
+        let issues = validate_codeable_concept_binding(&ctx, Some(&cc), |_| {
+            Err(TerminologyValidationError::RemoteValidationRequired(
+                "remote required".to_string(),
+            ))
+        });
 
         assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].severity, Severity::Error);
-        assert_eq!(issues[0].code, "value");
+        assert_eq!(issues[0].severity, Severity::Warning);
+        assert_eq!(issues[0].code, "terminology");
     }
 
     #[test]
     fn remote_required_without_service_produces_terminology_error() {
         let cc = cc_with_one_coding("http://example.org/system", "X");
 
-        let issues = validate_codeable_concept_binding(
-            &validator(),
+        let v = validator();
+        let ctx = BindingCheckContextSync::new(
+            &v,
             "Patient.maritalStatus",
             "http://hl7.org/fhir/ValueSet/marital-status",
             BindingStrength::Required,
-            Some(&cc),
-            |_| {
-                Err(TerminologyValidationError::RemoteValidationRequired(
-                    "remote required".to_string(),
-                ))
-            },
             None,
         );
+        let issues = validate_codeable_concept_binding(&ctx, Some(&cc), |_| {
+            Err(TerminologyValidationError::RemoteValidationRequired(
+                "remote required".to_string(),
+            ))
+        });
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Error);
         assert_eq!(issues[0].code, "terminology");

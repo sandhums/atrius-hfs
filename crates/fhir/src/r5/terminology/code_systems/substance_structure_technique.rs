@@ -126,5 +126,4 @@ impl SubstanceStructureTechnique {
             })
             .unwrap_or(false)
     }
-
 }

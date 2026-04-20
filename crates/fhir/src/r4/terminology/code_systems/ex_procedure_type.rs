@@ -47,8 +47,12 @@ impl ExampleProcedureTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Primary => Some("The first procedure in a series required to produce and overall patient outcome."),
-            Self::Secondary => Some("The second procedure in a series required to produce and overall patient outcome."),
+            Self::Primary => Some(
+                "The first procedure in a series required to produce and overall patient outcome.",
+            ),
+            Self::Secondary => Some(
+                "The second procedure in a series required to produce and overall patient outcome.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl ExampleProcedureTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

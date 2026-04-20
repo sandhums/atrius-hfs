@@ -71,14 +71,30 @@ impl OrganizationAffiliationRole {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Provider => Some("An organization that delivers care services (e.g. hospitals, clinics, community and social services, etc.)."),
-            Self::Agency => Some("An organization such as a public health agency, community/social services provider, etc."),
-            Self::Research => Some("An organization providing research-related services such as conducting research, recruiting research participants, analyzing data, etc."),
-            Self::Payer => Some("An organization providing reimbursement, payment, or related services"),
-            Self::Diagnostics => Some("An organization providing diagnostic testing/laboratory services"),
-            Self::Supplier => Some("An organization that provides medical supplies (e.g. medical devices, equipment, pharmaceutical products, etc.)"),
-            Self::HIEHIO => Some("An organization that facilitates electronic clinical data exchange between entities"),
-            Self::Member => Some("A type of non-ownership relationship between entities (encompasses partnerships, collaboration, joint ventures, etc.)"),
+            Self::Provider => Some(
+                "An organization that delivers care services (e.g. hospitals, clinics, community and social services, etc.).",
+            ),
+            Self::Agency => Some(
+                "An organization such as a public health agency, community/social services provider, etc.",
+            ),
+            Self::Research => Some(
+                "An organization providing research-related services such as conducting research, recruiting research participants, analyzing data, etc.",
+            ),
+            Self::Payer => {
+                Some("An organization providing reimbursement, payment, or related services")
+            }
+            Self::Diagnostics => {
+                Some("An organization providing diagnostic testing/laboratory services")
+            }
+            Self::Supplier => Some(
+                "An organization that provides medical supplies (e.g. medical devices, equipment, pharmaceutical products, etc.)",
+            ),
+            Self::HIEHIO => Some(
+                "An organization that facilitates electronic clinical data exchange between entities",
+            ),
+            Self::Member => Some(
+                "A type of non-ownership relationship between entities (encompasses partnerships, collaboration, joint ventures, etc.)",
+            ),
         }
     }
 
@@ -147,5 +163,4 @@ impl OrganizationAffiliationRole {
             })
             .unwrap_or(false)
     }
-
 }

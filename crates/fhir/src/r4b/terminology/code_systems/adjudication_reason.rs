@@ -105,5 +105,4 @@ impl AdjudicationReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

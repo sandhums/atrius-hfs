@@ -3,7 +3,7 @@
 
 //! DICOMAuditMessageRecordLifecycleEvents
 //!
-//! Attached is vocabulary for the record lifecycle events, as per DICOM Audit Message, 
+//! Attached is vocabulary for the record lifecycle events, as per DICOM Audit Message,
 
 use super::super::super::{CodeableConcept, Coding};
 
@@ -196,5 +196,4 @@ impl DICOMAuditMessageRecordLifecycleEvents {
             })
             .unwrap_or(false)
     }
-
 }

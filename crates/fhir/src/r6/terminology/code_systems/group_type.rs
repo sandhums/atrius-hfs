@@ -105,7 +105,9 @@ impl GroupType {
         match self {
             Self::Person => Some("Group contains \"person\" Patient resources."),
             Self::Animal => Some("Group contains \"animal\" Patient resources."),
-            Self::Practitioner => Some("Group contains healthcare practitioner resources (Practitioner or PractitionerRole)."),
+            Self::Practitioner => Some(
+                "Group contains healthcare practitioner resources (Practitioner or PractitionerRole).",
+            ),
             Self::Device => Some("Group contains Device resources."),
             Self::Careteam => Some("Group contains CareTeam resources."),
             Self::Healthcareservice => Some("Group contains HealthcareService resources."),
@@ -114,10 +116,14 @@ impl GroupType {
             Self::Relatedperson => Some("Group contains RelatedPerson resources."),
             Self::Specimen => Some("Group contains Specimen resources."),
             Self::Medication => Some("Group contains Medication resources."),
-            Self::Medicinalproductdefinition => Some("Group contains MedicinalProductDefinition resources."),
+            Self::Medicinalproductdefinition => {
+                Some("Group contains MedicinalProductDefinition resources.")
+            }
             Self::Substance => Some("Group contains Substance resources."),
             Self::Substancedefinition => Some("Group contains SubstanceDefinition resources."),
-            Self::BiologicallyDerivedProduct => Some("Group contains BiologicallyDerivedProduct resources."),
+            Self::BiologicallyDerivedProduct => {
+                Some("Group contains BiologicallyDerivedProduct resources.")
+            }
             Self::NutritionProduct => Some("Group contains NutritionProduct resources."),
         }
     }
@@ -203,5 +209,4 @@ impl GroupType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl QualityType {
             })
             .unwrap_or(false)
     }
-
 }

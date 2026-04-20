@@ -52,8 +52,12 @@ impl SearchEntryMode {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Match_ => Some("This resource matched the search specification."),
-            Self::Include => Some("This resource is returned because it is referred to from another resource in the search set."),
-            Self::Outcome => Some("An OperationOutcome that provides additional information about the processing of a search."),
+            Self::Include => Some(
+                "This resource is returned because it is referred to from another resource in the search set.",
+            ),
+            Self::Outcome => Some(
+                "An OperationOutcome that provides additional information about the processing of a search.",
+            ),
         }
     }
 
@@ -112,5 +116,4 @@ impl SearchEntryMode {
             })
             .unwrap_or(false)
     }
-
 }

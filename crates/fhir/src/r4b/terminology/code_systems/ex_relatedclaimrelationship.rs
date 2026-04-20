@@ -15,7 +15,8 @@ pub enum ExampleRelatedClaimRelationshipCodes {
 }
 
 impl ExampleRelatedClaimRelationshipCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/ex-relatedclaimrelationship";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/ex-relatedclaimrelationship";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -48,7 +49,9 @@ impl ExampleRelatedClaimRelationshipCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Prior => Some("A prior claim instance for the same intended suite of services."),
-            Self::Associated => Some("A claim for a different suite of services which is related the suite claimed here."),
+            Self::Associated => Some(
+                "A claim for a different suite of services which is related the suite claimed here.",
+            ),
         }
     }
 
@@ -105,5 +108,4 @@ impl ExampleRelatedClaimRelationshipCodes {
             })
             .unwrap_or(false)
     }
-
 }

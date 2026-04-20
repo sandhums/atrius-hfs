@@ -45,7 +45,8 @@ pub enum AppointmentCancellationReason {
 }
 
 impl AppointmentCancellationReason {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "example";
@@ -315,5 +316,4 @@ impl AppointmentCancellationReason {
             })
             .unwrap_or(false)
     }
-
 }

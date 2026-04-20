@@ -56,8 +56,12 @@ impl DeviceMetricStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("The device metric record is active."),
-            Self::Inactive => Some("The device metric record is not active, e.g., it represents a historical record."),
-            Self::EnteredInError => Some("The device metric record is not valid and should not be considered."),
+            Self::Inactive => Some(
+                "The device metric record is not active, e.g., it represents a historical record.",
+            ),
+            Self::EnteredInError => {
+                Some("The device metric record is not valid and should not be considered.")
+            }
             Self::Unknown => Some("The device metric record\'s status is currently unknown."),
         }
     }
@@ -119,5 +123,4 @@ impl DeviceMetricStatus {
             })
             .unwrap_or(false)
     }
-
 }

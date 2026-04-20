@@ -16,7 +16,8 @@ pub enum MedicationRequestCourseOfTherapyCodes {
 }
 
 impl MedicationRequestCourseOfTherapyCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationrequest-course-of-therapy";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationrequest-course-of-therapy";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -51,9 +52,15 @@ impl MedicationRequestCourseOfTherapyCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Continuous => Some("A medication which is expected to be continued beyond the present order and which the patient should be assumed to be taking unless explicitly stopped."),
-            Self::Acute => Some("A medication which the patient is only expected to consume for the duration of the current order and which is not expected to be renewed."),
-            Self::Seasonal => Some("A medication which is expected to be used on a part time basis at certain times of the year"),
+            Self::Continuous => Some(
+                "A medication which is expected to be continued beyond the present order and which the patient should be assumed to be taking unless explicitly stopped.",
+            ),
+            Self::Acute => Some(
+                "A medication which the patient is only expected to consume for the duration of the current order and which is not expected to be renewed.",
+            ),
+            Self::Seasonal => Some(
+                "A medication which is expected to be used on a part time basis at certain times of the year",
+            ),
         }
     }
 
@@ -112,5 +119,4 @@ impl MedicationRequestCourseOfTherapyCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -47,8 +47,12 @@ impl LanguagePreferenceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Verbal => Some("The patient prefers to verbally communicate with the associated language."),
-            Self::Written => Some("The patient prefers to communicate in writing with the associated language."),
+            Self::Verbal => {
+                Some("The patient prefers to verbally communicate with the associated language.")
+            }
+            Self::Written => {
+                Some("The patient prefers to communicate in writing with the associated language.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl LanguagePreferenceType {
             })
             .unwrap_or(false)
     }
-
 }

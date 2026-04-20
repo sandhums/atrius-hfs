@@ -59,11 +59,21 @@ impl SubscriptionChannelType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::RestHook => Some("The channel is executed by making a post to the URI. If a payload is included, the URL is interpreted as the service base, and an update (PUT) is made."),
-            Self::Websocket => Some("The channel is executed by sending a packet across a web socket connection maintained by the client. The URL identifies the websocket, and the client binds to this URL."),
-            Self::Email => Some("The channel is executed by sending an email to the email addressed in the URI (which must be a mailto:)."),
-            Self::Sms => Some("The channel is executed by sending an SMS message to the phone number identified in the URL (tel:)."),
-            Self::Message => Some("The channel is executed by sending a message (e.g. a Bundle with a MessageHeader resource etc.) to the application identified in the URI."),
+            Self::RestHook => Some(
+                "The channel is executed by making a post to the URI. If a payload is included, the URL is interpreted as the service base, and an update (PUT) is made.",
+            ),
+            Self::Websocket => Some(
+                "The channel is executed by sending a packet across a web socket connection maintained by the client. The URL identifies the websocket, and the client binds to this URL.",
+            ),
+            Self::Email => Some(
+                "The channel is executed by sending an email to the email addressed in the URI (which must be a mailto:).",
+            ),
+            Self::Sms => Some(
+                "The channel is executed by sending an SMS message to the phone number identified in the URL (tel:).",
+            ),
+            Self::Message => Some(
+                "The channel is executed by sending a message (e.g. a Bundle with a MessageHeader resource etc.) to the application identified in the URI.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl SubscriptionChannelType {
             })
             .unwrap_or(false)
     }
-
 }

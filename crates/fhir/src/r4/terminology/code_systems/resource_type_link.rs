@@ -119,5 +119,4 @@ impl PayeeResourceType {
             })
             .unwrap_or(false)
     }
-
 }

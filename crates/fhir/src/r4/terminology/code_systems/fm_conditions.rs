@@ -98,5 +98,4 @@ impl FMConditionCodes {
             })
             .unwrap_or(false)
     }
-
 }

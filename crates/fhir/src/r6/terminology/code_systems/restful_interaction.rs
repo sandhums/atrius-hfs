@@ -141,28 +141,56 @@ impl FHIRRestfulInteractions {
         match self {
             Self::Read => Some("Read the current state of the resource."),
             Self::Vread => Some("Read the state of a specific version of the resource."),
-            Self::Update => Some("Update an existing resource by its id (or create it if it is new)."),
-            Self::UpdateConditional => Some("Update an existing resource based on some identification criteria (or create it if it is new)."),
+            Self::Update => {
+                Some("Update an existing resource by its id (or create it if it is new).")
+            }
+            Self::UpdateConditional => Some(
+                "Update an existing resource based on some identification criteria (or create it if it is new).",
+            ),
             Self::Patch => Some("Update an existing resource by posting a set of changes to it."),
-            Self::PatchConditional => Some("Update an existing resource, based on some identification criteria, by posting a set of changes to it."),
+            Self::PatchConditional => Some(
+                "Update an existing resource, based on some identification criteria, by posting a set of changes to it.",
+            ),
             Self::Delete => Some("Delete a resource."),
-            Self::DeleteConditionalSingle => Some("Delete a single resource based on some identification criteria."),
-            Self::DeleteConditionalMultiple => Some("Delete one or more resources based on some identification criteria."),
+            Self::DeleteConditionalSingle => {
+                Some("Delete a single resource based on some identification criteria.")
+            }
+            Self::DeleteConditionalMultiple => {
+                Some("Delete one or more resources based on some identification criteria.")
+            }
             Self::DeleteHistory => Some("Delete all historical versions of a resource."),
             Self::DeleteHistoryVersion => Some("Delete a specific version of a resource."),
-            Self::History => Some("Retrieve the change history for a particular resource, type of resource, or the entire system."),
+            Self::History => Some(
+                "Retrieve the change history for a particular resource, type of resource, or the entire system.",
+            ),
             Self::HistoryInstance => Some("Retrieve the change history for a particular resource."),
-            Self::HistoryType => Some("Retrieve the change history for all resources of a particular type."),
-            Self::HistorySystem => Some("Retrieve the change history for all resources on a system."),
+            Self::HistoryType => {
+                Some("Retrieve the change history for all resources of a particular type.")
+            }
+            Self::HistorySystem => {
+                Some("Retrieve the change history for all resources on a system.")
+            }
             Self::Create => Some("Create a new resource with a server assigned id."),
-            Self::CreateConditional => Some("Create a new resource with a server assigned id if an equivalent resource does not already exist."),
-            Self::Search => Some("Search a resource type or all resources based on some filter criteria."),
-            Self::SearchType => Some("Search all resources of the specified type based on some filter criteria."),
+            Self::CreateConditional => Some(
+                "Create a new resource with a server assigned id if an equivalent resource does not already exist.",
+            ),
+            Self::Search => {
+                Some("Search a resource type or all resources based on some filter criteria.")
+            }
+            Self::SearchType => {
+                Some("Search all resources of the specified type based on some filter criteria.")
+            }
             Self::SearchSystem => Some("Search all resources based on some filter criteria."),
-            Self::SearchCompartment => Some("Search resources in a compartment based on some filter criteria."),
+            Self::SearchCompartment => {
+                Some("Search resources in a compartment based on some filter criteria.")
+            }
             Self::Capabilities => Some("Get a Capability Statement for the system."),
-            Self::Transaction => Some("Update, create or delete a set of resources as a single transaction."),
-            Self::Batch => Some("perform a set of a separate interactions in a single http operation"),
+            Self::Transaction => {
+                Some("Update, create or delete a set of resources as a single transaction.")
+            }
+            Self::Batch => {
+                Some("perform a set of a separate interactions in a single http operation")
+            }
             Self::Operation => Some("Perform an operation as defined by an OperationDefinition."),
         }
     }
@@ -266,5 +294,4 @@ impl FHIRRestfulInteractions {
             })
             .unwrap_or(false)
     }
-
 }

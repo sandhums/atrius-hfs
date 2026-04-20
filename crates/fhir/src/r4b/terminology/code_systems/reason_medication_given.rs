@@ -112,5 +112,4 @@ impl ReasonMedicationGivenCodes {
             })
             .unwrap_or(false)
     }
-
 }

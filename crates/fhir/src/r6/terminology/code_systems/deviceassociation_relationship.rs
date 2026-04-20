@@ -60,9 +60,15 @@ impl DeviceAssociation {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Owner => Some("Owner of the device."),
-            Self::Custodian => Some("The individual or organization who has responsibility for taking care of the device."),
-            Self::Maintainer => Some("The individual or organization that keeps the device in an appropriate condition."),
-            Self::Patient => Some("The patient in which the device is implanted, or to which the device is associated."),
+            Self::Custodian => Some(
+                "The individual or organization who has responsibility for taking care of the device.",
+            ),
+            Self::Maintainer => Some(
+                "The individual or organization that keeps the device in an appropriate condition.",
+            ),
+            Self::Patient => Some(
+                "The patient in which the device is implanted, or to which the device is associated.",
+            ),
             Self::Operator => Some("The person operating the device."),
         }
     }
@@ -126,5 +132,4 @@ impl DeviceAssociation {
             })
             .unwrap_or(false)
     }
-
 }

@@ -48,7 +48,9 @@ impl ProductStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("The product can be used."),
-            Self::EnteredInError => Some("This electronic record should never have existed, though it is possible that real-world decisions were based on it.  (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".)."),
+            Self::EnteredInError => Some(
+                "This electronic record should never have existed, though it is possible that real-world decisions were based on it.  (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".).",
+            ),
         }
     }
 
@@ -105,5 +107,4 @@ impl ProductStatus {
             })
             .unwrap_or(false)
     }
-
 }

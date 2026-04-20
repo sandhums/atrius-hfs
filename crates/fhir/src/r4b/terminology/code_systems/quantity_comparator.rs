@@ -119,5 +119,4 @@ impl QuantityComparator {
             })
             .unwrap_or(false)
     }
-
 }

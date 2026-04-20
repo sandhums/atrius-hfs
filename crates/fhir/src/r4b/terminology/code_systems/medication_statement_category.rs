@@ -15,7 +15,8 @@ pub enum MedicationStatementCategoryCodes {
 }
 
 impl MedicationStatementCategoryCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medication-statement-category";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medication-statement-category";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -53,10 +54,18 @@ impl MedicationStatementCategoryCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Inpatient => Some("Includes orders for medications to be administered or consumed in an inpatient or acute care setting"),
-            Self::Outpatient => Some("Includes orders for medications to be administered or consumed in an outpatient setting (for example, Emergency Department, Outpatient Clinic, Outpatient Surgery, Doctor\'s office)"),
-            Self::Community => Some("Includes orders for medications to be administered or consumed by the patient in their home (this would include long term care or nursing homes, hospices, etc.)."),
-            Self::Patientspecified => Some("Includes statements about medication use, including over the counter medication, provided by the patient, agent or another provider"),
+            Self::Inpatient => Some(
+                "Includes orders for medications to be administered or consumed in an inpatient or acute care setting",
+            ),
+            Self::Outpatient => Some(
+                "Includes orders for medications to be administered or consumed in an outpatient setting (for example, Emergency Department, Outpatient Clinic, Outpatient Surgery, Doctor\'s office)",
+            ),
+            Self::Community => Some(
+                "Includes orders for medications to be administered or consumed by the patient in their home (this would include long term care or nursing homes, hospices, etc.).",
+            ),
+            Self::Patientspecified => Some(
+                "Includes statements about medication use, including over the counter medication, provided by the patient, agent or another provider",
+            ),
         }
     }
 
@@ -117,5 +126,4 @@ impl MedicationStatementCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

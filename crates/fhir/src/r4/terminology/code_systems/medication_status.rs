@@ -112,5 +112,4 @@ impl MedicationStatusCodes_070d8f86 {
             })
             .unwrap_or(false)
     }
-
 }

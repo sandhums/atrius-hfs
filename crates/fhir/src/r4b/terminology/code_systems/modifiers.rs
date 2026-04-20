@@ -67,7 +67,9 @@ impl ModifierTypeCodes {
             Self::B => Some("Temporary service or installation."),
             Self::C => Some("Treatment associated with TMJ."),
             Self::E => Some("Implant or associated with an implant."),
-            Self::Rooh => Some("A Rush service or service performed outside of normal office hours."),
+            Self::Rooh => {
+                Some("A Rush service or service performed outside of normal office hours.")
+            }
             Self::X => Some("None."),
         }
     }
@@ -133,5 +135,4 @@ impl ModifierTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

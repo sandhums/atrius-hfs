@@ -112,5 +112,4 @@ impl ProcessPriorityCodes {
             })
             .unwrap_or(false)
     }
-
 }

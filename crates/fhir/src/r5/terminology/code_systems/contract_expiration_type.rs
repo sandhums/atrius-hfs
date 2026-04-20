@@ -98,5 +98,4 @@ impl ContractExpirationType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -79,16 +79,32 @@ impl AdmitSource {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::HospTrans => Some("The Patient has been transferred from another hospital for this encounter."),
-            Self::Emd => Some("The patient has been transferred from the emergency department within the hospital. This is typically used in the transition to an inpatient encounter"),
-            Self::Outp => Some("The patient has been transferred from an outpatient department within the hospital."),
-            Self::Born => Some("The patient is a newborn and the encounter will track the baby related activities (as opposed to the Mothers encounter - that may be associated using the newborn encounters partof property)"),
-            Self::Gp => Some("The patient has been admitted due to a referred from a General Practitioner."),
-            Self::Mp => Some("The patient has been admitted due to a referred from a Specialist (as opposed to a General Practitioner)."),
+            Self::HospTrans => {
+                Some("The Patient has been transferred from another hospital for this encounter.")
+            }
+            Self::Emd => Some(
+                "The patient has been transferred from the emergency department within the hospital. This is typically used in the transition to an inpatient encounter",
+            ),
+            Self::Outp => Some(
+                "The patient has been transferred from an outpatient department within the hospital.",
+            ),
+            Self::Born => Some(
+                "The patient is a newborn and the encounter will track the baby related activities (as opposed to the Mothers encounter - that may be associated using the newborn encounters partof property)",
+            ),
+            Self::Gp => {
+                Some("The patient has been admitted due to a referred from a General Practitioner.")
+            }
+            Self::Mp => Some(
+                "The patient has been admitted due to a referred from a Specialist (as opposed to a General Practitioner).",
+            ),
             Self::Nursing => Some("The patient has been transferred from a nursing home."),
             Self::Psych => Some("The patient has been transferred from a psychiatric facility."),
-            Self::Rehab => Some("The patient has been transferred from a rehabilitation facility or clinic."),
-            Self::Other => Some("The patient has been admitted from a source otherwise not specified here."),
+            Self::Rehab => {
+                Some("The patient has been transferred from a rehabilitation facility or clinic.")
+            }
+            Self::Other => {
+                Some("The patient has been admitted from a source otherwise not specified here.")
+            }
         }
     }
 
@@ -161,5 +177,4 @@ impl AdmitSource {
             })
             .unwrap_or(false)
     }
-
 }

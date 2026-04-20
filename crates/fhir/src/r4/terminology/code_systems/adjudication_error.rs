@@ -105,5 +105,4 @@ impl AdjudicationErrorCodes {
             })
             .unwrap_or(false)
     }
-
 }

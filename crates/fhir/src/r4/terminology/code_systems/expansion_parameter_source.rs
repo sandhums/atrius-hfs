@@ -16,7 +16,8 @@ pub enum ExpansionParameterSource {
 }
 
 impl ExpansionParameterSource {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/expansion-parameter-source";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/expansion-parameter-source";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -53,7 +54,9 @@ impl ExpansionParameterSource {
         match self {
             Self::Input => Some("The parameter was supplied by the client in the $expand request."),
             Self::Server => Some("The parameter was added by the expansion engine on the server."),
-            Self::Codesystem => Some("The parameter was added from one the code systems used in the $expand operation."),
+            Self::Codesystem => Some(
+                "The parameter was added from one the code systems used in the $expand operation.",
+            ),
         }
     }
 
@@ -112,5 +115,4 @@ impl ExpansionParameterSource {
             })
             .unwrap_or(false)
     }
-
 }

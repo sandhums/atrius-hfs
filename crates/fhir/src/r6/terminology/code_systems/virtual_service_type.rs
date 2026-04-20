@@ -51,7 +51,9 @@ impl VirtualServiceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Zoom => Some("the amount is the base price used for calculating the total price before applying surcharges, discount or taxes."),
+            Self::Zoom => Some(
+                "the amount is the base price used for calculating the total price before applying surcharges, discount or taxes.",
+            ),
             Self::MsTeams => Some("Microsoft Teams web conferencing meeting"),
             Self::Whatsapp => Some("A conference call using the WhatsApp conference call service"),
         }
@@ -112,5 +114,4 @@ impl VirtualServiceType {
             })
             .unwrap_or(false)
     }
-
 }

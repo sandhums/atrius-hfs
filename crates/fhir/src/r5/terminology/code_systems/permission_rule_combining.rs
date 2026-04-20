@@ -63,12 +63,24 @@ impl PermissionRuleCombining {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::DenyOverrides => Some("The deny overrides combining algorithm is intended for those cases where a deny decision should have priority over a permit decision."),
-            Self::PermitOverrides => Some("The permit overrides combining algorithm is intended for those cases where a permit decision should have priority over a deny decision."),
-            Self::OrderedDenyOverrides => Some("The behavior of this algorithm is identical to that of the \u{201c}Deny-overrides\u{201d} rule-combining algorithm with one exception.  The order in which the collection of rules is evaluated SHALL match the order as listed in the permission."),
-            Self::OrderedPermitOverrides => Some("The behavior of this algorithm is identical to that of the \u{201c}Permit-overrides\u{201d} rule-combining algorithm with one exception.  The order in which the collection of rules is evaluated SHALL match the order as listed in the permission."),
-            Self::DenyUnlessPermit => Some("The \u{201c}Deny-unless-permit\u{201d} combining algorithm is intended for those cases where a permit decision should have priority over a deny decision, and an \u{201c}Indeterminate\u{201d} or \u{201c}NotApplicable\u{201d} must never be the result. It is particularly useful at the top level in a policy structure to ensure that a PDP will always return a definite \u{201c}Permit\u{201d} or \u{201c}Deny\u{201d} result."),
-            Self::PermitUnlessDeny => Some("The \u{201c}Permit-unless-deny\u{201d} combining algorithm is intended for those cases where a deny decision should have priority over a permit decision, and an \u{201c}Indeterminate\u{201d} or \u{201c}NotApplicable\u{201d} must never be the result. It is particularly useful at the top level in a policy structure to ensure that a PDP will always return a definite \u{201c}Permit\u{201d} or \u{201c}Deny\u{201d} result. This algorithm has the following behavior."),
+            Self::DenyOverrides => Some(
+                "The deny overrides combining algorithm is intended for those cases where a deny decision should have priority over a permit decision.",
+            ),
+            Self::PermitOverrides => Some(
+                "The permit overrides combining algorithm is intended for those cases where a permit decision should have priority over a deny decision.",
+            ),
+            Self::OrderedDenyOverrides => Some(
+                "The behavior of this algorithm is identical to that of the \u{201c}Deny-overrides\u{201d} rule-combining algorithm with one exception.  The order in which the collection of rules is evaluated SHALL match the order as listed in the permission.",
+            ),
+            Self::OrderedPermitOverrides => Some(
+                "The behavior of this algorithm is identical to that of the \u{201c}Permit-overrides\u{201d} rule-combining algorithm with one exception.  The order in which the collection of rules is evaluated SHALL match the order as listed in the permission.",
+            ),
+            Self::DenyUnlessPermit => Some(
+                "The \u{201c}Deny-unless-permit\u{201d} combining algorithm is intended for those cases where a permit decision should have priority over a deny decision, and an \u{201c}Indeterminate\u{201d} or \u{201c}NotApplicable\u{201d} must never be the result. It is particularly useful at the top level in a policy structure to ensure that a PDP will always return a definite \u{201c}Permit\u{201d} or \u{201c}Deny\u{201d} result.",
+            ),
+            Self::PermitUnlessDeny => Some(
+                "The \u{201c}Permit-unless-deny\u{201d} combining algorithm is intended for those cases where a deny decision should have priority over a permit decision, and an \u{201c}Indeterminate\u{201d} or \u{201c}NotApplicable\u{201d} must never be the result. It is particularly useful at the top level in a policy structure to ensure that a PDP will always return a definite \u{201c}Permit\u{201d} or \u{201c}Deny\u{201d} result. This algorithm has the following behavior.",
+            ),
         }
     }
 
@@ -133,5 +145,4 @@ impl PermissionRuleCombining {
             })
             .unwrap_or(false)
     }
-
 }

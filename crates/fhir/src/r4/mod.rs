@@ -133,13 +133,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DecimalElement, Element};
 
-pub mod primitives;
 pub mod complex_types;
+pub mod primitives;
 pub mod resources;
 pub mod terminology;
 
-pub use primitives::*;
 pub use complex_types::*;
+pub use primitives::*;
 pub use resources::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FhirPath)]
@@ -380,15 +380,27 @@ impl PartialEq for Resource {
             (Self::MedicationRequest(a), Self::MedicationRequest(b)) => a == b,
             (Self::MedicationStatement(a), Self::MedicationStatement(b)) => a == b,
             (Self::MedicinalProduct(a), Self::MedicinalProduct(b)) => a == b,
-            (Self::MedicinalProductAuthorization(a), Self::MedicinalProductAuthorization(b)) => a == b,
-            (Self::MedicinalProductContraindication(a), Self::MedicinalProductContraindication(b)) => a == b,
+            (Self::MedicinalProductAuthorization(a), Self::MedicinalProductAuthorization(b)) => {
+                a == b
+            }
+            (
+                Self::MedicinalProductContraindication(a),
+                Self::MedicinalProductContraindication(b),
+            ) => a == b,
             (Self::MedicinalProductIndication(a), Self::MedicinalProductIndication(b)) => a == b,
             (Self::MedicinalProductIngredient(a), Self::MedicinalProductIngredient(b)) => a == b,
             (Self::MedicinalProductInteraction(a), Self::MedicinalProductInteraction(b)) => a == b,
-            (Self::MedicinalProductManufactured(a), Self::MedicinalProductManufactured(b)) => a == b,
+            (Self::MedicinalProductManufactured(a), Self::MedicinalProductManufactured(b)) => {
+                a == b
+            }
             (Self::MedicinalProductPackaged(a), Self::MedicinalProductPackaged(b)) => a == b,
-            (Self::MedicinalProductPharmaceutical(a), Self::MedicinalProductPharmaceutical(b)) => a == b,
-            (Self::MedicinalProductUndesirableEffect(a), Self::MedicinalProductUndesirableEffect(b)) => a == b,
+            (Self::MedicinalProductPharmaceutical(a), Self::MedicinalProductPharmaceutical(b)) => {
+                a == b
+            }
+            (
+                Self::MedicinalProductUndesirableEffect(a),
+                Self::MedicinalProductUndesirableEffect(b),
+            ) => a == b,
             (Self::MessageDefinition(a), Self::MessageDefinition(b)) => a == b,
             (Self::MessageHeader(a), Self::MessageHeader(b)) => a == b,
             (Self::MolecularSequence(a), Self::MolecularSequence(b)) => a == b,
@@ -433,7 +445,9 @@ impl PartialEq for Resource {
             (Self::SubstanceNucleicAcid(a), Self::SubstanceNucleicAcid(b)) => a == b,
             (Self::SubstancePolymer(a), Self::SubstancePolymer(b)) => a == b,
             (Self::SubstanceProtein(a), Self::SubstanceProtein(b)) => a == b,
-            (Self::SubstanceReferenceInformation(a), Self::SubstanceReferenceInformation(b)) => a == b,
+            (Self::SubstanceReferenceInformation(a), Self::SubstanceReferenceInformation(b)) => {
+                a == b
+            }
             (Self::SubstanceSourceMaterial(a), Self::SubstanceSourceMaterial(b)) => a == b,
             (Self::SubstanceSpecification(a), Self::SubstanceSpecification(b)) => a == b,
             (Self::SupplyDelivery(a), Self::SupplyDelivery(b)) => a == b,
@@ -725,7 +739,8 @@ pub mod type_hierarchy {
 
     /// Gets all subtypes of a given parent type
     pub fn get_subtypes(parent: &str) -> Vec<&'static str> {
-        get_type_parents().iter()
+        get_type_parents()
+            .iter()
             .filter_map(|(child, p)| {
                 if p.eq_ignore_ascii_case(parent) {
                     Some(*child)
@@ -736,7 +751,6 @@ pub mod type_hierarchy {
             .collect()
     }
 }
-
 
 // --- Complex Types Provider ---
 /// Marker struct for complex type information
@@ -982,7 +996,10 @@ pub fn get_summary_fields(resource_type: &str) -> &'static [&'static str] {
 /// let params = get_compartment_params("Patient", "Observation");
 /// assert_eq!(params, &["subject", "performer"]);
 /// ```
-pub fn get_compartment_params(compartment_type: &str, resource_type: &str) -> &'static [&'static str] {
+pub fn get_compartment_params(
+    compartment_type: &str,
+    resource_type: &str,
+) -> &'static [&'static str] {
     match compartment_type {
         "Device" => match resource_type {
             "Account" => &["subject"],

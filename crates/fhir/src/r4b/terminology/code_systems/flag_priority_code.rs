@@ -119,5 +119,4 @@ impl FlagPriorityCodes {
             })
             .unwrap_or(false)
     }
-
 }

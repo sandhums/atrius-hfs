@@ -61,7 +61,9 @@ impl RiskProbability {
         match self {
             Self::Negligible => Some("The specified outcome is exceptionally unlikely."),
             Self::Low => Some("The specified outcome is possible but unlikely."),
-            Self::Moderate => Some("The specified outcome has a reasonable likelihood of occurrence."),
+            Self::Moderate => {
+                Some("The specified outcome has a reasonable likelihood of occurrence.")
+            }
             Self::High => Some("The specified outcome is more likely to occur than not."),
             Self::Certain => Some("The specified outcome is effectively guaranteed."),
         }
@@ -126,5 +128,4 @@ impl RiskProbability {
             })
             .unwrap_or(false)
     }
-
 }

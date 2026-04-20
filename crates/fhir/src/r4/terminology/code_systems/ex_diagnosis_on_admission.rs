@@ -57,8 +57,12 @@ impl ExampleDiagnosisOnAdmissionCodes {
         match self {
             Self::Y => Some("Diagnosis was present at time of inpatient admission."),
             Self::N => Some("Diagnosis was not present at time of inpatient admission."),
-            Self::U => Some("Documentation insufficient to determine if condition was present at the time of inpatient admission."),
-            Self::W => Some("Clinically undetermined. Provider unable to clinically determine whether the condition was present at the time of inpatient admission."),
+            Self::U => Some(
+                "Documentation insufficient to determine if condition was present at the time of inpatient admission.",
+            ),
+            Self::W => Some(
+                "Clinically undetermined. Provider unable to clinically determine whether the condition was present at the time of inpatient admission.",
+            ),
         }
     }
 
@@ -119,5 +123,4 @@ impl ExampleDiagnosisOnAdmissionCodes {
             })
             .unwrap_or(false)
     }
-
 }

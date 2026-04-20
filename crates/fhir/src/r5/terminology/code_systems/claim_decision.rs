@@ -55,10 +55,16 @@ impl ClaimAdjudicationDecisionCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Denied => Some("The claim, or individual services, are not approved for any payment. This may also be known as \'rejected\'."),
+            Self::Denied => Some(
+                "The claim, or individual services, are not approved for any payment. This may also be known as \'rejected\'.",
+            ),
             Self::Approved => Some("The claim, or individual services, are approved as submitted."),
-            Self::Partial => Some("The claim, or individual services, are approved at an amount less than as submitted."),
-            Self::Pending => Some("The adjudication processing is not complete. This may be due to requiring manual review or receipt of additional information."),
+            Self::Partial => Some(
+                "The claim, or individual services, are approved at an amount less than as submitted.",
+            ),
+            Self::Pending => Some(
+                "The adjudication processing is not complete. This may be due to requiring manual review or receipt of additional information.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl ClaimAdjudicationDecisionCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -63,12 +63,24 @@ impl CommunicationTopic {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::PrescriptionRefillRequest => Some("The purpose or content of the communication is a prescription refill request."),
-            Self::ProgressUpdate => Some("The purpose or content of the communication is a progress update."),
-            Self::ReportLabs => Some("The purpose or content of the communication is to report labs."),
-            Self::AppointmentReminder => Some("The purpose or content of the communication is an appointment reminder."),
-            Self::PhoneConsult => Some("The purpose or content of the communication is a phone consult."),
-            Self::SummaryReport => Some("The purpose or content of the communication is a summary report."),
+            Self::PrescriptionRefillRequest => Some(
+                "The purpose or content of the communication is a prescription refill request.",
+            ),
+            Self::ProgressUpdate => {
+                Some("The purpose or content of the communication is a progress update.")
+            }
+            Self::ReportLabs => {
+                Some("The purpose or content of the communication is to report labs.")
+            }
+            Self::AppointmentReminder => {
+                Some("The purpose or content of the communication is an appointment reminder.")
+            }
+            Self::PhoneConsult => {
+                Some("The purpose or content of the communication is a phone consult.")
+            }
+            Self::SummaryReport => {
+                Some("The purpose or content of the communication is a summary report.")
+            }
         }
     }
 
@@ -133,5 +145,4 @@ impl CommunicationTopic {
             })
             .unwrap_or(false)
     }
-
 }

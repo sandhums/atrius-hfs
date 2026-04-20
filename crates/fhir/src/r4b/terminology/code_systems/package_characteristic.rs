@@ -112,5 +112,4 @@ impl PackageCharacteristic {
             })
             .unwrap_or(false)
     }
-
 }

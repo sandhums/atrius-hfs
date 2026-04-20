@@ -140,5 +140,4 @@ impl FHIRPathTypes {
             })
             .unwrap_or(false)
     }
-
 }

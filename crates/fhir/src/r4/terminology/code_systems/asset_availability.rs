@@ -98,5 +98,4 @@ impl ContractResourceAssetAvailiabilityCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -119,5 +119,4 @@ impl ContributorSummarySource {
             })
             .unwrap_or(false)
     }
-
 }

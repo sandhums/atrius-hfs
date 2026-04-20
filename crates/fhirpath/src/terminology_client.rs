@@ -302,7 +302,9 @@ impl TerminologyClient {
     ) -> FhirPathResult<Value> {
         let local_valueset_id = Self::local_valueset_id_from_canonical(valueset_canonical);
         let url = if let Some(valueset_id) = local_valueset_id {
-            if let Some(param_array) = parameters.get_mut("parameter").and_then(|p| p.as_array_mut())
+            if let Some(param_array) = parameters
+                .get_mut("parameter")
+                .and_then(|p| p.as_array_mut())
             {
                 param_array.retain(|p| {
                     p.get("name")

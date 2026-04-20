@@ -1414,7 +1414,8 @@ impl fhir_validation::r4::R4Validatable for MedicationAdministration {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationAdministrationMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationAdministration.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationAdministration.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
                 MedicationAdministrationMedication::Reference(value) => {
@@ -1733,7 +1734,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationAdministration {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationAdministrationMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationAdministration.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationAdministration.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
                 MedicationAdministrationMedication::Reference(value) => {
@@ -2228,7 +2230,8 @@ impl fhir_validation::r4::R4Validatable for MedicationDispense {
         if let Some(choice) = &self.status_reason {
             match choice {
                 MedicationDispenseStatusReason::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationDispense.statusReason[x]", "http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationDispense.statusReason[x]", "http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", value));
                     issues.extend(child_issues);
                 }
                 MedicationDispenseStatusReason::Reference(value) => {
@@ -2240,7 +2243,8 @@ impl fhir_validation::r4::R4Validatable for MedicationDispense {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationDispenseMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationDispense.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationDispense.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
                 MedicationDispenseMedication::Reference(value) => {
@@ -2592,7 +2596,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationDispense {
         if let Some(choice) = &self.status_reason {
             match choice {
                 MedicationDispenseStatusReason::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationDispense.statusReason[x]", "http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationDispense.statusReason[x]", "http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medicationdispense-status-reason", value)).await;
                     issues.extend(child_issues);
                 }
                 MedicationDispenseStatusReason::Reference(value) => {
@@ -2604,7 +2609,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationDispense {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationDispenseMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationDispense.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationDispense.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
                 MedicationDispenseMedication::Reference(value) => {
@@ -5131,7 +5137,8 @@ impl fhir_validation::r4::R4Validatable for MedicationRequest {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationRequestMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationRequest.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationRequest.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
                 MedicationRequestMedication::Reference(value) => {
@@ -5518,7 +5525,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationRequest {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationRequestMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationRequest.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationRequest.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
                 MedicationRequestMedication::Reference(value) => {
@@ -5804,7 +5812,8 @@ impl fhir_validation::r4::R4Validatable for MedicationRequestSubstitution {
                 MedicationRequestSubstitutionAllowed::Boolean(_value) => {
                 }
                 MedicationRequestSubstitutionAllowed::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationRequest.substitution.allowed[x]", "http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationRequest.substitution.allowed[x]", "http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", value));
                     issues.extend(child_issues);
                 }
             }
@@ -5883,7 +5892,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationRequestSubstitution {
                 MedicationRequestSubstitutionAllowed::Boolean(_value) => {
                 }
                 MedicationRequestSubstitutionAllowed::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationRequest.substitution.allowed[x]", "http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationRequest.substitution.allowed[x]", "http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -6057,7 +6067,8 @@ impl fhir_validation::r4::R4Validatable for MedicationStatement {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationStatementMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "MedicationStatement.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "MedicationStatement.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
                 MedicationStatementMedication::Reference(value) => {
@@ -6346,7 +6357,8 @@ impl fhir_validation::r4::R4ValidatableAsync for MedicationStatement {
         if let Some(choice) = &self.medication {
             match choice {
                 MedicationStatementMedication::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "MedicationStatement.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "MedicationStatement.medication[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
                 MedicationStatementMedication::Reference(value) => {

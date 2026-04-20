@@ -37,7 +37,8 @@ pub enum ArtifactRelationshipType {
 }
 
 impl ArtifactRelationshipType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/artifact-relationship-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/artifact-relationship-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -259,5 +260,4 @@ impl ArtifactRelationshipType {
             })
             .unwrap_or(false)
     }
-
 }

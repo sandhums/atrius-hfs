@@ -55,10 +55,14 @@ impl RemittanceOutcome {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Queued => Some("The Claim/Pre-authorization/Pre-determination has been received but processing has not begun."),
+            Self::Queued => Some(
+                "The Claim/Pre-authorization/Pre-determination has been received but processing has not begun.",
+            ),
             Self::Complete => Some("The processing completed without errors."),
             Self::Error => Some("The processing identified errors."),
-            Self::Partial => Some("No errors have been detected and some of the adjudication has been performed."),
+            Self::Partial => Some(
+                "No errors have been detected and some of the adjudication has been performed.",
+            ),
         }
     }
 
@@ -119,5 +123,4 @@ impl RemittanceOutcome {
             })
             .unwrap_or(false)
     }
-
 }

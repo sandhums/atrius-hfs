@@ -112,5 +112,4 @@ impl ExampleOnsetTypeReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

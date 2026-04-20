@@ -51,7 +51,9 @@ impl GenderStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Neutered => Some("The animal has been sterilized, castrated or otherwise made infertile."),
+            Self::Neutered => {
+                Some("The animal has been sterilized, castrated or otherwise made infertile.")
+            }
             Self::Intact => Some("The animal\'s reproductive organs are intact."),
             Self::Unknown => Some("Unable to determine whether the animal has been neutered."),
         }
@@ -112,5 +114,4 @@ impl GenderStatus {
             })
             .unwrap_or(false)
     }
-
 }

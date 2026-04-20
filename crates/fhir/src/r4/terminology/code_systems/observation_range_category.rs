@@ -51,9 +51,13 @@ impl ObservationRangeCategory {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Reference => Some("Reference (Normal) Range for Ordinal and Continuous Observations."),
+            Self::Reference => {
+                Some("Reference (Normal) Range for Ordinal and Continuous Observations.")
+            }
             Self::Critical => Some("Critical Range for Ordinal and Continuous Observations."),
-            Self::Absolute => Some("Absolute Range for Ordinal and Continuous Observations. Results outside this range are not possible."),
+            Self::Absolute => Some(
+                "Absolute Range for Ordinal and Continuous Observations. Results outside this range are not possible.",
+            ),
         }
     }
 
@@ -112,5 +116,4 @@ impl ObservationRangeCategory {
             })
             .unwrap_or(false)
     }
-
 }

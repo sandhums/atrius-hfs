@@ -916,7 +916,8 @@ impl fhir_validation::r4::R4Validatable for DeviceRequest {
                     issues.extend(validator.rebase_instance_paths(child_issues, "DeviceRequest.code[x]"));
                 }
                 DeviceRequestCode::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology);
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1256,7 +1257,8 @@ impl fhir_validation::r4::R4ValidatableAsync for DeviceRequest {
                     issues.extend(validator.rebase_instance_paths(child_issues, "DeviceRequest.code[x]"));
                 }
                 DeviceRequestCode::CodeableConcept(value) => {
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value), terminology).await;
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "DeviceRequest.code[x]", "http://hl7.org/fhir/ValueSet/device-kind", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/device-kind", value)).await;
                     issues.extend(child_issues);
                 }
             }

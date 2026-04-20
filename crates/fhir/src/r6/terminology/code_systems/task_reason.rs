@@ -126,5 +126,4 @@ impl TaskReason {
             })
             .unwrap_or(false)
     }
-
 }

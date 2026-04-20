@@ -126,5 +126,4 @@ impl StructureMapSourceListMode {
             })
             .unwrap_or(false)
     }
-
 }

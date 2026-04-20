@@ -119,5 +119,4 @@ impl HumanNameAssemblyOrder {
             })
             .unwrap_or(false)
     }
-
 }

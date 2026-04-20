@@ -18,9 +18,7 @@ pub fn manifest_dir() -> PathBuf {
 
 /// `crates/fhir/tests/data/json/{version}` (e.g. `version` = `"R5"`).
 pub fn fhir_json_dir(version: &str) -> PathBuf {
-    manifest_dir()
-        .join("../fhir/tests/data/json")
-        .join(version)
+    manifest_dir().join("../fhir/tests/data/json").join(version)
 }
 
 pub fn read_fhir_example_json(version: &str, filename: &str) -> String {
@@ -104,8 +102,8 @@ pub fn is_invariant_like_issue(i: &ValidationIssue) -> bool {
 }
 
 pub fn resource_type_of_json(path: &Path, json: &str) -> String {
-    let v: serde_json::Value = serde_json::from_str(json)
-        .unwrap_or_else(|e| panic!("JSON {}: {e}", path.display()));
+    let v: serde_json::Value =
+        serde_json::from_str(json).unwrap_or_else(|e| panic!("JSON {}: {e}", path.display()));
     v.get("resourceType")
         .and_then(|x| x.as_str())
         .map(str::to_owned)

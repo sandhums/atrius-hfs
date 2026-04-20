@@ -112,5 +112,4 @@ impl LocationStatus {
             })
             .unwrap_or(false)
     }
-
 }

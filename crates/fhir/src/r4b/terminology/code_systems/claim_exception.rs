@@ -105,5 +105,4 @@ impl ExceptionCodes {
             })
             .unwrap_or(false)
     }
-
 }

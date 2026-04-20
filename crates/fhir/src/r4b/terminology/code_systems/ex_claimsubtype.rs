@@ -105,5 +105,4 @@ impl ExampleClaimSubTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

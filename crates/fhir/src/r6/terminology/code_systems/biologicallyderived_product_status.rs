@@ -61,7 +61,9 @@ impl BiologicallyDerivedProductStatus {
         match self {
             Self::Available => Some("Product is currently available for use."),
             Self::Unavailable => Some("Product is not currently available for use."),
-            Self::Processed => Some("The biologically derived product has been further processed to one or more other products."),
+            Self::Processed => Some(
+                "The biologically derived product has been further processed to one or more other products.",
+            ),
             Self::Applied => Some("The biologically derived product has been clinically applied."),
             Self::Discarded => Some("The biologically derived product has been discarded."),
         }
@@ -126,5 +128,4 @@ impl BiologicallyDerivedProductStatus {
             })
             .unwrap_or(false)
     }
-
 }

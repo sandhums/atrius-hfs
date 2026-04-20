@@ -59,11 +59,21 @@ impl XPathUsageType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Normal => Some("The search parameter is derived directly from the selected nodes based on the type definitions."),
-            Self::Phonetic => Some("The search parameter is derived by a phonetic transform from the selected nodes."),
-            Self::Nearby => Some("The search parameter is based on a spatial transform of the selected nodes."),
-            Self::Distance => Some("The search parameter is based on a spatial transform of the selected nodes, using physical distance from the middle."),
-            Self::Other => Some("The interpretation of the xpath statement is unknown (and can\'t be automated)."),
+            Self::Normal => Some(
+                "The search parameter is derived directly from the selected nodes based on the type definitions.",
+            ),
+            Self::Phonetic => Some(
+                "The search parameter is derived by a phonetic transform from the selected nodes.",
+            ),
+            Self::Nearby => {
+                Some("The search parameter is based on a spatial transform of the selected nodes.")
+            }
+            Self::Distance => Some(
+                "The search parameter is based on a spatial transform of the selected nodes, using physical distance from the middle.",
+            ),
+            Self::Other => Some(
+                "The interpretation of the xpath statement is unknown (and can\'t be automated).",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl XPathUsageType {
             })
             .unwrap_or(false)
     }
-
 }

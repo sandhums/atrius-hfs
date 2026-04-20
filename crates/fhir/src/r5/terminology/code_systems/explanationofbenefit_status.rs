@@ -119,5 +119,4 @@ impl ExplanationOfBenefitStatus {
             })
             .unwrap_or(false)
     }
-
 }

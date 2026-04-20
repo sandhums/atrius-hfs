@@ -43,7 +43,9 @@ impl CommonTags {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Actionable => Some("This request is intended to be acted upon, not merely stored"),
+            Self::Actionable => {
+                Some("This request is intended to be acted upon, not merely stored")
+            }
         }
     }
 
@@ -98,5 +100,4 @@ impl CommonTags {
             })
             .unwrap_or(false)
     }
-
 }

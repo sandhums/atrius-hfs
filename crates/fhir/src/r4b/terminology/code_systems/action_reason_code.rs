@@ -59,11 +59,19 @@ impl ActionReasonCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::OffPathway => Some("The action should be performed because the patient was determined to be off pathway."),
-            Self::RiskAssessment => Some("The action should be performed based on a particular risk assessment."),
+            Self::OffPathway => Some(
+                "The action should be performed because the patient was determined to be off pathway.",
+            ),
+            Self::RiskAssessment => {
+                Some("The action should be performed based on a particular risk assessment.")
+            }
             Self::CareGap => Some("The action should be performed to address a detected care gap."),
-            Self::DrugDrugInteraction => Some("The action should be performed to address a detected potential drug-drug interaction."),
-            Self::QualityMeasure => Some("The action should be performed to bring the patient\'s care in line with a quality measure."),
+            Self::DrugDrugInteraction => Some(
+                "The action should be performed to address a detected potential drug-drug interaction.",
+            ),
+            Self::QualityMeasure => Some(
+                "The action should be performed to bring the patient\'s care in line with a quality measure.",
+            ),
         }
     }
 
@@ -126,5 +134,4 @@ impl ActionReasonCode {
             })
             .unwrap_or(false)
     }
-
 }

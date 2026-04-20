@@ -110,5 +110,4 @@ impl RegulatedAuthorizationType {
             })
             .unwrap_or(false)
     }
-
 }

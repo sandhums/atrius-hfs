@@ -1,6 +1,3 @@
-
-
-
 #[cfg(feature = "R4")]
 use fhir_validation::profile::extract::extract_r4_structure_definition_profile;
 #[cfg(feature = "R4B")]
@@ -14,7 +11,6 @@ use fhir_validation::{Severity, ValidationIssue};
 use helios_fhir::{FhirResource, FhirVersion};
 use std::fs;
 use std::path::PathBuf;
-
 
 pub fn fixture_path(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

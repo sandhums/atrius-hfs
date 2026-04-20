@@ -378,5 +378,4 @@ impl FHIROldTypes {
             })
             .unwrap_or(false)
     }
-
 }

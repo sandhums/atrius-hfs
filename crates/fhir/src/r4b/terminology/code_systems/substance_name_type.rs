@@ -110,5 +110,4 @@ impl SubstanceNameType {
             })
             .unwrap_or(false)
     }
-
 }

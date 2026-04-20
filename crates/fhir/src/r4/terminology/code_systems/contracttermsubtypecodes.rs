@@ -52,8 +52,12 @@ impl ContractTermSubtypeCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Condition => Some("Terms that go to the very root of a contract."),
-            Self::Warranty => Some("Less imperative than a condition, so the contract will survive a breach"),
-            Self::Innominate => Some("Breach of which might or might not go to the root of the contract depending upon the nature of the breach"),
+            Self::Warranty => {
+                Some("Less imperative than a condition, so the contract will survive a breach")
+            }
+            Self::Innominate => Some(
+                "Breach of which might or might not go to the root of the contract depending upon the nature of the breach",
+            ),
         }
     }
 
@@ -112,5 +116,4 @@ impl ContractTermSubtypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

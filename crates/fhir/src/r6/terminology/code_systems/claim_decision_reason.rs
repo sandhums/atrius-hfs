@@ -59,10 +59,18 @@ impl ClaimAdjudicationDecisionReasonCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::_0001 => Some("The payer has determined this product, service, or procedure as not medically necessary."),
-            Self::_0002 => Some("Prior authorization was not obtained prior to providing the product, service, or procedure."),
-            Self::_0003 => Some("This provider is considered out-of-network by the payer for this plan."),
-            Self::_0004 => Some("The payer has determined this product, service, or procedure is not consistent with the patient\'s age."),
+            Self::_0001 => Some(
+                "The payer has determined this product, service, or procedure as not medically necessary.",
+            ),
+            Self::_0002 => Some(
+                "Prior authorization was not obtained prior to providing the product, service, or procedure.",
+            ),
+            Self::_0003 => {
+                Some("This provider is considered out-of-network by the payer for this plan.")
+            }
+            Self::_0004 => Some(
+                "The payer has determined this product, service, or procedure is not consistent with the patient\'s age.",
+            ),
             Self::_0005 => Some("The patient or subscriber benefit\'s have been exceeded."),
         }
     }
@@ -126,5 +134,4 @@ impl ClaimAdjudicationDecisionReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

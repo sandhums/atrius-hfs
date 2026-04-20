@@ -51,9 +51,15 @@ impl QuestionnaireAnswerConstraint {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::OptionsOnly => Some("Only values listed as answerOption or in the expansion of the answerValueSet are permitted"),
-            Self::OptionsOrType => Some("In addition to the values listed as answerOption or in the expansion of the answerValueSet, any other values that correspond to the specified item.type are permitted"),
-            Self::OptionsOrString => Some("In addition to the values listed as answerOption or in the expansion of the answerValueSet, free-text strings are permitted.  Answers will have a type of \'string\'."),
+            Self::OptionsOnly => Some(
+                "Only values listed as answerOption or in the expansion of the answerValueSet are permitted",
+            ),
+            Self::OptionsOrType => Some(
+                "In addition to the values listed as answerOption or in the expansion of the answerValueSet, any other values that correspond to the specified item.type are permitted",
+            ),
+            Self::OptionsOrString => Some(
+                "In addition to the values listed as answerOption or in the expansion of the answerValueSet, free-text strings are permitted.  Answers will have a type of \'string\'.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl QuestionnaireAnswerConstraint {
             })
             .unwrap_or(false)
     }
-
 }

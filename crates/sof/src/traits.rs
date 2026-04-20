@@ -691,7 +691,9 @@ mod r4b_impl {
                     ViewDefinitionConstantValue::Decimal(d) => {
                         if let Some(precise_decimal) = &d.value {
                             match precise_decimal.original_string().parse() {
-                                Ok(decimal_value) => EvaluationResult::Decimal(decimal_value, None, None),
+                                Ok(decimal_value) => {
+                                    EvaluationResult::Decimal(decimal_value, None, None)
+                                }
                                 Err(_) => {
                                     return Err(SofError::InvalidViewDefinition(format!(
                                         "Invalid decimal value for constant '{}'",
@@ -1161,7 +1163,9 @@ mod r6_impl {
                     ViewDefinitionConstantValue::Decimal(d) => {
                         if let Some(precise_decimal) = &d.value {
                             match precise_decimal.original_string().parse() {
-                                Ok(decimal_value) => EvaluationResult::Decimal(decimal_value, None, None ),
+                                Ok(decimal_value) => {
+                                    EvaluationResult::Decimal(decimal_value, None, None)
+                                }
                                 Err(_) => {
                                     return Err(SofError::InvalidViewDefinition(format!(
                                         "Invalid decimal value for constant '{}'",

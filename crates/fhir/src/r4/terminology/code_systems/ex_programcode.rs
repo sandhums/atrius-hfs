@@ -119,5 +119,4 @@ impl ExampleProgramReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

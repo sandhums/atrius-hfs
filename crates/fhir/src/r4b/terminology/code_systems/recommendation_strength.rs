@@ -105,5 +105,4 @@ impl StrengthOfRecommendationRating {
             })
             .unwrap_or(false)
     }
-
 }

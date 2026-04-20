@@ -126,5 +126,4 @@ impl SubstanceRelationshipType {
             })
             .unwrap_or(false)
     }
-
 }

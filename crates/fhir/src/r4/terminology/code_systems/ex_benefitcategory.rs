@@ -287,5 +287,4 @@ impl BenefitCategoryCodes {
             })
             .unwrap_or(false)
     }
-
 }

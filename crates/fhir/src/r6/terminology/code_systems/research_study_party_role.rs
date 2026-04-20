@@ -87,18 +87,42 @@ impl ResearchStudyPartyRole {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Sponsor => Some("Person, company, agency or institution that initiates a clinical investigation and takes responsibility for that investigation but does not conduct the investigation."),
-            Self::LeadSponsor => Some("Primary person, company, agency or institution that initiates a clinical investigation and takes responsibility for that investigation but does not conduct the investigation if there is more than one sponsor."),
-            Self::SponsorInvestigator => Some("Entity who both initiates and conducts an investigation."),
-            Self::PrimaryInvestigator => Some("An investigator who is responsible for all aspects of the conduct of a study."),
-            Self::Collaborator => Some("An organization or individual, who contributes to a study by providing support to the primary investigator to conduct research."),
-            Self::FundingSource => Some("An organization that underwrites financial support for the research study."),
-            Self::GeneralContact => Some("Information for the person who can answer general questions for a study."),
-            Self::RecruitmentContact => Some("Information for the person who can answer recruitment questions for a study."),
-            Self::SubInvestigator => Some("Any individual member of the clinical trial team designated and supervised by the investigator at a trial site to perform critical trial-related procedures and/or to make important trial-related decisions (e.g., associates, residents, research fellows)."),
-            Self::StudyChair => Some("An individual person who both initiates and conducts, alone or with others, a clinical trial and under whose immediate direction the investigational product is administered to, dispensed to, or used by a subject. (Also called study director or study chairperson)"),
-            Self::Irb => Some("A group of individuals that reviews and monitors research involving human subjects."),
-            Self::DataMonitoring => Some("An organization or individual who monitors the validity and integrity of collected data while prioritizing participant safety and study integrity. The organization may be called a Data Monitoring Committee (DMC) or Data and Safety Monitoring Board (DSMB)."),
+            Self::Sponsor => Some(
+                "Person, company, agency or institution that initiates a clinical investigation and takes responsibility for that investigation but does not conduct the investigation.",
+            ),
+            Self::LeadSponsor => Some(
+                "Primary person, company, agency or institution that initiates a clinical investigation and takes responsibility for that investigation but does not conduct the investigation if there is more than one sponsor.",
+            ),
+            Self::SponsorInvestigator => {
+                Some("Entity who both initiates and conducts an investigation.")
+            }
+            Self::PrimaryInvestigator => Some(
+                "An investigator who is responsible for all aspects of the conduct of a study.",
+            ),
+            Self::Collaborator => Some(
+                "An organization or individual, who contributes to a study by providing support to the primary investigator to conduct research.",
+            ),
+            Self::FundingSource => {
+                Some("An organization that underwrites financial support for the research study.")
+            }
+            Self::GeneralContact => {
+                Some("Information for the person who can answer general questions for a study.")
+            }
+            Self::RecruitmentContact => {
+                Some("Information for the person who can answer recruitment questions for a study.")
+            }
+            Self::SubInvestigator => Some(
+                "Any individual member of the clinical trial team designated and supervised by the investigator at a trial site to perform critical trial-related procedures and/or to make important trial-related decisions (e.g., associates, residents, research fellows).",
+            ),
+            Self::StudyChair => Some(
+                "An individual person who both initiates and conducts, alone or with others, a clinical trial and under whose immediate direction the investigational product is administered to, dispensed to, or used by a subject. (Also called study director or study chairperson)",
+            ),
+            Self::Irb => Some(
+                "A group of individuals that reviews and monitors research involving human subjects.",
+            ),
+            Self::DataMonitoring => Some(
+                "An organization or individual who monitors the validity and integrity of collected data while prioritizing participant safety and study integrity. The organization may be called a Data Monitoring Committee (DMC) or Data and Safety Monitoring Board (DSMB).",
+            ),
         }
     }
 
@@ -175,5 +199,4 @@ impl ResearchStudyPartyRole {
             })
             .unwrap_or(false)
     }
-
 }

@@ -51,9 +51,15 @@ impl ActionRequiredBehavior {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Must => Some("An action with this behavior must be included in the actions processed by the end user; the end user SHALL NOT choose not to include this action."),
-            Self::Could => Some("An action with this behavior may be included in the set of actions processed by the end user."),
-            Self::MustUnlessDocumented => Some("An action with this behavior must be included in the set of actions processed by the end user, unless the end user provides documentation as to why the action was not included."),
+            Self::Must => Some(
+                "An action with this behavior must be included in the actions processed by the end user; the end user SHALL NOT choose not to include this action.",
+            ),
+            Self::Could => Some(
+                "An action with this behavior may be included in the set of actions processed by the end user.",
+            ),
+            Self::MustUnlessDocumented => Some(
+                "An action with this behavior must be included in the set of actions processed by the end user, unless the end user provides documentation as to why the action was not included.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl ActionRequiredBehavior {
             })
             .unwrap_or(false)
     }
-
 }

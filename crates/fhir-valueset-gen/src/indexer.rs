@@ -321,10 +321,7 @@ fn make_unique_type(base: &str, url: &str, used: &mut HashMap<String, String>) -
 /// suitable for generated module/file names.
 fn url_tail_to_snake(url: &str) -> String {
     // Take last non-empty path segment.
-    let tail = url
-        .split('/')
-        .rfind(|s| !s.is_empty())
-        .unwrap_or("unnamed");
+    let tail = url.split('/').rfind(|s| !s.is_empty()).unwrap_or("unnamed");
 
     let mut out = String::new();
     for ch in tail.chars() {
@@ -378,9 +375,9 @@ fn sanitize_type_name(name: &str) -> String {
         if ch.is_ascii_alphanumeric() {
             cur.push(ch);
         } else if !cur.is_empty() {
-                      parts.push(cur.clone());
-                        cur.clear();
-                  }
+            parts.push(cur.clone());
+            cur.clear();
+        }
     }
     if !cur.is_empty() {
         parts.push(cur);
@@ -493,10 +490,7 @@ fn is_example_valueset(vs: &ValueSet, url: &str) -> bool {
         }
     }
     // Some examples use url tail naming.
-    let tail = url
-        .split('/')
-        .rfind(|s| !s.is_empty())
-        .unwrap_or("");
+    let tail = url.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
     if tail.starts_with("example") {
         return true;
     }

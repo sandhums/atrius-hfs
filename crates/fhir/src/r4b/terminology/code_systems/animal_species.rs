@@ -112,5 +112,4 @@ impl AnimalSpecies {
             })
             .unwrap_or(false)
     }
-
 }

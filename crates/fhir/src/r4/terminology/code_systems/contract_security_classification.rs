@@ -98,5 +98,4 @@ impl ContractResourceScopeCodes_b30e542f {
             })
             .unwrap_or(false)
     }
-
 }

@@ -24,7 +24,8 @@ pub enum CitedArtifactClassificationType {
 }
 
 impl CitedArtifactClassificationType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/cited-artifact-classification-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/cited-artifact-classification-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -93,7 +94,9 @@ impl CitedArtifactClassificationType {
             Self::Chemical => Some("Chemical"),
             Self::PublishingModel => Some("Used for PubModel attribute in Medline"),
             Self::KnowledgeArtifactType => Some("Knowledge Artifact Type"),
-            Self::Coverage => Some("The spatial or temporal topic of the resource, spatial applicability of the resource, or jurisdiction under which the resource is relevant"),
+            Self::Coverage => Some(
+                "The spatial or temporal topic of the resource, spatial applicability of the resource, or jurisdiction under which the resource is relevant",
+            ),
         }
     }
 
@@ -168,5 +171,4 @@ impl CitedArtifactClassificationType {
             })
             .unwrap_or(false)
     }
-
 }

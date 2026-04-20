@@ -98,5 +98,4 @@ impl CharacteristicMethod {
             })
             .unwrap_or(false)
     }
-
 }

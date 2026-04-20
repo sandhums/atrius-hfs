@@ -112,5 +112,4 @@ impl EvidenceVariableClassifier {
             })
             .unwrap_or(false)
     }
-
 }

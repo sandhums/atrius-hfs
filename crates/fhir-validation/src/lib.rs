@@ -65,7 +65,8 @@
 //!
 //! Non-2xx remote responses are represented as structured remote terminology
 //! errors and surfaced as terminology validation issues with readable
-//! diagnostics.
+//! diagnostics. Unusable `$validate-code` JSON (for example missing `parameter`
+//! or boolean `result`) is reported as [`ValidationError::MalformedTerminologyResponse`].
 //!
 //! # Severity model
 //!
@@ -100,6 +101,7 @@
 pub mod binding;
 pub mod core;
 pub mod evaluators;
+pub mod issue_code;
 pub mod issue_to_op_outcome;
 pub mod profile;
 pub mod terminology;

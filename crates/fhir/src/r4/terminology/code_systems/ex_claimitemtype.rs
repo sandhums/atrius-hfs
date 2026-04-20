@@ -51,7 +51,9 @@ impl ClaimItemTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Group => Some("A group of products and/or Services, amount ar the summary or detail level products and services."),
+            Self::Group => Some(
+                "A group of products and/or Services, amount ar the summary or detail level products and services.",
+            ),
             Self::Product => Some("A billed product line item."),
             Self::Service => Some("A billed service line item."),
         }
@@ -112,5 +114,4 @@ impl ClaimItemTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

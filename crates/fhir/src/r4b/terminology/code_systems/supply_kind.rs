@@ -48,7 +48,9 @@ impl SupplyType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Central => Some("Supply is stored and requested from central supply."),
-            Self::Nonstock => Some("Supply is not onsite and must be requested from an outside vendor using a non-stock requisition."),
+            Self::Nonstock => Some(
+                "Supply is not onsite and must be requested from an outside vendor using a non-stock requisition.",
+            ),
         }
     }
 
@@ -105,5 +107,4 @@ impl SupplyType {
             })
             .unwrap_or(false)
     }
-
 }

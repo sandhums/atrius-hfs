@@ -23,7 +23,8 @@ pub enum ProvenanceParticipantType {
 }
 
 impl ProvenanceParticipantType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -80,15 +81,31 @@ impl ProvenanceParticipantType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Enterer => Some("A person entering the data into the originating system"),
-            Self::Performer => Some("A person, animal, organization or device that who actually and principally carries out the activity"),
-            Self::Author => Some("A party that originates the resource and therefore has responsibility for the information given in the resource and ownership of this resource"),
-            Self::Verifier => Some("A person who verifies the correctness and appropriateness of activity"),
-            Self::Legal => Some("The person authenticated the content and accepted legal responsibility for its content"),
+            Self::Performer => Some(
+                "A person, animal, organization or device that who actually and principally carries out the activity",
+            ),
+            Self::Author => Some(
+                "A party that originates the resource and therefore has responsibility for the information given in the resource and ownership of this resource",
+            ),
+            Self::Verifier => {
+                Some("A person who verifies the correctness and appropriateness of activity")
+            }
+            Self::Legal => Some(
+                "The person authenticated the content and accepted legal responsibility for its content",
+            ),
             Self::Attester => Some("A verifier who attests to the accuracy of the resource"),
-            Self::Informant => Some("A person who reported information that contributed to the resource"),
-            Self::Custodian => Some("The entity that is accountable for maintaining a true an accurate copy of the original record"),
-            Self::Assembler => Some("A device that operates independently of an author on custodian\'s algorithms for data extraction of existing information for purpose of generating a new artifact."),
-            Self::Composer => Some("A device used by an author to record new information, which may also be used by the author to select existing information for aggregation with newly recorded information for the purpose of generating a new artifact."),
+            Self::Informant => {
+                Some("A person who reported information that contributed to the resource")
+            }
+            Self::Custodian => Some(
+                "The entity that is accountable for maintaining a true an accurate copy of the original record",
+            ),
+            Self::Assembler => Some(
+                "A device that operates independently of an author on custodian\'s algorithms for data extraction of existing information for purpose of generating a new artifact.",
+            ),
+            Self::Composer => Some(
+                "A device used by an author to record new information, which may also be used by the author to select existing information for aggregation with newly recorded information for the purpose of generating a new artifact.",
+            ),
         }
     }
 
@@ -161,5 +178,4 @@ impl ProvenanceParticipantType {
             })
             .unwrap_or(false)
     }
-
 }

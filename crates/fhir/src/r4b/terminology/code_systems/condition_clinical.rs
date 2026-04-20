@@ -63,12 +63,24 @@ impl ConditionClinicalStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The subject is currently experiencing the symptoms of the condition or there is evidence of the condition."),
-            Self::Recurrence => Some("The subject is experiencing a re-occurence or repeating of a previously resolved condition, e.g. urinary tract infection, pancreatitis, cholangitis, conjunctivitis."),
-            Self::Relapse => Some("The subject is experiencing a return of a condition, or signs and symptoms after a period of improvement or remission, e.g. relapse of cancer, multiple sclerosis, rheumatoid arthritis, systemic lupus erythematosus, bipolar disorder, [psychotic relapse of] schizophrenia, etc."),
-            Self::Inactive => Some("The subject is no longer experiencing the symptoms of the condition or there is no longer evidence of the condition."),
-            Self::Remission => Some("The subject is no longer experiencing the symptoms of the condition, but there is a risk of the symptoms returning."),
-            Self::Resolved => Some("The subject is no longer experiencing the symptoms of the condition and there is a negligible perceived risk of the symptoms returning."),
+            Self::Active => Some(
+                "The subject is currently experiencing the symptoms of the condition or there is evidence of the condition.",
+            ),
+            Self::Recurrence => Some(
+                "The subject is experiencing a re-occurence or repeating of a previously resolved condition, e.g. urinary tract infection, pancreatitis, cholangitis, conjunctivitis.",
+            ),
+            Self::Relapse => Some(
+                "The subject is experiencing a return of a condition, or signs and symptoms after a period of improvement or remission, e.g. relapse of cancer, multiple sclerosis, rheumatoid arthritis, systemic lupus erythematosus, bipolar disorder, [psychotic relapse of] schizophrenia, etc.",
+            ),
+            Self::Inactive => Some(
+                "The subject is no longer experiencing the symptoms of the condition or there is no longer evidence of the condition.",
+            ),
+            Self::Remission => Some(
+                "The subject is no longer experiencing the symptoms of the condition, but there is a risk of the symptoms returning.",
+            ),
+            Self::Resolved => Some(
+                "The subject is no longer experiencing the symptoms of the condition and there is a negligible perceived risk of the symptoms returning.",
+            ),
         }
     }
 
@@ -133,5 +145,4 @@ impl ConditionClinicalStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

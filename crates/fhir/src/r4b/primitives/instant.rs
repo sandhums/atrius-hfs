@@ -2,9 +2,8 @@
 use crate::r4b::*;
 
 /// FHIR primitive type for instant in time values (to millisecond precision)
-/// 
+///
 /// Base StructureDefinition for instant Type: An instant in time - known at least to the second
-/// 
+///
 /// See: [instant](http://hl7.org/fhir/StructureDefinition/instant)
 pub type Instant = Element<crate::PrecisionInstant, Extension>;
-

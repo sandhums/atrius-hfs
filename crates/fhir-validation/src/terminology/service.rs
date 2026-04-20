@@ -16,14 +16,28 @@ use crate::terminology::types::TerminologyMembershipOutcome;
 use async_trait::async_trait;
 use helios_fhir::FhirVersion;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 /// Trait representing a terminology validation service.
 ///
 /// This allows the validator to remain independent of the specific
 /// terminology backend (Snowstorm, HAPI, local cache, etc.).
+///
+/// # Narrow `member_of` contract
+///
+/// [`TerminologyService::member_of`] is intentionally minimal: it models **one**
+/// `(system, code, display)` check, which matches how generated binding validation
+/// decomposes [`Coding`](https://hl7.org/fhir/datatypes.html#Coding) and
+/// [`CodeableConcept`](https://hl7.org/fhir/datatypes.html#CodeableConcept) for remote
+/// follow-up. It does **not** send a full FHIR [`ValidateVsRequest`] (no `coding` /
+/// `codeableConcept` JSON, `systemVersion`, `context`, `date`, etc.).
+///
+/// For a full `$validate-code` request, build a [`ValidateVsRequest`] and call
+/// [`RemoteTerminologyService::validate_vs`] (or use [`TerminologyBackend::validate_vs`]
+/// directly).
 #[async_trait]
 pub trait TerminologyService: Send + Sync {
+    /// Returns whether the given code is in the value set (narrow `code` / `system` / `display` shape).
     async fn member_of(
         &self,
         valueset_url: &str,
@@ -93,10 +107,24 @@ impl RemoteTerminologyService {
     pub fn with_backend(backend: Arc<dyn TerminologyBackend>) -> Self {
         Self { backend }
     }
+
+    /// Full `ValueSet/$validate-code` using [`ValidateVsRequest`].
+    ///
+    /// Use this when you need parameters beyond what [`TerminologyService::member_of`]
+    /// provides—for example `systemVersion`, embedded `coding` / `codeableConcept`,
+    /// `context`, or `date`.
+    pub async fn validate_vs(
+        &self,
+        req: &ValidateVsRequest,
+    ) -> Result<TerminologyMembershipOutcome, ValidationError> {
+        let response = self.backend.validate_vs(req).await?;
+        parse_validate_vs_result(&response)
+    }
 }
 
 #[async_trait]
 impl TerminologyService for RemoteTerminologyService {
+    #[instrument(skip(self, display), fields(valueset_url = %valueset_url))]
     async fn member_of(
         &self,
         valueset_url: &str,
@@ -112,10 +140,7 @@ impl TerminologyService for RemoteTerminologyService {
             ..Default::default()
         };
 
-        let response = self.backend.validate_vs(&req).await?;
-
-        // parse_validate_vs_result(&response)
-        let outcome = parse_validate_vs_result(&response)?;
+        let outcome = self.validate_vs(&req).await?;
         debug!(
             valueset_url,
             system,

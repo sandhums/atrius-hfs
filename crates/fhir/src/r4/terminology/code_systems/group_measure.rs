@@ -133,5 +133,4 @@ impl GroupMeasure {
             })
             .unwrap_or(false)
     }
-
 }

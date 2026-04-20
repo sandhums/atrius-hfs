@@ -15,8 +15,8 @@ use crate::common::fhir_json_examples::{load_r5_fhir_resource, read_fhir_example
 use crate::common::fixtures::{load_profile, local_terminology_r5};
 use fhir_validation::profile::profile_registry::ProfileRegistry;
 use fhir_validation::{R5FhirPathEvaluator, Validator};
-use helios_fhir::r5::{Patient, Resource};
 use helios_fhir::FhirResource;
+use helios_fhir::r5::{Patient, Resource};
 use serde_json::json;
 
 const ATRIUS_PATIENT_PROFILE: &str = "http://atrius.health/fhir/StructureDefinition/atrius-patient";
@@ -75,8 +75,7 @@ fn genomic_patient_with_atrius_profile_has_no_errors() {
 #[test]
 fn patient_without_identifier_fails_atrius_profile() {
     let mut v: serde_json::Value =
-        serde_json::from_str(&read_fhir_example_json("R5", "Patient-genomicPatient.json"))
-            .unwrap();
+        serde_json::from_str(&read_fhir_example_json("R5", "Patient-genomicPatient.json")).unwrap();
     let obj = v.as_object_mut().unwrap();
     obj.remove("identifier");
     obj.insert(

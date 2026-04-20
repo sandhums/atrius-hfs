@@ -105,5 +105,4 @@ impl MeasureGroupExample {
             })
             .unwrap_or(false)
     }
-
 }

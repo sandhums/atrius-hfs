@@ -55,10 +55,18 @@ impl CompositeMeasureScoring {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Opportunity => Some("Opportunity scoring combines the scores from component measures by combining the numerators and denominators for each component."),
-            Self::AllOrNothing => Some("All-or-nothing scoring includes an individual in the numerator of the composite measure if they are in the numerators of all of the component measures in which they are in the denominator."),
-            Self::Linear => Some("Linear scoring gives an individual a score based on the number of numerators in which they appear."),
-            Self::Weighted => Some("Weighted scoring gives an individual a score based on a weighted factor for each component numerator in which they appear."),
+            Self::Opportunity => Some(
+                "Opportunity scoring combines the scores from component measures by combining the numerators and denominators for each component.",
+            ),
+            Self::AllOrNothing => Some(
+                "All-or-nothing scoring includes an individual in the numerator of the composite measure if they are in the numerators of all of the component measures in which they are in the denominator.",
+            ),
+            Self::Linear => Some(
+                "Linear scoring gives an individual a score based on the number of numerators in which they appear.",
+            ),
+            Self::Weighted => Some(
+                "Weighted scoring gives an individual a score based on a weighted factor for each component numerator in which they appear.",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl CompositeMeasureScoring {
             })
             .unwrap_or(false)
     }
-
 }

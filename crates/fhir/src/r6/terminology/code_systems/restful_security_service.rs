@@ -64,11 +64,15 @@ impl RestfulSecurityService {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::OAuth => Some("OAuth (unspecified version see oauth.net)."),
-            Self::SMARTOnFHIR => Some("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org/)."),
+            Self::SMARTOnFHIR => {
+                Some("OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org/).")
+            }
             Self::NTLM => Some("Microsoft NTLM Authentication."),
             Self::Basic => Some("Basic authentication defined in HTTP specification."),
             Self::Kerberos => Some("see http://www.ietf.org/rfc/rfc4120.txt."),
-            Self::Certificates => Some("SSL where client must have a certificate registered with the server."),
+            Self::Certificates => {
+                Some("SSL where client must have a certificate registered with the server.")
+            }
         }
     }
 
@@ -133,5 +137,4 @@ impl RestfulSecurityService {
             })
             .unwrap_or(false)
     }
-
 }

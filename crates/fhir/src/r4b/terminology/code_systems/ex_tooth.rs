@@ -378,5 +378,4 @@ impl OralSiteCodes {
             })
             .unwrap_or(false)
     }
-
 }

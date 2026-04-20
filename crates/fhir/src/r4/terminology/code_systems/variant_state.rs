@@ -112,5 +112,4 @@ impl SequenceStatus {
             })
             .unwrap_or(false)
     }
-
 }

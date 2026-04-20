@@ -119,5 +119,4 @@ impl ActionType {
             })
             .unwrap_or(false)
     }
-
 }

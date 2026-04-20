@@ -58,11 +58,21 @@ impl FHIRDefinedConceptProperties {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Inactive => Some("True if the concept is not considered active - e.g. not a valid concept any more. Property type is boolean, default value is false"),
-            Self::Deprecated => Some("The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime"),
-            Self::NotSelectable => Some("The concept is not intended to be chosen by the user - only intended to be used as a selector for other concepts. Note, though, that the interpretation of this is highly contextual; all concepts are selectable in some context. Property type is boolean"),
-            Self::Parent => Some("The concept identified in this property is a parent of the concept on which it is a property. The property type will be \'code\'. The meaning of \'parent\' is defined by the hierarchyMeaning attribute"),
-            Self::Child => Some("The concept identified in this property is a child of the concept on which it is a property. The property type will be \'code\'. The meaning of \'child\' is defined by the hierarchyMeaning attribute"),
+            Self::Inactive => Some(
+                "True if the concept is not considered active - e.g. not a valid concept any more. Property type is boolean, default value is false",
+            ),
+            Self::Deprecated => Some(
+                "The date at which a concept was deprecated. Concepts that are deprecated but not inactive can still be used, but their use is discouraged, and they should be expected to be made inactive in a future release. Property type is dateTime",
+            ),
+            Self::NotSelectable => Some(
+                "The concept is not intended to be chosen by the user - only intended to be used as a selector for other concepts. Note, though, that the interpretation of this is highly contextual; all concepts are selectable in some context. Property type is boolean",
+            ),
+            Self::Parent => Some(
+                "The concept identified in this property is a parent of the concept on which it is a property. The property type will be \'code\'. The meaning of \'parent\' is defined by the hierarchyMeaning attribute",
+            ),
+            Self::Child => Some(
+                "The concept identified in this property is a child of the concept on which it is a property. The property type will be \'code\'. The meaning of \'child\' is defined by the hierarchyMeaning attribute",
+            ),
         }
     }
 
@@ -125,5 +135,4 @@ impl FHIRDefinedConceptProperties {
             })
             .unwrap_or(false)
     }
-
 }

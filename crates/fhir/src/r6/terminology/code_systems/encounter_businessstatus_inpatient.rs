@@ -59,11 +59,17 @@ impl EncounterBusinessStatusInpatient {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::PreAdmit => Some("The patient has been pre-admitted but has not yet arrived at the facility."),
+            Self::PreAdmit => {
+                Some("The patient has been pre-admitted but has not yet arrived at the facility.")
+            }
             Self::PendAdmit => Some("The patient admission is pending."),
             Self::Admit => Some("The patient has been admitted to the facility."),
-            Self::Discharge => Some("The patient is in the process of being discharged or has been discharged."),
-            Self::Unknown => Some("The inpatient business status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\"."),
+            Self::Discharge => {
+                Some("The patient is in the process of being discharged or has been discharged.")
+            }
+            Self::Unknown => Some(
+                "The inpatient business status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\".",
+            ),
         }
     }
 
@@ -126,5 +132,4 @@ impl EncounterBusinessStatusInpatient {
             })
             .unwrap_or(false)
     }
-
 }

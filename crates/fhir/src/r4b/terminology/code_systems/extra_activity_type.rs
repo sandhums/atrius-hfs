@@ -51,9 +51,15 @@ impl ExtraActivityType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Aggregate => Some("Activity resulting in a structured collection of preexisting content that does not necessarily result in an integral object with semantic context making it more than the sum of component parts, from which components could be disaggregated without loss of semantic context, e.g., the assembly of multiple stand-alone documents."),
-            Self::Compose => Some("Activity resulting in the structured compilation of new and preexisting content for the purposes of forming an integral object with  semantic context making it more than the sum of component parts, which would be lost if decomposed. For example, the composition of a document that includes in whole or part other documents along with new content that result in a new document that has unique semantic meaning."),
-            Self::Label => Some("The means used to associate a set of security attributes with a specific information object as part of the data structure for that object. [ISO-10181-3 Access Control]"),
+            Self::Aggregate => Some(
+                "Activity resulting in a structured collection of preexisting content that does not necessarily result in an integral object with semantic context making it more than the sum of component parts, from which components could be disaggregated without loss of semantic context, e.g., the assembly of multiple stand-alone documents.",
+            ),
+            Self::Compose => Some(
+                "Activity resulting in the structured compilation of new and preexisting content for the purposes of forming an integral object with  semantic context making it more than the sum of component parts, which would be lost if decomposed. For example, the composition of a document that includes in whole or part other documents along with new content that result in a new document that has unique semantic meaning.",
+            ),
+            Self::Label => Some(
+                "The means used to associate a set of security attributes with a specific information object as part of the data structure for that object. [ISO-10181-3 Access Control]",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl ExtraActivityType {
             })
             .unwrap_or(false)
     }
-
 }

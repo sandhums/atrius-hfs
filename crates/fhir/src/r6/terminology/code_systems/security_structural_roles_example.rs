@@ -91,19 +91,43 @@ impl SecurityStructuralRolesExamples {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::RegulatedHealthProfessionals => Some("A person who is authorized by a national recognized body to be qualified to perform health services"),
-            Self::GeneralMedicine => Some("The branch of medicine involving the study and treatment of general diseases or those affecting the internal parts of the body, especially those not usually requiring surgical intervention"),
-            Self::GeneralNursing => Some("The branch of healthcare concerned with caring for the sick or injured in any environment."),
-            Self::Dentist => Some("The specialty relating to the function and diseases of the teeth, mouth, and gums."),
+            Self::RegulatedHealthProfessionals => Some(
+                "A person who is authorized by a national recognized body to be qualified to perform health services",
+            ),
+            Self::GeneralMedicine => Some(
+                "The branch of medicine involving the study and treatment of general diseases or those affecting the internal parts of the body, especially those not usually requiring surgical intervention",
+            ),
+            Self::GeneralNursing => Some(
+                "The branch of healthcare concerned with caring for the sick or injured in any environment.",
+            ),
+            Self::Dentist => Some(
+                "The specialty relating to the function and diseases of the teeth, mouth, and gums.",
+            ),
             Self::Veterinarian => Some("The specialty relating to non-human subjects."),
-            Self::Pharmacy => Some("The branch of medical science that deals with drugs and their uses."),
-            Self::Dietician => Some("The health profession concerned with the practical application of diet in the prophylaxis and treatment of disease."),
-            Self::Pediatrics => Some("The medical specialty concerned with the study of treatment of children in health and disease during development from birth through adolescence."),
-            Self::NonRegulatedHealthProfessionals => Some("person employed by a healthcare organization who is not a health professional"),
-            Self::Receptionist => Some("Medical receptionists are professionals who are responsible for coordinating the daily administration of doctors, staff, visitors, and patinets at a healthcare facility."),
-            Self::BusinessManager => Some("Medical and health services managers plan, direct, and coordinate the business activities of healthcare providers."),
-            Self::Transcriptionist => Some("A medical transcriptionist listens to medical notes from health care professionals and accurately transcribes those audio recordings into written medical documents used for a variety of purposes."),
-            Self::ClaimsAdjudicator => Some("A medical Claims Adjudicator executes the process by which insurance companies review healthcare claims and decide whether they will pay the claim in full, pay a partial amount, or deny the claim altogether."),
+            Self::Pharmacy => {
+                Some("The branch of medical science that deals with drugs and their uses.")
+            }
+            Self::Dietician => Some(
+                "The health profession concerned with the practical application of diet in the prophylaxis and treatment of disease.",
+            ),
+            Self::Pediatrics => Some(
+                "The medical specialty concerned with the study of treatment of children in health and disease during development from birth through adolescence.",
+            ),
+            Self::NonRegulatedHealthProfessionals => Some(
+                "person employed by a healthcare organization who is not a health professional",
+            ),
+            Self::Receptionist => Some(
+                "Medical receptionists are professionals who are responsible for coordinating the daily administration of doctors, staff, visitors, and patinets at a healthcare facility.",
+            ),
+            Self::BusinessManager => Some(
+                "Medical and health services managers plan, direct, and coordinate the business activities of healthcare providers.",
+            ),
+            Self::Transcriptionist => Some(
+                "A medical transcriptionist listens to medical notes from health care professionals and accurately transcribes those audio recordings into written medical documents used for a variety of purposes.",
+            ),
+            Self::ClaimsAdjudicator => Some(
+                "A medical Claims Adjudicator executes the process by which insurance companies review healthcare claims and decide whether they will pay the claim in full, pay a partial amount, or deny the claim altogether.",
+            ),
         }
     }
 
@@ -182,5 +206,4 @@ impl SecurityStructuralRolesExamples {
             })
             .unwrap_or(false)
     }
-
 }

@@ -175,28 +175,52 @@ impl EventResourceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::ChargeItem => Some("Item containing charge code(s) associated with the provision of healthcare provider products."),
+            Self::ChargeItem => Some(
+                "Item containing charge code(s) associated with the provision of healthcare provider products.",
+            ),
             Self::ClaimResponse => Some("Remittance resource."),
-            Self::ClinicalImpression => Some("A clinical assessment performed when planning treatments and management strategies for a patient."),
-            Self::Communication => Some("A record of information transmitted from a sender to a receiver."),
-            Self::Composition => Some("A set of resources composed into a single coherent clinical statement with clinical attestation."),
-            Self::Condition => Some("Detailed information about conditions, problems or diagnoses."),
-            Self::Consent => Some("A healthcare consumer\'s policy choices to permits or denies recipients or roles to perform actions for specific purposes and periods of time."),
+            Self::ClinicalImpression => Some(
+                "A clinical assessment performed when planning treatments and management strategies for a patient.",
+            ),
+            Self::Communication => {
+                Some("A record of information transmitted from a sender to a receiver.")
+            }
+            Self::Composition => Some(
+                "A set of resources composed into a single coherent clinical statement with clinical attestation.",
+            ),
+            Self::Condition => {
+                Some("Detailed information about conditions, problems or diagnoses.")
+            }
+            Self::Consent => Some(
+                "A healthcare consumer\'s policy choices to permits or denies recipients or roles to perform actions for specific purposes and periods of time.",
+            ),
             Self::Coverage => Some("Insurance or medical plan or a payment agreement."),
             Self::DeviceUseStatement => Some("Record of use of a device."),
-            Self::DiagnosticReport => Some("A Diagnostic report - a combination of request information, atomic results, images, interpretation, as well as formatted reports."),
+            Self::DiagnosticReport => Some(
+                "A Diagnostic report - a combination of request information, atomic results, images, interpretation, as well as formatted reports.",
+            ),
             Self::DocumentManifest => Some("A list that defines a set of documents."),
             Self::DocumentReference => Some("A reference to a document."),
-            Self::Encounter => Some("An interaction during which services are provided to the patient."),
+            Self::Encounter => {
+                Some("An interaction during which services are provided to the patient.")
+            }
             Self::EnrollmentResponse => Some("EnrollmentResponse resource."),
-            Self::EpisodeOfCare => Some("An association of a Patient with an Organization and  Healthcare Provider(s) for a period of time that the Organization assumes some level of responsibility."),
+            Self::EpisodeOfCare => Some(
+                "An association of a Patient with an Organization and  Healthcare Provider(s) for a period of time that the Organization assumes some level of responsibility.",
+            ),
             Self::ExplanationOfBenefit => Some("Explanation of Benefit resource."),
-            Self::FamilyMemberHistory => Some("Information about patient\'s relatives, relevant for patient."),
+            Self::FamilyMemberHistory => {
+                Some("Information about patient\'s relatives, relevant for patient.")
+            }
             Self::GuidanceResponse => Some("The formal response to a guidance request."),
-            Self::ImagingStudy => Some("A set of images produced in single study (one or more series of references images)."),
+            Self::ImagingStudy => Some(
+                "A set of images produced in single study (one or more series of references images).",
+            ),
             Self::Immunization => Some("Immunization event information."),
             Self::MeasureReport => Some("Results of a measure evaluation."),
-            Self::Media => Some("A photo, video, or audio recording acquired or used in healthcare. The actual content may be inline or provided by direct reference."),
+            Self::Media => Some(
+                "A photo, video, or audio recording acquired or used in healthcare. The actual content may be inline or provided by direct reference.",
+            ),
             Self::MedicationAdministration => Some("Administration of medication to a patient."),
             Self::MedicationDispense => Some("Dispensing a medication to a named patient."),
             Self::MedicationStatement => Some("Record of medication being taken by a patient."),
@@ -329,5 +353,4 @@ impl EventResourceType {
             })
             .unwrap_or(false)
     }
-
 }

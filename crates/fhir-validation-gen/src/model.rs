@@ -198,7 +198,6 @@ pub struct FieldModel {
 
     /// True when min > 0.
     pub is_required: bool,
-
 }
 
 /// Normalized invariant definition extracted from `StructureDefinition`.

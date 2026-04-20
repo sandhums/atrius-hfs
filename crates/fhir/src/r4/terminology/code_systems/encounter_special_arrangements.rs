@@ -18,7 +18,8 @@ pub enum SpecialArrangements {
 }
 
 impl SpecialArrangements {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/encounter-special-arrangements";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/encounter-special-arrangements";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -59,11 +60,21 @@ impl SpecialArrangements {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Wheel => Some("The patient requires a wheelchair to be made available for the encounter."),
-            Self::AddBed => Some("An additional bed made available for a person accompanying the patient, for example a parent accompanying a child."),
-            Self::Int => Some("The patient is not fluent in the local language and requires an interpreter to be available. Refer to the Patient.Language property for the type of interpreter required."),
-            Self::Att => Some("A person who accompanies a patient to provide assistive services necessary for the patient\'s care during the encounter."),
-            Self::Dog => Some("The patient has a guide dog and the location used for the encounter should be able to support the presence of the service animal."),
+            Self::Wheel => {
+                Some("The patient requires a wheelchair to be made available for the encounter.")
+            }
+            Self::AddBed => Some(
+                "An additional bed made available for a person accompanying the patient, for example a parent accompanying a child.",
+            ),
+            Self::Int => Some(
+                "The patient is not fluent in the local language and requires an interpreter to be available. Refer to the Patient.Language property for the type of interpreter required.",
+            ),
+            Self::Att => Some(
+                "A person who accompanies a patient to provide assistive services necessary for the patient\'s care during the encounter.",
+            ),
+            Self::Dog => Some(
+                "The patient has a guide dog and the location used for the encounter should be able to support the presence of the service animal.",
+            ),
         }
     }
 
@@ -126,5 +137,4 @@ impl SpecialArrangements {
             })
             .unwrap_or(false)
     }
-
 }

@@ -26,7 +26,10 @@ impl EntityNamePartQualifier {
     /// Returns Some(true/false) when locally decidable; None means remote terminology validation is required.
     pub fn contains(system: &str, code: &str) -> Option<bool> {
         if system == "http://terminology.hl7.org/CodeSystem/v3-EntityNamePartQualifierR2" {
-            return Some(matches!(code, "LS" | "AC" | "NB" | "PR" | "HON" | "BR" | "AD" | "SP" | "MID" | "CL" | "IN"));
+            return Some(matches!(
+                code,
+                "LS" | "AC" | "NB" | "PR" | "HON" | "BR" | "AD" | "SP" | "MID" | "CL" | "IN"
+            ));
         }
         if system == "http://terminology.hl7.org/CodeSystem/v3-EntityNamePartQualifier" {
             return Some(matches!(code, "VV"));
@@ -39,7 +42,10 @@ impl EntityNamePartQualifier {
     /// system cannot be decided locally.
     pub fn code_known_in_system(system: &str, code: &str) -> Option<bool> {
         if system == "http://terminology.hl7.org/CodeSystem/v3-EntityNamePartQualifierR2" {
-            return Some(matches!(code, "LS" | "AC" | "NB" | "PR" | "HON" | "BR" | "AD" | "SP" | "MID" | "CL" | "IN"));
+            return Some(matches!(
+                code,
+                "LS" | "AC" | "NB" | "PR" | "HON" | "BR" | "AD" | "SP" | "MID" | "CL" | "IN"
+            ));
         }
         if system == "http://terminology.hl7.org/CodeSystem/v3-EntityNamePartQualifier" {
             return Some(matches!(code, "VV"));
@@ -88,7 +94,9 @@ impl EntityNamePartQualifier {
     /// and none matched, or if there are no codings.
     pub fn contains_codeable_concept(cc: &CodeableConcept) -> Option<bool> {
         let codings = cc.coding.as_ref()?;
-        if codings.is_empty() { return None; }
+        if codings.is_empty() {
+            return None;
+        }
 
         let mut any_none = false;
         for c in codings {
@@ -106,25 +114,36 @@ impl EntityNamePartQualifier {
     pub fn validate(system: &str, code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains(system, code) {
             Some(true) => Ok(()),
-            Some(false) => {
-                match Self::code_known_in_system(system, code) {
-                    Some(false) => Err(TerminologyValidationError::UnknownCode { system: system.to_string(), code: code.to_string() }),
-                    _ => Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: Some(system.to_string()), code: code.to_string() }),
-                }
-            }
-            None => Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string())),
+            Some(false) => match Self::code_known_in_system(system, code) {
+                Some(false) => Err(TerminologyValidationError::UnknownCode {
+                    system: system.to_string(),
+                    code: code.to_string(),
+                }),
+                _ => Err(TerminologyValidationError::NotInValueSet {
+                    valueset_url: Self::URL.to_string(),
+                    system: Some(system.to_string()),
+                    code: code.to_string(),
+                }),
+            },
+            None => Err(TerminologyValidationError::RemoteValidationRequired(
+                "Remote terminology validation required".to_string(),
+            )),
         }
     }
-
 
     /// Validate a primitive `code` against this ValueSet using best-effort local logic.
     pub fn validate_code(code: &str) -> Result<(), TerminologyValidationError> {
         match Self::contains_implicit_code(code) {
             Some(true) => Ok(()),
-            Some(false) => {
-                Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: code.to_string() })
-            }
-            None => Err(TerminologyValidationError::MissingSystem("The System URI could not be determined for this code in the bound ValueSet".to_string())),
+            Some(false) => Err(TerminologyValidationError::NotInValueSet {
+                valueset_url: Self::URL.to_string(),
+                system: None,
+                code: code.to_string(),
+            }),
+            None => Err(TerminologyValidationError::MissingSystem(
+                "The System URI could not be determined for this code in the bound ValueSet"
+                    .to_string(),
+            )),
         }
     }
 
@@ -137,12 +156,36 @@ impl EntityNamePartQualifier {
 
     /// Validate a Coding against this ValueSet using best-effort local logic.
     pub fn validate_coding(coding: &Coding) -> Result<(), TerminologyValidationError> {
-        let code = coding.code.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::InvalidInput("Coding.code is required".to_string()))?;
-        let system = coding.system.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()).ok_or_else(|| TerminologyValidationError::MissingSystem("Coding.system is required".to_string()))?;
-        if let Some(provided) = coding.display.as_ref().and_then(|e| e.value.as_deref()).filter(|v| !v.is_empty()) {
+        let code = coding
+            .code
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                TerminologyValidationError::InvalidInput("Coding.code is required".to_string())
+            })?;
+        let system = coding
+            .system
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                TerminologyValidationError::MissingSystem("Coding.system is required".to_string())
+            })?;
+        if let Some(provided) = coding
+            .display
+            .as_ref()
+            .and_then(|e| e.value.as_deref())
+            .filter(|v| !v.is_empty())
+        {
             if let Some(expected) = Self::expected_display(system, code) {
                 if provided != expected {
-                    return Err(TerminologyValidationError::WrongDisplay { system: system.to_string(), code: code.to_string(), expected: expected.to_string(), provided: provided.to_string() });
+                    return Err(TerminologyValidationError::WrongDisplay {
+                        system: system.to_string(),
+                        code: code.to_string(),
+                        expected: expected.to_string(),
+                        provided: provided.to_string(),
+                    });
                 }
             }
         }
@@ -150,10 +193,18 @@ impl EntityNamePartQualifier {
     }
 
     /// Validate a CodeableConcept against this ValueSet using best-effort local logic.
-    pub fn validate_codeable_concept(cc: &CodeableConcept) -> Result<(), TerminologyValidationError> {
-        let codings = cc.coding.as_ref().ok_or_else(|| TerminologyValidationError::InvalidInput("CodeableConcept.coding is required".to_string()))?;
+    pub fn validate_codeable_concept(
+        cc: &CodeableConcept,
+    ) -> Result<(), TerminologyValidationError> {
+        let codings = cc.coding.as_ref().ok_or_else(|| {
+            TerminologyValidationError::InvalidInput(
+                "CodeableConcept.coding is required".to_string(),
+            )
+        })?;
         if codings.is_empty() {
-            return Err(TerminologyValidationError::InvalidInput("CodeableConcept.coding must not be empty".to_string()));
+            return Err(TerminologyValidationError::InvalidInput(
+                "CodeableConcept.coding must not be empty".to_string(),
+            ));
         }
         let mut last_error: Option<TerminologyValidationError> = None;
         let mut saw_remote = false;
@@ -165,11 +216,17 @@ impl EntityNamePartQualifier {
             }
         }
         if saw_remote {
-            Err(TerminologyValidationError::RemoteValidationRequired("Remote terminology validation required".to_string()))
+            Err(TerminologyValidationError::RemoteValidationRequired(
+                "Remote terminology validation required".to_string(),
+            ))
         } else if let Some(err) = last_error {
             Err(err)
         } else {
-            Err(TerminologyValidationError::NotInValueSet { valueset_url: Self::URL.to_string(), system: None, code: "".to_string() })
+            Err(TerminologyValidationError::NotInValueSet {
+                valueset_url: Self::URL.to_string(),
+                system: None,
+                code: "".to_string(),
+            })
         }
     }
-  }
+}

@@ -59,11 +59,21 @@ impl ConformanceExpectation {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SHALL => Some("Support for the specified capability is required to be considered conformant."),
-            Self::SHOULD => Some("Support for the specified capability/requirement is strongly encouraged, and failure to support it should only occur after careful consideration."),
-            Self::MAY => Some("Support for the specified capability/requirement is not necessary to be considered conformant, and the requirement should be considered strictly optional."),
-            Self::SHOULDNOT => Some("Support for the specified capability/requirement is strongly discouraged and should occur only after careful consideration."),
-            Self::SHALLNOT => Some("Support for the specified capability/requirement is prohibited and should not occur only in any circumstance."),
+            Self::SHALL => Some(
+                "Support for the specified capability is required to be considered conformant.",
+            ),
+            Self::SHOULD => Some(
+                "Support for the specified capability/requirement is strongly encouraged, and failure to support it should only occur after careful consideration.",
+            ),
+            Self::MAY => Some(
+                "Support for the specified capability/requirement is not necessary to be considered conformant, and the requirement should be considered strictly optional.",
+            ),
+            Self::SHOULDNOT => Some(
+                "Support for the specified capability/requirement is strongly discouraged and should occur only after careful consideration.",
+            ),
+            Self::SHALLNOT => Some(
+                "Support for the specified capability/requirement is prohibited and should not occur only in any circumstance.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl ConformanceExpectation {
             })
             .unwrap_or(false)
     }
-
 }

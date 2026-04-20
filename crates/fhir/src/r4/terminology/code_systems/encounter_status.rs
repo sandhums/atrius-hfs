@@ -76,14 +76,26 @@ impl EncounterStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Planned => Some("The Encounter has not yet started."),
-            Self::Arrived => Some("The Patient is present for the encounter, however is not currently meeting with a practitioner."),
-            Self::Triaged => Some("The patient has been assessed for the priority of their treatment based on the severity of their condition."),
-            Self::InProgress => Some("The Encounter has begun and the patient is present / the practitioner and the patient are meeting."),
-            Self::Onleave => Some("The Encounter has begun, but the patient is temporarily on leave."),
+            Self::Arrived => Some(
+                "The Patient is present for the encounter, however is not currently meeting with a practitioner.",
+            ),
+            Self::Triaged => Some(
+                "The patient has been assessed for the priority of their treatment based on the severity of their condition.",
+            ),
+            Self::InProgress => Some(
+                "The Encounter has begun and the patient is present / the practitioner and the patient are meeting.",
+            ),
+            Self::Onleave => {
+                Some("The Encounter has begun, but the patient is temporarily on leave.")
+            }
             Self::Finished => Some("The Encounter has ended."),
             Self::Cancelled => Some("The Encounter has ended before it has begun."),
-            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
-            Self::Unknown => Some("The encounter status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\"."),
+            Self::EnteredInError => {
+                Some("This instance should not have been part of this patient\'s medical record.")
+            }
+            Self::Unknown => Some(
+                "The encounter status is unknown. Note that \"unknown\" is a value of last resort and every attempt should be made to provide a meaningful value other than \"unknown\".",
+            ),
         }
     }
 
@@ -154,5 +166,4 @@ impl EncounterStatus {
             })
             .unwrap_or(false)
     }
-
 }

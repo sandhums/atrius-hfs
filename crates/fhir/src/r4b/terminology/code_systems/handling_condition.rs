@@ -112,5 +112,4 @@ impl HandlingConditionSet {
             })
             .unwrap_or(false)
     }
-
 }

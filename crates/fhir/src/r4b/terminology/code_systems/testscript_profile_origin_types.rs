@@ -15,7 +15,8 @@ pub enum TestScriptProfileOriginTypes {
 }
 
 impl TestScriptProfileOriginTypes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/testscript-profile-origin-types";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -47,8 +48,12 @@ impl TestScriptProfileOriginTypes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::FHIRClient => Some("General FHIR client used to initiate operations against a FHIR server."),
-            Self::FHIRSDCFormFiller => Some("A FHIR client acting as a Structured Data Capture Form Filler."),
+            Self::FHIRClient => {
+                Some("General FHIR client used to initiate operations against a FHIR server.")
+            }
+            Self::FHIRSDCFormFiller => {
+                Some("A FHIR client acting as a Structured Data Capture Form Filler.")
+            }
         }
     }
 
@@ -105,5 +110,4 @@ impl TestScriptProfileOriginTypes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -98,5 +98,4 @@ impl ContractResourceExpirationTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

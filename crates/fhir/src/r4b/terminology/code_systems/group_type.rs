@@ -65,7 +65,9 @@ impl GroupType {
         match self {
             Self::Person => Some("Group contains \"person\" Patient resources."),
             Self::Animal => Some("Group contains \"animal\" Patient resources."),
-            Self::Practitioner => Some("Group contains healthcare practitioner resources (Practitioner or PractitionerRole)."),
+            Self::Practitioner => Some(
+                "Group contains healthcare practitioner resources (Practitioner or PractitionerRole).",
+            ),
             Self::Device => Some("Group contains Device resources."),
             Self::Medication => Some("Group contains Medication resources."),
             Self::Substance => Some("Group contains Substance resources."),
@@ -133,5 +135,4 @@ impl GroupType {
             })
             .unwrap_or(false)
     }
-
 }

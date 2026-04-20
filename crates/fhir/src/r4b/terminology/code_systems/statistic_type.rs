@@ -127,28 +127,62 @@ impl StatisticType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AbsoluteMedianDiff => Some("Computed by forming the difference between two medians."),
+            Self::AbsoluteMedianDiff => {
+                Some("Computed by forming the difference between two medians.")
+            }
             Self::C25463 => Some("The number or amount of something"),
-            Self::_0000301 => Some("The strength of correlation between a set (2 or more) of random variables. The covariance is obtained by forming: cov(x,y)=e([x-e(x)][y-e(y)] where e(x), e(y) is the expected value (mean) of variable x and y respectively. Covariance is symmetric so cov(x,y)=cov(y,x). The covariance is usefull when looking at the variance of the sum of the 2 random variables since: var(x+y) = var(x) +var(y) +2cov(x,y) the covariance cov(x,y) is used to obtain the coefficient of correlation cor(x,y) by normalizing (dividing) cov(x,y) but the product of the standard deviations of x and y."),
-            Self::PredictedRisk => Some("A special use case where the proportion is derived from a formula rather than derived from summary evidence."),
+            Self::_0000301 => Some(
+                "The strength of correlation between a set (2 or more) of random variables. The covariance is obtained by forming: cov(x,y)=e([x-e(x)][y-e(y)] where e(x), e(y) is the expected value (mean) of variable x and y respectively. Covariance is symmetric so cov(x,y)=cov(y,x). The covariance is usefull when looking at the variance of the sum of the 2 random variables since: var(x+y) = var(x) +var(y) +2cov(x,y) the covariance cov(x,y) is used to obtain the coefficient of correlation cor(x,y) by normalizing (dividing) cov(x,y) but the product of the standard deviations of x and y.",
+            ),
+            Self::PredictedRisk => Some(
+                "A special use case where the proportion is derived from a formula rather than derived from summary evidence.",
+            ),
             Self::Descriptive => Some("Descriptive measure reported as narrative."),
-            Self::C93150 => Some("A measure of how often a particular event happens in one group compared to how often it happens in another group, over time. In cancer research, hazard ratios are often used in clinical trials to measure survival at any point in time in a group of patients who have been given a specific treatment compared to a control group given another treatment or a placebo. A hazard ratio of one means that there is no difference in survival between the two groups. A hazard ratio of greater than one or less than one means that survival was better in one of the groups."),
+            Self::C93150 => Some(
+                "A measure of how often a particular event happens in one group compared to how often it happens in another group, over time. In cancer research, hazard ratios are often used in clinical trials to measure survival at any point in time in a group of patients who have been given a specific treatment compared to a control group given another treatment or a placebo. A hazard ratio of one means that there is no difference in survival between the two groups. A hazard ratio of greater than one or less than one means that survival was better in one of the groups.",
+            ),
             Self::C16726 => Some("The relative frequency of occurrence of something."),
-            Self::RateRatio => Some("A type of relative effect estimate that compares rates over time (eg events per person-years)."),
+            Self::RateRatio => Some(
+                "A type of relative effect estimate that compares rates over time (eg events per person-years).",
+            ),
             Self::C25564 => Some("The largest possible quantity or degree."),
-            Self::C53319 => Some("The sum of a set of values divided by the number of values in the set."),
-            Self::_0000457 => Some("The mean difference, or difference in means, measures the absolute difference between the mean value in two different groups."),
-            Self::C28007 => Some("The value which has an equal number of values greater and less than it."),
+            Self::C53319 => {
+                Some("The sum of a set of values divided by the number of values in the set.")
+            }
+            Self::_0000457 => Some(
+                "The mean difference, or difference in means, measures the absolute difference between the mean value in two different groups.",
+            ),
+            Self::C28007 => {
+                Some("The value which has an equal number of values greater and less than it.")
+            }
             Self::C25570 => Some("The smallest possible quantity."),
-            Self::C16932 => Some("The ratio of the odds of an event occurring in one group to the odds of it occurring in another group, or to a sample-based estimate of that ratio."),
-            Self::C65172 => Some("A measure of the correlation of two variables X and Y measured on the same object or organism, that is, a measure of the tendency of the variables to increase or decrease together. It is defined as the sum of the products of the standard scores of the two measures divided by the degrees of freedom."),
-            Self::C17010 => Some("The ratio (for a given time period) of the number of occurrences of a disease or event to the number of units at risk in the population."),
-            Self::C44256 => Some("Quotient of quantities of the same kind for different components within the same system. [Use for univariate outcomes within an individual.]"),
-            Self::_0000565 => Some("Generated by a type of data transformation called a regression, which aims to model a response variable by expression the predictor variables as part of a function where variable terms are modified by a number. A regression coefficient is one such number."),
-            Self::C93152 => Some("\u{a0}A measure of the risk of a certain event happening in one group compared to the risk of the same event happening in another group. In cancer research, risk ratios are used in prospective (forward looking) studies, such as cohort studies and clinical trials. A risk ratio of one means there is no difference between two groups in terms of their risk of cancer, based on whether or not they were exposed to a certain substance or factor, or how they responded to two treatments being compared. A risk ratio of greater than one or of less than one usually means that being exposed to a certain substance or factor either increases (risk ratio greater than one) or decreases (risk ratio less than one) the risk of cancer, or that the treatments being compared do not have the same effects."),
-            Self::_0000424 => Some("Difference between the observed risks (proportions of individuals with the outcome of interest) in the two groups. The risk difference is straightforward to interpret: it describes the actual difference in the observed risk of events between experimental and control interventions."),
-            Self::C65171 => Some("A distribution-free analog of correlation analysis. Like regression, it can be applied to compare two independent random variables, each at several levels (which may be discrete or continuous). Unlike regression, Spearman\'s rank correlation works on ranked (relative) data, rather than directly on the data itself."),
-            Self::_0000100 => Some("Computed by forming the difference between two means, divided by an estimate of the within-group standard deviation. It is used to provide an estimatation of the effect size between two treatments when the predictor (independent variable) is categorical and the response(dependent) variable is continuous"),
+            Self::C16932 => Some(
+                "The ratio of the odds of an event occurring in one group to the odds of it occurring in another group, or to a sample-based estimate of that ratio.",
+            ),
+            Self::C65172 => Some(
+                "A measure of the correlation of two variables X and Y measured on the same object or organism, that is, a measure of the tendency of the variables to increase or decrease together. It is defined as the sum of the products of the standard scores of the two measures divided by the degrees of freedom.",
+            ),
+            Self::C17010 => Some(
+                "The ratio (for a given time period) of the number of occurrences of a disease or event to the number of units at risk in the population.",
+            ),
+            Self::C44256 => Some(
+                "Quotient of quantities of the same kind for different components within the same system. [Use for univariate outcomes within an individual.]",
+            ),
+            Self::_0000565 => Some(
+                "Generated by a type of data transformation called a regression, which aims to model a response variable by expression the predictor variables as part of a function where variable terms are modified by a number. A regression coefficient is one such number.",
+            ),
+            Self::C93152 => Some(
+                "\u{a0}A measure of the risk of a certain event happening in one group compared to the risk of the same event happening in another group. In cancer research, risk ratios are used in prospective (forward looking) studies, such as cohort studies and clinical trials. A risk ratio of one means there is no difference between two groups in terms of their risk of cancer, based on whether or not they were exposed to a certain substance or factor, or how they responded to two treatments being compared. A risk ratio of greater than one or of less than one usually means that being exposed to a certain substance or factor either increases (risk ratio greater than one) or decreases (risk ratio less than one) the risk of cancer, or that the treatments being compared do not have the same effects.",
+            ),
+            Self::_0000424 => Some(
+                "Difference between the observed risks (proportions of individuals with the outcome of interest) in the two groups. The risk difference is straightforward to interpret: it describes the actual difference in the observed risk of events between experimental and control interventions.",
+            ),
+            Self::C65171 => Some(
+                "A distribution-free analog of correlation analysis. Like regression, it can be applied to compare two independent random variables, each at several levels (which may be discrete or continuous). Unlike regression, Spearman\'s rank correlation works on ranked (relative) data, rather than directly on the data itself.",
+            ),
+            Self::_0000100 => Some(
+                "Computed by forming the difference between two means, divided by an estimate of the within-group standard deviation. It is used to provide an estimatation of the effect size between two treatments when the predictor (independent variable) is categorical and the response(dependent) variable is continuous",
+            ),
         }
     }
 
@@ -245,5 +279,4 @@ impl StatisticType {
             })
             .unwrap_or(false)
     }
-
 }

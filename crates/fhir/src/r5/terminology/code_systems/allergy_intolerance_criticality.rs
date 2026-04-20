@@ -51,9 +51,15 @@ impl AllergyIntoleranceCriticality {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Low => Some("Worst case result of a future exposure is not assessed to be life-threatening or having high potential for organ system failure."),
-            Self::High => Some("Worst case result of a future exposure is assessed to be life-threatening or having high potential for organ system failure."),
-            Self::UnableToAssess => Some("Unable to assess the worst case result of a future exposure."),
+            Self::Low => Some(
+                "Worst case result of a future exposure is not assessed to be life-threatening or having high potential for organ system failure.",
+            ),
+            Self::High => Some(
+                "Worst case result of a future exposure is assessed to be life-threatening or having high potential for organ system failure.",
+            ),
+            Self::UnableToAssess => {
+                Some("Unable to assess the worst case result of a future exposure.")
+            }
         }
     }
 
@@ -112,5 +118,4 @@ impl AllergyIntoleranceCriticality {
             })
             .unwrap_or(false)
     }
-
 }

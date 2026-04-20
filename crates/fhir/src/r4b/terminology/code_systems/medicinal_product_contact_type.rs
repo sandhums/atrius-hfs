@@ -50,8 +50,12 @@ impl ProductContactType {
     pub fn display(self) -> Option<&'static str> {
         match self {
             Self::ProposedMAH => Some("Proposed Marketing Authorisation Holder/Person"),
-            Self::ProcedureContactDuring => Some("Person/Company authorised for Communication during procedure"),
-            Self::ProcedureContactAfter => Some("Person/Company authorised for Communication after procedure"),
+            Self::ProcedureContactDuring => {
+                Some("Person/Company authorised for Communication during procedure")
+            }
+            Self::ProcedureContactAfter => {
+                Some("Person/Company authorised for Communication after procedure")
+            }
             Self::QPPV => Some("Qualified Person Responsible for Pharmacovigilance"),
             Self::PVEnquiries => Some("Pharmacovigilance Enquiry Information"),
         }
@@ -60,8 +64,12 @@ impl ProductContactType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::ProposedMAH => Some("Proposed Marketing Authorisation Holder/Person"),
-            Self::ProcedureContactDuring => Some("Person/Company authorised for Communication on behalf of the Applicant during the Procedure"),
-            Self::ProcedureContactAfter => Some("Person/Company authorised for Communication between MAH and Authorities after Authorisation"),
+            Self::ProcedureContactDuring => Some(
+                "Person/Company authorised for Communication on behalf of the Applicant during the Procedure",
+            ),
+            Self::ProcedureContactAfter => Some(
+                "Person/Company authorised for Communication between MAH and Authorities after Authorisation",
+            ),
             Self::QPPV => Some("Qualified Person Responsible for Pharmacovigilance"),
             Self::PVEnquiries => Some("Pharmacovigilance Enquiry Information"),
         }
@@ -126,5 +134,4 @@ impl ProductContactType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -98,5 +98,4 @@ impl ContractResourceAssetScopeCodes {
             })
             .unwrap_or(false)
     }
-
 }

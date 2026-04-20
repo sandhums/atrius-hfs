@@ -126,5 +126,4 @@ impl PractitionerSpecialty {
             })
             .unwrap_or(false)
     }
-
 }

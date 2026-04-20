@@ -112,5 +112,4 @@ impl CanPushUpdates {
             })
             .unwrap_or(false)
     }
-
 }

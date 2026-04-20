@@ -52,7 +52,9 @@ impl MedicationStatementStatusCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Recorded => Some("The action of recording the medication statement is finished."),
-            Self::EnteredInError => Some("Some of the actions that are implied by the medication usage may have occurred.  For example, the patient may have taken some of the medication.  Clinical decision support systems should take this status into account."),
+            Self::EnteredInError => Some(
+                "Some of the actions that are implied by the medication usage may have occurred.  For example, the patient may have taken some of the medication.  Clinical decision support systems should take this status into account.",
+            ),
             Self::Draft => Some("The medication usage is draft or preliminary."),
         }
     }
@@ -112,5 +114,4 @@ impl MedicationStatementStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

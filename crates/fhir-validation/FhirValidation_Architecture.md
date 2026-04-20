@@ -274,9 +274,21 @@ Key traits:
 	•	TerminologyService (async)
 	•	TerminologyServiceSync (sync)
 
-RemoteTerminologyService adapts a narrow membership query into a ValidateVsRequest, delegates to the backend, and parses the raw response into TerminologyMembershipOutcome.
+**Narrow `member_of` path (binding validation)**
 
-This keeps generated validator code simple.
+`TerminologyService::member_of(valueset_url, system, code, display)` is intentionally minimal: one membership check for a single `(system, code, display)` triple. That matches how generated binding validation works end-to-end:
+
+	•	local evaluation may yield `NeedsRemote` carrying only those fields (see `LocalBindingOutcome` / `RemoteMembershipRequest` in the binding engine)
+	•	the adapter builds a `ValidateVsRequest` with `code`, `system`, and `display` set and everything else defaulted
+	•	it does **not** send full `Coding` or `CodeableConcept` JSON, `systemVersion`, `context`, `date`, or other `$validate-code` parameters
+
+So “narrow” is aligned with what the validator extracts today, not an accidental omission at the HTTP layer.
+
+**Full `ValidateVsRequest` path (integrations)**
+
+`RemoteTerminologyService::validate_vs(&ValidateVsRequest)` performs a complete `ValueSet/$validate-code`: it delegates to `TerminologyBackend::validate_vs`, then parses the response into `TerminologyMembershipOutcome`. Use this when you need richer parameters than `member_of` provides (for example embedded `coding` / `codeableConcept`, `systemVersion`, `context`, or `date`). Custom callers or future engine features can use this without changing the binding-facing trait.
+
+`member_of` is implemented by building a minimal `ValidateVsRequest` and calling `validate_vs` so both paths share one implementation.
 
 ⸻
 
@@ -436,9 +448,9 @@ This improves:
 
 3. Narrow validator-facing terminology API
 
-Generated binding validators use a simple membership-oriented terminology interface.
+Generated binding validators use a simple membership-oriented terminology interface (`TerminologyService::member_of`): value set URL plus optional system, code, and display per remote check. They do not need to understand full FHIR `$validate-code` semantics.
 
-They do not need to understand full FHIR $validate-code semantics.
+The richer `ValidateVsRequest` model lives at the backend and on `RemoteTerminologyService::validate_vs` for callers that need it; see **service.rs** above.
 
 ⸻
 
@@ -471,8 +483,8 @@ Atrius Validation Engine v1 is functional, but some areas are intentionally inco
 
 Known limitations
 	•	R5 is the primary target; R4 support is not yet fully aligned in all binding paths
-	•	remote terminology integration is currently focused on the validation patterns needed by binding enforcement
-	•	remote `$validate-code` calls serialize the full `ValidateVsRequest` shape; whether a given field affects the outcome still depends on the remote server’s FHIR version and capabilities
+	•	remote terminology integration is currently focused on the validation patterns needed by binding enforcement; binding-driven remote calls use the narrow `member_of` shape (not every `ValidateVsRequest` field)
+	•	when using `RemoteTerminologyService::validate_vs` or `TerminologyBackend::validate_vs` directly, remote `$validate-code` calls can serialize the full `ValidateVsRequest` shape; whether a given field affects the outcome still depends on the remote server’s FHIR version and capabilities
 	•	some advanced $validate-code request fields are modeled but not yet fully exercised end-to-end in automated tests
 	•	behavior may differ depending on the capabilities and FHIR version of the remote terminology server
 	•	not all future terminology operations ($lookup, $expand, $subsumes, etc.) are implemented yet

@@ -53,7 +53,9 @@ impl GoalAcceptStatus {
         match self {
             Self::Agree => Some("Stakeholder supports pursuit of the goal."),
             Self::Disagree => Some("Stakeholder is not in support of the pursuit of the goal."),
-            Self::Pending => Some("Stakeholder has not yet made a decision on whether they support the goal."),
+            Self::Pending => {
+                Some("Stakeholder has not yet made a decision on whether they support the goal.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl GoalAcceptStatus {
             })
             .unwrap_or(false)
     }
-
 }

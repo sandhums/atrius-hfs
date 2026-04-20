@@ -112,5 +112,4 @@ impl ExampleProviderQualificationCodes {
             })
             .unwrap_or(false)
     }
-
 }

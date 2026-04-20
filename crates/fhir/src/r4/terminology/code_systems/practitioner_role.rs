@@ -64,11 +64,15 @@ impl PractitionerRole {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Doctor => Some("A qualified/registered medical practitioner"),
-            Self::Nurse => Some("A practitioner with nursing experience that may be qualified/registered"),
+            Self::Nurse => {
+                Some("A practitioner with nursing experience that may be qualified/registered")
+            }
             Self::Pharmacist => Some("A qualified/registered/licensed pharmacist"),
             Self::Researcher => Some("A practitioner that may perform research"),
             Self::Teacher => Some("Someone who is able to provide educational services"),
-            Self::Ict => Some("Someone who is qualified in Information and Communication Technologies"),
+            Self::Ict => {
+                Some("Someone who is qualified in Information and Communication Technologies")
+            }
         }
     }
 
@@ -133,5 +137,4 @@ impl PractitionerRole {
             })
             .unwrap_or(false)
     }
-
 }

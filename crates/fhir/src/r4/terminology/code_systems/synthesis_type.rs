@@ -63,12 +63,22 @@ impl SynthesisType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::StdMA => Some("A meta-analysis of the summary data of estimates from individual studies or data sets."),
-            Self::IPDMA => Some("A meta-analysis of the individual participant data from individual studies or data sets."),
-            Self::IndirectNMA => Some("An indirect meta-analysis derived from 2 or more direct comparisons in a network meta-analysis."),
-            Self::CombinedNMA => Some("An composite meta-analysis derived from direct comparisons and indirect comparisons in a network meta-analysis."),
+            Self::StdMA => Some(
+                "A meta-analysis of the summary data of estimates from individual studies or data sets.",
+            ),
+            Self::IPDMA => Some(
+                "A meta-analysis of the individual participant data from individual studies or data sets.",
+            ),
+            Self::IndirectNMA => Some(
+                "An indirect meta-analysis derived from 2 or more direct comparisons in a network meta-analysis.",
+            ),
+            Self::CombinedNMA => Some(
+                "An composite meta-analysis derived from direct comparisons and indirect comparisons in a network meta-analysis.",
+            ),
             Self::Range => Some("A range of results across a body of evidence."),
-            Self::Classification => Some("An approach describing a body of evidence by categorically classifying individual studies (eg 3 studies showed beneft and 2 studied found no effect)."),
+            Self::Classification => Some(
+                "An approach describing a body of evidence by categorically classifying individual studies (eg 3 studies showed beneft and 2 studied found no effect).",
+            ),
         }
     }
 
@@ -133,5 +143,4 @@ impl SynthesisType {
             })
             .unwrap_or(false)
     }
-
 }

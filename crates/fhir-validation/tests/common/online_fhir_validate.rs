@@ -14,14 +14,14 @@ pub fn online_validator_base_url() -> Option<String> {
 }
 
 /// POST raw JSON to `{base}/{resourceType}/$validate` (content negotiation `application/fhir+json`).
-pub async fn post_instance_validate(resource_type: &str, resource_json: &str) -> Result<Value, String> {
-    let base = online_validator_base_url()
-        .ok_or_else(|| "set FHIR_ONLINE_VALIDATOR_BASE_URL (e.g. https://hapi.fhir.org/baseR5)".to_owned())?;
-    let url = format!(
-        "{}/{}/$validate",
-        base.trim_end_matches('/'),
-        resource_type
-    );
+pub async fn post_instance_validate(
+    resource_type: &str,
+    resource_json: &str,
+) -> Result<Value, String> {
+    let base = online_validator_base_url().ok_or_else(|| {
+        "set FHIR_ONLINE_VALIDATOR_BASE_URL (e.g. https://hapi.fhir.org/baseR5)".to_owned()
+    })?;
+    let url = format!("{}/{}/$validate", base.trim_end_matches('/'), resource_type);
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .timeout(Duration::from_secs(30))

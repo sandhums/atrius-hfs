@@ -59,11 +59,21 @@ impl ImmunizationOriginCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Provider => Some("The data for the immunization event originated with another provider."),
-            Self::Record => Some("The data for the immunization event originated with a written record for the patient."),
-            Self::Recall => Some("The data for the immunization event originated from the recollection of the patient or parent/guardian of the patient."),
-            Self::School => Some("The data for the immunization event originated with a school record for the patient."),
-            Self::Jurisdiction => Some("The data for the immunization event originated with an immunization information system (IIS) or registry operating within the jurisdiction."),
+            Self::Provider => {
+                Some("The data for the immunization event originated with another provider.")
+            }
+            Self::Record => Some(
+                "The data for the immunization event originated with a written record for the patient.",
+            ),
+            Self::Recall => Some(
+                "The data for the immunization event originated from the recollection of the patient or parent/guardian of the patient.",
+            ),
+            Self::School => Some(
+                "The data for the immunization event originated with a school record for the patient.",
+            ),
+            Self::Jurisdiction => Some(
+                "The data for the immunization event originated with an immunization information system (IIS) or registry operating within the jurisdiction.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl ImmunizationOriginCodes {
             })
             .unwrap_or(false)
     }
-
 }

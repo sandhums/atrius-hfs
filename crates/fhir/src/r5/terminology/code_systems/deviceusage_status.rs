@@ -72,8 +72,12 @@ impl DeviceUsageStatus {
             Self::NotDone => Some("The device was not used."),
             Self::EnteredInError => Some("The statement was recorded incorrectly."),
             Self::Intended => Some("The device may be used at some time in the future."),
-            Self::Stopped => Some("Actions implied by the statement have been permanently halted, before all of them occurred."),
-            Self::OnHold => Some("Actions implied by the statement have been temporarily halted, but are expected to continue later. May also be called \"suspended\"."),
+            Self::Stopped => Some(
+                "Actions implied by the statement have been permanently halted, before all of them occurred.",
+            ),
+            Self::OnHold => Some(
+                "Actions implied by the statement have been temporarily halted, but are expected to continue later. May also be called \"suspended\".",
+            ),
         }
     }
 
@@ -140,5 +144,4 @@ impl DeviceUsageStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -67,13 +67,27 @@ impl QuestionnaireItemOperator {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Exists => Some("True if whether an answer exists is equal to the enableWhen answer (which must be a boolean)."),
-            Self::Code => Some("True if whether at least one answer has a value that is equal to the enableWhen answer."),
-            Self::Code_2 => Some("True if whether at least no answer has a value that is equal to the enableWhen answer."),
-            Self::Code_3 => Some("True if whether at least no answer has a value that is greater than the enableWhen answer."),
-            Self::Code_4 => Some("True if whether at least no answer has a value that is less than the enableWhen answer."),
-            Self::Code_5 => Some("True if whether at least no answer has a value that is greater or equal to the enableWhen answer."),
-            Self::Code_6 => Some("True if whether at least no answer has a value that is less or equal to the enableWhen answer."),
+            Self::Exists => Some(
+                "True if whether an answer exists is equal to the enableWhen answer (which must be a boolean).",
+            ),
+            Self::Code => Some(
+                "True if whether at least one answer has a value that is equal to the enableWhen answer.",
+            ),
+            Self::Code_2 => Some(
+                "True if whether at least no answer has a value that is equal to the enableWhen answer.",
+            ),
+            Self::Code_3 => Some(
+                "True if whether at least no answer has a value that is greater than the enableWhen answer.",
+            ),
+            Self::Code_4 => Some(
+                "True if whether at least no answer has a value that is less than the enableWhen answer.",
+            ),
+            Self::Code_5 => Some(
+                "True if whether at least no answer has a value that is greater or equal to the enableWhen answer.",
+            ),
+            Self::Code_6 => Some(
+                "True if whether at least no answer has a value that is less or equal to the enableWhen answer.",
+            ),
         }
     }
 
@@ -140,5 +154,4 @@ impl QuestionnaireItemOperator {
             })
             .unwrap_or(false)
     }
-
 }

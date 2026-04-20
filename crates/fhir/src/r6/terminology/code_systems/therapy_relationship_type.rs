@@ -64,31 +64,63 @@ impl TherapyRelationshipType {
 
     pub fn display(self) -> Option<&'static str> {
         match self {
-            Self::ContraindicatedOnlyWith => Some("Only contraindicated if the other therapy is given"),
-            Self::ContraindicatedExceptWith => Some("Contraindicated unless the other therapy is given"),
-            Self::IndicatedOnlyWith => Some("Indicated only when the other therapy is given (co-occurrent)"),
+            Self::ContraindicatedOnlyWith => {
+                Some("Only contraindicated if the other therapy is given")
+            }
+            Self::ContraindicatedExceptWith => {
+                Some("Contraindicated unless the other therapy is given")
+            }
+            Self::IndicatedOnlyWith => {
+                Some("Indicated only when the other therapy is given (co-occurrent)")
+            }
             Self::IndicatedExceptWith => Some("Indicated except when the other therapy is given"),
-            Self::IndicatedOnlyAfter => Some("Indicated only if the other therapy is planned to be given afterwards (prep)"),
-            Self::IndicatedOnlyBefore => Some("Indicated only if the other therapy was given before (follow-up)"),
+            Self::IndicatedOnlyAfter => {
+                Some("Indicated only if the other therapy is planned to be given afterwards (prep)")
+            }
+            Self::IndicatedOnlyBefore => {
+                Some("Indicated only if the other therapy was given before (follow-up)")
+            }
             Self::ReplaceOtherTherapy => Some("Indicated to replace the other therapy"),
-            Self::ReplaceOtherTherapyContraindicated => Some("Indicated to replace the other contraindicated therapy"),
-            Self::ReplaceOtherTherapyNotTolerated => Some("Indicated to replace the other therapy not well tolerated by patient"),
-            Self::ReplaceOtherTherapyNotEffective => Some("Indicated to replace the other therapy not effective on patient"),
+            Self::ReplaceOtherTherapyContraindicated => {
+                Some("Indicated to replace the other contraindicated therapy")
+            }
+            Self::ReplaceOtherTherapyNotTolerated => {
+                Some("Indicated to replace the other therapy not well tolerated by patient")
+            }
+            Self::ReplaceOtherTherapyNotEffective => {
+                Some("Indicated to replace the other therapy not effective on patient")
+            }
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::ContraindicatedOnlyWith => Some("Only contraindicated if the other therapy is given"),
-            Self::ContraindicatedExceptWith => Some("Contraindicated unless the other therapy is given"),
-            Self::IndicatedOnlyWith => Some("Indicated only when the other therapy is given (co-occurrent)"),
+            Self::ContraindicatedOnlyWith => {
+                Some("Only contraindicated if the other therapy is given")
+            }
+            Self::ContraindicatedExceptWith => {
+                Some("Contraindicated unless the other therapy is given")
+            }
+            Self::IndicatedOnlyWith => {
+                Some("Indicated only when the other therapy is given (co-occurrent)")
+            }
             Self::IndicatedExceptWith => Some("Indicated except when the other therapy is given"),
-            Self::IndicatedOnlyAfter => Some("Indicated only if the other therapy is planned to be given afterwards (prep)"),
-            Self::IndicatedOnlyBefore => Some("Indicated only if the other therapy was given before (follow-up)"),
+            Self::IndicatedOnlyAfter => {
+                Some("Indicated only if the other therapy is planned to be given afterwards (prep)")
+            }
+            Self::IndicatedOnlyBefore => {
+                Some("Indicated only if the other therapy was given before (follow-up)")
+            }
             Self::ReplaceOtherTherapy => Some("Indicated to replace the other therapy"),
-            Self::ReplaceOtherTherapyContraindicated => Some("Indicated to replace the other contraindicated therapy."),
-            Self::ReplaceOtherTherapyNotTolerated => Some("Indicated to replace the other therapy not well tolerated by patient"),
-            Self::ReplaceOtherTherapyNotEffective => Some("Indicated to replace the other therapy not effective on patient"),
+            Self::ReplaceOtherTherapyContraindicated => {
+                Some("Indicated to replace the other contraindicated therapy.")
+            }
+            Self::ReplaceOtherTherapyNotTolerated => {
+                Some("Indicated to replace the other therapy not well tolerated by patient")
+            }
+            Self::ReplaceOtherTherapyNotEffective => {
+                Some("Indicated to replace the other therapy not effective on patient")
+            }
         }
     }
 
@@ -161,5 +193,4 @@ impl TherapyRelationshipType {
             })
             .unwrap_or(false)
     }
-
 }

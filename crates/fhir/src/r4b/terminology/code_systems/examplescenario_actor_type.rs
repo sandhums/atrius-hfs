@@ -105,5 +105,4 @@ impl ExampleScenarioActorType {
             })
             .unwrap_or(false)
     }
-
 }

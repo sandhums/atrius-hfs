@@ -47,8 +47,12 @@ impl PaymentIssuerTypeCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Patient => Some("The patient or a party issuing payment on behalf of the patient."),
-            Self::Insurance => Some("An insurer, or party acting on their behalf, which is making payment following a contract, direct or indirect, with the patient to pay for healthcare-related services."),
+            Self::Patient => {
+                Some("The patient or a party issuing payment on behalf of the patient.")
+            }
+            Self::Insurance => Some(
+                "An insurer, or party acting on their behalf, which is making payment following a contract, direct or indirect, with the patient to pay for healthcare-related services.",
+            ),
         }
     }
 
@@ -105,5 +109,4 @@ impl PaymentIssuerTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl RiskAssessmentMethod {
             })
             .unwrap_or(false)
     }
-
 }

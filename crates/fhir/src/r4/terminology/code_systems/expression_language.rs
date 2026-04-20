@@ -53,7 +53,9 @@ impl ExpressionLanguage {
         match self {
             Self::TextCql => Some("Clinical Quality Language."),
             Self::TextFhirpath => Some("FHIRPath."),
-            Self::ApplicationXFhirQuery => Some("FHIR\'s RESTful query syntax - typically independent of base URL."),
+            Self::ApplicationXFhirQuery => {
+                Some("FHIR\'s RESTful query syntax - typically independent of base URL.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl ExpressionLanguage {
             })
             .unwrap_or(false)
     }
-
 }

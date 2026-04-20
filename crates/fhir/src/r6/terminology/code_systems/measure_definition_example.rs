@@ -41,14 +41,20 @@ impl MeasureDefinitionExample {
     pub fn display(self) -> Option<&'static str> {
         match self {
             Self::Screening => Some("Screening"),
-            Self::StandardizedDepressionScreeningTool => Some("Standardized Depression Screening Tool"),
+            Self::StandardizedDepressionScreeningTool => {
+                Some("Standardized Depression Screening Tool")
+            }
         }
     }
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Screening => Some("Completion of a clinical or diagnostic tool used to identify people at risk of developing or having a certain disease or condition, even in the absence of symptoms."),
-            Self::StandardizedDepressionScreeningTool => Some("A normalized and validated depression screening tool developed for the patient population in which it is being utilized."),
+            Self::Screening => Some(
+                "Completion of a clinical or diagnostic tool used to identify people at risk of developing or having a certain disease or condition, even in the absence of symptoms.",
+            ),
+            Self::StandardizedDepressionScreeningTool => Some(
+                "A normalized and validated depression screening tool developed for the patient population in which it is being utilized.",
+            ),
         }
     }
 
@@ -105,5 +111,4 @@ impl MeasureDefinitionExample {
             })
             .unwrap_or(false)
     }
-
 }

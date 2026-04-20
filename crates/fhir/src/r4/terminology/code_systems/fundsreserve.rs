@@ -51,9 +51,15 @@ impl FundsReservationCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Patient => Some("The payor is requested to reserve funds for the provision of the named services by any provider for settlement of future claims related to this request."),
-            Self::Provider => Some("The payor is requested to reserve funds solely for the named provider for settlement of future claims related to this request."),
-            Self::None => Some("The payor is not being requested to reserve any funds for the settlement of future claims."),
+            Self::Patient => Some(
+                "The payor is requested to reserve funds for the provision of the named services by any provider for settlement of future claims related to this request.",
+            ),
+            Self::Provider => Some(
+                "The payor is requested to reserve funds solely for the named provider for settlement of future claims related to this request.",
+            ),
+            Self::None => Some(
+                "The payor is not being requested to reserve any funds for the settlement of future claims.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl FundsReservationCodes {
             })
             .unwrap_or(false)
     }
-
 }

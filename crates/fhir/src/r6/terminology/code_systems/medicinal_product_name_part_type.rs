@@ -196,5 +196,4 @@ impl ProductNamePartType {
             })
             .unwrap_or(false)
     }
-
 }

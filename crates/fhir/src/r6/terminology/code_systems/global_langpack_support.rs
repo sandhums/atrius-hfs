@@ -52,8 +52,12 @@ impl GlobalLangPackSupportVS {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::NotSupported => Some("Language Packs are not supported at all"),
-            Self::Explicit => Some("The server supports language packs, but only when the value set asks for them, or they are requested explicitly by parameter."),
-            Self::Implicit => Some("Language Packs marked as \'global language packs\' are automatically in scope when the relevant language is requested."),
+            Self::Explicit => Some(
+                "The server supports language packs, but only when the value set asks for them, or they are requested explicitly by parameter.",
+            ),
+            Self::Implicit => Some(
+                "Language Packs marked as \'global language packs\' are automatically in scope when the relevant language is requested.",
+            ),
         }
     }
 
@@ -112,5 +116,4 @@ impl GlobalLangPackSupportVS {
             })
             .unwrap_or(false)
     }
-
 }

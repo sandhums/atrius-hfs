@@ -105,5 +105,4 @@ impl StructureMapContextType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -51,8 +51,12 @@ impl EvidenceVariableConstraint {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AlphanumericOnly => Some("String values that are restricted to only numbers and letters [A-Za-z0-9]."),
-            Self::AlphanumericSpaceOnly => Some("String values that are restricted to only numbers, letters, and spaces [A-Za-z0-9\\s]."),
+            Self::AlphanumericOnly => {
+                Some("String values that are restricted to only numbers and letters [A-Za-z0-9].")
+            }
+            Self::AlphanumericSpaceOnly => Some(
+                "String values that are restricted to only numbers, letters, and spaces [A-Za-z0-9\\s].",
+            ),
             Self::RangeZeroToOne => Some("Numeric value between 0 and 1, inclusive."),
         }
     }
@@ -112,5 +116,4 @@ impl EvidenceVariableConstraint {
             })
             .unwrap_or(false)
     }
-
 }

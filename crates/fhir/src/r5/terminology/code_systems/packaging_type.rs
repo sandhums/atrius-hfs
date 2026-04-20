@@ -805,5 +805,4 @@ impl PackagingType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -1414,5 +1414,4 @@ impl AnimalTissueType {
             })
             .unwrap_or(false)
     }
-
 }

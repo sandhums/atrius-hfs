@@ -64,11 +64,17 @@ impl EndpointStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Active => Some("This endpoint is expected to be active and can be used."),
-            Self::Limited => Some("This endpoint is available for limited use (for example, it is undergoing internal testing).  I.e. the endpoint is not fully available, might not always be available, or might only be available for some users."),
+            Self::Limited => Some(
+                "This endpoint is available for limited use (for example, it is undergoing internal testing).  I.e. the endpoint is not fully available, might not always be available, or might only be available for some users.",
+            ),
             Self::Suspended => Some("This endpoint is temporarily unavailable."),
-            Self::Error => Some("This endpoint has exceeded connectivity thresholds and is considered in an error state and should no longer be attempted to connect to until corrective action is taken."),
+            Self::Error => Some(
+                "This endpoint has exceeded connectivity thresholds and is considered in an error state and should no longer be attempted to connect to until corrective action is taken.",
+            ),
             Self::Off => Some("This endpoint is no longer to be used."),
-            Self::EnteredInError => Some("This instance should not have been part of this patient\'s medical record."),
+            Self::EnteredInError => {
+                Some("This instance should not have been part of this patient\'s medical record.")
+            }
         }
     }
 
@@ -133,5 +139,4 @@ impl EndpointStatus {
             })
             .unwrap_or(false)
     }
-
 }

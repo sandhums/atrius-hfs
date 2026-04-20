@@ -133,5 +133,4 @@ impl ValidationProcess {
             })
             .unwrap_or(false)
     }
-
 }

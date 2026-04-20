@@ -133,5 +133,4 @@ impl GuidanceModuleCode {
             })
             .unwrap_or(false)
     }
-
 }

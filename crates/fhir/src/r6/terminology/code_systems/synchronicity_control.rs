@@ -53,7 +53,9 @@ impl OperationSynchronicityControl {
         match self {
             Self::Synchronous => Some("This operation is invoked synchronously"),
             Self::Asynchronous => Some("This operation is invoked asynchronously."),
-            Self::Either => Some("This operation can be invoked either synchronously or asynchronously."),
+            Self::Either => {
+                Some("This operation can be invoked either synchronously or asynchronously.")
+            }
         }
     }
 
@@ -112,5 +114,4 @@ impl OperationSynchronicityControl {
             })
             .unwrap_or(false)
     }
-
 }

@@ -119,5 +119,4 @@ impl AuditEventEntityType {
             })
             .unwrap_or(false)
     }
-
 }

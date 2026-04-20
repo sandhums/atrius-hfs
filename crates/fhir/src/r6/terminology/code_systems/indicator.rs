@@ -51,9 +51,15 @@ impl Indicator {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Info => Some("The response is informational and indicates that it contains additional information or relevant guidance that may be of interest"),
-            Self::Warning => Some("The response is a warning and indicates that it contains urgent or highly relevant information that should be considered"),
-            Self::Critical => Some("The response is critical and indicates that it contains information or activities that have high urgency and importance that should be immediately addressed"),
+            Self::Info => Some(
+                "The response is informational and indicates that it contains additional information or relevant guidance that may be of interest",
+            ),
+            Self::Warning => Some(
+                "The response is a warning and indicates that it contains urgent or highly relevant information that should be considered",
+            ),
+            Self::Critical => Some(
+                "The response is critical and indicates that it contains information or activities that have high urgency and importance that should be immediately addressed",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl Indicator {
             })
             .unwrap_or(false)
     }
-
 }

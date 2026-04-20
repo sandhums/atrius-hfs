@@ -67,13 +67,27 @@ impl AccountBillingStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Open => Some("The account is open for charging transactions (account.status is active)"),
-            Self::CarecompleteNotbilled => Some("The account.status is still active and may have charges recorded against it (only for events in the servicePeriod), however the encounters associated are completed. (Also known as Discharged not billed) This BillingStatus is often not used in ongoing accounts. (account.status is active)"),
-            Self::Billing => Some("Indicates that all transactions are recorded and the finance system can perform the billing process, including preparing insurance claims, scrubbing charges, invoicing etc. During this time any new charges will not be included in the current billing run/cycle. (account.status is active)"),
-            Self::ClosedBaddebt => Some("The balance of this debt has not been able to be recovered, and the organization has decided not to persue debt recovery. (account.status is in-active)"),
-            Self::ClosedVoided => Some("The account was not created in error, however the organization has decided that it will not be charging any transactions associated. (account.status is i n-active)"),
-            Self::ClosedCompleted => Some("The account is closed and all charges are processed and accounted for. (account.status is i n-active)"),
-            Self::ClosedCombined => Some("This account has been merged into another account, all charged have been migrated. This account should no longer be used, and will not be billed. (account.status is i n-active)"),
+            Self::Open => {
+                Some("The account is open for charging transactions (account.status is active)")
+            }
+            Self::CarecompleteNotbilled => Some(
+                "The account.status is still active and may have charges recorded against it (only for events in the servicePeriod), however the encounters associated are completed. (Also known as Discharged not billed) This BillingStatus is often not used in ongoing accounts. (account.status is active)",
+            ),
+            Self::Billing => Some(
+                "Indicates that all transactions are recorded and the finance system can perform the billing process, including preparing insurance claims, scrubbing charges, invoicing etc. During this time any new charges will not be included in the current billing run/cycle. (account.status is active)",
+            ),
+            Self::ClosedBaddebt => Some(
+                "The balance of this debt has not been able to be recovered, and the organization has decided not to persue debt recovery. (account.status is in-active)",
+            ),
+            Self::ClosedVoided => Some(
+                "The account was not created in error, however the organization has decided that it will not be charging any transactions associated. (account.status is i n-active)",
+            ),
+            Self::ClosedCompleted => Some(
+                "The account is closed and all charges are processed and accounted for. (account.status is i n-active)",
+            ),
+            Self::ClosedCombined => Some(
+                "This account has been merged into another account, all charged have been migrated. This account should no longer be used, and will not be billed. (account.status is i n-active)",
+            ),
         }
     }
 
@@ -140,5 +154,4 @@ impl AccountBillingStatus {
             })
             .unwrap_or(false)
     }
-
 }

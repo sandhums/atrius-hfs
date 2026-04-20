@@ -133,5 +133,4 @@ impl EvidenceVariableRole {
             })
             .unwrap_or(false)
     }
-
 }

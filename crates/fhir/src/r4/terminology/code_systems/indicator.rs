@@ -45,7 +45,9 @@ impl Indicator {
         match self {
             Self::Info => Some("The response is informational"),
             Self::Warning => Some("The response is a warning"),
-            Self::Critical => Some("The response is critical and indicates the workflow should not be allowed to proceed"),
+            Self::Critical => Some(
+                "The response is critical and indicates the workflow should not be allowed to proceed",
+            ),
         }
     }
 
@@ -112,5 +114,4 @@ impl Indicator {
             })
             .unwrap_or(false)
     }
-
 }

@@ -88,7 +88,9 @@ impl AdverseEventCategory {
             Self::WrongTime => Some("Wrong Time"),
             Self::ExpiredDrug => Some("Expired Drug"),
             Self::MedicalDeviceUseError => Some("Medical Device Use Error"),
-            Self::ProblemDifferentManufacturer => Some("Problem with Different Manufacturer of Same Medicine"),
+            Self::ProblemDifferentManufacturer => {
+                Some("Problem with Different Manufacturer of Same Medicine")
+            }
             Self::UnsafePhysicalEnvironment => Some("Unsafe Physical Environment"),
         }
     }
@@ -99,16 +101,26 @@ impl AdverseEventCategory {
             Self::ProductQuality => Some("The adverse event pertains to product quality."),
             Self::ProductUseError => Some("The adverse event pertains to a product use error."),
             Self::WrongDose => Some("The adverse event pertains to a wrong dose."),
-            Self::IncorrectPrescribingInformation => Some("The adverse event pertains to incorrect perscribing information."),
+            Self::IncorrectPrescribingInformation => {
+                Some("The adverse event pertains to incorrect perscribing information.")
+            }
             Self::WrongTechnique => Some("The adverse event pertains to a wrong technique."),
-            Self::WrongRouteOfAdministration => Some("The adverse event pertains to a wrong route of administration."),
+            Self::WrongRouteOfAdministration => {
+                Some("The adverse event pertains to a wrong route of administration.")
+            }
             Self::WrongRate => Some("The adverse event pertains to a wrong rate."),
             Self::WrongDuration => Some("The adverse event pertains to a wrong duration."),
             Self::WrongTime => Some("The adverse event pertains to a wrong time."),
             Self::ExpiredDrug => Some("The adverse event pertains to an expired drug."),
-            Self::MedicalDeviceUseError => Some("The adverse event pertains to a medical device use error."),
-            Self::ProblemDifferentManufacturer => Some("The adverse event pertains to a problem with a different manufacturer of the same medication."),
-            Self::UnsafePhysicalEnvironment => Some("The adverse event pertains to an unsafe physical environment."),
+            Self::MedicalDeviceUseError => {
+                Some("The adverse event pertains to a medical device use error.")
+            }
+            Self::ProblemDifferentManufacturer => Some(
+                "The adverse event pertains to a problem with a different manufacturer of the same medication.",
+            ),
+            Self::UnsafePhysicalEnvironment => {
+                Some("The adverse event pertains to an unsafe physical environment.")
+            }
         }
     }
 
@@ -189,5 +201,4 @@ impl AdverseEventCategory {
             })
             .unwrap_or(false)
     }
-
 }

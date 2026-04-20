@@ -110,5 +110,4 @@ impl SubstanceSourceMaterialGenus {
             })
             .unwrap_or(false)
     }
-
 }

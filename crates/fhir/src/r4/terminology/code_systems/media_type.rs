@@ -51,8 +51,12 @@ impl MediaType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Image => Some("The media consists of one or more unmoving images, including photographs, computer-generated graphs and charts, and scanned documents"),
-            Self::Video => Some("The media consists of a series of frames that capture a moving image"),
+            Self::Image => Some(
+                "The media consists of one or more unmoving images, including photographs, computer-generated graphs and charts, and scanned documents",
+            ),
+            Self::Video => {
+                Some("The media consists of a series of frames that capture a moving image")
+            }
             Self::Audio => Some("The media consists of a sound recording"),
         }
     }
@@ -112,5 +116,4 @@ impl MediaType {
             })
             .unwrap_or(false)
     }
-
 }

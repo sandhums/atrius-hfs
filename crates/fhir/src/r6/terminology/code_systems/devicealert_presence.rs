@@ -55,10 +55,18 @@ impl DeviceAlertPresence {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::On => Some("The signal is annunciated due to the presence of the alert condition"),
-            Self::Latched => Some("The signal is annunciated after the alert condition is no longer present, until it is stopped by deliberate operator action"),
-            Self::Off => Some("The signal is not being annunciated and the alert condition is no longer present"),
-            Self::Ack => Some("The signal is no longer annunciated having been stopped by deliberate operator action although the alert condition is still present"),
+            Self::On => {
+                Some("The signal is annunciated due to the presence of the alert condition")
+            }
+            Self::Latched => Some(
+                "The signal is annunciated after the alert condition is no longer present, until it is stopped by deliberate operator action",
+            ),
+            Self::Off => Some(
+                "The signal is not being annunciated and the alert condition is no longer present",
+            ),
+            Self::Ack => Some(
+                "The signal is no longer annunciated having been stopped by deliberate operator action although the alert condition is still present",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl DeviceAlertPresence {
             })
             .unwrap_or(false)
     }
-
 }

@@ -33,7 +33,8 @@ pub enum MedicationKnowledgePackageTypeCodes {
 }
 
 impl MedicationKnowledgePackageTypeCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/medicationknowledge-package-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/medicationknowledge-package-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -243,5 +244,4 @@ impl MedicationKnowledgePackageTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

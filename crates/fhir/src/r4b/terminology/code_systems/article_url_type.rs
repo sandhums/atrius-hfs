@@ -104,21 +104,35 @@ impl ArticleUrlType {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Abstract => Some("URL to reach the abstract for the article."),
-            Self::AbstractVersion => Some("URL to reach a specific version of the abstract for the article."),
+            Self::AbstractVersion => {
+                Some("URL to reach a specific version of the abstract for the article.")
+            }
             Self::DoiBased => Some("URL derived from DOI."),
             Self::FullText => Some("URL to reach the full-text of the article."),
-            Self::FullTextVersion => Some("URL to reach a specific version of the full-text of the article."),
+            Self::FullTextVersion => {
+                Some("URL to reach a specific version of the full-text of the article.")
+            }
             Self::Pdf => Some("URL to reach the full-text of the article in PDF form."),
-            Self::PdfVersion => Some("URL to reach a specific version of the full-text of the article in PDF form."),
+            Self::PdfVersion => {
+                Some("URL to reach a specific version of the full-text of the article in PDF form.")
+            }
             Self::Webpage => Some("Used when URL type is a webpage, but other codes do not apply."),
-            Self::NotSpecified => Some("Used when URL type is not specified, commonly when only a single URL is provided."),
+            Self::NotSpecified => Some(
+                "Used when URL type is not specified, commonly when only a single URL is provided.",
+            ),
             Self::Json => Some("URL to reach computable content in JSON format."),
-            Self::JsonVersion => Some("URL to reach a specific version of computable content in JSON format."),
+            Self::JsonVersion => {
+                Some("URL to reach a specific version of computable content in JSON format.")
+            }
             Self::Xml => Some("URL to reach computable content in XML format."),
-            Self::XmlVersion => Some("URL to reach a specific version of computable content in XML format."),
+            Self::XmlVersion => {
+                Some("URL to reach a specific version of computable content in XML format.")
+            }
             Self::Supplement => Some("Supplement"),
             Self::SupplementaryFileDirectory => Some("Supplementary file directory"),
-            Self::CompressedFile => Some("Compressed archive file (e.g. a zip file) that contains multiple files"),
+            Self::CompressedFile => {
+                Some("Compressed archive file (e.g. a zip file) that contains multiple files")
+            }
         }
     }
 
@@ -203,5 +217,4 @@ impl ArticleUrlType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -147,5 +147,4 @@ impl FHIRDeviceStatusReason {
             })
             .unwrap_or(false)
     }
-
 }

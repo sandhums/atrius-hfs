@@ -51,9 +51,15 @@ impl UseType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Claim => Some("The treatment is complete and this represents a Claim for the services."),
-            Self::Preauthorization => Some("The treatment is proposed and this represents a Pre-authorization for the services."),
-            Self::Predetermination => Some("The treatment is proposed and this represents a Pre-determination for the services."),
+            Self::Claim => {
+                Some("The treatment is complete and this represents a Claim for the services.")
+            }
+            Self::Preauthorization => Some(
+                "The treatment is proposed and this represents a Pre-authorization for the services.",
+            ),
+            Self::Predetermination => Some(
+                "The treatment is proposed and this represents a Pre-determination for the services.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl UseType {
             })
             .unwrap_or(false)
     }
-
 }

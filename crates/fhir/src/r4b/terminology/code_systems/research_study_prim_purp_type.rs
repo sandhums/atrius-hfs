@@ -21,7 +21,8 @@ pub enum ResearchStudyPrimaryPurposeType {
 }
 
 impl ResearchStudyPrimaryPurposeType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/research-study-prim-purp-type";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/research-study-prim-purp-type";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -71,14 +72,30 @@ impl ResearchStudyPrimaryPurposeType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Treatment => Some("One or more interventions are being evaluated for treating a disease, syndrome, or condition."),
-            Self::Prevention => Some("One or more interventions are being assessed for preventing the development of a specific disease or health condition."),
-            Self::Diagnostic => Some("One or more interventions are being evaluated for identifying a disease or health condition."),
-            Self::SupportiveCare => Some("One or more interventions are evaluated for maximizing comfort, minimizing side effects, or mitigating against a decline in the participant\'s health or function."),
-            Self::Screening => Some("One or more interventions are assessed or examined for identifying a condition, or risk factors for a condition, in people who are not yet known to have the condition or risk factor."),
-            Self::HealthServicesResearch => Some("One or more interventions for evaluating the delivery, processes, management, organization, or financing of healthcare."),
-            Self::BasicScience => Some("One or more interventions for examining the basic mechanism of action (for example, physiology or biomechanics of an intervention)."),
-            Self::DeviceFeasibility => Some("An intervention of a device product is being evaluated to determine the feasibility of the product or to test a prototype device and not health outcomes. Such studies are conducted to confirm the design and operating specifications of a device before beginning a full clinical trial."),
+            Self::Treatment => Some(
+                "One or more interventions are being evaluated for treating a disease, syndrome, or condition.",
+            ),
+            Self::Prevention => Some(
+                "One or more interventions are being assessed for preventing the development of a specific disease or health condition.",
+            ),
+            Self::Diagnostic => Some(
+                "One or more interventions are being evaluated for identifying a disease or health condition.",
+            ),
+            Self::SupportiveCare => Some(
+                "One or more interventions are evaluated for maximizing comfort, minimizing side effects, or mitigating against a decline in the participant\'s health or function.",
+            ),
+            Self::Screening => Some(
+                "One or more interventions are assessed or examined for identifying a condition, or risk factors for a condition, in people who are not yet known to have the condition or risk factor.",
+            ),
+            Self::HealthServicesResearch => Some(
+                "One or more interventions for evaluating the delivery, processes, management, organization, or financing of healthcare.",
+            ),
+            Self::BasicScience => Some(
+                "One or more interventions for examining the basic mechanism of action (for example, physiology or biomechanics of an intervention).",
+            ),
+            Self::DeviceFeasibility => Some(
+                "An intervention of a device product is being evaluated to determine the feasibility of the product or to test a prototype device and not health outcomes. Such studies are conducted to confirm the design and operating specifications of a device before beginning a full clinical trial.",
+            ),
         }
     }
 
@@ -147,5 +164,4 @@ impl ResearchStudyPrimaryPurposeType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -123,12 +123,16 @@ impl GenomicStudyMethodType {
             Self::Msi => "msi",
             Self::MFish => "m-fish",
             Self::MutationScanningOfSelectExons => "mutation-scanning-of-select-exons",
-            Self::MutationScanningOfTheEntireCodingRegion => "mutation-scanning-of-the-entire-coding-region",
+            Self::MutationScanningOfTheEntireCodingRegion => {
+                "mutation-scanning-of-the-entire-coding-region"
+            }
             Self::ProteinAnalysis => "protein-analysis",
             Self::ProteinExpression => "protein-expression",
             Self::RnaAnalysis => "rna-analysis",
             Self::SequenceAnalysisOfSelectExons => "sequence-analysis-of-select-exons",
-            Self::SequenceAnalysisOfTheEntireCodingRegion => "sequence-analysis-of-the-entire-coding-region",
+            Self::SequenceAnalysisOfTheEntireCodingRegion => {
+                "sequence-analysis-of-the-entire-coding-region"
+            }
             Self::SisterChromatidExchange => "sister-chromatid-exchange",
             Self::TargetedVariantAnalysis => "targeted-variant-analysis",
             Self::Udp => "udp",
@@ -161,7 +165,9 @@ impl GenomicStudyMethodType {
             Self::Mlpa => "mlpa",
             Self::NgsMps => "ngs-mps",
             Self::Ola => "ola",
-            Self::OligonucleotideHybridizationBasedDnaSequencing => "oligonucleotide-hybridization-based-dna-sequencing",
+            Self::OligonucleotideHybridizationBasedDnaSequencing => {
+                "oligonucleotide-hybridization-based-dna-sequencing"
+            }
             Self::Other => "other",
             Self::Pcr => "pcr",
             Self::PcrWithAlleleSpecificHybridization => "pcr-with-allele-specific-hybridization",
@@ -181,9 +187,13 @@ impl GenomicStudyMethodType {
             Self::Sky => "sky",
             Self::TBanding => "t-banding",
             Self::MsMs => "ms-ms",
-            Self::TetraNucleotideRepeatByPcrOrSouthernBlot => "tetra-nucleotide-repeat-by-pcr-or-southern-blot",
+            Self::TetraNucleotideRepeatByPcrOrSouthernBlot => {
+                "tetra-nucleotide-repeat-by-pcr-or-southern-blot"
+            }
             Self::TilingArrays => "tiling-arrays",
-            Self::TrinucleotideRepeatByPcrOrSouthernBlot => "trinucleotide-repeat-by-pcr-or-southern-blot",
+            Self::TrinucleotideRepeatByPcrOrSouthernBlot => {
+                "trinucleotide-repeat-by-pcr-or-southern-blot"
+            }
             Self::UniDirectionalSangerSequencing => "uni-directional-sanger-sequencing",
         }
     }
@@ -209,12 +219,16 @@ impl GenomicStudyMethodType {
             "msi" => Self::Msi,
             "m-fish" => Self::MFish,
             "mutation-scanning-of-select-exons" => Self::MutationScanningOfSelectExons,
-            "mutation-scanning-of-the-entire-coding-region" => Self::MutationScanningOfTheEntireCodingRegion,
+            "mutation-scanning-of-the-entire-coding-region" => {
+                Self::MutationScanningOfTheEntireCodingRegion
+            }
             "protein-analysis" => Self::ProteinAnalysis,
             "protein-expression" => Self::ProteinExpression,
             "rna-analysis" => Self::RnaAnalysis,
             "sequence-analysis-of-select-exons" => Self::SequenceAnalysisOfSelectExons,
-            "sequence-analysis-of-the-entire-coding-region" => Self::SequenceAnalysisOfTheEntireCodingRegion,
+            "sequence-analysis-of-the-entire-coding-region" => {
+                Self::SequenceAnalysisOfTheEntireCodingRegion
+            }
             "sister-chromatid-exchange" => Self::SisterChromatidExchange,
             "targeted-variant-analysis" => Self::TargetedVariantAnalysis,
             "udp" => Self::Udp,
@@ -247,7 +261,9 @@ impl GenomicStudyMethodType {
             "mlpa" => Self::Mlpa,
             "ngs-mps" => Self::NgsMps,
             "ola" => Self::Ola,
-            "oligonucleotide-hybridization-based-dna-sequencing" => Self::OligonucleotideHybridizationBasedDnaSequencing,
+            "oligonucleotide-hybridization-based-dna-sequencing" => {
+                Self::OligonucleotideHybridizationBasedDnaSequencing
+            }
             "other" => Self::Other,
             "pcr" => Self::Pcr,
             "pcr-with-allele-specific-hybridization" => Self::PcrWithAlleleSpecificHybridization,
@@ -267,9 +283,13 @@ impl GenomicStudyMethodType {
             "sky" => Self::Sky,
             "t-banding" => Self::TBanding,
             "ms-ms" => Self::MsMs,
-            "tetra-nucleotide-repeat-by-pcr-or-southern-blot" => Self::TetraNucleotideRepeatByPcrOrSouthernBlot,
+            "tetra-nucleotide-repeat-by-pcr-or-southern-blot" => {
+                Self::TetraNucleotideRepeatByPcrOrSouthernBlot
+            }
             "tiling-arrays" => Self::TilingArrays,
-            "trinucleotide-repeat-by-pcr-or-southern-blot" => Self::TrinucleotideRepeatByPcrOrSouthernBlot,
+            "trinucleotide-repeat-by-pcr-or-southern-blot" => {
+                Self::TrinucleotideRepeatByPcrOrSouthernBlot
+            }
             "uni-directional-sanger-sequencing" => Self::UniDirectionalSangerSequencing,
             _ => return None,
         })
@@ -296,21 +316,29 @@ impl GenomicStudyMethodType {
             Self::Msi => Some("Microsatellite instability testing (MSI)"),
             Self::MFish => Some("Multicolor FISH (M-FISH)"),
             Self::MutationScanningOfSelectExons => Some("Mutation scanning of select exons"),
-            Self::MutationScanningOfTheEntireCodingRegion => Some("Mutation scanning of the entire coding region"),
+            Self::MutationScanningOfTheEntireCodingRegion => {
+                Some("Mutation scanning of the entire coding region")
+            }
             Self::ProteinAnalysis => Some("Protein analysis"),
             Self::ProteinExpression => Some("Protein expression"),
             Self::RnaAnalysis => Some("RNA analysis"),
             Self::SequenceAnalysisOfSelectExons => Some("Sequence analysis of select exons"),
-            Self::SequenceAnalysisOfTheEntireCodingRegion => Some("Sequence analysis of the entire coding region"),
+            Self::SequenceAnalysisOfTheEntireCodingRegion => {
+                Some("Sequence analysis of the entire coding region")
+            }
             Self::SisterChromatidExchange => Some("Sister chromatid exchange"),
             Self::TargetedVariantAnalysis => Some("Targeted variant analysis"),
             Self::Udp => Some("Uniparental disomy study (UPD)"),
             Self::Aspe => Some("Allele-specific primer extension (ASPE)"),
             Self::AlternativeSplicingDetection => Some("Alternative splicing detection"),
-            Self::BiDirectionalSangerSequenceAnalysis => Some("Bi-directional Sanger Sequence Analysis"),
+            Self::BiDirectionalSangerSequenceAnalysis => {
+                Some("Bi-directional Sanger Sequence Analysis")
+            }
             Self::CBanding => Some("C-banding"),
             Self::Cia => Some("Chemiluminescent Immunoassay (CIA)"),
-            Self::ChromatinImmunoprecipitationOnChip => Some("Chromatin Immunoprecipitation on ChIP"),
+            Self::ChromatinImmunoprecipitationOnChip => {
+                Some("Chromatin Immunoprecipitation on ChIP")
+            }
             Self::ComparativeGenomicHybridization => Some("Comparative Genomic Hybridization"),
             Self::Damid => Some("DamID"),
             Self::DigitalVirtualKaryotyping => Some("Digital / Virtual karyotyping"),
@@ -334,10 +362,14 @@ impl GenomicStudyMethodType {
             Self::Mlpa => Some("Multiplex Ligation-dependent Probe Amplification (MLPA)"),
             Self::NgsMps => Some("Next-Generation (NGS)/Massively parallel sequencing (MPS)"),
             Self::Ola => Some("Oligonucleotide Ligation Assay (OLA)"),
-            Self::OligonucleotideHybridizationBasedDnaSequencing => Some("Oligonucleotide hybridization-based DNA sequencing"),
+            Self::OligonucleotideHybridizationBasedDnaSequencing => {
+                Some("Oligonucleotide hybridization-based DNA sequencing")
+            }
             Self::Other => Some("Other"),
             Self::Pcr => Some("PCR"),
-            Self::PcrWithAlleleSpecificHybridization => Some("PCR with allele specific hybridization"),
+            Self::PcrWithAlleleSpecificHybridization => {
+                Some("PCR with allele specific hybridization")
+            }
             Self::PcrRflpWithSouthernHybridization => Some("PCR-RFLP with Southern hybridization"),
             Self::ProteinTruncationTest => Some("Protein truncation test"),
             Self::Pyrosequencing => Some("Pyrosequencing"),
@@ -354,9 +386,13 @@ impl GenomicStudyMethodType {
             Self::Sky => Some("Spectral karyotyping (SKY)"),
             Self::TBanding => Some("T-banding"),
             Self::MsMs => Some("Tandem mass spectrometry (MS/MS)"),
-            Self::TetraNucleotideRepeatByPcrOrSouthernBlot => Some("Tetra-nucleotide repeat by PCR or Southern Blot"),
+            Self::TetraNucleotideRepeatByPcrOrSouthernBlot => {
+                Some("Tetra-nucleotide repeat by PCR or Southern Blot")
+            }
             Self::TilingArrays => Some("Tiling Arrays"),
-            Self::TrinucleotideRepeatByPcrOrSouthernBlot => Some("Trinucleotide repeat by PCR or Southern Blot"),
+            Self::TrinucleotideRepeatByPcrOrSouthernBlot => {
+                Some("Trinucleotide repeat by PCR or Southern Blot")
+            }
             Self::UniDirectionalSangerSequencing => Some("Uni-directional Sanger sequencing"),
         }
     }
@@ -658,5 +694,4 @@ impl GenomicStudyMethodType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -59,11 +59,21 @@ impl PriceComponentType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Base => Some("The amount is the base price used for calculating the total price before applying surcharges, discount or taxes."),
-            Self::Surcharge => Some("The amount (either directly specified, or calculated using a factor) that increases the cost of the item."),
-            Self::Discount => Some("The amount (either directly specified, or calculated using a factor) that reduces the cost of the item.  This is sometimes referred to as a deduction."),
-            Self::Tax => Some("The amount (either directly specified, or calculated using a factor) that is levied by a government on the item."),
-            Self::Informational => Some("The amount (either directly specified, or calculated using a factor) is of informational character, it has not been applied in the calculation of the total price."),
+            Self::Base => Some(
+                "The amount is the base price used for calculating the total price before applying surcharges, discount or taxes.",
+            ),
+            Self::Surcharge => Some(
+                "The amount (either directly specified, or calculated using a factor) that increases the cost of the item.",
+            ),
+            Self::Discount => Some(
+                "The amount (either directly specified, or calculated using a factor) that reduces the cost of the item.  This is sometimes referred to as a deduction.",
+            ),
+            Self::Tax => Some(
+                "The amount (either directly specified, or calculated using a factor) that is levied by a government on the item.",
+            ),
+            Self::Informational => Some(
+                "The amount (either directly specified, or calculated using a factor) is of informational character, it has not been applied in the calculation of the total price.",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl PriceComponentType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -53,7 +53,9 @@ impl ParticipantRequired {
         match self {
             Self::Required => Some("The participant is required to attend the appointment."),
             Self::Optional => Some("The participant may optionally attend the appointment."),
-            Self::InformationOnly => Some("The participant is excluded from the appointment, and might not be informed of the appointment taking place. (Appointment is about them, not for them - such as 2 doctors discussing results about a patient\'s test)."),
+            Self::InformationOnly => Some(
+                "The participant is excluded from the appointment, and might not be informed of the appointment taking place. (Appointment is about them, not for them - such as 2 doctors discussing results about a patient\'s test).",
+            ),
         }
     }
 
@@ -112,5 +114,4 @@ impl ParticipantRequired {
             })
             .unwrap_or(false)
     }
-
 }

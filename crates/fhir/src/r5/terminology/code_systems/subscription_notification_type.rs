@@ -59,11 +59,21 @@ impl SubscriptionNotificationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Handshake => Some("The status was generated as part of the setup or verification of a communications channel."),
-            Self::Heartbeat => Some("The status was generated to perform a heartbeat notification to the subscriber."),
-            Self::EventNotification => Some("The status was generated for an event to the subscriber."),
-            Self::QueryStatus => Some("The status was generated in response to a status query/request."),
-            Self::QueryEvent => Some("The status was generated in response to an event query/request."),
+            Self::Handshake => Some(
+                "The status was generated as part of the setup or verification of a communications channel.",
+            ),
+            Self::Heartbeat => Some(
+                "The status was generated to perform a heartbeat notification to the subscriber.",
+            ),
+            Self::EventNotification => {
+                Some("The status was generated for an event to the subscriber.")
+            }
+            Self::QueryStatus => {
+                Some("The status was generated in response to a status query/request.")
+            }
+            Self::QueryEvent => {
+                Some("The status was generated in response to an event query/request.")
+            }
         }
     }
 
@@ -126,5 +136,4 @@ impl SubscriptionNotificationType {
             })
             .unwrap_or(false)
     }
-
 }

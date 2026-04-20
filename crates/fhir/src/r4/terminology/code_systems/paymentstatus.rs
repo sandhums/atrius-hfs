@@ -105,5 +105,4 @@ impl PaymentStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

@@ -105,5 +105,4 @@ impl RestfulCapabilityMode {
             })
             .unwrap_or(false)
     }
-
 }

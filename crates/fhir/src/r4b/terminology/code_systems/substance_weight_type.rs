@@ -110,5 +110,4 @@ impl SubstanceWeightType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -69,10 +69,18 @@ impl UDIEntryType {
         match self {
             Self::Barcode => Some("a barcodescanner captured the data from the device label."),
             Self::Rfid => Some("An RFID chip reader captured the data from the device label."),
-            Self::Manual => Some("The data was read from the label by a person and manually entered. (e.g.  via a keyboard)."),
-            Self::Card => Some("The data originated from a patient\'s implant card and was read by an operator."),
-            Self::SelfReported => Some("The data originated from a patient source and was not directly scanned or read from a label or card."),
-            Self::ElectronicTransmission => Some("The UDI information was received electronically from the device through a communication protocol, such as the IEEE 11073 20601 version 4 exchange protocol over Bluetooth or USB."),
+            Self::Manual => Some(
+                "The data was read from the label by a person and manually entered. (e.g.  via a keyboard).",
+            ),
+            Self::Card => Some(
+                "The data originated from a patient\'s implant card and was read by an operator.",
+            ),
+            Self::SelfReported => Some(
+                "The data originated from a patient source and was not directly scanned or read from a label or card.",
+            ),
+            Self::ElectronicTransmission => Some(
+                "The UDI information was received electronically from the device through a communication protocol, such as the IEEE 11073 20601 version 4 exchange protocol over Bluetooth or USB.",
+            ),
             Self::Unknown => Some("The method of data capture has not been determined."),
         }
     }
@@ -140,5 +148,4 @@ impl UDIEntryType {
             })
             .unwrap_or(false)
     }
-
 }

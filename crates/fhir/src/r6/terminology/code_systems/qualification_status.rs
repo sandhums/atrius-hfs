@@ -71,14 +71,30 @@ impl QualificationStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The qualification is available to use - The qualification period may be included to indicate a time interval if required."),
-            Self::Inactive => Some("This qualification is not available to use. This can be used without a period, and the expectation will not resume use."),
-            Self::InProgress => Some("The practitioner is in the process of aquiring for this qualification/certification "),
-            Self::Pending => Some("The qualification is complete, however final issue/award is pending "),
-            Self::Temporary => Some("This qualification has been allocated to the practitioner on a temporary basis, the period may indicate a time interval. This could cover cases such as the recognition of an external qualificiaiton that is still being verified, but can be used during the process."),
-            Self::Conditional => Some("This qualification may be used, however there are conditions that may apply"),
-            Self::Suspended => Some("This qualification should not be used, but may resume use in the future - the period, if included, may indicate when this started (via the end date, start date indicates when the qualification was available from)."),
-            Self::Revoked => Some("This qualification should not be used, and is not expected to resume in the future"),
+            Self::Active => Some(
+                "The qualification is available to use - The qualification period may be included to indicate a time interval if required.",
+            ),
+            Self::Inactive => Some(
+                "This qualification is not available to use. This can be used without a period, and the expectation will not resume use.",
+            ),
+            Self::InProgress => Some(
+                "The practitioner is in the process of aquiring for this qualification/certification ",
+            ),
+            Self::Pending => {
+                Some("The qualification is complete, however final issue/award is pending ")
+            }
+            Self::Temporary => Some(
+                "This qualification has been allocated to the practitioner on a temporary basis, the period may indicate a time interval. This could cover cases such as the recognition of an external qualificiaiton that is still being verified, but can be used during the process.",
+            ),
+            Self::Conditional => {
+                Some("This qualification may be used, however there are conditions that may apply")
+            }
+            Self::Suspended => Some(
+                "This qualification should not be used, but may resume use in the future - the period, if included, may indicate when this started (via the end date, start date indicates when the qualification was available from).",
+            ),
+            Self::Revoked => Some(
+                "This qualification should not be used, and is not expected to resume in the future",
+            ),
         }
     }
 
@@ -147,5 +163,4 @@ impl QualificationStatus {
             })
             .unwrap_or(false)
     }
-
 }

@@ -52,8 +52,12 @@ impl ClaimPayeeTypeCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Subscriber => Some("The subscriber (policy holder) will be reimbursed."),
-            Self::Provider => Some("Any benefit payable will be paid to the provider (Assignment of Benefit)."),
-            Self::Other => Some("Any benefit payable will be paid to a third party such as a guarrantor."),
+            Self::Provider => {
+                Some("Any benefit payable will be paid to the provider (Assignment of Benefit).")
+            }
+            Self::Other => {
+                Some("Any benefit payable will be paid to a third party such as a guarrantor.")
+            }
         }
     }
 
@@ -112,5 +116,4 @@ impl ClaimPayeeTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

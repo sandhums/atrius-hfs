@@ -51,8 +51,12 @@ impl DetectedIssueManagementCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InterventionRequired => Some("Indicates the issue requires professional intervention."),
-            Self::ReviewSuggested => Some("Indicates professional review of the issue is suggested."),
+            Self::InterventionRequired => {
+                Some("Indicates the issue requires professional intervention.")
+            }
+            Self::ReviewSuggested => {
+                Some("Indicates professional review of the issue is suggested.")
+            }
             Self::PotentialRisk => Some("Indicates the issue represents a potential risk."),
         }
     }
@@ -112,5 +116,4 @@ impl DetectedIssueManagementCode {
             })
             .unwrap_or(false)
     }
-
 }

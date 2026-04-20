@@ -105,5 +105,4 @@ impl ChoiceListOrientation {
             })
             .unwrap_or(false)
     }
-
 }

@@ -110,5 +110,4 @@ impl SubstanceSourceMaterialPart {
             })
             .unwrap_or(false)
     }
-
 }

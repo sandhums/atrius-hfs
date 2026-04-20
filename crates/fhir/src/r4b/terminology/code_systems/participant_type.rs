@@ -47,8 +47,12 @@ impl ParticipantType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Translator => Some("A translator who is facilitating communication with the patient during the encounter."),
-            Self::Emergency => Some("A person to be contacted in case of an emergency during the encounter."),
+            Self::Translator => Some(
+                "A translator who is facilitating communication with the patient during the encounter.",
+            ),
+            Self::Emergency => {
+                Some("A person to be contacted in case of an emergency during the encounter.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl ParticipantType {
             })
             .unwrap_or(false)
     }
-
 }

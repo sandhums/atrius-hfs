@@ -101,19 +101,41 @@ impl DataAbsentReason {
         match self {
             Self::Unknown => Some("The value is expected to exist but is not known."),
             Self::AskedUnknown => Some("The source was asked but does not know the value."),
-            Self::TempUnknown => Some("There is reason to expect (from the workflow) that the value may become known."),
+            Self::TempUnknown => Some(
+                "There is reason to expect (from the workflow) that the value may become known.",
+            ),
             Self::NotAsked => Some("The workflow didn\'t lead to this value being known."),
             Self::AskedDeclined => Some("The source was asked but declined to answer."),
-            Self::Masked => Some("The information is not available due to security, privacy or related reasons."),
-            Self::NotApplicable => Some("There is no proper value for this element (e.g. last menstrual period for a male)."),
-            Self::Unsupported => Some("The source system wasn\'t capable of supporting this element."),
-            Self::AsText => Some("The content of the data is represented in the resource narrative."),
-            Self::Error => Some("Some system or workflow process error means that the information is not available."),
-            Self::NotANumber => Some("The numeric value is undefined or unrepresentable due to a floating point processing error."),
-            Self::NegativeInfinity => Some("The numeric value is excessively low and unrepresentable due to a floating point processing error."),
-            Self::PositiveInfinity => Some("The numeric value is excessively high and unrepresentable due to a floating point processing error."),
-            Self::NotPerformed => Some("The value is not available because the observation procedure (test, etc.) was not performed."),
-            Self::NotPermitted => Some("The value is not permitted in this context (e.g. due to profiles, or the base data types)."),
+            Self::Masked => Some(
+                "The information is not available due to security, privacy or related reasons.",
+            ),
+            Self::NotApplicable => Some(
+                "There is no proper value for this element (e.g. last menstrual period for a male).",
+            ),
+            Self::Unsupported => {
+                Some("The source system wasn\'t capable of supporting this element.")
+            }
+            Self::AsText => {
+                Some("The content of the data is represented in the resource narrative.")
+            }
+            Self::Error => Some(
+                "Some system or workflow process error means that the information is not available.",
+            ),
+            Self::NotANumber => Some(
+                "The numeric value is undefined or unrepresentable due to a floating point processing error.",
+            ),
+            Self::NegativeInfinity => Some(
+                "The numeric value is excessively low and unrepresentable due to a floating point processing error.",
+            ),
+            Self::PositiveInfinity => Some(
+                "The numeric value is excessively high and unrepresentable due to a floating point processing error.",
+            ),
+            Self::NotPerformed => Some(
+                "The value is not available because the observation procedure (test, etc.) was not performed.",
+            ),
+            Self::NotPermitted => Some(
+                "The value is not permitted in this context (e.g. due to profiles, or the base data types).",
+            ),
         }
     }
 
@@ -196,5 +218,4 @@ impl DataAbsentReason {
             })
             .unwrap_or(false)
     }
-
 }

@@ -112,5 +112,4 @@ impl TestReportParticipantType {
             })
             .unwrap_or(false)
     }
-
 }

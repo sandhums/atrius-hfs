@@ -92,17 +92,31 @@ impl ObservationReferenceRangeMeaningCodes {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Type_ => Some("General types of reference range."),
-            Self::Normal => Some("Values expected for a normal member of the relevant control population being measured. Typically each results producer such as a laboratory has specific normal ranges and they are usually defined as within two standard deviations from the mean and account for 95.45% of this population."),
-            Self::Recommended => Some("The range that is recommended by a relevant professional body."),
+            Self::Normal => Some(
+                "Values expected for a normal member of the relevant control population being measured. Typically each results producer such as a laboratory has specific normal ranges and they are usually defined as within two standard deviations from the mean and account for 95.45% of this population.",
+            ),
+            Self::Recommended => {
+                Some("The range that is recommended by a relevant professional body.")
+            }
             Self::Treatment => Some("The range at which treatment would/should be considered."),
             Self::Therapeutic => Some("The optimal range for best therapeutic outcomes."),
-            Self::Pre => Some("The optimal range for best therapeutic outcomes for a specimen taken immediately before administration."),
-            Self::Post => Some("The optimal range for best therapeutic outcomes for a specimen taken immediately after administration."),
+            Self::Pre => Some(
+                "The optimal range for best therapeutic outcomes for a specimen taken immediately before administration.",
+            ),
+            Self::Post => Some(
+                "The optimal range for best therapeutic outcomes for a specimen taken immediately after administration.",
+            ),
             Self::Endocrine => Some("Endocrine related states that change the expected value."),
             Self::PrePuberty => Some("An expected range in an individual prior to puberty."),
-            Self::Follicular => Some("An expected range in an individual during the follicular stage of the cycle."),
-            Self::Midcycle => Some("An expected range in an individual during the midcycle stage of the cycle."),
-            Self::Luteal => Some("An expected range in an individual during the luteal stage of the cycle."),
+            Self::Follicular => {
+                Some("An expected range in an individual during the follicular stage of the cycle.")
+            }
+            Self::Midcycle => {
+                Some("An expected range in an individual during the midcycle stage of the cycle.")
+            }
+            Self::Luteal => {
+                Some("An expected range in an individual during the luteal stage of the cycle.")
+            }
             Self::Postmenopausal => Some("An expected range in an individual post-menopause."),
         }
     }
@@ -182,5 +196,4 @@ impl ObservationReferenceRangeMeaningCodes {
             })
             .unwrap_or(false)
     }
-
 }

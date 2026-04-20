@@ -83,7 +83,9 @@ impl SurfaceCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::M => Some("The surface of a tooth that is closest to the midline (middle) of the face."),
+            Self::M => {
+                Some("The surface of a tooth that is closest to the midline (middle) of the face.")
+            }
             Self::O => Some("The chewing surface of posterior teeth."),
             Self::I => Some("The biting edge of anterior teeth."),
             Self::D => Some("The surface of a tooth that faces away from the midline of the face."),
@@ -168,5 +170,4 @@ impl SurfaceCodes {
             })
             .unwrap_or(false)
     }
-
 }

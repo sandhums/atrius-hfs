@@ -135,30 +135,76 @@ impl HL7Workgroup {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Cbcc => Some("Community Based Collaborative Care (http://www.hl7.org/Special/committees/cbcc/index.cfm)."),
-            Self::Cds => Some("Clinical Decision Support (http://www.hl7.org/Special/committees/dss/index.cfm)."),
-            Self::Cqi => Some("Clinical Quality Information (http://www.hl7.org/Special/committees/cqi/index.cfm)."),
-            Self::Cg => Some("Clinical Genomics (http://www.hl7.org/Special/committees/clingenomics/index.cfm)."),
-            Self::Dev => Some("Health Care Devices (http://www.hl7.org/Special/committees/healthcaredevices/index.cfm)."),
-            Self::Ehr => Some("Electronic Health Records (http://www.hl7.org/special/committees/ehr/index.cfm)."),
-            Self::Fhir => Some("FHIR Infrastructure (http://www.hl7.org/Special/committees/fiwg/index.cfm)."),
-            Self::Fm => Some("Financial Management (http://www.hl7.org/Special/committees/fm/index.cfm)."),
-            Self::Hsi => Some("Health Standards Integration (http://www.hl7.org/Special/committees/hsi/index.cfm)."),
-            Self::Ii => Some("Imaging Integration (http://www.hl7.org/Special/committees/imagemgt/index.cfm)."),
-            Self::Inm => Some("Infrastructure And Messaging (http://www.hl7.org/special/committees/inm/index.cfm)."),
-            Self::Its => Some("Implementable Technology Specifications (http://www.hl7.org/special/committees/xml/index.cfm)."),
-            Self::Mnm => Some("Modeling and Methodology (http://www.hl7.org/Special/committees/mnm/index.cfm)."),
-            Self::Oo => Some("Orders and Observations (http://www.hl7.org/Special/committees/orders/index.cfm)."),
-            Self::Pa => Some("Patient Administration (http://www.hl7.org/Special/committees/pafm/index.cfm)."),
-            Self::Pc => Some("Patient Care (http://www.hl7.org/Special/committees/patientcare/index.cfm)."),
-            Self::Pher => Some("Public Health and Emergency Response (http://www.hl7.org/Special/committees/pher/index.cfm)."),
-            Self::Phx => Some("Pharmacy (http://www.hl7.org/Special/committees/medication/index.cfm)."),
-            Self::Brr => Some("Biomedical Research and Regulation (http://www.hl7.org/Special/committees/rcrim/index.cfm)."),
-            Self::Sd => Some("Structured Documents (http://www.hl7.org/Special/committees/structure/index.cfm)."),
+            Self::Cbcc => Some(
+                "Community Based Collaborative Care (http://www.hl7.org/Special/committees/cbcc/index.cfm).",
+            ),
+            Self::Cds => Some(
+                "Clinical Decision Support (http://www.hl7.org/Special/committees/dss/index.cfm).",
+            ),
+            Self::Cqi => Some(
+                "Clinical Quality Information (http://www.hl7.org/Special/committees/cqi/index.cfm).",
+            ),
+            Self::Cg => Some(
+                "Clinical Genomics (http://www.hl7.org/Special/committees/clingenomics/index.cfm).",
+            ),
+            Self::Dev => Some(
+                "Health Care Devices (http://www.hl7.org/Special/committees/healthcaredevices/index.cfm).",
+            ),
+            Self::Ehr => Some(
+                "Electronic Health Records (http://www.hl7.org/special/committees/ehr/index.cfm).",
+            ),
+            Self::Fhir => {
+                Some("FHIR Infrastructure (http://www.hl7.org/Special/committees/fiwg/index.cfm).")
+            }
+            Self::Fm => {
+                Some("Financial Management (http://www.hl7.org/Special/committees/fm/index.cfm).")
+            }
+            Self::Hsi => Some(
+                "Health Standards Integration (http://www.hl7.org/Special/committees/hsi/index.cfm).",
+            ),
+            Self::Ii => Some(
+                "Imaging Integration (http://www.hl7.org/Special/committees/imagemgt/index.cfm).",
+            ),
+            Self::Inm => Some(
+                "Infrastructure And Messaging (http://www.hl7.org/special/committees/inm/index.cfm).",
+            ),
+            Self::Its => Some(
+                "Implementable Technology Specifications (http://www.hl7.org/special/committees/xml/index.cfm).",
+            ),
+            Self::Mnm => Some(
+                "Modeling and Methodology (http://www.hl7.org/Special/committees/mnm/index.cfm).",
+            ),
+            Self::Oo => Some(
+                "Orders and Observations (http://www.hl7.org/Special/committees/orders/index.cfm).",
+            ),
+            Self::Pa => Some(
+                "Patient Administration (http://www.hl7.org/Special/committees/pafm/index.cfm).",
+            ),
+            Self::Pc => {
+                Some("Patient Care (http://www.hl7.org/Special/committees/patientcare/index.cfm).")
+            }
+            Self::Pher => Some(
+                "Public Health and Emergency Response (http://www.hl7.org/Special/committees/pher/index.cfm).",
+            ),
+            Self::Phx => {
+                Some("Pharmacy (http://www.hl7.org/Special/committees/medication/index.cfm).")
+            }
+            Self::Brr => Some(
+                "Biomedical Research and Regulation (http://www.hl7.org/Special/committees/rcrim/index.cfm).",
+            ),
+            Self::Sd => Some(
+                "Structured Documents (http://www.hl7.org/Special/committees/structure/index.cfm).",
+            ),
             Self::Sec => Some("Security (http://www.hl7.org/Special/committees/secure/index.cfm)."),
-            Self::Us => Some("US Realm Taskforce (http://www.hl7.org/Special/committees/usrealm/index.cfm)."),
-            Self::Vocab => Some("Vocabulary (http://www.hl7.org/Special/committees/Vocab/index.cfm)."),
-            Self::Aid => Some("Application Implementation and Design (http://www.hl7.org/Special/committees/java/index.cfm)."),
+            Self::Us => Some(
+                "US Realm Taskforce (http://www.hl7.org/Special/committees/usrealm/index.cfm).",
+            ),
+            Self::Vocab => {
+                Some("Vocabulary (http://www.hl7.org/Special/committees/Vocab/index.cfm).")
+            }
+            Self::Aid => Some(
+                "Application Implementation and Design (http://www.hl7.org/Special/committees/java/index.cfm).",
+            ),
         }
     }
 
@@ -259,5 +305,4 @@ impl HL7Workgroup {
             })
             .unwrap_or(false)
     }
-
 }

@@ -62,8 +62,12 @@ impl ArtifactAssessmentDisposition {
             Self::Unresolved => Some("The comment is unresolved"),
             Self::NotPersuasive => Some("The comment is not persuasive (rejected in full)"),
             Self::Persuasive => Some("The comment is persuasive (accepted in full)"),
-            Self::PersuasiveWithModification => Some("The comment is persuasive with modification (partially accepted)"),
-            Self::NotPersuasiveWithModification => Some("The comment is not persuasive with modification (partially rejected)"),
+            Self::PersuasiveWithModification => {
+                Some("The comment is persuasive with modification (partially accepted)")
+            }
+            Self::NotPersuasiveWithModification => {
+                Some("The comment is not persuasive with modification (partially rejected)")
+            }
         }
     }
 
@@ -126,5 +130,4 @@ impl ArtifactAssessmentDisposition {
             })
             .unwrap_or(false)
     }
-
 }

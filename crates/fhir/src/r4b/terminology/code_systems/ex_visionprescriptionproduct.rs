@@ -15,7 +15,8 @@ pub enum ExampleVisionPrescriptionProductCodes {
 }
 
 impl ExampleVisionPrescriptionProductCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/ex-visionprescriptionproduct";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -105,5 +106,4 @@ impl ExampleVisionPrescriptionProductCodes {
             })
             .unwrap_or(false)
     }
-
 }

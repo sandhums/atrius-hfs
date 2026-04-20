@@ -89,7 +89,9 @@ impl CoverageClassCodes {
             Self::Subplan => Some("A subset of a specific suite of benefits."),
             Self::Class => Some("A class of benefits."),
             Self::Subclass => Some("A subset of a class of benefits."),
-            Self::Sequence => Some("A sequence number associated with a short-term continuance of the coverage."),
+            Self::Sequence => {
+                Some("A sequence number associated with a short-term continuance of the coverage.")
+            }
             Self::Rxbin => Some("Pharmacy benefit manager\'s Business Identification Number."),
             Self::Rxpcn => Some("A Pharmacy Benefit Manager specified Processor Control Number."),
             Self::Rxid => Some("A Pharmacy Benefit Manager specified Member ID."),
@@ -168,5 +170,4 @@ impl CoverageClassCodes {
             })
             .unwrap_or(false)
     }
-
 }

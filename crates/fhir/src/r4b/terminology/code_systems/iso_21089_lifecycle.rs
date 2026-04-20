@@ -146,33 +146,87 @@ impl ISO210892017HealthRecordLifecycleEvents {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Access => Some("Occurs when an agent causes the system to obtain and open a record entry for inspection or review."),
-            Self::Hold => Some("Occurs when an agent causes the system to tag or otherwise indicate special access management and suspension of record entry deletion/destruction, if deemed relevant to a lawsuit or which are reasonably anticipated to be relevant or to fulfill organizational policy under the legal doctrine of \u{201c}duty to preserve\u{201d}."),
-            Self::Amend => Some("Occurs when an agent makes any change to record entry content currently residing in storage considered permanent (persistent)."),
-            Self::Archive => Some("Occurs when an agent causes the system to create and move archive artifacts containing record entry content, typically to long-term offline storage."),
-            Self::Attest => Some("Occurs when an agent causes the system to capture the agent\u{2019}s digital signature (or equivalent indication) during formal validation of record entry content."),
-            Self::Decrypt => Some("Occurs when an agent causes the system to decode record entry content from a cipher."),
-            Self::Deidentify => Some("Occurs when an agent causes the system to scrub record entry content to reduce the association between a set of identifying data and the data subject in a way that might or might not be reversible."),
-            Self::Deprecate => Some("Occurs when an agent causes the system to tag record entry(ies) as obsolete, erroneous or untrustworthy, to warn against its future use."),
-            Self::Destroy => Some("Occurs when an agent causes the system to permanently erase record entry content from the system."),
-            Self::Disclose => Some("Occurs when an agent causes the system to release, transfer, provision access to, or otherwise divulge record entry content."),
-            Self::Encrypt => Some("Occurs when an agent causes the system to encode record entry content in a cipher."),
-            Self::Extract => Some("Occurs when an agent causes the system to selectively pull out a subset of record entry content, based on explicit criteria."),
-            Self::Link => Some("Occurs when an agent causes the system to connect related record entries."),
-            Self::Merge => Some("Occurs when an agent causes the system to combine or join content from two or more record entries, resulting in a single logical record entry."),
-            Self::Originate => Some("Occurs when an agent causes the system to: a) initiate capture of potential record content, and b) incorporate that content into the storage considered a permanent part of the health record."),
-            Self::Pseudonymize => Some("Occurs when an agent causes the system to remove record entry content to reduce the association between a set of identifying data and the data subject in a way that may be reversible."),
-            Self::Reactivate => Some("Occurs when an agent causes the system to recreate or restore full status to record entries previously deleted or deprecated."),
-            Self::Receive => Some("Occurs when an agent causes the system to a) initiate capture of data content from elsewhere, and b) incorporate that content into the storage considered a permanent part of the health record."),
-            Self::Reidentify => Some("Occurs when an agent causes the system to restore information to data that allows identification of information source and/or information subject."),
-            Self::Unhold => Some("Occurs when an agent causes the system to remove a tag or other cues for special access management had required to fulfill organizational policy under the legal doctrine of \u{201c}duty to preserve\u{201d}."),
-            Self::Report => Some("Occurs when an agent causes the system to produce and deliver record entry content in a particular form and manner."),
-            Self::Restore => Some("Occurs when an agent causes the system to recreate record entries and their content from a previous created archive artefact."),
-            Self::Transform => Some("Occurs when an agent causes the system to change the form, language or code system used to represent record entry content."),
-            Self::Transmit => Some("Occurs when an agent causes the system to send record entry content from one (EHR/PHR/other) system to another."),
-            Self::Unlink => Some("Occurs when an agent causes the system to disconnect two or more record entries previously connected, rendering them separate (disconnected) again."),
-            Self::Unmerge => Some("Occurs when an agent causes the system to reverse a previous record entry merge operation, rendering them separate again."),
-            Self::Verify => Some("Occurs when an agent causes the system to confirm compliance of data or data objects with regulations, requirements, specifications, or other imposed conditions based on organizational policy."),
+            Self::Access => Some(
+                "Occurs when an agent causes the system to obtain and open a record entry for inspection or review.",
+            ),
+            Self::Hold => Some(
+                "Occurs when an agent causes the system to tag or otherwise indicate special access management and suspension of record entry deletion/destruction, if deemed relevant to a lawsuit or which are reasonably anticipated to be relevant or to fulfill organizational policy under the legal doctrine of \u{201c}duty to preserve\u{201d}.",
+            ),
+            Self::Amend => Some(
+                "Occurs when an agent makes any change to record entry content currently residing in storage considered permanent (persistent).",
+            ),
+            Self::Archive => Some(
+                "Occurs when an agent causes the system to create and move archive artifacts containing record entry content, typically to long-term offline storage.",
+            ),
+            Self::Attest => Some(
+                "Occurs when an agent causes the system to capture the agent\u{2019}s digital signature (or equivalent indication) during formal validation of record entry content.",
+            ),
+            Self::Decrypt => Some(
+                "Occurs when an agent causes the system to decode record entry content from a cipher.",
+            ),
+            Self::Deidentify => Some(
+                "Occurs when an agent causes the system to scrub record entry content to reduce the association between a set of identifying data and the data subject in a way that might or might not be reversible.",
+            ),
+            Self::Deprecate => Some(
+                "Occurs when an agent causes the system to tag record entry(ies) as obsolete, erroneous or untrustworthy, to warn against its future use.",
+            ),
+            Self::Destroy => Some(
+                "Occurs when an agent causes the system to permanently erase record entry content from the system.",
+            ),
+            Self::Disclose => Some(
+                "Occurs when an agent causes the system to release, transfer, provision access to, or otherwise divulge record entry content.",
+            ),
+            Self::Encrypt => Some(
+                "Occurs when an agent causes the system to encode record entry content in a cipher.",
+            ),
+            Self::Extract => Some(
+                "Occurs when an agent causes the system to selectively pull out a subset of record entry content, based on explicit criteria.",
+            ),
+            Self::Link => {
+                Some("Occurs when an agent causes the system to connect related record entries.")
+            }
+            Self::Merge => Some(
+                "Occurs when an agent causes the system to combine or join content from two or more record entries, resulting in a single logical record entry.",
+            ),
+            Self::Originate => Some(
+                "Occurs when an agent causes the system to: a) initiate capture of potential record content, and b) incorporate that content into the storage considered a permanent part of the health record.",
+            ),
+            Self::Pseudonymize => Some(
+                "Occurs when an agent causes the system to remove record entry content to reduce the association between a set of identifying data and the data subject in a way that may be reversible.",
+            ),
+            Self::Reactivate => Some(
+                "Occurs when an agent causes the system to recreate or restore full status to record entries previously deleted or deprecated.",
+            ),
+            Self::Receive => Some(
+                "Occurs when an agent causes the system to a) initiate capture of data content from elsewhere, and b) incorporate that content into the storage considered a permanent part of the health record.",
+            ),
+            Self::Reidentify => Some(
+                "Occurs when an agent causes the system to restore information to data that allows identification of information source and/or information subject.",
+            ),
+            Self::Unhold => Some(
+                "Occurs when an agent causes the system to remove a tag or other cues for special access management had required to fulfill organizational policy under the legal doctrine of \u{201c}duty to preserve\u{201d}.",
+            ),
+            Self::Report => Some(
+                "Occurs when an agent causes the system to produce and deliver record entry content in a particular form and manner.",
+            ),
+            Self::Restore => Some(
+                "Occurs when an agent causes the system to recreate record entries and their content from a previous created archive artefact.",
+            ),
+            Self::Transform => Some(
+                "Occurs when an agent causes the system to change the form, language or code system used to represent record entry content.",
+            ),
+            Self::Transmit => Some(
+                "Occurs when an agent causes the system to send record entry content from one (EHR/PHR/other) system to another.",
+            ),
+            Self::Unlink => Some(
+                "Occurs when an agent causes the system to disconnect two or more record entries previously connected, rendering them separate (disconnected) again.",
+            ),
+            Self::Unmerge => Some(
+                "Occurs when an agent causes the system to reverse a previous record entry merge operation, rendering them separate again.",
+            ),
+            Self::Verify => Some(
+                "Occurs when an agent causes the system to confirm compliance of data or data objects with regulations, requirements, specifications, or other imposed conditions based on organizational policy.",
+            ),
         }
     }
 
@@ -279,5 +333,4 @@ impl ISO210892017HealthRecordLifecycleEvents {
             })
             .unwrap_or(false)
     }
-
 }

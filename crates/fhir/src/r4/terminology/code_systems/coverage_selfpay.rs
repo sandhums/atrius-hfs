@@ -43,7 +43,9 @@ impl CoverageSelfPayCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Pay => Some("An individual or organization is paying directly for goods and services."),
+            Self::Pay => {
+                Some("An individual or organization is paying directly for goods and services.")
+            }
         }
     }
 
@@ -98,5 +100,4 @@ impl CoverageSelfPayCodes {
             })
             .unwrap_or(false)
     }
-
 }

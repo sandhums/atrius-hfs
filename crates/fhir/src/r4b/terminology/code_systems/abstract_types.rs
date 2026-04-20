@@ -105,5 +105,4 @@ impl AbstractType {
             })
             .unwrap_or(false)
     }
-
 }

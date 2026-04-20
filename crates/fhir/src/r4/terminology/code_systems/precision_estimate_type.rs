@@ -119,5 +119,4 @@ impl PrecisionEstimateType {
             })
             .unwrap_or(false)
     }
-
 }

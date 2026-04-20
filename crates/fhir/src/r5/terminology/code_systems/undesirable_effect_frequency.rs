@@ -112,5 +112,4 @@ impl UndesirablEffectFrequency {
             })
             .unwrap_or(false)
     }
-
 }

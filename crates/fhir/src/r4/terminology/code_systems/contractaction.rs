@@ -105,5 +105,4 @@ impl ContractActionCodes {
             })
             .unwrap_or(false)
     }
-
 }

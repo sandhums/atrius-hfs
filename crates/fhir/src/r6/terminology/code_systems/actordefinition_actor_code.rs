@@ -83,7 +83,9 @@ impl ActorDefinitionActorCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::NonSystem => Some("A person, animal, (non-software) device, organization or other entity"),
+            Self::NonSystem => {
+                Some("A person, animal, (non-software) device, organization or other entity")
+            }
             Self::Individual => Some("A person or animal"),
             Self::Patient => None,
             Self::Practitioner => None,
@@ -168,5 +170,4 @@ impl ActorDefinitionActorCode {
             })
             .unwrap_or(false)
     }
-
 }

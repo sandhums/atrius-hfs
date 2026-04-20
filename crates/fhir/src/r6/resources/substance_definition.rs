@@ -2,52 +2,54 @@
 use crate::r6::*;
 
 /// FHIR SubstanceDefinition type
-/// 
+///
 /// The detailed description of a substance, typically at a level beyond what is
 /// used for prescribing.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot3
-/// 
+///
 /// See: [SubstanceDefinition](http://hl7.org/fhir/StructureDefinition/SubstanceDefinition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,version,status,classification,domain,grade,description,note,manufacturer,supplier,moiety,characterization,property,molecular_weight,structure,code,name,relationship,source_material")]
+#[fhir_resource(
+    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,version,status,classification,domain,grade,description,note,manufacturer,supplier,moiety,characterization,property,molecular_weight,structure,code,name,relationship,source_material"
+)]
 pub struct SubstanceDefinition {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resouce id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -55,7 +57,7 @@ pub struct SubstanceDefinition {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -65,22 +67,22 @@ pub struct SubstanceDefinition {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -91,27 +93,27 @@ pub struct SubstanceDefinition {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -119,27 +121,27 @@ pub struct SubstanceDefinition {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -147,41 +149,41 @@ pub struct SubstanceDefinition {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -191,11 +193,11 @@ pub struct SubstanceDefinition {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -203,295 +205,295 @@ pub struct SubstanceDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Identifier by which this substance is known
-    /// 
+    ///
     /// Identifier by which this substance is known.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// A business level edition or revision identifier
-    /// 
+    ///
     /// A business level edition or revision identifier.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Status of substance within the catalogue e.g. active, retired
-    /// 
+    ///
     /// Status of substance within the catalogue e.g. active, retired.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that can indicate that a record should not be treated as valid
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status
     pub status: Option<CodeableConcept>,
     /// A categorization, high level e.g. polymer or nucleic acid, or food, chemical, biological, or lower e.g. polymer linear or branch chain, or type of impurity
-    /// 
+    ///
     /// A high level categorization, e.g. polymer or nucleic acid, or food, chemical,
     /// biological, or a lower level such as the general types of polymer (linear or
     /// branch chain) or type of impurity (process related or contaminant).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub classification: Option<Vec<CodeableConcept>>,
     /// The applicable usage of the substance, as an example human or veterinary
-    /// 
+    ///
     /// The applicable usage of the substance, as an example human or veterinary.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Applicable domain for this product (e.g. human, veterinary).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medicinal-product-domain
     pub domain: Option<CodeableConcept>,
     /// The quality standard, established benchmark, to which substance complies (e.g. USP/NF, BP)
-    /// 
+    ///
     /// The quality standard, established benchmark, to which substance complies
     /// (e.g. USP/NF, Ph. Eur, JP, BP, Company Standard).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The quality standard, established benchmark, to which a substance complies
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-grade
     pub grade: Option<Vec<CodeableConcept>>,
     /// Textual description of the substance
-    /// 
+    ///
     /// Textual description of the substance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Textual comment about the substance's catalogue or registry record
-    /// 
+    ///
     /// Textual comment about the substance's catalogue or registry record.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// The entity that creates, makes, produces or fabricates the substance
-    /// 
+    ///
     /// The entity that creates, makes, produces or fabricates the substance. This is
     /// a set of potential manufacturers but is not necessarily comprehensive.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub manufacturer: Option<Vec<Reference>>,
     /// An entity that is the source for the substance. It may be different from the manufacturer
-    /// 
+    ///
     /// An entity that is the source for the substance. It may be different from the
     /// manufacturer. Supplier is synonymous to a distributor.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub supplier: Option<Vec<Reference>>,
     /// Moiety, for structural modifications
-    /// 
+    ///
     /// Moiety, for structural modifications.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub moiety: Option<Vec<SubstanceDefinitionMoiety>>,
     /// General specifications for this substance
-    /// 
+    ///
     /// General specifications for this substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub characterization: Option<Vec<SubstanceDefinitionCharacterization>>,
     /// General specifications for this substance
-    /// 
+    ///
     /// General specifications for this substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub property: Option<Vec<SubstanceDefinitionProperty>>,
     /// The average mass of a molecule of a compound
-    /// 
+    ///
     /// The average mass of a molecule of a compound compared to 1/12 the mass of
     /// carbon 12 and calculated as the sum of the atomic weights of the constituent
     /// atoms.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "molecularWeight")]
     pub molecular_weight: Option<Vec<SubstanceDefinitionMolecularWeight>>,
     /// Structural information
-    /// 
+    ///
     /// Structural information.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub structure: Option<SubstanceDefinitionStructure>,
     /// Codes associated with the substance
-    /// 
+    ///
     /// Codes associated with the substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub code: Option<Vec<SubstanceDefinitionCode>>,
     /// Names applicable to this substance
-    /// 
+    ///
     /// Names applicable to this substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<Vec<SubstanceDefinitionName>>,
     /// A link between this substance and another
-    /// 
+    ///
     /// A link between this substance and another, with details of the relationship.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub relationship: Option<Vec<SubstanceDefinitionRelationship>>,
     /// Material or taxonomic/anatomical source
-    /// 
+    ///
     /// Material or taxonomic/anatomical source for the substance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -500,55 +502,55 @@ pub struct SubstanceDefinition {
 }
 
 /// General specifications for this substance
-/// 
+///
 /// General specifications for this substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionCharacterization {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -558,11 +560,11 @@ pub struct SubstanceDefinitionCharacterization {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -570,90 +572,90 @@ pub struct SubstanceDefinitionCharacterization {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The method used to find the characterization e.g. HPLC
-    /// 
+    ///
     /// The method used to elucidate the characterization of the drug substance.
     /// Example: HPLC.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The method used to elucidate the characterization of the drug substance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-structure-technique
     pub technique: Option<CodeableConcept>,
     /// Describes the nature of the chemical entity and explains, for instance, whether this is a base or a salt form
-    /// 
+    ///
     /// Describes the nature of the chemical entity and explains, for instance,
     /// whether this is a base or a salt form.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-form
     pub form: Option<CodeableConcept>,
     /// The description or justification in support of the interpretation of the data file
-    /// 
+    ///
     /// The description or justification in support of the interpretation of the data
     /// file.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// The data produced by the analytical instrument or a pictorial representation of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or spectrum analysis
-    /// 
+    ///
     /// The data produced by the analytical instrument or a pictorial representation
     /// of that data. Examples: a JCAMP, JDX, or ADX file, or a chromatogram or
     /// spectrum analysis.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -661,55 +663,55 @@ pub struct SubstanceDefinitionCharacterization {
 }
 
 /// Codes associated with the substance
-/// 
+///
 /// Codes associated with the substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionCode {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -719,11 +721,11 @@ pub struct SubstanceDefinitionCode {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -731,96 +733,96 @@ pub struct SubstanceDefinitionCode {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The specific code
-    /// 
+    ///
     /// The specific code.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub code: Option<CodeableConcept>,
     /// Status of the code assignment, for example 'provisional', 'approved'
-    /// 
+    ///
     /// Status of the code assignment, for example 'provisional', 'approved'.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status
     pub status: Option<CodeableConcept>,
     /// The date at which the code status was changed
-    /// 
+    ///
     /// The date at which the code status was changed as part of the terminology
     /// maintenance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "statusDate")]
     pub status_date: Option<DateTime>,
     /// Any comment can be provided in this field
-    /// 
+    ///
     /// Any comment can be provided in this field, if necessary.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Supporting literature
-    /// 
+    ///
     /// Supporting literature.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -840,14 +842,14 @@ pub enum SubstanceDefinitionMoietyAmount {
 }
 
 /// Moiety, for structural modifications
-/// 
+///
 /// Moiety, for structural modifications.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -855,41 +857,41 @@ pub enum SubstanceDefinitionMoietyAmount {
 #[fhir_resource(choice_elements = "amount")]
 pub struct SubstanceDefinitionMoiety {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -899,11 +901,11 @@ pub struct SubstanceDefinitionMoiety {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -911,98 +913,98 @@ pub struct SubstanceDefinitionMoiety {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Role that the moiety is playing
-    /// 
+    ///
     /// Role that the moiety is playing.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub role: Option<CodeableConcept>,
     /// Identifier by which this moiety substance is known
-    /// 
+    ///
     /// Identifier by which this moiety substance is known.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Identifier>,
     /// Textual name for this moiety substance
-    /// 
+    ///
     /// Textual name for this moiety substance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Stereochemistry type
-    /// 
+    ///
     /// Stereochemistry type.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The optical rotation type of a substance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-stereochemistry
     pub stereochemistry: Option<CodeableConcept>,
     /// Optical activity type
-    /// 
+    ///
     /// Optical activity type.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The optical rotation type of a substance.
@@ -1010,50 +1012,50 @@ pub struct SubstanceDefinitionMoiety {
     #[fhir_serde(rename = "opticalActivity")]
     pub optical_activity: Option<CodeableConcept>,
     /// Molecular formula for this moiety (e.g. with the Hill system)
-    /// 
+    ///
     /// Molecular formula for this moiety of this substance, typically using the Hill
     /// system.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "molecularFormula")]
     pub molecular_formula: Option<String>,
     /// Quantitative value for this moiety
-    /// 
+    ///
     /// Quantitative value for this moiety.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub amount: Option<SubstanceDefinitionMoietyAmount>,
     /// The measurement type of the quantitative value
-    /// 
+    ///
     /// The measurement type of the quantitative value. In capturing the actual
     /// relative amounts of substances or molecular fragments it may be necessary to
     /// indicate whether the amount refers to, for example, a mole ratio or weight
     /// ratio.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The relationship between two substance types.
@@ -1063,57 +1065,57 @@ pub struct SubstanceDefinitionMoiety {
 }
 
 /// The average mass of a molecule of a compound
-/// 
+///
 /// The average mass of a molecule of a compound compared to 1/12 the mass of
 /// carbon 12 and calculated as the sum of the atomic weights of the constituent
 /// atoms.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionMolecularWeight {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1123,11 +1125,11 @@ pub struct SubstanceDefinitionMolecularWeight {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1135,60 +1137,60 @@ pub struct SubstanceDefinitionMolecularWeight {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The method by which the weight was determined
-    /// 
+    ///
     /// The method by which the molecular weight was determined.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The method by which the substance weight was measured.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-weight-method
     pub method: Option<CodeableConcept>,
     /// Type of molecular weight e.g. exact, average, weight average
-    /// 
+    ///
     /// Type of molecular weight such as exact, average (also known as. number
     /// average), weight average.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type of substance weight measurement.
@@ -1196,17 +1198,17 @@ pub struct SubstanceDefinitionMolecularWeight {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Used to capture quantitative values for a variety of elements
-    /// 
+    ///
     /// Used to capture quantitative values for a variety of elements. If only limits
     /// are given, the arithmetic mean would be the average. If only a single
     /// definite value for a given element is given, it would be captured in this
     /// field.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1214,55 +1216,55 @@ pub struct SubstanceDefinitionMolecularWeight {
 }
 
 /// Names applicable to this substance
-/// 
+///
 /// Names applicable to this substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionName {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1272,11 +1274,11 @@ pub struct SubstanceDefinitionName {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1284,54 +1286,54 @@ pub struct SubstanceDefinitionName {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The actual name
-    /// 
+    ///
     /// The actual name.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: String,
     /// Name type e.g. 'systematic',  'scientific, 'brand'
-    /// 
+    ///
     /// Name type, for example 'systematic',  'scientific, 'brand'.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type of a name given to a substance.
@@ -1339,140 +1341,140 @@ pub struct SubstanceDefinitionName {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// The status of the name e.g. 'current', 'proposed'
-    /// 
+    ///
     /// The status of the name, for example 'current', 'proposed'.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status
     pub status: Option<CodeableConcept>,
     /// If this is the preferred name for this substance
-    /// 
+    ///
     /// If this is the preferred name for this substance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If this value is not present, there is no statement being made about whether this is the preferred name or not. No inference can be made
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub preferred: Option<Boolean>,
     /// Human language that the name is written in
-    /// 
+    ///
     /// Human language that the name is written in.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3
     pub language: Option<Vec<CodeableConcept>>,
     /// The use context of this name e.g. as an active ingredient or as a food colour additive
-    /// 
+    ///
     /// The use context of this name for example if there is a different name a drug
     /// active ingredient as opposed to a food colour additive.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The use context of a substance name for example if there is a different name when used as a drug active ingredient as opposed to a food colour additive.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-name-domain
     pub domain: Option<Vec<CodeableConcept>>,
     /// The jurisdiction where this name applies
-    /// 
+    ///
     /// The jurisdiction where this name applies.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Jurisdiction codes
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// A synonym of this particular name, by which the substance is also known
-    /// 
+    ///
     /// A synonym of this particular name, by which the substance is also known.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub synonym: Option<Vec<SubstanceDefinitionName>>,
     /// A translation for this name into another human language
-    /// 
+    ///
     /// A translation for this name into another human language.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub translation: Option<Vec<SubstanceDefinitionName>>,
     /// Details of the official nature of this name
-    /// 
+    ///
     /// Details of the official nature of this name.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub official: Option<Vec<SubstanceDefinitionNameOfficial>>,
     /// Supporting literature
-    /// 
+    ///
     /// Supporting literature.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1480,55 +1482,55 @@ pub struct SubstanceDefinitionName {
 }
 
 /// Details of the official nature of this name
-/// 
+///
 /// Details of the official nature of this name.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionNameOfficial {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1538,11 +1540,11 @@ pub struct SubstanceDefinitionNameOfficial {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1550,73 +1552,73 @@ pub struct SubstanceDefinitionNameOfficial {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Which authority uses this official name
-    /// 
+    ///
     /// Which authority uses this official name.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: An authority that officiates substance names.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-name-authority
     pub authority: Option<CodeableConcept>,
     /// The status of the official name, for example 'draft', 'active'
-    /// 
+    ///
     /// The status of the official name, for example 'draft', 'active', 'retired'.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status
     pub status: Option<CodeableConcept>,
     /// Date of official name change
-    /// 
+    ///
     /// Date of the official name change.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1648,14 +1650,14 @@ pub enum SubstanceDefinitionPropertyValue {
 }
 
 /// General specifications for this substance
-/// 
+///
 /// General specifications for this substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1663,41 +1665,41 @@ pub enum SubstanceDefinitionPropertyValue {
 #[fhir_resource(choice_elements = "value")]
 pub struct SubstanceDefinitionProperty {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1707,11 +1709,11 @@ pub struct SubstanceDefinitionProperty {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1719,41 +1721,41 @@ pub struct SubstanceDefinitionProperty {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// A code expressing the type of property
-    /// 
+    ///
     /// A code expressing the type of property.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: This value set includes all observable entity codes from SNOMED CT - provided as an exemplar value set.
@@ -1761,14 +1763,14 @@ pub struct SubstanceDefinitionProperty {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// A value for the property
-    /// 
+    ///
     /// A value for the property.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1804,14 +1806,14 @@ pub enum SubstanceDefinitionRelationshipAmount {
 }
 
 /// A link between this substance and another
-/// 
+///
 /// A link between this substance and another, with details of the relationship.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1819,41 +1821,41 @@ pub enum SubstanceDefinitionRelationshipAmount {
 #[fhir_resource(choice_elements = "substanceDefinition,amount")]
 pub struct SubstanceDefinitionRelationship {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1863,11 +1865,11 @@ pub struct SubstanceDefinitionRelationship {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1875,57 +1877,57 @@ pub struct SubstanceDefinitionRelationship {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// A pointer to another substance, as a resource or a representational code
-    /// 
+    ///
     /// A pointer to another substance, as a resource or just a representational
     /// code.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub substance_definition: Option<SubstanceDefinitionRelationshipSubstanceDefinition>,
     /// For example "salt to parent", "active moiety"
-    /// 
+    ///
     /// For example "salt to parent", "active moiety", "starting material",
     /// "polymorph", "impurity of".
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The relationship between two substance types.
@@ -1933,80 +1935,80 @@ pub struct SubstanceDefinitionRelationship {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// For example where an enzyme strongly bonds with a particular substance, this is a defining relationship for that enzyme, out of several possible relationships
-    /// 
+    ///
     /// For example where an enzyme strongly bonds with a particular substance, this
     /// is a defining relationship for that enzyme, out of several possible substance
     /// relationships.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If this value is not present, there is no statement being made about whether this is a defining relationship or not. No inference can be made
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "isDefining")]
     pub is_defining: Option<Boolean>,
     /// A numeric factor for the relationship, e.g. that a substance salt has some percentage of active substance in relation to some other
-    /// 
+    ///
     /// A numeric factor for the relationship, for instance to express that the salt
     /// of a substance has some percentage of the active substance in relation to
     /// some other.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub amount: Option<SubstanceDefinitionRelationshipAmount>,
     /// For use when the numeric has an uncertain range
-    /// 
+    ///
     /// For use when the numeric has an uncertain range.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "ratioHighLimitAmount")]
     pub ratio_high_limit_amount: Option<Ratio>,
     /// An operator for the amount, for example "average", "approximately", "less than"
-    /// 
+    ///
     /// An operator for the amount, for example "average", "approximately", "less
     /// than".
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The relationship between two substance types.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-amount-type
     pub comparator: Option<CodeableConcept>,
     /// Supporting literature
-    /// 
+    ///
     /// Supporting literature.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2014,55 +2016,55 @@ pub struct SubstanceDefinitionRelationship {
 }
 
 /// Material or taxonomic/anatomical source
-/// 
+///
 /// Material or taxonomic/anatomical source for the substance.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionSourceMaterial {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2072,11 +2074,11 @@ pub struct SubstanceDefinitionSourceMaterial {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2084,42 +2086,42 @@ pub struct SubstanceDefinitionSourceMaterial {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Classification of the origin of the raw material. e.g. cat hair is an Animal source type
-    /// 
+    ///
     /// A classification that provides the origin of the raw material. Example: cat
     /// hair would be an Animal source type.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A classification that provides the origin of the substance raw material.
@@ -2127,74 +2129,74 @@ pub struct SubstanceDefinitionSourceMaterial {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// The genus of an organism e.g. the Latin epithet of the plant/animal scientific name
-    /// 
+    ///
     /// The genus of an organism, typically referring to the Latin epithet of the
     /// genus element of the plant/animal scientific name.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The genus of an organism, typically referring to the Latin epithet of the genus element of the plant/animal scientific name.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-source-material-genus
     pub genus: Option<CodeableConcept>,
     /// The species of an organism e.g. the Latin epithet of the species of the plant/animal
-    /// 
+    ///
     /// The species of an organism, typically referring to the Latin epithet of the
     /// species of the plant/animal.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A species of origin a substance raw material.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-source-material-species
     pub species: Option<CodeableConcept>,
     /// An anatomical origin of the source material within an organism
-    /// 
+    ///
     /// An anatomical origin of the source material within an organism.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: An anatomical origin of the source material within an organism.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-source-material-part
     pub part: Option<CodeableConcept>,
     /// The country or countries where the material is harvested
-    /// 
+    ///
     /// The country or countries where the material is harvested.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Jurisdiction codes
@@ -2204,55 +2206,55 @@ pub struct SubstanceDefinitionSourceMaterial {
 }
 
 /// Structural information
-/// 
+///
 /// Structural information.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionStructure {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2262,11 +2264,11 @@ pub struct SubstanceDefinitionStructure {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2274,59 +2276,59 @@ pub struct SubstanceDefinitionStructure {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Stereochemistry type
-    /// 
+    ///
     /// Stereochemistry type.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The optical rotation type of a substance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-stereochemistry
     pub stereochemistry: Option<CodeableConcept>,
     /// Optical activity type
-    /// 
+    ///
     /// Optical activity type.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The optical rotation type of a substance.
@@ -2334,92 +2336,92 @@ pub struct SubstanceDefinitionStructure {
     #[fhir_serde(rename = "opticalActivity")]
     pub optical_activity: Option<CodeableConcept>,
     /// An expression which states the number and type of atoms present in a molecule of a substance
-    /// 
+    ///
     /// An expression which states the number and type of atoms present in a molecule
     /// of a substance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "molecularFormula")]
     pub molecular_formula: Option<String>,
     /// Specified per moiety according to the Hill system
-    /// 
+    ///
     /// Specified per moiety according to the Hill system, i.e. first C, then H, then
     /// alphabetical, each moiety separated by a dot.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "molecularFormulaByMoiety")]
     pub molecular_formula_by_moiety: Option<String>,
     /// The molecular weight or weight range
-    /// 
+    ///
     /// The molecular weight or weight range (for proteins, polymers or nucleic
     /// acids).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "molecularWeight")]
     pub molecular_weight: Option<SubstanceDefinitionMolecularWeight>,
     /// The method used to find the structure e.g. X-ray, NMR
-    /// 
+    ///
     /// The method used to elucidate the structure of the drug substance. Examples:
     /// X-ray, NMR, Peptide mapping, Ligand binding assay.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The method used to elucidate the structure of the drug substance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-structure-technique
     pub technique: Option<Vec<CodeableConcept>>,
     /// Source of information for the structure
-    /// 
+    ///
     /// The source of information about the structure.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "sourceDocument")]
     pub source_document: Option<Vec<Reference>>,
     /// A depiction of the structure of the substance
-    /// 
+    ///
     /// A depiction of the structure of the substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2427,55 +2429,55 @@ pub struct SubstanceDefinitionStructure {
 }
 
 /// A depiction of the structure of the substance
-/// 
+///
 /// A depiction of the structure of the substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SubstanceDefinitionStructureRepresentation {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2485,11 +2487,11 @@ pub struct SubstanceDefinitionStructureRepresentation {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2497,41 +2499,41 @@ pub struct SubstanceDefinitionStructureRepresentation {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The kind of structural representation (e.g. full, partial)
-    /// 
+    ///
     /// The kind of structural representation (e.g. full, partial).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A format of a substance representation.
@@ -2539,51 +2541,50 @@ pub struct SubstanceDefinitionStructureRepresentation {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// The structural representation as a text string in a standard format
-    /// 
+    ///
     /// The structural representation as a text string in a standard format.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub representation: Option<String>,
     /// The format of the representation e.g. InChI, SMILES, MOLFILE (note: not the physical file format)
-    /// 
+    ///
     /// The format of the representation e.g. InChI, SMILES, MOLFILE, CDX, SDF, PDB,
     /// mmCIF. The logical content type rather than the physical file format of a
     /// document.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A format of a substance representation.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-representation-format
     pub format: Option<CodeableConcept>,
     /// An attachment with the structural representation e.g. a structure graphic or AnIML file
-    /// 
+    ///
     /// An attached file with the structural representation e.g. a molecular
     /// structure graphic of the substance, a JCAMP or AnIML file.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub document: Option<Reference>,
 }
-

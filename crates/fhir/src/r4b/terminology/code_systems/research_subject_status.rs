@@ -91,19 +91,37 @@ impl ResearchSubjectStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Candidate => Some("An identified person that can be considered for inclusion in a study."),
-            Self::Eligible => Some("A person that has met the eligibility criteria for inclusion in a study."),
-            Self::FollowUp => Some("A person is no longer receiving study intervention and/or being evaluated with tests and procedures according to the protocol, but they are being monitored on a protocol-prescribed schedule."),
-            Self::Ineligible => Some("A person who did not meet one or more criteria required for participation in a study is considered to have failed screening or\nis ineligible for the study."),
+            Self::Candidate => {
+                Some("An identified person that can be considered for inclusion in a study.")
+            }
+            Self::Eligible => {
+                Some("A person that has met the eligibility criteria for inclusion in a study.")
+            }
+            Self::FollowUp => Some(
+                "A person is no longer receiving study intervention and/or being evaluated with tests and procedures according to the protocol, but they are being monitored on a protocol-prescribed schedule.",
+            ),
+            Self::Ineligible => Some(
+                "A person who did not meet one or more criteria required for participation in a study is considered to have failed screening or\nis ineligible for the study.",
+            ),
             Self::NotRegistered => Some("A person for whom registration was not completed."),
-            Self::OffStudy => Some("A person that has ended their participation on a study either because their treatment/observation is complete or through not\nresponding, withdrawal, non-compliance and/or adverse event."),
+            Self::OffStudy => Some(
+                "A person that has ended their participation on a study either because their treatment/observation is complete or through not\nresponding, withdrawal, non-compliance and/or adverse event.",
+            ),
             Self::OnStudy => Some("A person that is enrolled or registered on a study."),
-            Self::OnStudyIntervention => Some("The person is receiving the treatment or participating in an activity (e.g. yoga, diet, etc.) that the study is evaluating."),
-            Self::OnStudyObservation => Some("The subject is being evaluated via tests and assessments according to the study calendar, but is not receiving any intervention. Note that this state is study-dependent and might not exist in all studies.  A synonym for this is \"short-term follow-up\"."),
+            Self::OnStudyIntervention => Some(
+                "The person is receiving the treatment or participating in an activity (e.g. yoga, diet, etc.) that the study is evaluating.",
+            ),
+            Self::OnStudyObservation => Some(
+                "The subject is being evaluated via tests and assessments according to the study calendar, but is not receiving any intervention. Note that this state is study-dependent and might not exist in all studies.  A synonym for this is \"short-term follow-up\".",
+            ),
             Self::PendingOnStudy => Some("A person is pre-registered for a study."),
-            Self::PotentialCandidate => Some("A person that is potentially eligible for participation in the study."),
+            Self::PotentialCandidate => {
+                Some("A person that is potentially eligible for participation in the study.")
+            }
             Self::Screening => Some("A person who is being evaluated for eligibility for a study."),
-            Self::Withdrawn => Some("The person has withdrawn their participation in the study before registration."),
+            Self::Withdrawn => Some(
+                "The person has withdrawn their participation in the study before registration.",
+            ),
         }
     }
 
@@ -182,5 +200,4 @@ impl ResearchSubjectStatus {
             })
             .unwrap_or(false)
     }
-
 }

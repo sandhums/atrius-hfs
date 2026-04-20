@@ -105,5 +105,4 @@ impl NetworkTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

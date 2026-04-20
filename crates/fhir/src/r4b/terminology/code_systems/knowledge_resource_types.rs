@@ -75,14 +75,22 @@ impl KnowledgeResourceType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::ActivityDefinition => Some("The definition of a specific activity to be taken, independent of any particular patient or context."),
+            Self::ActivityDefinition => Some(
+                "The definition of a specific activity to be taken, independent of any particular patient or context.",
+            ),
             Self::CodeSystem => Some("A set of codes drawn from one or more code systems."),
-            Self::ConceptMap => Some("A map from one set of concepts to one or more other concepts."),
+            Self::ConceptMap => {
+                Some("A map from one set of concepts to one or more other concepts.")
+            }
             Self::Library => Some("Represents a library of quality improvement components."),
             Self::Measure => Some("A quality measure definition."),
-            Self::PlanDefinition => Some("The definition of a plan for a series of actions, independent of any specific patient or context."),
+            Self::PlanDefinition => Some(
+                "The definition of a plan for a series of actions, independent of any specific patient or context.",
+            ),
             Self::StructureDefinition => Some("Structural Definition."),
-            Self::StructureMap => Some("A Map of relationships between 2 structures that can be used to transform data."),
+            Self::StructureMap => Some(
+                "A Map of relationships between 2 structures that can be used to transform data.",
+            ),
             Self::ValueSet => Some("A set of codes drawn from one or more code systems."),
         }
     }
@@ -154,5 +162,4 @@ impl KnowledgeResourceType {
             })
             .unwrap_or(false)
     }
-
 }

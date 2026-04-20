@@ -906,12 +906,16 @@ fn emit_choice_field_recursive_validation(
                             "                {enum_name}::{variant_name}(value) => {{\n"
                         ));
                         output.push_str(&format!(
-                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology);\n",
-                            validation_module_path = validation_module_path,
-                            helper_name = helper_name,
+                            "                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, {fhir_path:?}, {value_set:?}, {strength}, terminology);\n",
                             fhir_path = binding.path,
                             value_set = binding.value_set,
                             strength = binding.strength.as_rust_tokens(),
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value));\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            value_set = binding.value_set,
                             terminology_module_path = terminology_module_path,
                             local_validator_name = local_validator_name,
                         ));
@@ -968,15 +972,30 @@ fn emit_choice_field_recursive_validation(
                             "                {enum_name}::{variant_name}(value) => {{\n"
                         ));
                         output.push_str(&format!(
-                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology);\n",
-                            validation_module_path = validation_module_path,
-                            helper_name = helper_name,
+                            "                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, {fhir_path:?}, {value_set:?}, {strength}, terminology);\n",
                             fhir_path = binding.path,
                             value_set = binding.value_set,
                             strength = binding.strength.as_rust_tokens(),
-                            terminology_module_path = terminology_module_path,
-                            local_validator_name = local_validator_name,
                         ));
+                        if type_code == "code" {
+                            output.push_str(&format!(
+                                "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, value.value.as_deref(), Some({terminology_module_path}::implicit_system({value_set:?})), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value));\n",
+                                validation_module_path = validation_module_path,
+                                helper_name = helper_name,
+                                value_set = binding.value_set,
+                                terminology_module_path = terminology_module_path,
+                                local_validator_name = local_validator_name,
+                            ));
+                        } else {
+                            output.push_str(&format!(
+                                "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value));\n",
+                                validation_module_path = validation_module_path,
+                                helper_name = helper_name,
+                                value_set = binding.value_set,
+                                terminology_module_path = terminology_module_path,
+                                local_validator_name = local_validator_name,
+                            ));
+                        }
                         output.push_str("                    issues.extend(child_issues);\n");
                         output.push_str("                }\n");
                     } else {
@@ -1012,12 +1031,16 @@ fn emit_choice_field_recursive_validation(
                             "                {enum_name}::{variant_name}(value) => {{\n"
                         ));
                         output.push_str(&format!(
-                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology).await;\n",
-                            validation_module_path = validation_module_path,
-                            helper_name = helper_name,
+                            "                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, {fhir_path:?}, {value_set:?}, {strength}, terminology);\n",
                             fhir_path = binding.path,
                             value_set = binding.value_set,
                             strength = binding.strength.as_rust_tokens(),
+                        ));
+                        output.push_str(&format!(
+                            "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, Some(value), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value)).await;\n",
+                            validation_module_path = validation_module_path,
+                            helper_name = helper_name,
+                            value_set = binding.value_set,
                             terminology_module_path = terminology_module_path,
                             local_validator_name = local_validator_name,
                         ));
@@ -1074,15 +1097,30 @@ fn emit_choice_field_recursive_validation(
                             "                {enum_name}::{variant_name}(value) => {{\n"
                         ));
                         output.push_str(&format!(
-                            "                    let child_issues = {validation_module_path}::{helper_name}(validator, {fhir_path:?}, {value_set:?}, {strength}, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value), terminology).await;\n",
-                            validation_module_path = validation_module_path,
-                            helper_name = helper_name,
+                            "                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, {fhir_path:?}, {value_set:?}, {strength}, terminology);\n",
                             fhir_path = binding.path,
                             value_set = binding.value_set,
                             strength = binding.strength.as_rust_tokens(),
-                            terminology_module_path = terminology_module_path,
-                            local_validator_name = local_validator_name,
                         ));
+                        if type_code == "code" {
+                            output.push_str(&format!(
+                                "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, value.value.as_deref(), Some({terminology_module_path}::implicit_system({value_set:?})), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value)).await;\n",
+                                validation_module_path = validation_module_path,
+                                helper_name = helper_name,
+                                value_set = binding.value_set,
+                                terminology_module_path = terminology_module_path,
+                                local_validator_name = local_validator_name,
+                            ));
+                        } else {
+                            output.push_str(&format!(
+                                "                    let child_issues = {validation_module_path}::{helper_name}(&binding_ctx, value.value.as_deref(), |value| {terminology_module_path}::{local_validator_name}({value_set:?}, value)).await;\n",
+                                validation_module_path = validation_module_path,
+                                helper_name = helper_name,
+                                value_set = binding.value_set,
+                                terminology_module_path = terminology_module_path,
+                                local_validator_name = local_validator_name,
+                            ));
+                        }
                         output.push_str("                    issues.extend(child_issues);\n");
                         output.push_str("                }\n");
                     } else {
@@ -1778,12 +1816,12 @@ fn upper_snake_case(name: &str) -> String {
                 out.push(ch);
                 prev_is_lower_or_digit = false;
             } else if ch.is_ascii_lowercase() {
-                               out.push(ch.to_ascii_uppercase());
-                                prev_is_lower_or_digit = true;
-                           } else {
-                                out.push(ch);
-                                prev_is_lower_or_digit = true;
-                           }
+                out.push(ch.to_ascii_uppercase());
+                prev_is_lower_or_digit = true;
+            } else {
+                out.push(ch);
+                prev_is_lower_or_digit = true;
+            }
         } else {
             if !out.ends_with('_') && !out.is_empty() {
                 out.push('_');

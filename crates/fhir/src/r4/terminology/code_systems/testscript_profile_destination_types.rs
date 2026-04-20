@@ -17,7 +17,8 @@ pub enum TestScriptProfileDestinationType {
 }
 
 impl TestScriptProfileDestinationType {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/testscript-profile-destination-types";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -55,10 +56,18 @@ impl TestScriptProfileDestinationType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::FHIRServer => Some("General FHIR server used to respond to operations sent from a FHIR client."),
-            Self::FHIRSDCFormManager => Some("A FHIR server acting as a Structured Data Capture Form Manager."),
-            Self::FHIRSDCFormProcessor => Some("A FHIR server acting as a Structured Data Capture Form Processor."),
-            Self::FHIRSDCFormReceiver => Some("A FHIR server acting as a Structured Data Capture Form Receiver."),
+            Self::FHIRServer => {
+                Some("General FHIR server used to respond to operations sent from a FHIR client.")
+            }
+            Self::FHIRSDCFormManager => {
+                Some("A FHIR server acting as a Structured Data Capture Form Manager.")
+            }
+            Self::FHIRSDCFormProcessor => {
+                Some("A FHIR server acting as a Structured Data Capture Form Processor.")
+            }
+            Self::FHIRSDCFormReceiver => {
+                Some("A FHIR server acting as a Structured Data Capture Form Receiver.")
+            }
         }
     }
 
@@ -119,5 +128,4 @@ impl TestScriptProfileDestinationType {
             })
             .unwrap_or(false)
     }
-
 }

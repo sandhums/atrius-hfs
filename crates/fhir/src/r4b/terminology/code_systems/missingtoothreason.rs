@@ -119,5 +119,4 @@ impl MissingToothReasonCodes {
             })
             .unwrap_or(false)
     }
-
 }

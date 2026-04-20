@@ -119,5 +119,4 @@ impl EncounterType {
             })
             .unwrap_or(false)
     }
-
 }

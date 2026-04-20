@@ -55,10 +55,16 @@ impl EncounterLocationStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Planned => Some("The patient is planned to be moved to this location at some point in the future."),
-            Self::Active => Some("The patient is currently at this location, or was between the period specified.\n\nA system may update these records when the patient leaves the location to either reserved, or completed."),
+            Self::Planned => Some(
+                "The patient is planned to be moved to this location at some point in the future.",
+            ),
+            Self::Active => Some(
+                "The patient is currently at this location, or was between the period specified.\n\nA system may update these records when the patient leaves the location to either reserved, or completed.",
+            ),
             Self::Reserved => Some("This location is held empty for this patient."),
-            Self::Completed => Some("The patient was at this location during the period specified.\n\nNot to be used when the patient is currently at the location."),
+            Self::Completed => Some(
+                "The patient was at this location during the period specified.\n\nNot to be used when the patient is currently at the location.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl EncounterLocationStatus {
             })
             .unwrap_or(false)
     }
-
 }

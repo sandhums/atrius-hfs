@@ -55,10 +55,18 @@ impl MeasureReportType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Individual => Some("An individual report that provides information on the performance for a given measure with respect to a single subject."),
-            Self::SubjectList => Some("A subject list report that includes a listing of subjects that satisfied each population criteria in the measure."),
-            Self::Summary => Some("A summary report that returns the number of members in each population criteria for the measure."),
-            Self::DataCollection => Some("A data collection report that contains data-of-interest for the measure."),
+            Self::Individual => Some(
+                "An individual report that provides information on the performance for a given measure with respect to a single subject.",
+            ),
+            Self::SubjectList => Some(
+                "A subject list report that includes a listing of subjects that satisfied each population criteria in the measure.",
+            ),
+            Self::Summary => Some(
+                "A summary report that returns the number of members in each population criteria for the measure.",
+            ),
+            Self::DataCollection => {
+                Some("A data collection report that contains data-of-interest for the measure.")
+            }
         }
     }
 
@@ -119,5 +127,4 @@ impl MeasureReportType {
             })
             .unwrap_or(false)
     }
-
 }

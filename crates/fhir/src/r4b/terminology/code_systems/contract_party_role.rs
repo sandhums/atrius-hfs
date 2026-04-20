@@ -98,5 +98,4 @@ impl ContractPartyRole {
             })
             .unwrap_or(false)
     }
-
 }

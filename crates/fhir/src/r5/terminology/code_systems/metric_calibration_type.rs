@@ -119,5 +119,4 @@ impl DeviceMetricCalibrationType {
             })
             .unwrap_or(false)
     }
-
 }

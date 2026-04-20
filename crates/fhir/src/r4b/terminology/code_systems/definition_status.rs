@@ -55,10 +55,14 @@ impl DefinitionStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Draft => Some("The definition is in the design stage and is not yet considered to be \"ready for use\"."),
+            Self::Draft => Some(
+                "The definition is in the design stage and is not yet considered to be \"ready for use\".",
+            ),
             Self::Active => Some("The definition is considered ready for use."),
             Self::Withdrawn => Some("The definition should no longer be used."),
-            Self::Unknown => Some("The authoring/source system does not know which of the status values currently applies for this resource.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply,  but the authoring/source system does not know which."),
+            Self::Unknown => Some(
+                "The authoring/source system does not know which of the status values currently applies for this resource.  Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply,  but the authoring/source system does not know which.",
+            ),
         }
     }
 
@@ -119,5 +123,4 @@ impl DefinitionStatus {
             })
             .unwrap_or(false)
     }
-
 }

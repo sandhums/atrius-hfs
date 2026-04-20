@@ -112,5 +112,4 @@ impl CopyNumberEvent {
             })
             .unwrap_or(false)
     }
-
 }

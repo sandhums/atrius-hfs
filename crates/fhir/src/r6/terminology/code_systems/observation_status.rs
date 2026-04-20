@@ -83,16 +83,36 @@ impl ObservationStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Registered => Some("The existence of the observation is registered, but there is no result yet available."),
-            Self::SpecimenInProcess => Some("The specimen being processed in the laboratory but no results are available yet."),
-            Self::Preliminary => Some("This is an initial or interim observation: data may be incomplete or unverified."),
-            Self::Final => Some("The observation is complete and there are no further actions needed. Additional information such \"released\", \"signed\", etc. would be represented using [Provenance](provenance.html) which provides not only the act but also the actors and dates and other related data. These act states would be associated with an observation status of `preliminary` until they are all completed and then a status of `final` would be applied. Also, this status applies for situations where there is a \"not-asked\" code for dataAbsentReason."),
-            Self::Amended => Some("Subsequent to being Final, the observation has been modified. This includes updates/new information and corrections."),
-            Self::Corrected => Some("Subsequent to being Final, the observation has been modified to correct an error in the original test result(s)."),
-            Self::Appended => Some("Subsequent to being Final, the observation has been modified to include additional information, with no changes to the original test result(s)."),
-            Self::Cancelled => Some("The observation is unavailable because the measurement was not started or not completed (also sometimes called \"aborted\"). A data absent reason should be present providing clarity as to why there is no value on an Observation instance"),
-            Self::EnteredInError => Some("The observation has been withdrawn following previous final release.  This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".)."),
-            Self::Unknown => Some("The authoring/source system does not know which of the status values currently applies for this observation. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which."),
+            Self::Registered => Some(
+                "The existence of the observation is registered, but there is no result yet available.",
+            ),
+            Self::SpecimenInProcess => Some(
+                "The specimen being processed in the laboratory but no results are available yet.",
+            ),
+            Self::Preliminary => Some(
+                "This is an initial or interim observation: data may be incomplete or unverified.",
+            ),
+            Self::Final => Some(
+                "The observation is complete and there are no further actions needed. Additional information such \"released\", \"signed\", etc. would be represented using [Provenance](provenance.html) which provides not only the act but also the actors and dates and other related data. These act states would be associated with an observation status of `preliminary` until they are all completed and then a status of `final` would be applied. Also, this status applies for situations where there is a \"not-asked\" code for dataAbsentReason.",
+            ),
+            Self::Amended => Some(
+                "Subsequent to being Final, the observation has been modified. This includes updates/new information and corrections.",
+            ),
+            Self::Corrected => Some(
+                "Subsequent to being Final, the observation has been modified to correct an error in the original test result(s).",
+            ),
+            Self::Appended => Some(
+                "Subsequent to being Final, the observation has been modified to include additional information, with no changes to the original test result(s).",
+            ),
+            Self::Cancelled => Some(
+                "The observation is unavailable because the measurement was not started or not completed (also sometimes called \"aborted\"). A data absent reason should be present providing clarity as to why there is no value on an Observation instance",
+            ),
+            Self::EnteredInError => Some(
+                "The observation has been withdrawn following previous final release.  This electronic record should never have existed, though it is possible that real-world decisions were based on it. (If real-world activity has occurred, the status should be \"cancelled\" rather than \"entered-in-error\".).",
+            ),
+            Self::Unknown => Some(
+                "The authoring/source system does not know which of the status values currently applies for this observation. Note: This concept is not to be used for \"other\" - one of the listed statuses is presumed to apply, but the authoring/source system does not know which.",
+            ),
             Self::CannotBeObtained => Some("The observation cannot be obtained."),
         }
     }
@@ -168,5 +188,4 @@ impl ObservationStatus {
             })
             .unwrap_or(false)
     }
-
 }

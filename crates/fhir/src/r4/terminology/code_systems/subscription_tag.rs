@@ -47,7 +47,9 @@ impl SubscriptionTag {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Queued => Some("The message has been queued for processing on a destination systems."),
+            Self::Queued => {
+                Some("The message has been queued for processing on a destination systems.")
+            }
             Self::Delivered => Some("The message has been delivered to its intended recipient."),
         }
     }
@@ -105,5 +107,4 @@ impl SubscriptionTag {
             })
             .unwrap_or(false)
     }
-
 }

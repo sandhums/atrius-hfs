@@ -119,5 +119,4 @@ impl ExampleDiagnosisRelatedGroupCodes {
             })
             .unwrap_or(false)
     }
-
 }

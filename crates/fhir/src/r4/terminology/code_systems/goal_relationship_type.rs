@@ -59,11 +59,21 @@ impl GoalRelationshipType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Predecessor => Some("Indicates that the target goal is one which must be met before striving for the current goal."),
-            Self::Successor => Some("Indicates that the target goal is a desired objective once the current goal is met."),
-            Self::Replacement => Some("Indicates that this goal has been replaced by the target goal."),
-            Self::Milestone => Some("Indicates that the target goal is considered to be a \"piece\" of attaining this goal."),
-            Self::Other => Some("Indicates that the relationship is not covered by one of the pre-defined codes.  (An extension may convey more information about the meaning of the relationship.)."),
+            Self::Predecessor => Some(
+                "Indicates that the target goal is one which must be met before striving for the current goal.",
+            ),
+            Self::Successor => Some(
+                "Indicates that the target goal is a desired objective once the current goal is met.",
+            ),
+            Self::Replacement => {
+                Some("Indicates that this goal has been replaced by the target goal.")
+            }
+            Self::Milestone => Some(
+                "Indicates that the target goal is considered to be a \"piece\" of attaining this goal.",
+            ),
+            Self::Other => Some(
+                "Indicates that the relationship is not covered by one of the pre-defined codes.  (An extension may convey more information about the meaning of the relationship.).",
+            ),
         }
     }
 
@@ -126,5 +136,4 @@ impl GoalRelationshipType {
             })
             .unwrap_or(false)
     }
-
 }

@@ -71,7 +71,9 @@ impl Diet {
             Self::DairyFree => Some("Excludes dairy products."),
             Self::NutFree => Some("Excludes ingredients containing nuts."),
             Self::GlutenFree => Some("Excludes ingredients containing gluten."),
-            Self::Vegan => Some("Food without meat, poultry, seafood, eggs, dairy products and other animal-derived substances."),
+            Self::Vegan => Some(
+                "Food without meat, poultry, seafood, eggs, dairy products and other animal-derived substances.",
+            ),
             Self::Halal => Some("Foods that conform to Islamic law."),
             Self::Kosher => Some("Foods that conform to Jewish dietary law."),
         }
@@ -140,5 +142,4 @@ impl Diet {
             })
             .unwrap_or(false)
     }
-
 }

@@ -126,5 +126,4 @@ impl AuditEventAgentNetworkType {
             })
             .unwrap_or(false)
     }
-
 }

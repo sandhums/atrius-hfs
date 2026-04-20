@@ -75,15 +75,21 @@ impl Eligibility {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Veterans => Some("Only Veterans are eligible to receive services associated with this code"),
+            Self::Veterans => {
+                Some("Only Veterans are eligible to receive services associated with this code")
+            }
             Self::PediatricPatients => Some("Pediatric Patients"),
             Self::ExistingPatients => Some("Existing Patients"),
             Self::NewPatients => Some("New patients"),
             Self::LowIncomePatients => Some("Low-income patients"),
             Self::UninsuredPatients => Some("Uninsured patients"),
             Self::RenalPatients => Some("Renal patients (e.g., for dialysis services)"),
-            Self::SpecialistReferralRequired => Some("A specific specialist referral is required to receive services associated with this code"),
-            Self::AssessmentRequired => Some("An assessment is required to receive services associated with this code"),
+            Self::SpecialistReferralRequired => Some(
+                "A specific specialist referral is required to receive services associated with this code",
+            ),
+            Self::AssessmentRequired => {
+                Some("An assessment is required to receive services associated with this code")
+            }
         }
     }
 
@@ -154,5 +160,4 @@ impl Eligibility {
             })
             .unwrap_or(false)
     }
-
 }

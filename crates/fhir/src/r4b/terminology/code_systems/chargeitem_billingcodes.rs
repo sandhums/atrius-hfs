@@ -51,9 +51,15 @@ impl ChargeItemCode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::_1100 => Some("From German EBM billing system:\nUnvorhergesehene Inanspruchnahme des Vertragsarztes durch einen Patienten;zwischen 19:00 und 22:00 Uhr;an Samstagen, Sonntagen und gesetzlichen Feiertagen, am 24.12. und 31.12. zwischen 07:00 und 19:00 Uhr."),
-            Self::_1210 => Some("From German EBM billing system:\nNotfallpauschale im organisierten Not(-fall)dienst und f\u{fc}r nicht an der vertrags\u{e4}rztlichen Versorgung teilnehmende \u{c4}rzte, Institute und Krankenh\u{e4}user bei Inanspruchnahme;zwischen 07:00 und 19:00 Uhr."),
-            Self::_1320 => Some("From German EBM billing system:\nGrundpauschale f\u{fc}r \u{c4}rzte, Institute und Krankenh\u{e4}user, die zur Erbringung von Leistungen innerhalb mindestens eines der Fachgebiete An\u{e4}sthesiologie, Frauenheilkunde und Geburtshilfe, Haut- und Geschlechtskrankheiten, Mund-, Kiefer- und Gesichtschirurgie und Humangenetik erm\u{e4}chtigt sind."),
+            Self::_1100 => Some(
+                "From German EBM billing system:\nUnvorhergesehene Inanspruchnahme des Vertragsarztes durch einen Patienten;zwischen 19:00 und 22:00 Uhr;an Samstagen, Sonntagen und gesetzlichen Feiertagen, am 24.12. und 31.12. zwischen 07:00 und 19:00 Uhr.",
+            ),
+            Self::_1210 => Some(
+                "From German EBM billing system:\nNotfallpauschale im organisierten Not(-fall)dienst und f\u{fc}r nicht an der vertrags\u{e4}rztlichen Versorgung teilnehmende \u{c4}rzte, Institute und Krankenh\u{e4}user bei Inanspruchnahme;zwischen 07:00 und 19:00 Uhr.",
+            ),
+            Self::_1320 => Some(
+                "From German EBM billing system:\nGrundpauschale f\u{fc}r \u{c4}rzte, Institute und Krankenh\u{e4}user, die zur Erbringung von Leistungen innerhalb mindestens eines der Fachgebiete An\u{e4}sthesiologie, Frauenheilkunde und Geburtshilfe, Haut- und Geschlechtskrankheiten, Mund-, Kiefer- und Gesichtschirurgie und Humangenetik erm\u{e4}chtigt sind.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl ChargeItemCode {
             })
             .unwrap_or(false)
     }
-
 }

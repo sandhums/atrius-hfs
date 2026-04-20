@@ -62,8 +62,12 @@ impl ClaimTypeCodes {
             Self::Institutional => Some("Hospital, clinic and typically inpatient claims."),
             Self::Oral => Some("Dental, Denture and Hygiene claims."),
             Self::Pharmacy => Some("Pharmacy claims for goods and services."),
-            Self::Professional => Some("Typically, outpatient claims from Physician, Psychological, Chiropractor, Physiotherapy, Speech Pathology, rehabilitative, consulting."),
-            Self::Vision => Some("Vision claims for professional services and products such as glasses and contact lenses."),
+            Self::Professional => Some(
+                "Typically, outpatient claims from Physician, Psychological, Chiropractor, Physiotherapy, Speech Pathology, rehabilitative, consulting.",
+            ),
+            Self::Vision => Some(
+                "Vision claims for professional services and products such as glasses and contact lenses.",
+            ),
         }
     }
 
@@ -126,5 +130,4 @@ impl ClaimTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

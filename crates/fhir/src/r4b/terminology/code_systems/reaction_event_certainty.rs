@@ -55,10 +55,18 @@ impl AllergyIntoleranceCertainty {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Unlikely => Some("There is a low level of clinical certainty that the reaction was caused by the identified      substance."),
-            Self::Likely => Some("There is a high level of clinical certainty that the reaction was caused by the identified      substance."),
-            Self::Confirmed => Some("There is a very high level of clinical certainty that the reaction was due to the identified      substance, which may include clinical evidence by testing or rechallenge."),
-            Self::Unknown => Some("The clinical certainty that the reaction was caused by the identified substance is unknown.       It is an explicit assertion that certainty is not known."),
+            Self::Unlikely => Some(
+                "There is a low level of clinical certainty that the reaction was caused by the identified      substance.",
+            ),
+            Self::Likely => Some(
+                "There is a high level of clinical certainty that the reaction was caused by the identified      substance.",
+            ),
+            Self::Confirmed => Some(
+                "There is a very high level of clinical certainty that the reaction was due to the identified      substance, which may include clinical evidence by testing or rechallenge.",
+            ),
+            Self::Unknown => Some(
+                "The clinical certainty that the reaction was caused by the identified substance is unknown.       It is an explicit assertion that certainty is not known.",
+            ),
         }
     }
 
@@ -119,5 +127,4 @@ impl AllergyIntoleranceCertainty {
             })
             .unwrap_or(false)
     }
-
 }

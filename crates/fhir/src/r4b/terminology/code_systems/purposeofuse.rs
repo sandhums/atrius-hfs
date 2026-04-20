@@ -153,26 +153,42 @@ impl NHINPurposeOfUse {
             Self::SYSADMIN => Some("System Administration"),
             Self::FRAUD => Some("Fraud detection"),
             Self::PSYCHOTHERAPY => Some("Use or disclosure of Psychotherapy Notes"),
-            Self::TRAINING => Some("Use or disclosure by the covered entity for its own training programs"),
-            Self::LEGAL => Some("Use or disclosure by the covered entity to defend itself in a legal action"),
+            Self::TRAINING => {
+                Some("Use or disclosure by the covered entity for its own training programs")
+            }
+            Self::LEGAL => {
+                Some("Use or disclosure by the covered entity to defend itself in a legal action")
+            }
             Self::MARKETING => Some("Marketing"),
             Self::DIRECTORY => Some("Use and disclosure for facility directories"),
-            Self::FAMILY => Some("Disclose to a family member, other relative, or a close personal friend of the individual"),
+            Self::FAMILY => Some(
+                "Disclose to a family member, other relative, or a close personal friend of the individual",
+            ),
             Self::PRESENT => Some("Uses and disclosures with the individual present."),
-            Self::EMERGENCY => Some("Permission cannot practicably be provided because of the individual\'s incapacity or an emergency."),
+            Self::EMERGENCY => Some(
+                "Permission cannot practicably be provided because of the individual\'s incapacity or an emergency.",
+            ),
             Self::DISASTER => Some("Use and disclosures for disaster relief purposes."),
             Self::PUBLICHEALTH => Some("Uses and disclosures for public health activities."),
-            Self::ABUSE => Some("Disclosures about victims of abuse, neglect or domestic violence."),
+            Self::ABUSE => {
+                Some("Disclosures about victims of abuse, neglect or domestic violence.")
+            }
             Self::OVERSIGHT => Some("Uses and disclosures for health oversight activities."),
             Self::JUDICIAL => Some("Disclosures for judicial and administrative proceedings."),
             Self::LAW => Some("Disclosures for law enforcement purposes."),
             Self::DECEASED => Some("Uses and disclosures about decedents."),
-            Self::DONATION => Some("Uses and disclosures for cadaveric organ,  eye or tissue donation purposes"),
+            Self::DONATION => {
+                Some("Uses and disclosures for cadaveric organ,  eye or tissue donation purposes")
+            }
             Self::RESEARCH => Some("Uses and disclosures for research purposes."),
-            Self::THREAT => Some("Uses and disclosures to avert a serious threat to health or safety."),
+            Self::THREAT => {
+                Some("Uses and disclosures to avert a serious threat to health or safety.")
+            }
             Self::GOVERNMENT => Some("Uses and disclosures for specialized government functions."),
             Self::WORKERSCOMP => Some("Disclosures for workers\' compensation."),
-            Self::COVERAGE => Some("Disclosures for insurance or disability coverage determination"),
+            Self::COVERAGE => {
+                Some("Disclosures for insurance or disability coverage determination")
+            }
             Self::REQUEST => Some("Request of the Individual"),
         }
     }
@@ -280,5 +296,4 @@ impl NHINPurposeOfUse {
             })
             .unwrap_or(false)
     }
-
 }

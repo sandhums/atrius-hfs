@@ -55,8 +55,12 @@ impl FHIRDeviceStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Active => Some("The device is available for use.  Note: For *implanted devices*  this means that the device is implanted in the patient."),
-            Self::Inactive => Some("The device is no longer available for use (e.g. lost, expired, damaged).  Note: For *implanted devices*  this means that the device has been removed from the patient."),
+            Self::Active => Some(
+                "The device is available for use.  Note: For *implanted devices*  this means that the device is implanted in the patient.",
+            ),
+            Self::Inactive => Some(
+                "The device is no longer available for use (e.g. lost, expired, damaged).  Note: For *implanted devices*  this means that the device has been removed from the patient.",
+            ),
             Self::EnteredInError => Some("The device was entered in error and voided."),
             Self::Unknown => Some("The status of the device has not been determined."),
         }
@@ -119,5 +123,4 @@ impl FHIRDeviceStatus {
             })
             .unwrap_or(false)
     }
-
 }

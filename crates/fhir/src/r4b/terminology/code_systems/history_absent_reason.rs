@@ -55,10 +55,16 @@ impl FamilyHistoryAbsentReason {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::SubjectUnknown => Some("Patient does not know the subject, e.g. the biological parent of an adopted patient."),
+            Self::SubjectUnknown => Some(
+                "Patient does not know the subject, e.g. the biological parent of an adopted patient.",
+            ),
             Self::Withheld => Some("The patient withheld or refused to share the information."),
-            Self::UnableToObtain => Some("Information cannot be obtained; e.g. unconscious patient."),
-            Self::Deferred => Some("Patient does not have the information now, but can provide the information at a later date."),
+            Self::UnableToObtain => {
+                Some("Information cannot be obtained; e.g. unconscious patient.")
+            }
+            Self::Deferred => Some(
+                "Patient does not have the information now, but can provide the information at a later date.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl FamilyHistoryAbsentReason {
             })
             .unwrap_or(false)
     }
-
 }

@@ -119,5 +119,4 @@ impl ContributorType {
             })
             .unwrap_or(false)
     }
-
 }

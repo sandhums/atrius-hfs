@@ -119,5 +119,4 @@ impl VariableRole {
             })
             .unwrap_or(false)
     }
-
 }

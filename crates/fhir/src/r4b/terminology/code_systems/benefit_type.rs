@@ -175,5 +175,4 @@ impl BenefitTypeCodes {
             })
             .unwrap_or(false)
     }
-
 }

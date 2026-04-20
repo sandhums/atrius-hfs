@@ -51,9 +51,15 @@ impl DetectedIssueSeverity {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::High => Some("Indicates the issue may be life-threatening or has the potential to cause permanent injury."),
-            Self::Moderate => Some("Indicates the issue may result in noticeable adverse consequences but is unlikely to be life-threatening or cause permanent injury."),
-            Self::Low => Some("Indicates the issue may result in some adverse consequences but is unlikely to substantially affect the situation of the subject."),
+            Self::High => Some(
+                "Indicates the issue may be life-threatening or has the potential to cause permanent injury.",
+            ),
+            Self::Moderate => Some(
+                "Indicates the issue may result in noticeable adverse consequences but is unlikely to be life-threatening or cause permanent injury.",
+            ),
+            Self::Low => Some(
+                "Indicates the issue may result in some adverse consequences but is unlikely to substantially affect the situation of the subject.",
+            ),
         }
     }
 
@@ -112,5 +118,4 @@ impl DetectedIssueSeverity {
             })
             .unwrap_or(false)
     }
-
 }

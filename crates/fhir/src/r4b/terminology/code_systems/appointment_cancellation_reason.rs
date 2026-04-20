@@ -45,7 +45,8 @@ pub enum LocationType_4657e82b {
 }
 
 impl LocationType_4657e82b {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/appointment-cancellation-reason";
     pub const VERSION: &'static str = "4.3.0";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "example";
@@ -315,5 +316,4 @@ impl LocationType_4657e82b {
             })
             .unwrap_or(false)
     }
-
 }

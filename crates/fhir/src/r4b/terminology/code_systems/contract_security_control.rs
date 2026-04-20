@@ -98,5 +98,4 @@ impl ContractSecurityControl {
             })
             .unwrap_or(false)
     }
-
 }

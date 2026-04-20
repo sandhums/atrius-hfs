@@ -48,7 +48,9 @@ impl OperationKind {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::Operation => Some("This operation is invoked as an operation."),
-            Self::Query => Some("This operation is a named query, invoked using the search mechanism."),
+            Self::Query => {
+                Some("This operation is a named query, invoked using the search mechanism.")
+            }
         }
     }
 
@@ -105,5 +107,4 @@ impl OperationKind {
             })
             .unwrap_or(false)
     }
-
 }

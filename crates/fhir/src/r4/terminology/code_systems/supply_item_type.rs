@@ -105,5 +105,4 @@ impl SupplyItemType {
             })
             .unwrap_or(false)
     }
-
 }

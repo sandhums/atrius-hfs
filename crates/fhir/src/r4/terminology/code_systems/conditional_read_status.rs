@@ -56,9 +56,15 @@ impl ConditionalReadStatus {
     pub fn definition(self) -> Option<&'static str> {
         match self {
             Self::NotSupported => Some("No support for conditional reads."),
-            Self::ModifiedSince => Some("Conditional reads are supported, but only with the If-Modified-Since HTTP Header."),
-            Self::NotMatch => Some("Conditional reads are supported, but only with the If-None-Match HTTP Header."),
-            Self::FullSupport => Some("Conditional reads are supported, with both If-Modified-Since and If-None-Match HTTP Headers."),
+            Self::ModifiedSince => Some(
+                "Conditional reads are supported, but only with the If-Modified-Since HTTP Header.",
+            ),
+            Self::NotMatch => Some(
+                "Conditional reads are supported, but only with the If-None-Match HTTP Header.",
+            ),
+            Self::FullSupport => Some(
+                "Conditional reads are supported, with both If-Modified-Since and If-None-Match HTTP Headers.",
+            ),
         }
     }
 
@@ -119,5 +125,4 @@ impl ConditionalReadStatus {
             })
             .unwrap_or(false)
     }
-
 }

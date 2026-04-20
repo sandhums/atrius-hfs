@@ -107,23 +107,45 @@ impl QuestionnaireItemType {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Group => Some("An item with no direct answer but should have at least one child item."),
-            Self::Display => Some("Text for display that will not capture an answer or have child items."),
-            Self::Question => Some("An item that defines a specific answer to be captured, and which may have child items. (the answer provided in the QuestionnaireResponse should be of the defined datatype)."),
+            Self::Group => {
+                Some("An item with no direct answer but should have at least one child item.")
+            }
+            Self::Display => {
+                Some("Text for display that will not capture an answer or have child items.")
+            }
+            Self::Question => Some(
+                "An item that defines a specific answer to be captured, and which may have child items. (the answer provided in the QuestionnaireResponse should be of the defined datatype).",
+            ),
             Self::Boolean => Some("Question with a yes/no answer (valueBoolean)."),
             Self::Decimal => Some("Question with is a real number answer (valueDecimal)."),
             Self::Integer => Some("Question with an integer answer (valueInteger)."),
             Self::Date => Some("Question with a date answer (valueDate)."),
             Self::DateTime => Some("Question with a date and time answer (valueDateTime)."),
-            Self::Time => Some("Question with a time (hour:minute:second) answer independent of date. (valueTime)."),
-            Self::String => Some("Question with a short (few words to short sentence) free-text entry answer (valueString)."),
-            Self::Text => Some("Question with a long (potentially multi-paragraph) free-text entry answer (valueString)."),
+            Self::Time => Some(
+                "Question with a time (hour:minute:second) answer independent of date. (valueTime).",
+            ),
+            Self::String => Some(
+                "Question with a short (few words to short sentence) free-text entry answer (valueString).",
+            ),
+            Self::Text => Some(
+                "Question with a long (potentially multi-paragraph) free-text entry answer (valueString).",
+            ),
             Self::Url => Some("Question with a URL (website, FTP site, etc.) answer (valueUri)."),
-            Self::Choice => Some("Question with a Coding drawn from a list of possible answers (specified in either the answerOption property, or via the valueset referenced in the answerValueSet property) as an answer (valueCoding)."),
-            Self::OpenChoice => Some("Answer is a Coding drawn from a list of possible answers (as with the choice type) or a free-text entry in a string (valueCoding or valueString)."),
-            Self::Attachment => Some("Question with binary content such as an image, PDF, etc. as an answer (valueAttachment)."),
-            Self::Reference => Some("Question with a reference to another resource (practitioner, organization, etc.) as an answer (valueReference)."),
-            Self::Quantity => Some("Question with a combination of a numeric value and unit, potentially with a comparator (<, >, etc.) as an answer. (valueQuantity) There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to define what unit should be captured (or the unit that has a ucum conversion from the provided unit)."),
+            Self::Choice => Some(
+                "Question with a Coding drawn from a list of possible answers (specified in either the answerOption property, or via the valueset referenced in the answerValueSet property) as an answer (valueCoding).",
+            ),
+            Self::OpenChoice => Some(
+                "Answer is a Coding drawn from a list of possible answers (as with the choice type) or a free-text entry in a string (valueCoding or valueString).",
+            ),
+            Self::Attachment => Some(
+                "Question with binary content such as an image, PDF, etc. as an answer (valueAttachment).",
+            ),
+            Self::Reference => Some(
+                "Question with a reference to another resource (practitioner, organization, etc.) as an answer (valueReference).",
+            ),
+            Self::Quantity => Some(
+                "Question with a combination of a numeric value and unit, potentially with a comparator (<, >, etc.) as an answer. (valueQuantity) There is an extension \'http://hl7.org/fhir/StructureDefinition/questionnaire-unit\' that can be used to define what unit should be captured (or the unit that has a ucum conversion from the provided unit).",
+            ),
         }
     }
 
@@ -210,5 +232,4 @@ impl QuestionnaireItemType {
             })
             .unwrap_or(false)
     }
-
 }

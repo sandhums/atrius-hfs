@@ -47,8 +47,12 @@ impl StructureMapGroupTypeMode {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Types => Some("This group is a default mapping group for the specified types and for the primary source type."),
-            Self::TypeAndTypes => Some("This group is a default mapping group for the specified types."),
+            Self::Types => Some(
+                "This group is a default mapping group for the specified types and for the primary source type.",
+            ),
+            Self::TypeAndTypes => {
+                Some("This group is a default mapping group for the specified types.")
+            }
         }
     }
 
@@ -105,5 +109,4 @@ impl StructureMapGroupTypeMode {
             })
             .unwrap_or(false)
     }
-
 }

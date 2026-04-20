@@ -105,5 +105,4 @@ impl EncounterBusinessStatusOutpatient {
             })
             .unwrap_or(false)
     }
-
 }

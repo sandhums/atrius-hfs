@@ -51,9 +51,15 @@ impl ExpansionProcessingRule {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::AllCodes => Some("The expansion (when in UI mode) includes all codes *and* any defined groups (in extensions)."),
-            Self::Ungrouped => Some("The expanion (when in UI mode) lists the groups, and then any codes that have not been included in a group."),
-            Self::GroupsOnly => Some("The expansion (when in UI mode) only includes the defined groups."),
+            Self::AllCodes => Some(
+                "The expansion (when in UI mode) includes all codes *and* any defined groups (in extensions).",
+            ),
+            Self::Ungrouped => Some(
+                "The expanion (when in UI mode) lists the groups, and then any codes that have not been included in a group.",
+            ),
+            Self::GroupsOnly => {
+                Some("The expansion (when in UI mode) only includes the defined groups.")
+            }
         }
     }
 
@@ -112,5 +118,4 @@ impl ExpansionProcessingRule {
             })
             .unwrap_or(false)
     }
-
 }

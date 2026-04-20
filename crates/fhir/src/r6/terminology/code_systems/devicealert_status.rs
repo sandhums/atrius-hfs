@@ -55,9 +55,13 @@ impl DeviceAlertStatus {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::InProgress => Some("The alert condition is present, or any signal from a previously present condition is not off"),
+            Self::InProgress => Some(
+                "The alert condition is present, or any signal from a previously present condition is not off",
+            ),
             Self::Completed => Some("The alert condition is not present, and all signals are off"),
-            Self::EnteredInError => Some("This alert record was created in error and is not valid."),
+            Self::EnteredInError => {
+                Some("This alert record was created in error and is not valid.")
+            }
             Self::Unknown => Some("The status of the alert is not known."),
         }
     }
@@ -119,5 +123,4 @@ impl DeviceAlertStatus {
             })
             .unwrap_or(false)
     }
-
 }

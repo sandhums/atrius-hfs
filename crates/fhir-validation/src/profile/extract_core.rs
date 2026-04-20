@@ -3,14 +3,16 @@
 //! See [`super::extract`](crate::profile::extract) for differential vs snapshot behavior.
 
 use crate::ValidationError;
+use crate::issue_code::FHIR_JSON_VALUE;
+use crate::profile::structure_definition_extract::StructureDefinitionExtractMessage as SdMsg;
 use crate::profile::types::{
     ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile,
     ExtractedSliceDiscriminator, ExtractedSlicing, ExtractedSlicingRules, ExtractedTypeConstraint,
     ExtractedValueConstraint,
 };
 use fhir_validation_types::{
-    bindable_element_type_codes, BindingDef, BindingStrength, BindingTargetKind, InvariantDef,
-    Severity, StructureDefinitionKind, TypeDerivationRule,
+    BindingDef, BindingStrength, BindingTargetKind, InvariantDef, Severity,
+    StructureDefinitionKind, TypeDerivationRule, bindable_element_type_codes,
     binding_target_kind_from_element_type_codes, normalize_fhir_element_type_code,
 };
 use serde_json::{Map, Value};
@@ -39,11 +41,9 @@ pub fn prune_json_nulls(value: Value) -> Value {
 pub fn extract_structure_definition_profile_from_json(
     value: &Value,
 ) -> Result<ExtractedProfile, ValidationError> {
-    let obj = value.as_object().ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "StructureDefinition JSON must be an object".to_string(),
-        )
-    })?;
+    let obj = value
+        .as_object()
+        .ok_or_else(|| ValidationError::from(SdMsg::JsonMustBeObject))?;
 
     // Typed `helios_fhir` resources serialized with `serde_json::to_value` may omit
     // `resourceType`; infer StructureDefinition when the JSON clearly describes one.
@@ -57,76 +57,55 @@ pub fn extract_structure_definition_profile_from_json(
             if obj.get("kind").is_some() && obj.get("differential").is_some() {
                 "StructureDefinition"
             } else {
-                return Err(ValidationError::InvalidStructureDefinition(
-                    "Missing resourceType on StructureDefinition".to_string(),
-                ));
+                return Err(ValidationError::from(SdMsg::MissingResourceType));
             }
         }
     };
     if rt != "StructureDefinition" {
-        return Err(ValidationError::InvalidStructureDefinition(format!(
-            "Expected resourceType StructureDefinition, got {rt}"
-        )));
+        return Err(ValidationError::from(SdMsg::ExpectedResourceType {
+            got: rt.to_string(),
+        }));
     }
 
     let url = obj
         .get("url")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            ValidationError::InvalidStructureDefinition(
-                "StructureDefinition.url is required".to_string(),
-            )
-        })?
+        .ok_or_else(|| ValidationError::from(SdMsg::UrlRequired))?
         .to_string();
 
-    let kind_str = obj.get("kind").and_then(|v| v.as_str()).ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "StructureDefinition.kind is required".to_string(),
-        )
-    })?;
+    let kind_str = obj
+        .get("kind")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ValidationError::from(SdMsg::KindRequired))?;
     let kind = StructureDefinitionKind::parse(kind_str).ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Unknown StructureDefinition.kind '{kind_str}'"
-        ))
+        ValidationError::from(SdMsg::UnknownKind {
+            value: kind_str.to_string(),
+        })
     })?;
 
     let derivation_str = obj
         .get("derivation")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            ValidationError::InvalidStructureDefinition(
-                "StructureDefinition.derivation is required".to_string(),
-            )
-        })?;
+        .ok_or_else(|| ValidationError::from(SdMsg::DerivationRequired))?;
     let derivation = TypeDerivationRule::parse(derivation_str).ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Unknown StructureDefinition.derivation '{derivation_str}'"
-        ))
+        ValidationError::from(SdMsg::UnknownDerivation {
+            value: derivation_str.to_string(),
+        })
     })?;
 
     let resource_type = obj
         .get("type")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            ValidationError::InvalidStructureDefinition(
-                "StructureDefinition.type is required".to_string(),
-            )
-        })?
+        .ok_or_else(|| ValidationError::from(SdMsg::TypeRequired))?
         .to_string();
 
     let diff = obj
         .get("differential")
         .and_then(|d| d.get("element"))
         .and_then(|e| e.as_array())
-        .ok_or_else(|| {
-            ValidationError::InvalidStructureDefinition(
-                "StructureDefinition.differential.element must be a non-empty array".to_string(),
-            )
-        })?;
+        .ok_or_else(|| ValidationError::from(SdMsg::DifferentialElementMustBeArray))?;
     if diff.is_empty() {
-        return Err(ValidationError::InvalidStructureDefinition(
-            "StructureDefinition.differential.element must be non-empty".to_string(),
-        ));
+        return Err(ValidationError::from(SdMsg::DifferentialElementNonEmpty));
     }
 
     let snapshot_map: HashMap<String, Value> = obj
@@ -164,19 +143,13 @@ pub fn extract_structure_definition_profile_from_json(
     let mut element_rules = Vec::new();
 
     for diff_el in diff {
-        let diff_obj = diff_el.as_object().ok_or_else(|| {
-            ValidationError::InvalidStructureDefinition(
-                "StructureDefinition.differential.element entry must be an object".to_string(),
-            )
-        })?;
+        let diff_obj = diff_el
+            .as_object()
+            .ok_or_else(|| ValidationError::from(SdMsg::DifferentialElementEntryMustBeObject))?;
         let path = diff_obj
             .get("path")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                ValidationError::InvalidStructureDefinition(
-                    "StructureDefinition differential element missing path".to_string(),
-                )
-            })?;
+            .ok_or_else(|| ValidationError::from(SdMsg::DifferentialElementMissingPath))?;
         let id = diff_obj
             .get("id")
             .and_then(|v| v.as_str())
@@ -221,11 +194,9 @@ fn extract_element_rule(
     path: String,
     resolved: &Value,
 ) -> Result<ExtractedElementRule, ValidationError> {
-    let obj = resolved.as_object().ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "StructureDefinition element must be an object".to_string(),
-        )
-    })?;
+    let obj = resolved
+        .as_object()
+        .ok_or_else(|| ValidationError::from(SdMsg::ElementMustBeObject))?;
 
     Ok(ExtractedElementRule {
         id,
@@ -345,7 +316,7 @@ fn extract_value_set(b: &Map<String, Value>) -> Result<String, ValidationError> 
             return Ok(s.to_string());
         }
         if let Some(o) = v.as_object() {
-            if let Some(s) = o.get("value").and_then(|x| x.as_str()) {
+            if let Some(s) = o.get(FHIR_JSON_VALUE).and_then(|x| x.as_str()) {
                 return Ok(s.to_string());
             }
         }
@@ -356,9 +327,7 @@ fn extract_value_set(b: &Map<String, Value>) -> Result<String, ValidationError> 
     if let Some(v) = b.get("valueSetUri").and_then(|v| v.as_str()) {
         return Ok(v.to_string());
     }
-    Err(ValidationError::InvalidStructureDefinition(
-        "ElementDefinition.binding is missing a value set reference".to_string(),
-    ))
+    Err(ValidationError::from(SdMsg::BindingMissingValueSet))
 }
 
 fn extract_type_codes(obj: &Map<String, Value>) -> Vec<String> {
@@ -381,20 +350,17 @@ fn extract_binding(path: String, resolved: &Value) -> Result<Option<BindingDef>,
     let Some(bind) = obj.get("binding") else {
         return Ok(None);
     };
-    let b = bind.as_object().ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "ElementDefinition.binding must be an object".to_string(),
-        )
-    })?;
-    let strength_str = b.get("strength").and_then(|v| v.as_str()).ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "ElementDefinition.binding.strength is required when binding is present".to_string(),
-        )
-    })?;
+    let b = bind
+        .as_object()
+        .ok_or_else(|| ValidationError::from(SdMsg::BindingMustBeObject))?;
+    let strength_str = b
+        .get("strength")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ValidationError::from(SdMsg::BindingStrengthRequired))?;
     let strength = parse_binding_strength(strength_str).ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(format!(
-            "Unknown ElementDefinition.binding.strength '{strength_str}'"
-        ))
+        ValidationError::from(SdMsg::UnknownBindingStrength {
+            value: strength_str.to_string(),
+        })
     })?;
 
     let value_set = extract_value_set(b)?;
@@ -503,11 +469,9 @@ fn extract_slicing(obj: &Map<String, Value>) -> Result<Option<ExtractedSlicing>,
     let Some(s) = obj.get("slicing") else {
         return Ok(None);
     };
-    let s = s.as_object().ok_or_else(|| {
-        ValidationError::InvalidStructureDefinition(
-            "ElementDefinition.slicing must be an object".to_string(),
-        )
-    })?;
+    let s = s
+        .as_object()
+        .ok_or_else(|| ValidationError::from(SdMsg::SlicingMustBeObject))?;
     let discriminators = s
         .get("discriminator")
         .and_then(|d| d.as_array())

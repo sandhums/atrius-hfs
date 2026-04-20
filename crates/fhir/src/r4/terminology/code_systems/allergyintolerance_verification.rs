@@ -17,7 +17,8 @@ pub enum AllergyIntoleranceVerificationStatusCodes {
 }
 
 impl AllergyIntoleranceVerificationStatusCodes {
-    pub const URL: &'static str = "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification";
+    pub const URL: &'static str =
+        "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification";
     pub const VERSION: &'static str = "4.0.1";
     pub const STATUS: &'static str = "draft";
     pub const CONTENT: &'static str = "complete";
@@ -55,9 +56,15 @@ impl AllergyIntoleranceVerificationStatusCodes {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Unconfirmed => Some("A low level of certainty about the propensity for a reaction to the identified substance."),
-            Self::Confirmed => Some("A high level of certainty about the propensity for a reaction to the identified substance, which may include clinical evidence by testing or rechallenge."),
-            Self::Refuted => Some("A propensity for a reaction to the identified substance has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This might or might not include testing or rechallenge."),
+            Self::Unconfirmed => Some(
+                "A low level of certainty about the propensity for a reaction to the identified substance.",
+            ),
+            Self::Confirmed => Some(
+                "A high level of certainty about the propensity for a reaction to the identified substance, which may include clinical evidence by testing or rechallenge.",
+            ),
+            Self::Refuted => Some(
+                "A propensity for a reaction to the identified substance has been disputed or disproven with a sufficient level of clinical certainty to justify invalidating the assertion. This might or might not include testing or rechallenge.",
+            ),
             Self::EnteredInError => Some("The statement was entered in error and is not valid."),
         }
     }
@@ -119,5 +126,4 @@ impl AllergyIntoleranceVerificationStatusCodes {
             })
             .unwrap_or(false)
     }
-
 }

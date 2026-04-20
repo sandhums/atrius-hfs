@@ -71,14 +71,28 @@ impl VersionAlgorithm {
 
     pub fn definition(self) -> Option<&'static str> {
         match self {
-            Self::Semver => Some("Uses the semantic versioning scheme as defined in [semver.org](http://semver.org)."),
+            Self::Semver => Some(
+                "Uses the semantic versioning scheme as defined in [semver.org](http://semver.org).",
+            ),
             Self::Integer => Some("Versions are integers and ordered numerically"),
-            Self::Alpha => Some("Simple alphabetic sort on a case-insensitive and accent-insensitive basis.  (Sorting of different cases or accented versions of a character is indeterminate)"),
-            Self::Date => Some("Versions are expressed as an ISO date/time syntax (including syntaxes with only portions of a date) in the general format of YYYY-MM-DD (with or without separators). Inclusion of the time portion is optional."),
-            Self::Natural => Some("Sorted according to the algorithm defined here: [naturalordersort.org](http://www.naturalordersort.org/)"),
-            Self::MajorMinor => Some("Similar to semver, but having only two components - i.e. a major and minor (integer) version number separated by a \'.\'.  The specific nature of what constitutes a major vs. minor increment is locally defined."),
-            Self::SctUrl => Some("Versions are expressed according to the SNOMED URL scheme. See the [Versions](https://terminology.hl7.org/SNOMEDCT.html#versions) topic for more details."),
-            Self::UsDate => Some("Versions are expressed as an US date format, i.e. MMDDYYYY (with or without separators)."),
+            Self::Alpha => Some(
+                "Simple alphabetic sort on a case-insensitive and accent-insensitive basis.  (Sorting of different cases or accented versions of a character is indeterminate)",
+            ),
+            Self::Date => Some(
+                "Versions are expressed as an ISO date/time syntax (including syntaxes with only portions of a date) in the general format of YYYY-MM-DD (with or without separators). Inclusion of the time portion is optional.",
+            ),
+            Self::Natural => Some(
+                "Sorted according to the algorithm defined here: [naturalordersort.org](http://www.naturalordersort.org/)",
+            ),
+            Self::MajorMinor => Some(
+                "Similar to semver, but having only two components - i.e. a major and minor (integer) version number separated by a \'.\'.  The specific nature of what constitutes a major vs. minor increment is locally defined.",
+            ),
+            Self::SctUrl => Some(
+                "Versions are expressed according to the SNOMED URL scheme. See the [Versions](https://terminology.hl7.org/SNOMEDCT.html#versions) topic for more details.",
+            ),
+            Self::UsDate => Some(
+                "Versions are expressed as an US date format, i.e. MMDDYYYY (with or without separators).",
+            ),
         }
     }
 
@@ -147,5 +161,4 @@ impl VersionAlgorithm {
             })
             .unwrap_or(false)
     }
-
 }

@@ -105,5 +105,4 @@ impl AuditEntityDetailTypeExample {
             })
             .unwrap_or(false)
     }
-
 }
