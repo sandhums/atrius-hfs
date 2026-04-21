@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod tests {
 
     use fhir_validation::profile::cardinality::validate_min_cardinality;

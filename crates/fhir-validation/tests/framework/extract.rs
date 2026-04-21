@@ -1,4 +1,3 @@
-#[cfg(feature = "R5")]
 mod tests {
 
     use fhir_validation::profile::extract::extract_r5_structure_definition_profile;

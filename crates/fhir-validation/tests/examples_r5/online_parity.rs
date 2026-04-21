@@ -1,27 +1,8 @@
-//! **Optional** parity checks against a remote FHIR server’s `$validate` (default: HAPI public).
-//!
-//! These tests are **`#[ignore]` by default** (network + third-party behavior). To run:
-//!
-//! ```text
-//! FHIR_ONLINE_VALIDATOR_BASE_URL=https://hapi.fhir.org/baseR5 \
-//!   cargo test -p fhir-validation --features R5 \
-//!   --test json_examples_online_parity_tests -- --ignored
-//! ```
-//!
-//! We compare **severity counts** (error/warning/information) between Atrius and the remote
-//! `OperationOutcome`, not issue text. Validators legitimately differ on warnings and terminology.
+//! Optional parity vs remote instance `$validate` (default target documented in `online_fhir_validate`).
 
-#![cfg(feature = "R5")]
-
-mod common {
-    pub mod fhir_json_examples;
-    pub mod fixtures;
-    pub mod online_fhir_validate;
-}
-
-use crate::common::fhir_json_examples::load_r5_fhir_resource;
 use crate::common::fhir_json_examples::{
-    count_severities, fhir_json_dir, read_fhir_example_json, resource_type_of_json,
+    count_severities, fhir_json_dir, load_r5_fhir_resource, read_fhir_example_json,
+    resource_type_of_json,
 };
 use crate::common::fixtures::local_terminology_r5;
 use crate::common::online_fhir_validate::{
@@ -65,7 +46,6 @@ async fn hapi_validate_genomic_patient_severity_counts() {
         le, 0,
         "local validator should report no errors: {issues:#?}"
     );
-    // Warnings may differ; log both for human review when running --ignored.
     assert!(
         lw < 100 && rw < 100,
         "local errors={le} warnings={lw} info={li}; remote errors={re} warnings={rw} info={ri}"

@@ -1,9 +1,3 @@
-#![cfg(feature = "R4")]
-
-mod common {
-    pub mod fixtures;
-}
-#[cfg(test)]
 mod tests {
     use crate::common::fixtures::{
         assert_has_binding_issue, assert_has_error, load_resource, local_terminology_r4,

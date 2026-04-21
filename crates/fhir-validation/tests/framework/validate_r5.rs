@@ -1,10 +1,6 @@
-#![cfg(feature = "R5")]
-mod common {
-    pub mod fixtures;
-}
 mod tests {
 
-    use crate::common::fixtures::{load_profile, load_resource, local_terminology_r5};
+    use crate::common::fixtures::{load_profile, local_terminology_r5};
     use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use fhir_validation::profile::types::{
@@ -18,14 +14,8 @@ mod tests {
     };
     use helios_fhir::r5::StructureDefinition;
     use helios_fhir::r5::{Bundle, Parameters, Patient, Resource};
-    use helios_fhir::{FhirResource, FhirVersion};
+    use helios_fhir::FhirVersion;
     use serde_json::json;
-    pub fn r5_evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
-        let FhirResource::R5(r) = resource else {
-            panic!("expected R5 FhirResource");
-        };
-        R5FhirPathEvaluator::new((**r).clone())
-    }
     fn validator() -> Validator {
         Validator::default()
     }
@@ -59,60 +49,6 @@ mod tests {
         };
         let mut state = ValidationState::default();
         validate_profile(&ctx, &mut state, resource, resource_type, profile)
-    }
-    #[test]
-    fn profile_validation_reports_missing_required_fields_and_invariant() {
-        let resource = load_resource(FhirVersion::R5, "profile/declared-meta.json");
-
-        let profile = load_profile(FhirVersion::R5, "profile/atrius-profile.json");
-        let mut registry = ProfileRegistry::new();
-        registry.insert(profile);
-
-        let evaluator = r5_evaluator_for(&resource);
-
-        let term = local_terminology_r5();
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            Some(&term),
-            &evaluator,
-            &registry,
-        );
-
-        assert_eq!(issues.len(), 5);
-        assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
-        assert!(issues.iter().any(|i| i.fhir_path == "Patient.gender"));
-        assert!(issues.iter().any(|i| i.fhir_path == "Patient.birthDate"));
-        assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
-        assert!(
-            issues
-                .iter()
-                .any(|i| i.expression.as_deref() == Some("active = true implies name.exists()"))
-        );
-    }
-
-    #[test]
-    fn profile_validation_reports_only_invariant_when_required_fields_are_present() {
-        let resource = load_resource(FhirVersion::R5, "profile/only-invariants.json");
-
-        let profile = load_profile(FhirVersion::R5, "profile/atrius-profile.json");
-        let mut registry = ProfileRegistry::new();
-        registry.insert(profile);
-        let evaluator = r5_evaluator_for(&resource);
-
-        let term = local_terminology_r5();
-        let issues = validator().validate_resource_with_profiles(
-            &resource,
-            Some(&term),
-            &evaluator,
-            &registry,
-        );
-        // println!("issues: {:?}", issues);
-        assert_eq!(issues.len(), 4);
-        assert_eq!(issues[0].fhir_path, "Patient");
-        assert_eq!(
-            issues[2].expression.as_deref(),
-            Some("active = true implies name.exists()")
-        );
     }
     #[test]
     fn fixed_constraint_fails_when_value_differs() {
@@ -2325,7 +2261,7 @@ mod tests {
         }));
     }
 
-    /// Same differential content as `extract_tests::TYPE_AGGREGATION_VERSIONING_SD`.
+    /// Same differential content as `framework::extract::tests::TYPE_AGGREGATION_VERSIONING_SD`.
     const PATIENT_LINK_AGGREGATION_SD: &str = r#"
     {
       "resourceType": "StructureDefinition",

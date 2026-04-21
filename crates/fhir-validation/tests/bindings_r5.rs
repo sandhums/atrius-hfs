@@ -13,7 +13,7 @@
 //! under `tests/fixtures/r5/` cover types not present in that corpus (e.g. `StructureDefinition`
 //! language, `Slot.serviceType`).
 //!
-//! Related R5 integration crates: **`invariants_r5`**, **`profiles_r5`**.
+//! Related integration crates: **`invariants_r5`**, **`profiles_r5`**, **`examples_r5`**, **`framework`**, **`r4_suite`**.
 
 #![cfg(feature = "R5")]
 

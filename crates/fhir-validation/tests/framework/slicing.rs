@@ -1,5 +1,3 @@
-#![cfg(feature = "R5")]
-
 use fhir_validation::ValidationConfig;
 use fhir_validation::profile::extract::extract_r5_structure_definition_profile;
 use fhir_validation::profile::slicing::{validate_slicing, validate_slicing_with_context};

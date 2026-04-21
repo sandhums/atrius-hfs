@@ -1,7 +1,3 @@
-#![cfg(feature = "R4")]
-mod common {
-    pub mod fixtures;
-}
 mod tests {
     use crate::common::fixtures::load_resource;
     use crate::common::fixtures::{

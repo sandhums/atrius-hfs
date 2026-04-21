@@ -1,8 +1,3 @@
-#![cfg(feature = "R4")]
-mod common {
-    pub mod fixtures;
-}
-#[cfg(test)]
 mod tests {
     use fhir_validation::LocalTerminologyService;
     use fhir_validation::binding::common::BindingCheckContextSync;

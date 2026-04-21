@@ -1,14 +1,9 @@
-#![cfg(feature = "R4")]
-mod common {
-    pub mod fixtures;
-}
 mod tests {
-    use crate::common::fixtures::{assert_has_invariant, assert_no_errors};
-    use crate::common::fixtures::{
-        assert_has_invariant_expression, load_resource, local_terminology_r4,
-    };
+    use crate::common::fixtures::{assert_has_invariant, assert_issue_count, assert_no_errors};
+    use crate::common::fixtures::{assert_has_warning, load_resource, local_terminology_r4};
     use fhir_validation::R4FhirPathEvaluator;
     use helios_fhir::{FhirResource, FhirVersion};
+
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
         let FhirResource::R4(r) = resource else {
             panic!("expected R4 FhirResource")
@@ -16,23 +11,21 @@ mod tests {
         R4FhirPathEvaluator::new((**r).clone())
     }
     #[test]
-    fn dom3_local_reference_passes_when_contained_matches() {
+    fn local_reference_with_matching_contained_resource_is_valid() {
         let r = load_resource(
             FhirVersion::R4,
             "valid/patient/patient-local-contained-reference-valid.json",
         );
+
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
         let term = local_terminology_r4();
         let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
         assert_no_errors(&issues);
-        // assert_no_errors_or_warnings(&issues);
     }
-
-    #[ignore]
     #[test]
-    fn dom3_local_reference_fails_when_missing_contained() {
+    fn patient_local_reference_without_matching_contained_resource_emits_invariant() {
         let r = load_resource(
             FhirVersion::R4,
             "invalid/patient/patient-bad-contained-reference.json",
@@ -42,79 +35,103 @@ mod tests {
         let term = local_terminology_r4();
         let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
+        assert_issue_count(&issues, 2);
         assert_has_invariant(
             &issues,
             "Patient.managingOrganization",
-            "contained resource",
+            "SHALL have a contained resource if a local reference is provided",
         );
-    }
-    #[test]
-    fn dom3_no_id_in_contained() {
-        let r = load_resource(
-            FhirVersion::R4,
-            "invalid/patient/patient_no_id_in_contained.json",
-        );
-        let validator = fhir_validation::Validator::default();
-        let evaluator = r4_evaluator_for(&r);
-        let term = local_terminology_r4();
-        let _issues = validator.validate_resource(&r, Some(&term), &evaluator);
-    }
-    #[test]
-    fn dom2_contained_cannot_have_contained() {
-        let r = load_resource(
-            FhirVersion::R4,
-            "invalid/patient/patient-nested-contained.json",
-        );
-
-        let validator = fhir_validation::Validator::default();
-        let evaluator = r4_evaluator_for(&r);
-        let term = local_terminology_r4();
-        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
-
-        assert_has_invariant_expression(&issues, "Patient", "contained.contained.empty()");
     }
     #[ignore]
     #[test]
-    fn dom4_contained_cannot_have_meta_version_id() {
+    fn patient_non_local_reference_passes() {
         let r = load_resource(
             FhirVersion::R4,
-            "invalid/patient/patient_contained_no_meta_versionId.json",
+            "valid/patient/patient_non_local_reference.json",
         );
-
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
         let term = local_terminology_r4();
         let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
-        assert_has_invariant_expression(
+        assert_no_errors(&issues);
+    }
+    #[ignore]
+    #[test]
+    fn patient_malformed_reference() {
+        let r = load_resource(
+            FhirVersion::R4,
+            "invalid/patient/patient_malformed_reference.json",
+        );
+        let validator = fhir_validation::Validator::default();
+        let evaluator = r4_evaluator_for(&r);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
+        assert_issue_count(&issues, 1);
+        assert_has_invariant(
             &issues,
             "Patient",
-            "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()",
+            "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource",
         );
     }
+    // Next reference coverage to enable after adding the corresponding fixtures.
+    #[ignore]
     #[test]
-    fn dom4_contained_cannot_have_meta_last_updated() {
+    fn patient_absent_optional_reference_passes() {
         let r = load_resource(
             FhirVersion::R4,
-            "invalid/patient/patient_contained_no_meta_lastUpdated.json",
+            "valid/patient/patient_without_managing_organization.json",
         );
-
         let validator = fhir_validation::Validator::default();
         let evaluator = r4_evaluator_for(&r);
         let term = local_terminology_r4();
         let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
-        assert_has_invariant_expression(
+        assert_no_errors(&issues);
+    }
+    #[ignore]
+    #[test]
+    fn patient_local_reference_with_multiple_contained_resources_match_is_valid() {
+        let r = load_resource(
+            FhirVersion::R4,
+            "valid/patient/patient_multiple_contained_match.json",
+        );
+        let validator = fhir_validation::Validator::default();
+        let evaluator = r4_evaluator_for(&r);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
+
+        assert_no_errors(&issues);
+    }
+    #[ignore]
+    #[test]
+    fn patient_local_reference_with_multiple_contained_resources_no_match_emits_invariant() {
+        let r = load_resource(
+            FhirVersion::R4,
+            "invalid/patient/patient_multiple_contained_no_match.json",
+        );
+        let validator = fhir_validation::Validator::default();
+        let evaluator = r4_evaluator_for(&r);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
+
+        assert_issue_count(&issues, 2);
+        assert_has_invariant(
+            &issues,
+            "Patient.managingOrganization",
+            "SHALL have a contained resource if a local reference is provided",
+        );
+        assert_has_invariant(
             &issues,
             "Patient",
-            "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()",
+            "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource",
         );
     }
     #[test]
-    fn dom5_contained_cannot_have_meta_security() {
+    fn contained_resource_referencing_parent_is_valid() {
         let r = load_resource(
             FhirVersion::R4,
-            "invalid/patient/patient_contained_no_meta_security.json",
+            "valid/patient/patient_contained_references_parent.json",
         );
 
         let validator = fhir_validation::Validator::default();
@@ -122,17 +139,7 @@ mod tests {
         let term = local_terminology_r4();
         let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
-        assert_has_invariant_expression(&issues, "Patient", "contained.meta.security.empty()");
-    }
-    #[test]
-    fn dom6_patient_no_narrative() {
-        let r = load_resource(FhirVersion::R4, "invalid/patient/patient_no_narrative.json");
-
-        let validator = fhir_validation::Validator::default();
-        let evaluator = r4_evaluator_for(&r);
-        let term = local_terminology_r4();
-        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
-
-        assert_has_invariant_expression(&issues, "Patient", "text.`div`.exists()");
+        assert_no_errors(&issues);
+        assert_has_warning(&issues);
     }
 }

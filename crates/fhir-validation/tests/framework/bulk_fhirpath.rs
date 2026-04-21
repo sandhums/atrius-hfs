@@ -1,4 +1,3 @@
-#![cfg(feature = "R5")]
 use fhir_validation::{FhirPathEvaluator, InvariantExprRef, R5FhirPathEvaluator};
 use helios_fhir::r5::Resource as R5Resource;
 use helios_fhirpath::handlers::json_value_to_evaluation_result;

@@ -28,7 +28,11 @@ fn declared_meta_reports_missing_required_fields_and_root_invariant() {
         &evaluator,
         &registry,
     );
-    assert!(issues.len() >= 4);
+    assert_eq!(
+        issues.len(),
+        5,
+        "identifier + gender + birthDate + root invariant + identifier value rule: {issues:#?}"
+    );
     assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
     assert!(issues.iter().any(|i| i.fhir_path == "Patient.gender"));
     assert!(issues.iter().any(|i| i.fhir_path == "Patient.birthDate"));
@@ -54,11 +58,15 @@ fn only_invariants_fixture_reports_expected_profile_issue_count() {
         &registry,
     );
     assert_eq!(issues.len(), 4);
-    assert!(issues.iter().any(|i| i.fhir_path == "Patient"));
+    assert!(
+        issues.iter().any(|i| i.fhir_path == "Patient"),
+        "expected at least one issue at Patient: {issues:#?}"
+    );
     assert!(
         issues.iter().any(|i| {
             i.expression.as_deref() == Some("active = true implies name.exists()")
-        })
+        }),
+        "expected active/name invariant: {issues:#?}"
     );
     assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
     assert!(
