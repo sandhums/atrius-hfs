@@ -31,12 +31,8 @@ pub enum StructureDefinitionExtractMessage {
 impl fmt::Display for StructureDefinitionExtractMessage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::JsonMustBeObject => {
-                f.write_str("StructureDefinition JSON must be an object")
-            }
-            Self::MissingResourceType => {
-                f.write_str("Missing resourceType on StructureDefinition")
-            }
+            Self::JsonMustBeObject => f.write_str("StructureDefinition JSON must be an object"),
+            Self::MissingResourceType => f.write_str("Missing resourceType on StructureDefinition"),
             Self::ExpectedResourceType { got } => {
                 write!(f, "Expected resourceType StructureDefinition, got {got}")
             }
@@ -45,9 +41,7 @@ impl fmt::Display for StructureDefinitionExtractMessage {
             Self::UnknownKind { value } => {
                 write!(f, "Unknown StructureDefinition.kind '{value}'")
             }
-            Self::DerivationRequired => {
-                f.write_str("StructureDefinition.derivation is required")
-            }
+            Self::DerivationRequired => f.write_str("StructureDefinition.derivation is required"),
             Self::UnknownDerivation { value } => {
                 write!(f, "Unknown StructureDefinition.derivation '{value}'")
             }
@@ -74,24 +68,21 @@ impl fmt::Display for StructureDefinitionExtractMessage {
                 f,
                 "ElementDefinition.binding is missing a value set reference"
             ),
-            Self::BindingMustBeObject => {
-                f.write_str("ElementDefinition.binding must be an object")
-            }
+            Self::BindingMustBeObject => f.write_str("ElementDefinition.binding must be an object"),
             Self::BindingStrengthRequired => write!(
                 f,
                 "ElementDefinition.binding.strength is required when binding is present"
             ),
-            Self::UnknownBindingStrength { value } => write!(
-                f,
-                "Unknown ElementDefinition.binding.strength '{value}'"
-            ),
-            Self::SlicingMustBeObject => {
-                f.write_str("ElementDefinition.slicing must be an object")
+            Self::UnknownBindingStrength { value } => {
+                write!(f, "Unknown ElementDefinition.binding.strength '{value}'")
             }
+            Self::SlicingMustBeObject => f.write_str("ElementDefinition.slicing must be an object"),
             Self::SerializeFailed { error } => {
-                write!(f, "Failed to serialize StructureDefinition to JSON: {error}")
+                write!(
+                    f,
+                    "Failed to serialize StructureDefinition to JSON: {error}"
+                )
             }
         }
     }
 }
-

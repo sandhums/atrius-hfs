@@ -169,12 +169,17 @@ pub fn assert_has_binding_issue(issues: &[ValidationIssue], path: &str, expressi
     );
 }
 #[allow(dead_code)]
-pub fn assert_has_binding_issue_with_diagnostics(issues: &[ValidationIssue], path: &str, expression: &str, diag:&str) {
+pub fn assert_has_binding_issue_with_diagnostics(
+    issues: &[ValidationIssue],
+    path: &str,
+    expression: &str,
+    diag: &str,
+) {
     assert!(
         issues.iter().any(|issue| {
             issue.instance_path.as_deref() == Some(path)
                 && issue.expression.as_deref() == Some(expression)
-            && issue.diagnostics.contains(diag)
+                && issue.diagnostics.contains(diag)
         }),
         "expected issue at path {path:?}, for value set {expression:?}, got issues: {issues:#?}, expected diagnostics: {diag:?}"
     );
@@ -195,7 +200,7 @@ pub fn assert_has_info(issues: &[ValidationIssue]) {
 pub fn assert_no_errors(issues: &[ValidationIssue]) {
     let errors: Vec<_> = issues
         .iter()
-        .filter(|i| matches!(i.severity, Severity::Error | Severity::Fatal))
+        .filter(|i| matches!(i.severity, Severity::Error | Severity::Fatal ))
         .collect();
 
     assert!(

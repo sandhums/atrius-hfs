@@ -47,6 +47,7 @@ pub const R5_CURATED: &[&str] = &[
     "Group-denovoFamily.json",
     "RelatedPerson-denovoFather.json",
     "Requirements-example1.json",
+    "coverageeligibilityrequest-example.json",
 ];
 
 #[allow(dead_code)]

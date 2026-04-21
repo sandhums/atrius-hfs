@@ -23,17 +23,17 @@
 //! terminology servers may be required.
 
 use crate::binding::common::{
-    bindable_primitive_string_value, binding_issue_summary, choice_declared_allows_kind,
-    BindingCheckContextAsync, BindingCheckContextSync, get_json_values_with_instance_paths,
+    BindingCheckContextAsync, BindingCheckContextSync, bindable_primitive_string_value,
+    binding_issue_summary, choice_declared_allows_kind, get_json_values_with_instance_paths,
     prettify_remote_terminology_error, primitive_choice_target_kind, relative_binding_path,
     root_instance_path,
 };
-use crate::issue_code;
 use crate::binding::engine::{
     BindingVersionAdapter, evaluate_local_codeable_concept_binding, evaluate_local_coding_binding,
     evaluate_local_primitive_code_binding, evaluate_local_primitive_value_binding,
     evaluate_local_quantity_binding,
 };
+use crate::issue_code;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
 use fhir_validation_types::{BindingDef, BindingTargetKind};
@@ -815,48 +815,35 @@ fn apply_r4_binding_sync_single(
             let code_value =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
-            validate_primitive_code_binding(
-                &ctx,
-                code_value,
-                implicit_system,
-                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-            )
+            validate_primitive_code_binding(&ctx, code_value, implicit_system, |code| {
+                terminology_index::validate_code(binding.value_set.as_str(), code)
+            })
         }
         BindingTargetKind::String | BindingTargetKind::Uri => {
             let text =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
-            validate_primitive_value_binding(
-                &ctx,
-                text,
-                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-            )
+            validate_primitive_value_binding(&ctx, text, |code| {
+                terminology_index::validate_code(binding.value_set.as_str(), code)
+            })
         }
         BindingTargetKind::Coding => {
             let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
-            validate_coding_binding(
-                &ctx,
-                coding.as_ref(),
-                |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
-            )
+            validate_coding_binding(&ctx, coding.as_ref(), |coding| {
+                terminology_index::validate_coding(binding.value_set.as_str(), coding)
+            })
         }
         BindingTargetKind::CodeableConcept => {
             let codeable_concept =
                 serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
-            validate_codeable_concept_binding(
-                &ctx,
-                codeable_concept.as_ref(),
-                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-            )
+            validate_codeable_concept_binding(&ctx, codeable_concept.as_ref(), |cc| {
+                terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc)
+            })
         }
         BindingTargetKind::Quantity => {
             let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
-            validate_quantity_binding(
-                &ctx,
-                quantity.as_ref(),
-                |quantity| {
-                    terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
-                },
-            )
+            validate_quantity_binding(&ctx, quantity.as_ref(), |quantity| {
+                terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+            })
         }
         // FHIR R4 has no CodeableReference; ignore if a profile mis-declares this kind.
         BindingTargetKind::CodeableReference => vec![],
@@ -877,52 +864,39 @@ async fn apply_r4_binding_async_single(
             let code_value =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
             let implicit_system = terminology_index::implicit_system(binding.value_set.as_str());
-            validate_primitive_code_binding_async(
-                &ctx,
-                code_value,
-                implicit_system,
-                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-            )
+            validate_primitive_code_binding_async(&ctx, code_value, implicit_system, |code| {
+                terminology_index::validate_code(binding.value_set.as_str(), code)
+            })
             .await
         }
         BindingTargetKind::String | BindingTargetKind::Uri => {
             let text =
                 bindable_primitive_string_value(field_value).or_else(|| field_value.as_str());
-            validate_primitive_value_binding_async(
-                &ctx,
-                text,
-                |code| terminology_index::validate_code(binding.value_set.as_str(), code),
-            )
+            validate_primitive_value_binding_async(&ctx, text, |code| {
+                terminology_index::validate_code(binding.value_set.as_str(), code)
+            })
             .await
         }
         BindingTargetKind::Coding => {
             let coding = serde_json::from_value::<Coding>(field_value.clone()).ok();
-            validate_coding_binding_async(
-                &ctx,
-                coding.as_ref(),
-                |coding| terminology_index::validate_coding(binding.value_set.as_str(), coding),
-            )
+            validate_coding_binding_async(&ctx, coding.as_ref(), |coding| {
+                terminology_index::validate_coding(binding.value_set.as_str(), coding)
+            })
             .await
         }
         BindingTargetKind::CodeableConcept => {
             let codeable_concept =
                 serde_json::from_value::<CodeableConcept>(field_value.clone()).ok();
-            validate_codeable_concept_binding_async(
-                &ctx,
-                codeable_concept.as_ref(),
-                |cc| terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc),
-            )
+            validate_codeable_concept_binding_async(&ctx, codeable_concept.as_ref(), |cc| {
+                terminology_index::validate_codeable_concept(binding.value_set.as_str(), cc)
+            })
             .await
         }
         BindingTargetKind::Quantity => {
             let quantity = serde_json::from_value::<Quantity>(field_value.clone()).ok();
-            validate_quantity_binding_async(
-                &ctx,
-                quantity.as_ref(),
-                |quantity| {
-                    terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
-                },
-            )
+            validate_quantity_binding_async(&ctx, quantity.as_ref(), |quantity| {
+                terminology_index::validate_quantity(binding.value_set.as_str(), quantity)
+            })
             .await
         }
         BindingTargetKind::CodeableReference => vec![],
@@ -965,9 +939,7 @@ where
                 expression: None,
                 expression_kind: None,
                 source_invariant_key: None,
-                summary: Some(
-                    binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string(),
-                ),
+                summary: Some(binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string()),
                 detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!("Failed to serialize focus for binding validation: {}", err),
             });
@@ -1051,9 +1023,7 @@ where
                 expression: None,
                 expression_kind: None,
                 source_invariant_key: None,
-                summary: Some(
-                    binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string(),
-                ),
+                summary: Some(binding_issue_summary::RESOURCE_SERIALIZATION_FAILED.to_string()),
                 detail_code: Some(crate::ValidationIssueDetailCode::ValidationException),
                 diagnostics: format!("Failed to serialize focus for binding validation: {}", e),
             });

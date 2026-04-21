@@ -235,7 +235,9 @@ fn single_bound_key_value<'a>(bound: &'a Value, prefix: &str) -> Option<(&'a str
 fn primitive_string_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
+        Value::Object(map) => map
+            .get(issue_code::FHIR_JSON_VALUE)
+            .and_then(|v| v.as_str()),
         _ => None,
     }
 }

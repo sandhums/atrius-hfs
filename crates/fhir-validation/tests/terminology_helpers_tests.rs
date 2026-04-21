@@ -1,13 +1,14 @@
 //! Tests for terminology helper error mapping and `$validate-code` parsing.
 
+use fhir_validation::terminology::helpers::{
+    build_remote_terminology_error, parse_validate_vs_result,
+    terminology_remote_from_fhir_path_error,
+};
 use fhir_validation::{
     MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyRequestInvalid,
     ValidationError,
 };
 use helios_fhir::TerminologyValidationError;
-use fhir_validation::terminology::helpers::{
-    build_remote_terminology_error, parse_validate_vs_result, terminology_remote_from_fhir_path_error,
-};
 use helios_fhirpath::error::FhirPathError;
 use helios_fhirpath_support::EvaluationError;
 use serde_json::json;
@@ -44,7 +45,10 @@ fn terminology_remote_from_validate_code_message_parses_status_prefix() {
     let err = FhirPathError::TerminologyError(msg.to_string());
     let remote = terminology_remote_from_fhir_path_error(&err);
     assert_eq!(remote.status, Some(404));
-    assert_eq!(remote.raw_body.as_deref(), Some(r#"{"resourceType":"OperationOutcome"}"#));
+    assert_eq!(
+        remote.raw_body.as_deref(),
+        Some(r#"{"resourceType":"OperationOutcome"}"#)
+    );
 }
 
 #[test]
@@ -96,8 +100,8 @@ fn parse_validate_vs_result_parameter_entry_not_object() {
     let err = parse_validate_vs_result(&body).unwrap_err();
     match err {
         ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
-            MalformedValidateCodeParameters::ParameterEntryNotObject { index },
-        )) if index == 0 => {}
+            MalformedValidateCodeParameters::ParameterEntryNotObject { index: 0 },
+        ))  => {}
         _ => panic!("unexpected {err:?}"),
     }
 }

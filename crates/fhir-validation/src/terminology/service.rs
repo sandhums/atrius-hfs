@@ -8,8 +8,8 @@
 //! For sync validation without a remote server, see [`super::LocalTerminologyService`], which
 //! delegates to generated ValueSet helpers in `helios_fhir`.
 use crate::ValidationError;
-use crate::error::{remote_terminology_error_kind_label, validation_error_kind_label};
 use crate::backend::TerminologyBackend;
+use crate::error::{remote_terminology_error_kind_label, validation_error_kind_label};
 use crate::helpers::parse_validate_vs_result;
 use crate::requests::ValidateVsRequest;
 use crate::terminology::helios::HeliosTerminologyBackend;

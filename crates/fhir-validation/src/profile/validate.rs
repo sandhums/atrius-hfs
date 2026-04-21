@@ -34,6 +34,7 @@
 //! [`Validator::apply_invariants`]; that is unchanged and remains correct for datatype-local
 //! rules such as `ele-1` on nested structures.
 
+use crate::issue_code;
 use crate::profile::cardinality::{
     is_root_profile_element_path, relative_profile_path, validate_max_cardinality,
     validate_min_cardinality,
@@ -45,7 +46,6 @@ use crate::profile::helpers::{
 use crate::profile::profile_registry::ProfileRegistry;
 use crate::profile::slicing::validate_slicing;
 use crate::profile::types::{ExtractedProfile, ExtractedTypeConstraint, ExtractedValueConstraint};
-use crate::issue_code;
 use crate::validation_context::AsyncValidationContext;
 pub use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
@@ -1030,7 +1030,9 @@ fn is_referenced_style_reference(ref_url: &str) -> bool {
 fn json_stringish_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
+        Value::Object(map) => map
+            .get(issue_code::FHIR_JSON_VALUE)
+            .and_then(|v| v.as_str()),
         _ => None,
     }
 }

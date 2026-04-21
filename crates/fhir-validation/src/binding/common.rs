@@ -34,7 +34,7 @@ pub(crate) fn choice_declared_allows_kind(
 ) -> bool {
     match declared {
         None => true,
-        Some(codes) if codes.is_empty() => true,
+        Some([])  => true,
         Some(codes) => codes
             .iter()
             .filter_map(|c| binding_target_kind_for_element_type_code(c.as_str()))
@@ -67,7 +67,9 @@ pub(crate) fn primitive_choice_target_kind(declared: Option<&[String]>) -> Bindi
 pub(crate) fn bindable_primitive_string_value(value: &Value) -> Option<&str> {
     match value {
         Value::String(s) => Some(s.as_str()),
-        Value::Object(map) => map.get(issue_code::FHIR_JSON_VALUE).and_then(|v| v.as_str()),
+        Value::Object(map) => map
+            .get(issue_code::FHIR_JSON_VALUE)
+            .and_then(|v| v.as_str()),
         _ => None,
     }
 }
@@ -504,15 +506,13 @@ pub fn validation_error_to_issues(
     err: &ValidationError,
 ) -> Vec<ValidationIssue> {
     match err {
-        ValidationError::LocalTerminology(e) => {
-            local_error_to_issues(
-                ctx.validator,
-                ctx.fhir_path,
-                ctx.valueset_url,
-                ctx.strength,
-                e.clone(),
-            )
-        }
+        ValidationError::LocalTerminology(e) => local_error_to_issues(
+            ctx.validator,
+            ctx.fhir_path,
+            ctx.valueset_url,
+            ctx.strength,
+            e.clone(),
+        ),
         ValidationError::RemoteTerminology(_) => {
             vec![terminology_validation_issue(
                 ctx.fhir_path,
@@ -638,10 +638,7 @@ impl<'a> BindingCheckContextSync<'a> {
         }
     }
 
-    pub fn classify_local_outcome(
-        &self,
-        outcome: LocalBindingOutcome,
-    ) -> LocalBindingDisposition {
+    pub fn classify_local_outcome(&self, outcome: LocalBindingOutcome) -> LocalBindingDisposition {
         classify_local_outcome(
             self.validator,
             self.fhir_path,
@@ -721,10 +718,7 @@ impl<'a> BindingCheckContextAsync<'a> {
         }
     }
 
-    pub fn classify_local_outcome(
-        &self,
-        outcome: LocalBindingOutcome,
-    ) -> LocalBindingDisposition {
+    pub fn classify_local_outcome(&self, outcome: LocalBindingOutcome) -> LocalBindingDisposition {
         classify_local_outcome(
             self.validator,
             self.fhir_path,
@@ -734,7 +728,10 @@ impl<'a> BindingCheckContextAsync<'a> {
         )
     }
 
-    pub async fn execute_remote_async(&self, req: &RemoteMembershipRequest) -> Vec<ValidationIssue> {
+    pub async fn execute_remote_async(
+        &self,
+        req: &RemoteMembershipRequest,
+    ) -> Vec<ValidationIssue> {
         execute_remote_async(
             self.validator,
             self.fhir_path,
@@ -940,8 +937,7 @@ pub async fn execute_remote_async(
 
 /// Shared [`ValidationIssue::summary`] text for binding validation across FHIR versions.
 pub mod binding_issue_summary {
-    pub const QUANTITY_CODE_WITHOUT_SYSTEM: &str =
-        "Quantity code is present without a code system";
+    pub const QUANTITY_CODE_WITHOUT_SYSTEM: &str = "Quantity code is present without a code system";
     pub const RESOURCE_SERIALIZATION_FAILED: &str =
         "Resource serialization failed during binding validation";
 }

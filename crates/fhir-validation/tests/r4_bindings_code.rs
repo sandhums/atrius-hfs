@@ -66,16 +66,12 @@ mod tests {
             BindingStrength::Extensible,
             Some(&term),
         );
-        let issues = validate_primitive_code_binding(
-            &ctx,
-            Some("xx"),
-            Some("remote required"),
-            |_| {
+        let issues =
+            validate_primitive_code_binding(&ctx, Some("xx"), Some("remote required"), |_| {
                 Err(TerminologyValidationError::RemoteValidationRequired(
                     "remote required".to_string(),
                 ))
-            },
-        );
+            });
 
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Warning);
@@ -96,16 +92,12 @@ mod tests {
             BindingStrength::Required,
             None,
         );
-        let issues = validate_primitive_code_binding(
-            &ctx,
-            Some("en"),
-            Some("remote required"),
-            |_| {
+        let issues =
+            validate_primitive_code_binding(&ctx, Some("en"), Some("remote required"), |_| {
                 Err(TerminologyValidationError::RemoteValidationRequired(
                     "remote required".to_string(),
                 ))
-            },
-        );
+            });
 
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Error);

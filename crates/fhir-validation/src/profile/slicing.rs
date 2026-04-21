@@ -35,15 +35,16 @@
 //! support is intentionally deferred until that capability is available or a
 //! suitable equivalent resolution strategy is introduced.
 
+use crate::issue_code;
 use crate::profile::helpers::{
     get_values_at_relative_path, get_values_with_paths_at_relative_path, json_type_codes,
     parse_slice_max,
 };
 use crate::profile::types::{
-    ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile, ExtractedSliceDiscriminator,
-    ExtractedSlicingRules, ExtractedTypeConstraint, ExtractedValueConstraint,
+    ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile,
+    ExtractedSliceDiscriminator, ExtractedSlicingRules, ExtractedTypeConstraint,
+    ExtractedValueConstraint,
 };
-use crate::issue_code;
 use crate::profile::validate::validate_profile_with_depth;
 use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
@@ -447,9 +448,9 @@ fn matches_slice(
     eval: &mut SliceEvaluationCtx<'_, '_>,
     discriminators: &[ExtractedSliceDiscriminator],
 ) -> bool {
-    discriminators.iter().all(|discriminator| {
-        matches_discriminator(eval, discriminator)
-    })
+    discriminators
+        .iter()
+        .all(|discriminator| matches_discriminator(eval, discriminator))
 }
 
 /// Dispatch discriminator evaluation by discriminator kind.
@@ -482,16 +483,14 @@ fn matches_discriminator(
         ExtractedDiscriminatorType::Position => {
             matches_position_discriminator(eval.item_index, eval.slice, eval.slice_order)
         }
-        ExtractedDiscriminatorType::Profile => {
-            matches_profile_discriminator(
-                eval.actual,
-                eval.slice,
-                discriminator,
-                eval.profile,
-                eval.validation_ctx,
-                eval.state,
-            )
-        }
+        ExtractedDiscriminatorType::Profile => matches_profile_discriminator(
+            eval.actual,
+            eval.slice,
+            discriminator,
+            eval.profile,
+            eval.validation_ctx,
+            eval.state,
+        ),
     }
 }
 

@@ -68,11 +68,13 @@ pub fn terminology_remote_from_fhir_path_error(err: &FhirPathError) -> Terminolo
             raw_body: Some(body.clone()),
         },
         FhirPathError::TerminologyError(msg) => parse_validate_code_client_terminology_message(msg),
-        FhirPathError::NetworkError(msg) | FhirPathError::ParseError(msg) => TerminologyRemoteError {
-            status: None,
-            diagnostics: Vec::new(),
-            raw_body: Some(msg.clone()),
-        },
+        FhirPathError::NetworkError(msg) | FhirPathError::ParseError(msg) => {
+            TerminologyRemoteError {
+                status: None,
+                diagnostics: Vec::new(),
+                raw_body: Some(msg.clone()),
+            }
+        }
         other => TerminologyRemoteError {
             status: None,
             diagnostics: vec![other.to_string()],
@@ -123,9 +125,11 @@ pub fn parse_validate_vs_result(
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
     if let Some(serde_json::Value::String(rt)) = body.get("resourceType") {
         if rt != "Parameters" {
-            return Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
-                MalformedValidateCodeParameters::WrongResourceType { got: rt.clone() },
-            )));
+            return Err(ValidationError::from(
+                RemoteTerminologyError::MalformedResponse(
+                    MalformedValidateCodeParameters::WrongResourceType { got: rt.clone() },
+                ),
+            ));
         }
     }
 
@@ -148,9 +152,11 @@ pub fn parse_validate_vs_result(
 
     for (index, p) in params.iter().enumerate() {
         if !p.is_object() {
-            return Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
-                MalformedValidateCodeParameters::ParameterEntryNotObject { index },
-            )));
+            return Err(ValidationError::from(
+                RemoteTerminologyError::MalformedResponse(
+                    MalformedValidateCodeParameters::ParameterEntryNotObject { index },
+                ),
+            ));
         }
 
         let name = p.get("name").and_then(|n| n.as_str()).unwrap_or_default();
@@ -225,8 +231,10 @@ pub fn parse_validate_vs_result(
             display,
             local_failure: None,
         }),
-        None => Err(ValidationError::from(RemoteTerminologyError::MalformedResponse(
-            MalformedValidateCodeParameters::MissingResultBoolean,
-        ))),
+        None => Err(ValidationError::from(
+            RemoteTerminologyError::MalformedResponse(
+                MalformedValidateCodeParameters::MissingResultBoolean,
+            ),
+        )),
     }
 }

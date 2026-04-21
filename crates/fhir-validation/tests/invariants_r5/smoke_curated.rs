@@ -1,29 +1,16 @@
-//! Structural & **invariant** (`ConstraintDefinition`) validation on examples under
-//! `crates/fhir/tests/data/json/R5/`.
-//!
-//! We assert validation completes and summarize invariant-class issues. Exact parity with
-//! another engine is *not* required here (see `json_examples_online_parity_tests.rs`).
-
-#![cfg(feature = "R5")]
-
-mod common {
-    pub mod fhir_json_examples;
-    pub mod fixtures;
-}
+//! Curated HL7 R5 JSON corpus: validation completes; invariant-like issues stay bounded.
 
 use crate::common::fhir_json_examples::{
     R5_CURATED, count_severities, fhir_json_dir, is_invariant_like_issue, list_r5_json_filenames,
     load_r5_fhir_resource, read_fhir_example_json, resource_type_of_json,
 };
 use crate::common::fixtures::local_terminology_r5;
+use crate::harness::r5_evaluator_for;
 use fhir_validation::{R5FhirPathEvaluator, Validator};
 use helios_fhir::FhirResource;
 
 fn evaluator_for(resource: &FhirResource) -> R5FhirPathEvaluator {
-    let FhirResource::R5(r) = resource else {
-        unreachable!()
-    };
-    R5FhirPathEvaluator::new((**r).clone())
+    r5_evaluator_for(resource)
 }
 
 #[test]

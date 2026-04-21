@@ -5,8 +5,8 @@
 //! well-formed issue list for real-world shapes. Tight assertions on issue counts are
 //! intentionally avoided here (they belong next to specific invariant or profile fixtures).
 //!
-//! Broader R5 coverage: `json_examples_bindings_tests`, `json_examples_invariants_tests`,
-//! `json_examples_profile_tests`, and optional remote parity in `json_examples_online_parity_tests`.
+//! Broader R5 coverage: `bindings_r5`, `invariants_r5`, `profiles_r5`, and optional remote parity
+//! in `json_examples_online_parity_tests`.
 //!
 //! Add targeted regression tests under `tests/` when a particular example must always pass or fail
 //! a named constraint.

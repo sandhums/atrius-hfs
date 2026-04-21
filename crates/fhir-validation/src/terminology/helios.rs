@@ -9,8 +9,8 @@
 //! populated on [`ValidateVsRequest`](crate::requests::ValidateVsRequest) (not
 //! only primitive `code` / `system` / `display`).
 use crate::ValidationError;
-use crate::error::TerminologyRequestInvalid;
 use crate::backend::TerminologyBackend;
+use crate::error::TerminologyRequestInvalid;
 use crate::helpers::terminology_remote_from_fhir_path_error;
 use crate::requests::ValidateVsRequest;
 use async_trait::async_trait;

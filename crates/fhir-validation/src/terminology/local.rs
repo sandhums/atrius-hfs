@@ -81,9 +81,7 @@ fn map_validation_error(
     err: TerminologyValidationError,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
     match err {
-        TerminologyValidationError::InvalidInput(_) => {
-            Err(ValidationError::LocalTerminology(err))
-        }
+        TerminologyValidationError::InvalidInput(_) => Err(ValidationError::LocalTerminology(err)),
         TerminologyValidationError::MissingSystem(_) => Ok(LocalTerminologyService::not_member()),
         TerminologyValidationError::RemoteValidationRequired(msg) => {
             Ok(TerminologyMembershipOutcome {

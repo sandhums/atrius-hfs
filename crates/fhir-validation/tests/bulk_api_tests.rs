@@ -165,5 +165,5 @@ fn eval_invariant_declared_path_still_works() {
     assert!(result.unwrap());
 
     let result = evaluator.eval_invariant("Patient", "birthDate.exists()");
-    assert_eq!(result.unwrap(), false);
+    assert!(!result.unwrap());
 }

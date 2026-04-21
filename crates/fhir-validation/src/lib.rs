@@ -121,13 +121,13 @@ pub mod terminology;
 pub mod validation_context;
 pub mod validation_issue_detail;
 
+pub use binding::common::{TerminologyIssueContext, validation_error_to_issues};
 pub use core::*;
 pub use error::{
     MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyRequestInvalid,
     ValidationError, malformed_validate_code_parameters_kind_label,
     remote_terminology_error_kind_label, validation_error_kind_label,
 };
-pub use binding::common::{TerminologyIssueContext, validation_error_to_issues};
 pub use evaluators::*;
 pub use issue_to_op_outcome::VALIDATION_SOURCE_INVARIANT_KEY_URL;
 use terminology::service::{TerminologyService, TerminologyServiceSync};

@@ -61,16 +61,10 @@ impl fmt::Display for MalformedValidateCodeParameters {
                 f.write_str("Expected FHIR Parameters resource with a `parameter` array")
             }
             Self::WrongResourceType { got } => {
-                write!(
-                    f,
-                    "Expected resourceType Parameters, got {got:?}",
-                )
+                write!(f, "Expected resourceType Parameters, got {got:?}",)
             }
             Self::ParameterEntryNotObject { index } => {
-                write!(
-                    f,
-                    "Parameters.parameter[{index}] must be a JSON object",
-                )
+                write!(f, "Parameters.parameter[{index}] must be a JSON object",)
             }
             Self::ResultValueNotBoolean => f.write_str(
                 "$validate-code Parameters response `result` must use boolean `valueBoolean`",
@@ -280,7 +274,9 @@ pub fn validation_error_kind_label(err: &ValidationError) -> &'static str {
 pub fn remote_terminology_error_kind_label(err: &RemoteTerminologyError) -> &'static str {
     match err {
         RemoteTerminologyError::Upstream(_) => "remote_http",
-        RemoteTerminologyError::MalformedResponse(m) => malformed_validate_code_parameters_kind_label(m),
+        RemoteTerminologyError::MalformedResponse(m) => {
+            malformed_validate_code_parameters_kind_label(m)
+        }
     }
 }
 
@@ -291,7 +287,9 @@ pub fn malformed_validate_code_parameters_kind_label(
     match err {
         MalformedValidateCodeParameters::MissingParameterArray => "missing_parameter_array",
         MalformedValidateCodeParameters::WrongResourceType { .. } => "wrong_resource_type",
-        MalformedValidateCodeParameters::ParameterEntryNotObject { .. } => "parameter_entry_not_object",
+        MalformedValidateCodeParameters::ParameterEntryNotObject { .. } => {
+            "parameter_entry_not_object"
+        }
         MalformedValidateCodeParameters::ResultValueNotBoolean => "result_value_not_boolean",
         MalformedValidateCodeParameters::MissingResultBoolean => "missing_result_boolean",
     }
