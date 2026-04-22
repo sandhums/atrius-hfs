@@ -16,12 +16,7 @@
 //! Related integration crates: **`invariants_r5`**, **`profiles_r5`**, **`examples_r5`**, **`framework`**, **`r4_suite`**.
 
 #![cfg(feature = "R5")]
-
-mod common {
-    pub mod fhir_json_examples;
-    pub mod fixtures;
-}
-
+pub mod common;
 // Integration-test submodules live under `tests/` by default; keep sources in `tests/bindings_r5/`.
 #[path = "bindings_r5/harness.rs"]
 mod harness;

@@ -6,18 +6,14 @@
 //! ```
 
 #![cfg(feature = "R4")]
-
-mod common {
-    pub mod fixtures;
-}
-
+ pub mod common;
 #[path = "r4_suite/bindings_code.rs"]
 mod bindings_code;
 #[path = "r4_suite/bindings_codeable_concept.rs"]
 mod bindings_codeable_concept;
 #[path = "r4_suite/domain_resource_invariants.rs"]
 mod domain_resource_invariants;
-#[path = "r4_suite/reference_invariants.rs"]
-mod reference_invariants;
 #[path = "r4_suite/patient.rs"]
 mod patient;
+#[path = "r4_suite/reference_invariants.rs"]
+mod reference_invariants;

@@ -7,19 +7,14 @@
 //! Related integration crates: **`bindings_r5`**, **`invariants_r5`**, **`examples_r5`**, **`framework`**, **`r4_suite`**.
 
 #![cfg(feature = "R5")]
-
-mod common {
-    pub mod fhir_json_examples;
-    pub mod fixtures;
-}
-
-#[path = "profiles_r5/harness.rs"]
-mod harness;
+pub mod common;
+#[path = "profiles_r5/capability_statement_cpb12.rs"]
+mod capability_statement_cpb12;
 #[path = "profiles_r5/examples_atrius_registry.rs"]
 mod examples_atrius_registry;
 #[path = "profiles_r5/fixtures_declared_profile.rs"]
 mod fixtures_declared_profile;
-#[path = "profiles_r5/capability_statement_cpb12.rs"]
-mod capability_statement_cpb12;
+#[path = "profiles_r5/harness.rs"]
+mod harness;
 #[path = "profiles_r5/patient_validate_profile_root.rs"]
 mod patient_validate_profile_root;

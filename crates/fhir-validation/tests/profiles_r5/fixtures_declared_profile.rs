@@ -2,8 +2,8 @@
 
 use crate::common::fixtures::{load_profile, load_resource, local_terminology_r5};
 use crate::harness::r5_evaluator_for;
-use fhir_validation::profile::profile_registry::ProfileRegistry;
 use fhir_validation::Validator;
+use fhir_validation::profile::profile_registry::ProfileRegistry;
 use helios_fhir::FhirVersion;
 
 fn validator() -> Validator {
@@ -22,12 +22,8 @@ fn declared_meta_reports_missing_required_fields_and_root_invariant() {
     let registry = atrius_registry();
     let evaluator = r5_evaluator_for(&resource);
     let term = local_terminology_r5();
-    let issues = validator().validate_resource_with_profiles(
-        &resource,
-        Some(&term),
-        &evaluator,
-        &registry,
-    );
+    let issues =
+        validator().validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
     assert_eq!(
         issues.len(),
         5,
@@ -51,21 +47,17 @@ fn only_invariants_fixture_reports_expected_profile_issue_count() {
     let registry = atrius_registry();
     let evaluator = r5_evaluator_for(&resource);
     let term = local_terminology_r5();
-    let issues = validator().validate_resource_with_profiles(
-        &resource,
-        Some(&term),
-        &evaluator,
-        &registry,
-    );
+    let issues =
+        validator().validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
     assert_eq!(issues.len(), 4);
     assert!(
         issues.iter().any(|i| i.fhir_path == "Patient"),
         "expected at least one issue at Patient: {issues:#?}"
     );
     assert!(
-        issues.iter().any(|i| {
-            i.expression.as_deref() == Some("active = true implies name.exists()")
-        }),
+        issues
+            .iter()
+            .any(|i| { i.expression.as_deref() == Some("active = true implies name.exists()") }),
         "expected active/name invariant: {issues:#?}"
     );
     assert!(issues.iter().any(|i| i.fhir_path == "Patient.identifier"));
@@ -82,12 +74,8 @@ fn missing_declared_profile_url_produces_not_found_issue() {
     let registry = atrius_registry();
     let evaluator = r5_evaluator_for(&resource);
     let term = local_terminology_r5();
-    let issues = validator().validate_resource_with_profiles(
-        &resource,
-        Some(&term),
-        &evaluator,
-        &registry,
-    );
+    let issues =
+        validator().validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
 
     assert!(!issues.is_empty());
     assert!(issues.iter().any(|i| i.code == "not-found"));

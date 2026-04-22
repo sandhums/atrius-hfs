@@ -12,9 +12,9 @@ mod tests {
         R5FhirPathEvaluator, StructureDefinitionKind, TypeDerivationRule, TypeProfileMatchMode,
         Validator,
     };
+    use helios_fhir::FhirVersion;
     use helios_fhir::r5::StructureDefinition;
     use helios_fhir::r5::{Bundle, Parameters, Patient, Resource};
-    use helios_fhir::FhirVersion;
     use serde_json::json;
     fn validator() -> Validator {
         Validator::default()

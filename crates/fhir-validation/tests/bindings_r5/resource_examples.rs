@@ -87,7 +87,10 @@ fn coverage_eligibility_request_priority_code_without_system_local() {
 /// to remote.
 #[test]
 fn service_request_minimal_codeableref_local_no_errors_procedure_code_deferred() {
-    let resource = load_resource(FhirVersion::R5, "valid/servicerequest-codeableref-minimal.json");
+    let resource = load_resource(
+        FhirVersion::R5,
+        "valid/servicerequest-codeableref-minimal.json",
+    );
     let evaluator = r5_evaluator_for(&resource);
     let term = local_terminology_r5();
     let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);
@@ -102,7 +105,10 @@ fn service_request_minimal_codeableref_local_no_errors_procedure_code_deferred()
 
 #[tokio::test]
 async fn service_request_minimal_codeableref_remote_no_errors() {
-    let resource = load_resource(FhirVersion::R5, "valid/servicerequest-codeableref-minimal.json");
+    let resource = load_resource(
+        FhirVersion::R5,
+        "valid/servicerequest-codeableref-minimal.json",
+    );
     let evaluator = r5_evaluator_for(&resource);
     let term = remote_terminology_for_tests();
     let issues = Validator::default()

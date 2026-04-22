@@ -1,7 +1,7 @@
 //! [`validate_profile`] on `Patient` with only root-level constraints (element rules cleared).
 
 use crate::common::fixtures::{load_fixture, load_profile, load_resource};
-use crate::harness::{run_validate_profile, r5_evaluator_for};
+use crate::harness::{r5_evaluator_for, run_validate_profile};
 use fhir_validation::Validator;
 use helios_fhir::FhirVersion;
 
@@ -22,9 +22,9 @@ fn root_invariant_active_implies_name_evaluates_via_validate_profile() {
         &evaluator,
     );
     assert!(
-        issues.iter().any(|i| {
-            i.expression.as_deref() == Some("active = true implies name.exists()")
-        }),
+        issues
+            .iter()
+            .any(|i| { i.expression.as_deref() == Some("active = true implies name.exists()") }),
         "expected atrius root invariant expression, got: {issues:#?}"
     );
 }

@@ -7,14 +7,8 @@
 //! Related crates: **`bindings_r5`**, **`invariants_r5`**, **`profiles_r5`**, **`framework`**, **`r4_suite`**.
 
 #![cfg(feature = "R5")]
-
-mod common {
-    pub mod fhir_json_examples;
-    pub mod fixtures;
-    pub mod online_fhir_validate;
-}
-
-#[path = "examples_r5/smoke.rs"]
-mod smoke;
+pub mod common;
 #[path = "examples_r5/online_parity.rs"]
 mod online_parity;
+#[path = "examples_r5/smoke.rs"]
+mod smoke;

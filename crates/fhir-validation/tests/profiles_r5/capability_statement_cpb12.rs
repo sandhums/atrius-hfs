@@ -1,10 +1,12 @@
 //! Element-scoped profile constraints: `cpb-12`-style FHIRPath on `CapabilityStatement.rest.resource`.
 
-use crate::harness::{run_validate_profile, r5_evaluator_for};
+use crate::harness::{r5_evaluator_for, run_validate_profile};
 use fhir_validation::profile::types::{ExtractedElementRule, ExtractedProfile};
-use fhir_validation::{InvariantDef, Severity, StructureDefinitionKind, TypeDerivationRule, Validator};
-use helios_fhir::r5::{CapabilityStatement, Resource};
+use fhir_validation::{
+    InvariantDef, Severity, StructureDefinitionKind, TypeDerivationRule, Validator,
+};
 use helios_fhir::FhirResource;
+use helios_fhir::r5::{CapabilityStatement, Resource};
 use serde_json::json;
 
 fn cpb12_profile() -> ExtractedProfile {
@@ -104,7 +106,8 @@ fn capability_statement_distinct_search_param_json() -> serde_json::Value {
 #[test]
 fn cpb12_fails_when_search_param_names_not_distinct() {
     let json = capability_statement_duplicate_search_param_json();
-    let cs: CapabilityStatement = serde_json::from_value(json.clone()).expect("CapabilityStatement");
+    let cs: CapabilityStatement =
+        serde_json::from_value(json.clone()).expect("CapabilityStatement");
     let fhir = FhirResource::R5(Box::new(Resource::CapabilityStatement(Box::new(cs))));
     let evaluator = r5_evaluator_for(&fhir);
     let profile = cpb12_profile();
@@ -126,7 +129,8 @@ fn cpb12_fails_when_search_param_names_not_distinct() {
 #[test]
 fn cpb12_passes_when_search_param_names_distinct() {
     let json = capability_statement_distinct_search_param_json();
-    let cs: CapabilityStatement = serde_json::from_value(json.clone()).expect("CapabilityStatement");
+    let cs: CapabilityStatement =
+        serde_json::from_value(json.clone()).expect("CapabilityStatement");
     let fhir = FhirResource::R5(Box::new(Resource::CapabilityStatement(Box::new(cs))));
     let evaluator = r5_evaluator_for(&fhir);
     let profile = cpb12_profile();

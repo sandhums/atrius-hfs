@@ -3,8 +3,8 @@
 use crate::common::fhir_json_examples::read_fhir_example_json;
 use crate::common::fixtures::{load_profile, local_terminology_r5};
 use crate::harness::r5_evaluator_for;
-use fhir_validation::profile::profile_registry::ProfileRegistry;
 use fhir_validation::Validator;
+use fhir_validation::profile::profile_registry::ProfileRegistry;
 use helios_fhir::FhirResource;
 use helios_fhir::r5::{Patient, Resource};
 use serde_json::json;
@@ -85,7 +85,8 @@ fn patient_without_identifier_fails_atrius_profile() {
 
 #[test]
 fn resource_without_declared_profile_still_validates_via_base_structure() {
-    let resource = crate::common::fhir_json_examples::load_r5_fhir_resource("Patient-genomicPatient.json");
+    let resource =
+        crate::common::fhir_json_examples::load_r5_fhir_resource("Patient-genomicPatient.json");
     let evaluator = r5_evaluator_for(&resource);
     let term = local_terminology_r5();
     let issues = Validator::default().validate_resource(&resource, Some(&term), &evaluator);

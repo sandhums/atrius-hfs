@@ -7,11 +7,8 @@
 //!
 //! HL7 example smoke / remote parity: **`examples_r5`**. Versioned profile/registry tests: **`profiles_r5`**.
 
-mod common {
-    pub mod fixtures;
-}
-
 #[cfg(feature = "R5")]
+pub mod common;
 #[path = "framework/validate_r5.rs"]
 mod validate_r5;
 

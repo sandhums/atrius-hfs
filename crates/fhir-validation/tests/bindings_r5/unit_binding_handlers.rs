@@ -3,8 +3,8 @@
 use fhir_validation::LocalTerminologyService;
 use fhir_validation::binding::common::BindingCheckContextSync;
 use fhir_validation::r5::binding::{
-    validate_codeable_concept_binding, validate_codeable_reference_binding, validate_coding_binding,
-    validate_primitive_code_binding, validate_primitive_value_binding,
+    validate_codeable_concept_binding, validate_codeable_reference_binding,
+    validate_coding_binding, validate_primitive_code_binding, validate_primitive_value_binding,
 };
 use fhir_validation::{ValidationConfig, Validator};
 use fhir_validation_types::{BindingStrength, Severity};
@@ -99,12 +99,11 @@ fn primitive_code_remote_false_extensible_is_warning_when_service_present() {
         BindingStrength::Extensible,
         Some(&term),
     );
-    let issues =
-        validate_primitive_code_binding(&ctx, Some("xx"), Some("remote required"), |_| {
-            Err(TerminologyValidationError::RemoteValidationRequired(
-                "remote required".to_string(),
-            ))
-        });
+    let issues = validate_primitive_code_binding(&ctx, Some("xx"), Some("remote required"), |_| {
+        Err(TerminologyValidationError::RemoteValidationRequired(
+            "remote required".to_string(),
+        ))
+    });
     assert_eq!(issues.len(), 1);
     assert_eq!(issues[0].severity, Severity::Warning);
     assert_eq!(issues[0].code, "terminology");
@@ -164,11 +163,7 @@ fn coding_absent_produces_no_issue() {
 
 #[test]
 fn coding_local_success_produces_no_issue() {
-    let c = coding(
-        "http://hl7.org/fhir/administrative-gender",
-        "male",
-        None,
-    );
+    let c = coding("http://hl7.org/fhir/administrative-gender", "male", None);
     let v = validator();
     let ctx = BindingCheckContextSync::new(
         &v,

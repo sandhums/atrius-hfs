@@ -9,8 +9,7 @@ fn invariant_errors(issues: &[fhir_validation::ValidationIssue]) -> usize {
     issues
         .iter()
         .filter(|i| {
-            i.code == "invariant"
-                && matches!(i.severity, Severity::Error | Severity::Fatal)
+            i.code == "invariant" && matches!(i.severity, Severity::Error | Severity::Fatal)
         })
         .count()
 }

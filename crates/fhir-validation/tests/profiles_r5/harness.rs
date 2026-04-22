@@ -3,7 +3,9 @@
 use fhir_validation::profile::types::ExtractedProfile;
 use fhir_validation::profile::validate::validate_profile;
 use fhir_validation::validation_context::{ValidationContext, ValidationState};
-use fhir_validation::{FhirPathEvaluator, LocalTerminologyService, R5FhirPathEvaluator, ValidationIssue, Validator};
+use fhir_validation::{
+    FhirPathEvaluator, LocalTerminologyService, R5FhirPathEvaluator, ValidationIssue, Validator,
+};
 use helios_fhir::{FhirResource, FhirVersion};
 use std::collections::HashMap;
 

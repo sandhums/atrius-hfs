@@ -101,7 +101,7 @@ fn parse_validate_vs_result_parameter_entry_not_object() {
     match err {
         ValidationError::RemoteTerminology(RemoteTerminologyError::MalformedResponse(
             MalformedValidateCodeParameters::ParameterEntryNotObject { index: 0 },
-        ))  => {}
+        )) => {}
         _ => panic!("unexpected {err:?}"),
     }
 }
