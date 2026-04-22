@@ -19,6 +19,7 @@ pub fn fixture_path(rel: &str) -> PathBuf {
         .join("r4")
         .join(rel)
 }
+#[allow(dead_code)]
 pub fn fixture_path_r5(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")

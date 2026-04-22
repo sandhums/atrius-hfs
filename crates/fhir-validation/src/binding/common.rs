@@ -34,7 +34,7 @@ pub(crate) fn choice_declared_allows_kind(
 ) -> bool {
     match declared {
         None => true,
-        Some([])  => true,
+        Some([]) => true,
         Some(codes) => codes
             .iter()
             .filter_map(|c| binding_target_kind_for_element_type_code(c.as_str()))

@@ -9,9 +9,7 @@ mod tests {
     use helios_fhirpath_support::EvaluationResult;
 
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else {
-            panic!("expected R4 FhirResource")
-        };
+        let FhirResource::R4(r) = resource;
         R4FhirPathEvaluator::new((**r).clone())
     }
     #[test]

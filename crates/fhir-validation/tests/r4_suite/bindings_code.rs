@@ -9,9 +9,7 @@ mod tests {
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::{FhirResource, FhirVersion, TerminologyValidationError};
     pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else {
-            panic!("expected R4 FhirResource")
-        };
+        let FhirResource::R4(r) = resource;
         R4FhirPathEvaluator::new((**r).clone())
     }
     fn validator() -> Validator {
