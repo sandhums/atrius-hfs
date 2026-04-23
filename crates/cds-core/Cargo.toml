@@ -1,0 +1,28 @@
+[package]
+name = "cds-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Decision-support evaluation and CdsHooksService impls; optional EHR FHIR reads; pair with cds-server."
+keywords = ["hl7", "fhir", "cds-hooks", "clinical-decision-support"]
+readme = "README.md"
+
+[dependencies]
+helios-cds-hooks = { path = "../cds-hooks" }
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt", "macros", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde_json.workspace = true
+thiserror = "1.0"
+tracing = "0.1"
+url = "2.5"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
+wiremock = "0.6"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
