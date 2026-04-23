@@ -1501,6 +1501,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "cds-core"
+version = "0.1.47"
+dependencies = [
+ "async-trait",
+ "helios-cds-hooks",
+ "reqwest",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "url",
+ "wiremock",
+]
+
+[[package]]
+name = "cds-server"
+version = "0.1.47"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "axum-test",
+ "cds-core",
+ "chrono",
+ "clap",
+ "helios-cds-hooks",
+ "http 1.4.0",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "wiremock",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
