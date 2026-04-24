@@ -6,6 +6,8 @@ members = [
 # This keeps `cargo build` working on machines without Python while still
 # making `crates/pysof` an actual workspace member for maturin.
 default-members = [
+	"crates/cds-core",
+	"crates/cds-server",
 	"crates/fhir",
 	"crates/fhir-gen",
 	"crates/fhir-macro",
@@ -41,4 +43,4 @@ rust-version = "1.90"
 serde = { version = "=1.0.220", features = ["derive"] }
 serde_json = "=1.0.143"
 helios-fhir = { path = "crates/fhir" }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde", "clock"] }

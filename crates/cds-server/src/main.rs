@@ -1,10 +1,11 @@
-//! Optional demo: standalone CDS Hooks HTTP server using [`cds_core::PatientGreeterService`].
+//! Optional demo: standalone CDS Hooks HTTP server using [`cds_core::PatientGreeterService`] and
+//! [`cds_core::PatientViewQualityGapsService`] (same `patient-view` hook, separate discovery ids).
 //!
 //! Run: `cargo run -p cds-server --features binary -- --help`
 
 use std::sync::Arc;
 
-use cds_core::PatientGreeterService;
+use cds_core::{PatientGreeterService, PatientViewQualityGapsService};
 use cds_server::{CdsServiceDispatch, CdsServiceRegistry, ServiceWrapper, cds_hooks_router};
 use clap::Parser;
 
@@ -31,7 +32,9 @@ async fn main() -> anyhow::Result<()> {
     let addr = format!("{}:{}", args.host, args.port);
     let greeter: Arc<dyn CdsServiceDispatch> =
         Arc::new(ServiceWrapper::new(Arc::new(PatientGreeterService)));
-    let registry = CdsServiceRegistry::try_from_services([greeter])?;
+    let quality_gaps: Arc<dyn CdsServiceDispatch> =
+        Arc::new(ServiceWrapper::new(Arc::new(PatientViewQualityGapsService)));
+    let registry = CdsServiceRegistry::try_from_services([greeter, quality_gaps])?;
     let app = cds_hooks_router(registry);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!(%addr, "cds-hooks-server listening (CDS Hooks discovery + service + feedback)");

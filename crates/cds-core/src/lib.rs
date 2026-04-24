@@ -6,10 +6,14 @@
 
 mod evaluate;
 mod fhir_fetch;
+mod gaps;
 mod patient_greeter;
+mod patient_quality_gaps;
 
 pub use evaluate::patient_view_greeting;
 pub use fhir_fetch::{
     FhirFetchError, get_patient_json, patient_display_name, try_patient_display_name,
 };
+pub use gaps::{QualityFinding, evaluate_patient_view_gaps};
 pub use patient_greeter::PatientGreeterService;
+pub use patient_quality_gaps::PatientViewQualityGapsService;

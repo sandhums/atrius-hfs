@@ -7,7 +7,7 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "Decision-support evaluation and CdsHooksService impls; optional EHR FHIR reads; pair with cds-server."
-keywords = ["hl7", "fhir", "cds-hooks", "clinical-decision-support"]
+keywords = ["hl7", "fhir", "cds-hooks", "cds"]
 readme = "README.md"
 
 [dependencies]
@@ -19,6 +19,7 @@ serde_json.workspace = true
 thiserror = "1.0"
 tracing = "0.1"
 url = "2.5"
+chrono = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }

@@ -4,7 +4,7 @@ Axum [`Router`](https://docs.rs/axum) for [CDS Hooks](https://cds-hooks.hl7.org/
 
 Depends on [`helios-cds-hooks`](../cds-hooks) for protocol types and `CdsHooksService`. This crate adds an object-safe `CdsServiceDispatch` and `cds_hooks_router` for wiring.
 
-**Run the demo binary** (uses [`cds-core`](../cds-core) for evaluation, not inline logic)
+**Run the demo binary** — registers `patient-greeter` and `patient-quality-gaps` (both `patient-view`); see [`cds-core`](../cds-core).
 
 ```bash
 cargo run -p cds-server --features binary -- --port 8088
