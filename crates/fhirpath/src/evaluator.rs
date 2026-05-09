@@ -77,7 +77,7 @@ use crate::parser::{Expression, Invocation, Literal, Term, TypeSpecifier};
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike};
 use helios_fhir::{FhirResource, FhirVersion};
 use helios_fhirpath_support::{
-    EvaluationError, EvaluationResult, IntoEvaluationResult, TypeInfoResult,
+    EvaluationError, EvaluationResult, IntoEvaluationResult, PrimitiveElement, TypeInfoResult,
 };
 use parking_lot::Mutex;
 use regex::RegexBuilder;
@@ -971,11 +971,8 @@ pub fn evaluate(
             let left_bool = match &left_eval {
                 // Direct boolean values
                 EvaluationResult::Boolean(_, _, _) => left_eval.to_boolean_for_logic()?,
-                // Metadata-only FHIR primitives are still valueless for boolean logic.
-                // They preserve element metadata, but they do not contribute a primitive value.
-                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                    EvaluationResult::Empty
-                }
+                // Empty evaluates to empty in logical context
+                EvaluationResult::Empty => EvaluationResult::Empty,
                 // For non-boolean singletons, apply singleton evaluation:
                 // A single value is considered true
                 EvaluationResult::String(_, _, _)
@@ -997,9 +994,7 @@ pub fn evaluate(
                                 EvaluationResult::Boolean(_, _, _) => {
                                     items[0].to_boolean_for_logic()?
                                 }
-                                // A singleton metadata-only primitive still has no boolean value.
-                                EvaluationResult::Empty
-                                | EvaluationResult::EmptyWithMeta { .. } => EvaluationResult::Empty,
+                                EvaluationResult::Empty => EvaluationResult::Empty,
                                 _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                             }
                         }
@@ -1023,9 +1018,8 @@ pub fn evaluate(
                     let right_bool = match &right_eval {
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                            EvaluationResult::Empty
-                        }
+                        // Empty evaluates to empty in logical context
+                        EvaluationResult::Empty => EvaluationResult::Empty,
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1047,10 +1041,7 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty
-                                        | EvaluationResult::EmptyWithMeta { .. } => {
-                                            EvaluationResult::Empty
-                                        }
+                                        EvaluationResult::Empty => EvaluationResult::Empty,
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -1076,10 +1067,8 @@ pub fn evaluate(
                     let right_bool = match &right_eval {
                         // Direct boolean values
                         EvaluationResult::Boolean(_, _, _) => right_eval.to_boolean_for_logic()?,
-                        // Metadata-only FHIR primitives behave like empty in logical evaluation.
-                        EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                            EvaluationResult::Empty
-                        }
+                        // Empty evaluates to empty in logical context
+                        EvaluationResult::Empty => EvaluationResult::Empty,
                         // For non-boolean singletons, apply singleton evaluation:
                         // A single value is considered true
                         EvaluationResult::String(_, _, _)
@@ -1101,10 +1090,7 @@ pub fn evaluate(
                                         EvaluationResult::Boolean(_, _, _) => {
                                             items[0].to_boolean_for_logic()?
                                         }
-                                        EvaluationResult::Empty
-                                        | EvaluationResult::EmptyWithMeta { .. } => {
-                                            EvaluationResult::Empty
-                                        }
+                                        EvaluationResult::Empty => EvaluationResult::Empty,
                                         _ => EvaluationResult::boolean(true), // Non-boolean singleton is true
                                     }
                                 }
@@ -1338,6 +1324,32 @@ pub fn evaluate(
 /// # Returns
 ///
 /// A tuple containing the evaluation result and the potentially modified context
+/// Resolves member access (`.id`, `.extension`, etc.) on a FHIR primitive value.
+///
+/// FHIR primitives can carry id/extension metadata via the `PrimitiveElement`
+/// trailing field on each primitive variant. When that metadata is present,
+/// `.id` and `.extension` return it; otherwise they return `Empty` per FHIRPath
+/// semantics. All other member access on a primitive returns `Empty`.
+fn primitive_member_access(
+    base: &EvaluationResult,
+    name: &str,
+) -> Result<EvaluationResult, EvaluationError> {
+    let element = base.primitive_element();
+    match name {
+        "id" => match element.and_then(|e: &PrimitiveElement| e.id.as_ref()) {
+            Some(id) => Ok(EvaluationResult::fhir_string(id.clone(), "id")),
+            None => Ok(EvaluationResult::Empty),
+        },
+        "extension" => match element {
+            Some(e) if !e.extension.is_empty() => {
+                Ok(EvaluationResult::collection(e.extension.clone()))
+            }
+            _ => Ok(EvaluationResult::Empty),
+        },
+        _ => Ok(EvaluationResult::Empty),
+    }
+}
+
 fn evaluate_with_context(
     expr: &Expression,
     context: EvaluationContext,
@@ -1458,14 +1470,7 @@ fn flatten_collections_recursive(result: EvaluationResult) -> (Vec<EvaluationRes
             }
         }
         EvaluationResult::Empty => {
-            // Skip truly absent results when flattening.
-        }
-        EvaluationResult::EmptyWithMeta { .. } => {
-            // Preserve metadata-only FHIR primitives as collection members.
-            // They are valueless for boolean/scalar semantics, but they still represent
-            // real element nodes needed by path traversal, select(), where(), hasValue(),
-            // and member access such as `.id` / `.extension`.
-            flattened_items.push(result);
+            // Skip empty results
         }
         other => {
             // Add non-collection, non-empty items directly
@@ -1923,7 +1928,7 @@ fn evaluate_invocation_with_context(
 ///
 /// An EvaluationResult representation of the resource, typically as an Object
 #[inline] // Suggest inlining this simple function call
-pub fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
+fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
     // Now that FhirResource implements IntoEvaluationResult, just call the method.
     resource.to_evaluation_result()
 }
@@ -2015,9 +2020,10 @@ fn evaluate_invocation(
         Invocation::Member(name) => {
             // Handle member access on the invocation_base
             // Special handling for boolean literals that might be parsed as identifiers
-            if name == "true" && invocation_base.is_effectively_empty() {
+            if name == "true" && matches!(invocation_base, EvaluationResult::Empty) {
+                // Only if base is empty context
                 return Ok(EvaluationResult::boolean(true));
-            } else if name == "false" && invocation_base.is_effectively_empty() {
+            } else if name == "false" && matches!(invocation_base, EvaluationResult::Empty) {
                 return Ok(EvaluationResult::boolean(false));
             }
 
@@ -2103,7 +2109,7 @@ fn evaluate_invocation(
                         {
                             result_is_unordered = true;
                         }
-                        if !res.is_effectively_empty() {
+                        if res != EvaluationResult::Empty {
                             results.push(res);
                         }
                     }
@@ -2125,7 +2131,7 @@ fn evaluate_invocation(
                                 if item_is_unordered {
                                     any_item_was_unordered_collection = true;
                                 }
-                            } else if !res_item.is_effectively_empty() {
+                            } else if res_item != EvaluationResult::Empty {
                                 combined_results_for_flattening.push(res_item);
                             }
                         }
@@ -2144,131 +2150,19 @@ fn evaluate_invocation(
                         ))
                     }
                 }
-                // New Code
-                // Special handling for primitive types with primitive meta (id/extension access)
-                EvaluationResult::EmptyWithMeta { .. }
-                | EvaluationResult::Boolean(_, _, _)
+                // Special handling for primitive types.
+                // FHIR primitives can carry id/extension via the PrimitiveElement
+                // metadata populated from `_field` siblings in JSON.
+                EvaluationResult::Boolean(_, _, _)
                 | EvaluationResult::String(_, _, _)
                 | EvaluationResult::Integer(_, _, _)
+                | EvaluationResult::Integer64(_, _, _)
                 | EvaluationResult::Decimal(_, _, _)
                 | EvaluationResult::Date(_, _, _)
                 | EvaluationResult::DateTime(_, _, _)
                 | EvaluationResult::Time(_, _, _)
                 | EvaluationResult::Quantity(_, _, _, _) => {
-                    if name == "id" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if let Some(id) = &meta.id {
-                                return Ok(EvaluationResult::string(id.clone()));
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else if name == "extension" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if let Some(ext) = meta.extension.as_ref() {
-                                if !ext.is_empty() {
-                                    return Ok(EvaluationResult::collection(ext.clone()));
-                                }
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else {
-                        Ok(EvaluationResult::Empty)
-                    }
-                }
-                // Special handling for primitive types
-                // In FHIR, primitive values can have id and extension properties
-                // EvaluationResult::Boolean(_, _, _)
-                // | EvaluationResult::String(_, _, _)
-                // | EvaluationResult::Integer(_, _, _)
-                // | EvaluationResult::Decimal(_, _, _)
-                // | EvaluationResult::Date(_, _, _)
-                // | EvaluationResult::DateTime(_, _, _)
-                // | EvaluationResult::Time(_, _, _)
-                // | EvaluationResult::Quantity(_, _, _) => {
-                // For now, we return Empty for id and extension on primitives
-                // This is where we would add proper support for accessing these fields
-                // if the primitive value was from a FHIR Element type with id/extension
-                //     if name == "id" || name == "extension" {
-                //         // TODO: Proper implementation would check if this is a FHIR Element
-                //         // and return its id or extension if available
-                //         Ok(EvaluationResult::Empty)
-                //     } else {
-                //         // For other properties on primitives, return Empty
-                //         Ok(EvaluationResult::Empty)
-                //     }
-                // }
-                // R5+ only: Integer64 primitive type handling
-                #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                // EvaluationResult::Integer64(_, _, _) => {
-                //     // For now, we return Empty for id and extension on primitives
-                //     // This is where we would add proper support for accessing these fields
-                //     // if the primitive value was from a FHIR Element type with id/extension
-                //     if name == "id" || name == "extension" {
-                //         // TODO: Proper implementation would check if this is a FHIR Element
-                //         // and return its id or extension if available
-                //         Ok(EvaluationResult::Empty)
-                //     } else {
-                //         // For other properties on primitives, return Empty
-                //         Ok(EvaluationResult::Empty)
-                //     }
-                // }
-                EvaluationResult::Integer64(_, _, _) => {
-                    if name == "id" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if let Some(id) = &meta.id {
-                                return Ok(EvaluationResult::string(id.clone()));
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else if name == "extension" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if !meta.extension.is_empty() {
-                                return Ok(EvaluationResult::collection(meta.extension.clone()));
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else {
-                        Ok(EvaluationResult::Empty)
-                    }
-                }
-                // R4/R4B: Integer64 should be treated as Integer primitive
-                #[cfg(any(feature = "R4", feature = "R4B"))]
-                //     EvaluationResult::Integer64(_, _, _) => {
-                //         // For now, we return Empty for id and extension on primitives
-                //         // This is where we would add proper support for accessing these fields
-                //         // if the primitive value was from a FHIR Element type with id/extension
-                //         if name == "id" || name == "extension" {
-                //             // TODO: Proper implementation would check if this is a FHIR Element
-                //             // and return its id or extension if available
-                //             Ok(EvaluationResult::Empty)
-                //         } else {
-                //             // For other properties on primitives, return Empty
-                //             Ok(EvaluationResult::Empty)
-                //         }
-                //     }
-                //     // Accessing member on Empty returns Empty
-                //     EvaluationResult::Empty => Ok(EvaluationResult::Empty), // Wrap in Ok
-                // }
-                EvaluationResult::Integer64(_, _, _) => {
-                    if name == "id" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if let Some(id) = &meta.id {
-                                return Ok(EvaluationResult::string(id.clone()));
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else if name == "extension" {
-                        if let Some(meta) = invocation_base.primitive_meta() {
-                            if let Some(ext) = meta.extension.as_ref() {
-                                if !ext.is_empty() {
-                                    return Ok(EvaluationResult::collection(ext.clone()));
-                                }
-                            }
-                        }
-                        Ok(EvaluationResult::Empty)
-                    } else {
-                        Ok(EvaluationResult::Empty)
-                    }
+                    primitive_member_access(invocation_base, name)
                 }
                 // Accessing member on Empty returns Empty
                 EvaluationResult::Empty => Ok(EvaluationResult::Empty), // Wrap in Ok
@@ -3801,9 +3695,7 @@ fn call_function(
                 EvaluationResult::Integer64(_, _, _) => EvaluationResult::boolean(true),
                 // Objects are not convertible to String via this function
                 EvaluationResult::Object { .. } => EvaluationResult::boolean(false),
-                EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                    EvaluationResult::Empty
-                }
+                EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::Collection { .. } => unreachable!(), // Already handled by singleton check
             })
         }
@@ -6266,34 +6158,21 @@ fn call_function(
                 now.nanosecond() / 1_000_000 // Convert nanoseconds to milliseconds
             )))
         }
-
         "children" => {
-            // New Code
-            // Returns a collection with all immediate child nodes of all items in
-            // the input collection.
-            //
-            // Empty primitive values are filtered out so `children()` reflects
-            // meaningful FHIR element content for checks such as `ele-1`.
+            // Returns a collection with all immediate child nodes of all items in the input collection
             Ok(match invocation_base {
                 EvaluationResult::Empty => EvaluationResult::Empty,
                 EvaluationResult::Object { map, type_info: _ } => {
-                    // Collect all immediate child values except `resourceType`.
+                    // Get all values in the map (excluding the resourceType field)
                     let mut children: Vec<EvaluationResult> = Vec::new();
                     for (key, value) in map {
                         if key != "resourceType" {
                             match value {
                                 EvaluationResult::Collection { items, .. } => {
-                                    for item in items {
-                                        if contributes_meaningful_child_content(item) {
-                                            children.push(item.clone());
-                                        }
-                                    }
+                                    // Destructure
+                                    children.extend(items.clone());
                                 }
-                                _ => {
-                                    if contributes_meaningful_child_content(value) {
-                                        children.push(value.clone());
-                                    }
-                                }
+                                _ => children.push(value.clone()),
                             }
                         }
                     }
@@ -6408,33 +6287,19 @@ fn call_function(
             crate::reference_key_functions::get_reference_key_function(invocation_base, args)
         }
         "hasValue" => {
-            // New Code
-            // `hasValue()` returns true only when the focus itself is a primitive
-            // with an actual scalar value.
-            //
-            // Metadata-only primitives (represented as `EmptyWithMeta`) are real FHIR
-            // element nodes, but still return false because they do not carry a value.
+            // hasValue() returns true if the element is a primitive with an actual value
+            // Returns false if element is empty or is a primitive with extensions but no value
             match invocation_base {
                 EvaluationResult::Empty => Ok(EvaluationResult::boolean(false)),
-
-                // Primitive/scalar values carry an actual value.
-                EvaluationResult::Boolean(..)
-                | EvaluationResult::Integer(..)
-                | EvaluationResult::Integer64(..)
-                | EvaluationResult::Decimal(..)
-                | EvaluationResult::String(..)
-                | EvaluationResult::Date(..)
-                | EvaluationResult::DateTime(..)
-                | EvaluationResult::Time(..)
-                | EvaluationResult::Quantity(..) => Ok(EvaluationResult::boolean(true)),
-
-                EvaluationResult::EmptyWithMeta { .. } => Ok(EvaluationResult::boolean(false)),
-                // Objects are complex elements, not primitive values.
-                EvaluationResult::Object { .. } => Ok(EvaluationResult::boolean(false)),
-
-                // Collections should already be singleton-checked by callers in invariant
-                // evaluation paths, but hasValue() over a collection is not itself a primitive value.
-                EvaluationResult::Collection { .. } => Ok(EvaluationResult::boolean(false)),
+                EvaluationResult::Object { type_info, .. } => {
+                    // Check if this is an Element (primitive with extensions but no value)
+                    let is_element = type_info
+                        .as_ref()
+                        .map(|ti| ti.name == "Element")
+                        .unwrap_or(false);
+                    Ok(EvaluationResult::boolean(!is_element))
+                }
+                _ => Ok(EvaluationResult::boolean(true)),
             }
         }
         "encode" => {
@@ -6763,40 +6628,7 @@ fn add_duration_to_date(
         new_date.format("%Y-%m-%d").to_string(),
     ))
 }
-/// Return true when an `EvaluationResult` contributes meaningful child content
-/// for the FHIRPath `children()` function.
-///
-/// This is used to make `children()` align better with FHIR `ele-1` semantics:
-/// empty primitive values such as `""` should not count as meaningful child
-/// content, while populated primitive values and complex objects should.
-// New Code
-fn contributes_meaningful_child_content(value: &EvaluationResult) -> bool {
-    match value {
-        EvaluationResult::Empty => false,
-        EvaluationResult::EmptyWithMeta { .. } => false,
 
-        // Empty primitive string values should not count as meaningful child content.
-        EvaluationResult::String(s, ..) => !s.is_empty(),
-
-        // Primitive/scalar values with an actual value do count as child content.
-        EvaluationResult::Boolean(..)
-        | EvaluationResult::Integer(..)
-        | EvaluationResult::Integer64(..)
-        | EvaluationResult::Decimal(..)
-        | EvaluationResult::Date(..)
-        | EvaluationResult::DateTime(..)
-        | EvaluationResult::Time(..)
-        | EvaluationResult::Quantity(..) => true,
-
-        // Complex nodes count as children.
-        EvaluationResult::Object { .. } => true,
-
-        // Collections contribute content only if any contained item does.
-        EvaluationResult::Collection { items, .. } => {
-            items.iter().any(contributes_meaningful_child_content)
-        }
-    }
-}
 /// Adds a duration to a datetime string
 fn add_duration_to_datetime(
     dt_str: &str,
@@ -7499,7 +7331,7 @@ fn apply_integer_multiplicative(
 }
 
 /// Applies an additive operator to two values
-pub fn apply_additive(
+fn apply_additive(
     left: &EvaluationResult,
     op: &str,
     right: &EvaluationResult,

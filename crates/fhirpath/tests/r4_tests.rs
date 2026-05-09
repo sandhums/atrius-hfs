@@ -227,7 +227,7 @@ fn test_real_fhir_patient_type() {
     println!("Real active.type().name: {:?}", result);
     assert_eq!(
         result,
-        EvaluationResult::String("boolean".to_string(), None, None),
+        EvaluationResult::String("boolean".to_string(), None, None)
     );
 }
 

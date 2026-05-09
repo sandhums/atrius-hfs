@@ -210,34 +210,29 @@ pub trait IntoEvaluationResult {
 /// assert_eq!(collection.count(), 2);
 /// assert!(collection.is_collection());
 /// ```
-// New  Code
+/// FHIR primitive metadata (id and extensions) carried alongside a primitive value.
+///
+/// In FHIR JSON, primitive values can have an associated metadata sibling field with
+/// an underscore prefix, e.g. `{"birthDate": "1980-01-01", "_birthDate": {"id": "abc",
+/// "extension": [...]}}`. This struct captures that metadata so FHIRPath expressions
+/// like `Patient.active.id` and `Patient.birthDate.extension` can reach it.
+///
+/// `extension` holds each FHIR Extension as an `EvaluationResult::Object`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct PrimitiveMeta {
+pub struct PrimitiveElement {
+    /// Optional element identifier (the `id` field of the Element).
     pub id: Option<String>,
-    pub extension: Option<Vec<EvaluationResult>>,
+    /// Extensions on the primitive, each represented as an `EvaluationResult::Object`.
+    pub extension: Vec<EvaluationResult>,
 }
 
-impl PrimitiveMeta {
+impl PrimitiveElement {
+    /// Returns true when there is no id and no extensions.
     pub fn is_empty(&self) -> bool {
-        self.id.is_none() && self.extension.as_ref().is_none_or(|v| v.is_empty())
+        self.id.is_none() && self.extension.is_empty()
     }
 }
 
-impl PartialOrd for PrimitiveMeta {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for PrimitiveMeta {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.id.cmp(&other.id) {
-            Ordering::Equal => self.extension.cmp(&other.extension),
-            other => other,
-        }
-    }
-}
-// End New
 #[derive(Debug, Clone)]
 pub enum EvaluationResult {
     /// No value or empty collection.
@@ -249,43 +244,65 @@ pub enum EvaluationResult {
     /// Boolean true/false value.
     ///
     /// Results from boolean expressions, existence checks, and logical operations.
-    /// Also used for FHIR boolean fields.
-    Boolean(bool, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    /// Also used for FHIR boolean fields. The trailing `Option<Box<PrimitiveElement>>`
+    /// carries id/extension metadata when the source was a FHIR primitive with a
+    /// `_field` sibling in JSON.
+    Boolean(bool, Option<TypeInfoResult>, Option<Box<PrimitiveElement>>),
     /// Text string value.
     ///
     /// Used for FHIR string, code, uri, canonical, id, and other text-based types.
     /// Also results from string manipulation functions and conversions.
-    String(String, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    String(
+        String,
+        Option<TypeInfoResult>,
+        Option<Box<PrimitiveElement>>,
+    ),
     /// High-precision decimal number.
     ///
     /// Uses `rust_decimal::Decimal` for precise arithmetic without floating-point
     /// errors. Required for FHIR's decimal type and mathematical operations.
-    Decimal(Decimal, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Decimal(
+        Decimal,
+        Option<TypeInfoResult>,
+        Option<Box<PrimitiveElement>>,
+    ),
     /// Whole number value.
     ///
     /// Used for FHIR integer, positiveInt, unsignedInt types and counting operations.
     /// Also results from indexing and length functions.
-    Integer(i64, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Integer(i64, Option<TypeInfoResult>, Option<Box<PrimitiveElement>>),
     /// 64-bit integer value.
     ///
     /// Explicit 64-bit integer type for cases where the distinction from regular
     /// integers is important.
-    Integer64(i64, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Integer64(i64, Option<TypeInfoResult>, Option<Box<PrimitiveElement>>),
     /// Date value in ISO format.
     ///
     /// Stores date as string in YYYY-MM-DD format. Handles FHIR date fields
     /// and results from date extraction functions.
-    Date(String, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Date(
+        String,
+        Option<TypeInfoResult>,
+        Option<Box<PrimitiveElement>>,
+    ),
     /// DateTime value in ISO format.
     ///
     /// Stores datetime as string in ISO 8601 format with optional timezone.
     /// Handles FHIR dateTime and instant fields.
-    DateTime(String, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    DateTime(
+        String,
+        Option<TypeInfoResult>,
+        Option<Box<PrimitiveElement>>,
+    ),
     /// Time value in ISO format.
     ///
     /// Stores time as string in HH:MM:SS format. Handles FHIR time fields
     /// and results from time extraction functions.
-    Time(String, Option<TypeInfoResult>, Option<PrimitiveMeta>),
+    Time(
+        String,
+        Option<TypeInfoResult>,
+        Option<Box<PrimitiveElement>>,
+    ),
     /// Quantity with value and unit.
     ///
     /// Represents measurements with units (e.g., "5.4 mg", "10 years").
@@ -295,7 +312,7 @@ pub enum EvaluationResult {
         Decimal,
         String,
         Option<TypeInfoResult>,
-        Option<PrimitiveMeta>,
+        Option<Box<PrimitiveElement>>,
     ),
     /// Ordered collection of evaluation results.
     ///
@@ -327,10 +344,6 @@ pub enum EvaluationResult {
         /// The object's properties
         map: HashMap<String, EvaluationResult>,
         /// Optional type information
-        type_info: Option<TypeInfoResult>,
-    },
-    EmptyWithMeta {
-        meta: PrimitiveMeta,
         type_info: Option<TypeInfoResult>,
     },
 }
@@ -612,23 +625,6 @@ impl Ord for EvaluationResult {
             (EvaluationResult::Empty, _) => Ordering::Less,
             (_, EvaluationResult::Empty) => Ordering::Greater,
 
-            (
-                EvaluationResult::EmptyWithMeta {
-                    meta: a_meta,
-                    type_info: a_type,
-                },
-                EvaluationResult::EmptyWithMeta {
-                    meta: b_meta,
-                    type_info: b_type,
-                },
-            ) => match a_type.iter().cmp(b_type) {
-                Ordering::Equal => a_meta.cmp(b_meta),
-                other => other,
-            },
-
-            (EvaluationResult::EmptyWithMeta { .. }, _) => Ordering::Less,
-            (_, EvaluationResult::EmptyWithMeta { .. }) => Ordering::Greater,
-
             (EvaluationResult::Boolean(a, _, _), EvaluationResult::Boolean(b, _, _)) => a.cmp(b),
             (EvaluationResult::Boolean(_, _, _), _) => Ordering::Less,
             (_, EvaluationResult::Boolean(_, _, _)) => Ordering::Greater,
@@ -754,10 +750,6 @@ impl Hash for EvaluationResult {
         match self {
             // Empty has no additional data to hash
             EvaluationResult::Empty => {}
-            EvaluationResult::EmptyWithMeta { meta, type_info } => {
-                meta.hash(state);
-                type_info.hash(state);
-            }
             EvaluationResult::Boolean(b, _, _) => b.hash(state),
             EvaluationResult::String(s, _, _) => s.hash(state),
             // Hash normalized decimal for consistency with equality
@@ -881,6 +873,43 @@ impl EvaluationResult {
             Some(TypeInfoResult::new("System", "Quantity")),
             None,
         )
+    }
+
+    /// Returns a reference to the primitive metadata (id/extension) if this is a primitive.
+    pub fn primitive_element(&self) -> Option<&PrimitiveElement> {
+        match self {
+            EvaluationResult::Boolean(_, _, e)
+            | EvaluationResult::String(_, _, e)
+            | EvaluationResult::Decimal(_, _, e)
+            | EvaluationResult::Integer(_, _, e)
+            | EvaluationResult::Integer64(_, _, e)
+            | EvaluationResult::Date(_, _, e)
+            | EvaluationResult::DateTime(_, _, e)
+            | EvaluationResult::Time(_, _, e)
+            | EvaluationResult::Quantity(_, _, _, e) => e.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Returns this primitive value with the given primitive metadata attached.
+    /// Returns the value unchanged for non-primitive variants.
+    pub fn with_primitive_element(self, element: PrimitiveElement) -> Self {
+        if element.is_empty() {
+            return self;
+        }
+        let boxed = Some(Box::new(element));
+        match self {
+            EvaluationResult::Boolean(v, t, _) => EvaluationResult::Boolean(v, t, boxed),
+            EvaluationResult::String(v, t, _) => EvaluationResult::String(v, t, boxed),
+            EvaluationResult::Decimal(v, t, _) => EvaluationResult::Decimal(v, t, boxed),
+            EvaluationResult::Integer(v, t, _) => EvaluationResult::Integer(v, t, boxed),
+            EvaluationResult::Integer64(v, t, _) => EvaluationResult::Integer64(v, t, boxed),
+            EvaluationResult::Date(v, t, _) => EvaluationResult::Date(v, t, boxed),
+            EvaluationResult::DateTime(v, t, _) => EvaluationResult::DateTime(v, t, boxed),
+            EvaluationResult::Time(v, t, _) => EvaluationResult::Time(v, t, boxed),
+            EvaluationResult::Quantity(v, u, t, _) => EvaluationResult::Quantity(v, u, t, boxed),
+            other => other,
+        }
     }
 
     /// Creates a Collection result.
@@ -1114,7 +1143,7 @@ impl EvaluationResult {
     /// ```
     pub fn to_string_value(&self) -> String {
         match self {
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => "".to_string(),
+            EvaluationResult::Empty => "".to_string(),
             EvaluationResult::Boolean(b, _, _) => b.to_string(),
             EvaluationResult::String(s, _, _) => s.clone(),
             EvaluationResult::Decimal(d, _, _) => d.to_string(),
@@ -1247,9 +1276,7 @@ impl EvaluationResult {
             | EvaluationResult::Time(_, _, _)
             | EvaluationResult::Quantity(_, _, _, _)
             | EvaluationResult::Object { .. } => Ok(EvaluationResult::Empty),
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. } => {
-                Ok(EvaluationResult::Empty)
-            }
+            EvaluationResult::Empty => Ok(EvaluationResult::Empty),
         }
     }
 
@@ -1298,7 +1325,6 @@ impl EvaluationResult {
     pub fn type_name(&self) -> &'static str {
         match self {
             EvaluationResult::Empty => "Empty",
-            EvaluationResult::EmptyWithMeta { .. } => "Empty",
             EvaluationResult::Boolean(_, _, _) => "Boolean",
             EvaluationResult::String(_, _, _) => "String",
             EvaluationResult::Decimal(_, _, _) => "Decimal",
@@ -1312,61 +1338,6 @@ impl EvaluationResult {
             EvaluationResult::Object { .. } => "Object",
         }
     }
-    // New Code
-    // Also added PrimitiveMeta to enum variants
-    pub fn primitive_meta(&self) -> Option<&PrimitiveMeta> {
-        match self {
-            EvaluationResult::EmptyWithMeta { meta, .. } => Some(meta),
-            EvaluationResult::Boolean(_, _, m)
-            | EvaluationResult::String(_, _, m)
-            | EvaluationResult::Integer(_, _, m)
-            | EvaluationResult::Integer64(_, _, m)
-            | EvaluationResult::Decimal(_, _, m)
-            | EvaluationResult::Date(_, _, m)
-            | EvaluationResult::DateTime(_, _, m)
-            | EvaluationResult::Time(_, _, m) => m.as_ref(),
-            EvaluationResult::Quantity(_, _, _, m) => m.as_ref(),
-            _ => None,
-        }
-    }
-
-    pub fn with_primitive_meta(self, meta: Option<PrimitiveMeta>) -> Self {
-        let meta = meta.filter(|m| !m.is_empty());
-        match self {
-            EvaluationResult::Empty => meta
-                .map(|meta| EvaluationResult::EmptyWithMeta {
-                    meta,
-                    type_info: None,
-                })
-                .unwrap_or(EvaluationResult::Empty),
-            EvaluationResult::EmptyWithMeta { type_info, .. } => meta
-                .map(|meta| EvaluationResult::EmptyWithMeta { meta, type_info })
-                .unwrap_or(EvaluationResult::Empty),
-            EvaluationResult::Boolean(v, t, _) => EvaluationResult::Boolean(v, t, meta),
-            EvaluationResult::String(v, t, _) => EvaluationResult::String(v, t, meta),
-            EvaluationResult::Integer(v, t, _) => EvaluationResult::Integer(v, t, meta),
-            EvaluationResult::Integer64(v, t, _) => EvaluationResult::Integer64(v, t, meta),
-            EvaluationResult::Decimal(v, t, _) => EvaluationResult::Decimal(v, t, meta),
-            EvaluationResult::Date(v, t, _) => EvaluationResult::Date(v, t, meta),
-            EvaluationResult::DateTime(v, t, _) => EvaluationResult::DateTime(v, t, meta),
-            EvaluationResult::Time(v, t, _) => EvaluationResult::Time(v, t, meta),
-            EvaluationResult::Quantity(v, u, t, _) => EvaluationResult::Quantity(v, u, t, meta),
-            other => other,
-        }
-    }
-    pub fn is_effectively_empty(&self) -> bool {
-        matches!(
-            self,
-            EvaluationResult::Empty | EvaluationResult::EmptyWithMeta { .. }
-        )
-    }
-    pub fn empty_fhir_primitive_with_meta(meta: PrimitiveMeta, fhir_type: &str) -> Self {
-        EvaluationResult::EmptyWithMeta {
-            meta,
-            type_info: Some(TypeInfoResult::new("FHIR", fhir_type)),
-        }
-    }
-    // End New
 }
 
 // === IntoEvaluationResult Implementations ===
@@ -1553,8 +1524,4 @@ fn format_unit_for_display(unit: &str) -> String {
         // UCUM code units: display with quotes
         format!("'{}'", unit)
     }
-
-    // --- Patch: Update all remaining tuple-style EmptyWithMeta patterns to struct-style
-
-    // (No further code, all changes above.)
 }

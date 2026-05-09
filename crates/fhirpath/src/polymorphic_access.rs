@@ -779,7 +779,7 @@ pub fn apply_polymorphic_type_operation(
                     }
                     EvaluationResult::Collection { .. } => Ok(EvaluationResult::boolean(false)),
                     #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                    EvaluationResult::Integer64(_, _) => {
+                    EvaluationResult::Integer64(_, _, _) => {
                         // Check for qualifiers like "System.Integer64" and "FHIR.integer64"
                         let is_integer64_type = type_name == "Integer64"
                             || type_name == "integer64"

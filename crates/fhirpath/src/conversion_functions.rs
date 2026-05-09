@@ -42,7 +42,7 @@ pub fn to_decimal_function(
         }
         EvaluationResult::Integer(i, _, _) => EvaluationResult::decimal(Decimal::from(*i)),
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
-        EvaluationResult::Integer64(i, _) => EvaluationResult::decimal(Decimal::from(*i)),
+        EvaluationResult::Integer64(i, _, _) => EvaluationResult::decimal(Decimal::from(*i)),
         EvaluationResult::Decimal(d, _, _) => EvaluationResult::decimal(*d),
         EvaluationResult::String(s, _, _) => {
             // Try parsing as Decimal
@@ -88,7 +88,7 @@ pub fn to_integer_function(
         EvaluationResult::Boolean(b, _, _) => EvaluationResult::integer(if *b { 1 } else { 0 }),
         EvaluationResult::Integer(i, _, _) => EvaluationResult::integer(*i),
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
-        EvaluationResult::Integer64(i, _) => EvaluationResult::integer(*i),
+        EvaluationResult::Integer64(i, _, _) => EvaluationResult::integer(*i),
         EvaluationResult::String(s, _, _) => {
             // Try parsing as i64
             s.parse::<i64>()
