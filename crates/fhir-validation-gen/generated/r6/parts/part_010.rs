@@ -2,6 +2,409 @@
 // FHIR version: FHIR R6
 // shard parts/part_010.rs
 
+static GUIDANCE_RESPONSE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "GuidanceResponse".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "GuidanceResponse".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "GuidanceResponse".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "GuidanceResponse".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "GuidanceResponse".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static GUIDANCE_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "GuidanceResponse.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "GuidanceResponse.module[x]".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/guidance-module-code".to_string(),
+        binding_name: Some("GuidanceModuleCode".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["uri".to_string(), "CodeableConcept".to_string()]),
+    },
+    fhir_validation_types::BindingDef {
+        path: "GuidanceResponse.status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/guidance-response-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("GuidanceResponseStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for GuidanceResponse {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, GUIDANCE_RESPONSE_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.text"));
+        }
+        if let Some(value) = &self.request_identifier {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.requestIdentifier"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.subject {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.subject"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.encounter"));
+        }
+        if let Some(value) = &self.performer {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.performer"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.location"));
+        }
+        if let Some(value) = &self.evaluation_message {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.evaluationMessage"));
+        }
+        if let Some(value) = &self.output_parameters {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.outputParameters"));
+        }
+        if let Some(values) = &self.result {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.result[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.data_requirement {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.dataRequirement[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.module {
+            match choice {
+                GuidanceResponseModule::Uri(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "GuidanceResponse.module[x]", "http://hl7.org/fhir/ValueSet/guidance-module-code", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/guidance-module-code", value));
+                    issues.extend(child_issues);
+                }
+                GuidanceResponseModule::Canonical(_value) => {
+                }
+                GuidanceResponseModule::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "GuidanceResponse.module[x]", "http://hl7.org/fhir/ValueSet/guidance-module-code", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/guidance-module-code", value));
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, GUIDANCE_RESPONSE_INVARIANTS.as_slice(), evaluator, "GuidanceResponse"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.identifier"));
+            }
+        }
+        if let Some(values) = &self.reason {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.reason", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.reason"));
+            }
+        }
+        if let Some(values) = &self.note {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.note", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.note"));
+            }
+        }
+        if let Some(values) = &self.result {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.result", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.result"));
+            }
+        }
+        if let Some(values) = &self.data_requirement {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "GuidanceResponse.dataRequirement", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("GuidanceResponse.dataRequirement"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.request_identifier {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.requestIdentifier"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.subject {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.subject"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.encounter"));
+        }
+        if let Some(value) = &self.performer {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.performer"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.location"));
+        }
+        if let Some(values) = &self.reason {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.reason[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.note {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.note[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.evaluation_message {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.evaluationMessage"));
+        }
+        if let Some(value) = &self.output_parameters {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.outputParameters"));
+        }
+        if let Some(values) = &self.result {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.result[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.data_requirement {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.dataRequirement[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.module {
+            match choice {
+                GuidanceResponseModule::Uri(_value) => {
+                }
+                GuidanceResponseModule::Canonical(_value) => {
+                }
+                GuidanceResponseModule::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.module[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for GuidanceResponse {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, GUIDANCE_RESPONSE_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.text"));
+        }
+        if let Some(value) = &self.request_identifier {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.requestIdentifier"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.subject {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.subject"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.encounter"));
+        }
+        if let Some(value) = &self.performer {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.performer"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.location"));
+        }
+        if let Some(value) = &self.evaluation_message {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.evaluationMessage"));
+        }
+        if let Some(value) = &self.output_parameters {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "GuidanceResponse.outputParameters"));
+        }
+        if let Some(values) = &self.result {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.result[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.data_requirement {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.dataRequirement[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("GuidanceResponse.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.module {
+            match choice {
+                GuidanceResponseModule::Uri(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "GuidanceResponse.module[x]", "http://hl7.org/fhir/ValueSet/guidance-module-code", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/guidance-module-code", value)).await;
+                    issues.extend(child_issues);
+                }
+                GuidanceResponseModule::Canonical(_value) => {
+                }
+                GuidanceResponseModule::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "GuidanceResponse.module[x]", "http://hl7.org/fhir/ValueSet/guidance-module-code", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/guidance-module-code", value)).await;
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        issues
+    }
+    }
+
 static HEALTHCARE_SERVICE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "dom-2".to_string(),
@@ -44,7 +447,7 @@ static HEALTHCARE_SERVICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "HealthcareService.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -100,7 +503,7 @@ static HEALTHCARE_SERVICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "HealthcareService.communication".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -796,7 +1199,7 @@ static IMAGING_SELECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
     fhir_validation_types::BindingDef {
         path: "ImagingSelection.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -804,7 +1207,7 @@ static IMAGING_SELECTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
     fhir_validation_types::BindingDef {
         path: "ImagingSelection.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ImagingSelectionStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1392,7 +1795,7 @@ static IMAGING_SELECTION_INSTANCE_IMAGE_REGION2_D_BINDINGS: std::sync::LazyLock<
     fhir_validation_types::BindingDef {
         path: "ImagingSelection.instance.imageRegion2D.regionType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-ballot4".to_string(),
         binding_name: Some("ImagingSelection2DGraphicType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1479,7 +1882,7 @@ static IMAGING_SELECTION_IMAGE_REGION3_D_BINDINGS: std::sync::LazyLock<Vec<fhir_
     fhir_validation_types::BindingDef {
         path: "ImagingSelection.imageRegion3D.regionType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-ballot4".to_string(),
         binding_name: Some("ImagingSelection3DGraphicType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1607,7 +2010,7 @@ static IMAGING_STUDY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::
         severity: fhir_validation_types::Severity::Error,
         path: "ImagingStudy".to_string(),
         expression: "numberOfSeries.exists() and series.exists() implies numberOfSeries = series.count()".to_string(),
-        human: "If numberOfSeries  and series are both present, the numberOfSeries value SHALL match the number of series elements".to_string(),
+        human: "If numberOfSeries and series are both present, the numberOfSeries value SHALL match the number of series elements".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "ist-4".to_string(),
@@ -1637,13 +2040,20 @@ static IMAGING_STUDY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::
         expression: "modality.exists() implies modality.coding.select(system&'|'&code).trace('r').exclude(series.modality.coding.select(system&'|'&code).trace('c')).empty() and modality.text.exclude(series.modality.text).empty() and series.modality.coding.select(system&'|'&code).trace('r').exclude(modality.coding.select(system&'|'&code).trace('c')).empty() and series.modality.text.exclude(modality.text).empty()".to_string(),
         human: "If modality is present, modality SHALL equal all of the distinct values of series.modality".to_string(),
     },
+    fhir_validation_types::InvariantDef {
+        key: "ist-8".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "ImagingStudy".to_string(),
+        expression: "started.empty() or series.where(started.empty() or started >= %resource.started).count() = series.count()".to_string(),
+        human: "If started and series.started are both present, the started value SHALL be less than or equal to all of the series.started values".to_string(),
+    },
 ]);
 
 static IMAGING_STUDY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "ImagingStudy.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1651,7 +2061,7 @@ static IMAGING_STUDY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "ImagingStudy.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/imagingstudy-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/imagingstudy-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ImagingStudyStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2362,13 +2772,27 @@ static IMMUNIZATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::I
         expression: "text.`div`.exists()".to_string(),
         human: "A resource should have narrative for robust management".to_string(),
     },
+    fhir_validation_types::InvariantDef {
+        key: "imm-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Immunization".to_string(),
+        expression: "statusReason.exists() implies status = 'not-done'".to_string(),
+        human: "statusReason SHALL only be present if the immunization status is 'not-done'".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "imm-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Immunization".to_string(),
+        expression: "subpotentReason.exists() implies (isSubpotent.exists() and isSubpotent = true)".to_string(),
+        human: "subpotentReason SHALL only be present if isSubpotent is 'true'".to_string(),
+    },
 ]);
 
 static IMMUNIZATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "Immunization.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2376,7 +2800,7 @@ static IMMUNIZATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Immunization.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/immunization-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/immunization-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ImmunizationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2858,7 +3282,7 @@ static IMMUNIZATION_PERFORMER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "Immunization.performer.function".to_string(),
         strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/immunization-function".to_string(),
+        value_set: "http://terminology.hl7.org/ValueSet/immunization-function".to_string(),
         binding_name: Some("ImmunizationFunction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -3278,7 +3702,7 @@ static IMPLEMENTATION_GUIDE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3294,7 +3718,7 @@ static IMPLEMENTATION_GUIDE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3310,7 +3734,7 @@ static IMPLEMENTATION_GUIDE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.license".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/spdx-license|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/spdx-license|6.0.0-ballot4".to_string(),
         binding_name: Some("SPDXLicense".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3318,7 +3742,7 @@ static IMPLEMENTATION_GUIDE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.fhirVersion".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRVersion".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3682,7 +4106,7 @@ static IMPLEMENTATION_GUIDE_GLOBAL_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.global.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/resource-types|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/resource-types|6.0.0-ballot4".to_string(),
         binding_name: Some("ResourceType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3995,7 +4419,7 @@ static IMPLEMENTATION_GUIDE_DEFINITION_RESOURCE_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.definition.resource.fhirVersion".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRVersion".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4102,7 +4526,7 @@ static IMPLEMENTATION_GUIDE_DEFINITION_PAGE_BINDINGS: std::sync::LazyLock<Vec<fh
     fhir_validation_types::BindingDef {
         path: "ImplementationGuide.definition.page.generation".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/guide-page-generation|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/guide-page-generation|6.0.0-ballot4".to_string(),
         binding_name: Some("GuidePageGeneration".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4683,7 +5107,7 @@ static INGREDIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
     fhir_validation_types::BindingDef {
         path: "Ingredient.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4691,7 +5115,7 @@ static INGREDIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
     fhir_validation_types::BindingDef {
         path: "Ingredient.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4732,9 +5156,11 @@ impl fhir_validation::r6::R6Validatable for Ingredient {
             let child_issues = value.validate_bindings(validator, terminology);
             issues.extend(validator.rebase_instance_paths(child_issues, "Ingredient.text"));
         }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Ingredient.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Ingredient.identifier[{idx}]")));
+            }
         }
         if let Some(values) = &self.r#for {
             for (idx, value) in values.iter().enumerate() {
@@ -4785,6 +5211,11 @@ impl fhir_validation::r6::R6Validatable for Ingredient {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "Ingredient.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Ingredient.modifierExtension"));
             }
         }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Ingredient.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Ingredient.identifier"));
+            }
+        }
         if let Some(values) = &self.r#for {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "Ingredient.for", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Ingredient.for"));
@@ -4821,9 +5252,11 @@ impl fhir_validation::r6::R6Validatable for Ingredient {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Ingredient.modifierExtension[{idx}]")));
             }
         }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Ingredient.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Ingredient.identifier[{idx}]")));
+            }
         }
         if let Some(values) = &self.r#for {
             for (idx, value) in values.iter().enumerate() {
@@ -4883,9 +5316,11 @@ impl fhir_validation::r6::R6ValidatableAsync for Ingredient {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
             issues.extend(validator.rebase_instance_paths(child_issues, "Ingredient.text"));
         }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Ingredient.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Ingredient.identifier[{idx}]")));
+            }
         }
         if let Some(values) = &self.r#for {
             for (idx, value) in values.iter().enumerate() {
@@ -4928,7 +5363,7 @@ static INGREDIENT_MANUFACTURER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
     fhir_validation_types::BindingDef {
         path: "Ingredient.manufacturer.role".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/ingredient-manufacturer-role|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/ingredient-manufacturer-role|6.0.0-ballot4".to_string(),
         binding_name: Some("IngredientManufacturerRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5536,7 +5971,7 @@ static INSURANCE_PLAN_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "InsurancePlan.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5854,90 +6289,6 @@ impl fhir_validation::r6::R6ValidatableAsync for InsurancePlanGeneralCost {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
             issues.extend(validator.rebase_instance_paths(child_issues, "generalCost.cost"));
         }
-        issues
-    }
-    }
-
-static INSURANCE_PLAN_SPECIFIC_COST_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "InsurancePlan.specificCost".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for InsurancePlanSpecificCost {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, INSURANCE_PLAN_SPECIFIC_COST_INVARIANTS.as_slice(), evaluator, "InsurancePlan.specificCost"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "InsurancePlan.specificCost.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("specificCost.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "InsurancePlan.specificCost.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("specificCost.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.benefit {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "InsurancePlan.specificCost.benefit", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("specificCost.benefit"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("specificCost.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("specificCost.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.category.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "specificCost.category"));
-        if let Some(values) = &self.benefit {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("specificCost.benefit[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for InsurancePlanSpecificCost {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
         issues
     }
     }

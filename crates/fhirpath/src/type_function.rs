@@ -133,17 +133,7 @@ fn get_type_info(value: &EvaluationResult) -> (String, String) {
                 ("System".to_string(), "Collection".to_string())
             }
         }
-        // Plain `Empty` has no runtime type information.
-        // `EmptyWithMeta` represents a metadata-only FHIR primitive, so preserve its
-        // stored primitive type when present; otherwise fall back to `System.Empty`.
         EvaluationResult::Empty => ("System".to_string(), "Empty".to_string()),
-        EvaluationResult::EmptyWithMeta { type_info, .. } => {
-            if let Some(type_info) = type_info {
-                (type_info.namespace.clone(), type_info.name.clone())
-            } else {
-                ("System".to_string(), "Empty".to_string())
-            }
-        }
         #[cfg(not(any(feature = "R4", feature = "R4B")))]
         EvaluationResult::Integer64(_, type_info, _) => {
             if let Some(type_info) = type_info {

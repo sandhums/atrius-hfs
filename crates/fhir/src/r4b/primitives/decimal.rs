@@ -2,8 +2,9 @@
 use crate::r4b::*;
 
 /// FHIR primitive type for decimal numbers with arbitrary precision
-///
+/// 
 /// Base StructureDefinition for decimal Type: A rational number with implicit precision
-///
+/// 
 /// See: [decimal](http://hl7.org/fhir/StructureDefinition/decimal)
 pub type Decimal = DecimalElement<Extension>;
+

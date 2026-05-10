@@ -16,7 +16,7 @@ static ADDRESS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
     fhir_validation_types::BindingDef {
         path: "Address.use".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/address-use|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/address-use|6.0.0-ballot4".to_string(),
         binding_name: Some("AddressUse".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -24,7 +24,7 @@ static ADDRESS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingD
     fhir_validation_types::BindingDef {
         path: "Address.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/address-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/address-type|6.0.0-ballot4".to_string(),
         binding_name: Some("AddressType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -125,7 +125,7 @@ static AGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>>
     fhir_validation_types::BindingDef {
         path: "Age.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("QuantityComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -304,7 +304,7 @@ static ATTACHMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
     fhir_validation_types::BindingDef {
         path: "Attachment.contentType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot4".to_string(),
         binding_name: Some("MimeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -312,7 +312,7 @@ static ATTACHMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindi
     fhir_validation_types::BindingDef {
         path: "Attachment.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -490,7 +490,7 @@ static AVAILABILITY_AVAILABLE_TIME_BINDINGS: std::sync::LazyLock<Vec<fhir_valida
     fhir_validation_types::BindingDef {
         path: "Availability.availableTime.daysOfWeek".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4".to_string(),
         binding_name: Some("DaysOfWeek".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -938,7 +938,7 @@ static CONTACT_POINT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "ContactPoint.system".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/contact-point-system|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/contact-point-system|6.0.0-ballot4".to_string(),
         binding_name: Some("ContactPointSystem".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -946,7 +946,7 @@ static CONTACT_POINT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "ContactPoint.use".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/contact-point-use|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/contact-point-use|6.0.0-ballot4".to_string(),
         binding_name: Some("ContactPointUse".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1042,7 +1042,7 @@ static COUNT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef
     fhir_validation_types::BindingDef {
         path: "Count.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("QuantityComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1113,7 +1113,7 @@ static DATA_REQUIREMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types:
     fhir_validation_types::BindingDef {
         path: "DataRequirement.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fhir-types|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/fhir-types|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRTypes".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1513,7 +1513,7 @@ static DATA_REQUIREMENT_VALUE_FILTER_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "DataRequirement.valueFilter.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/value-filter-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/value-filter-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("ValueFilterComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1633,7 +1633,7 @@ static DATA_REQUIREMENT_SORT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "DataRequirement.sort.direction".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/sort-direction|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/sort-direction|6.0.0-ballot4".to_string(),
         binding_name: Some("SortDirection".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1725,7 +1725,7 @@ static DISTANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
     fhir_validation_types::BindingDef {
         path: "Distance.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("QuantityComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1821,7 +1821,7 @@ static DOSAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDe
         strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://hl7.org/fhir/ValueSet/approach-site-codes".to_string(),
         binding_name: Some("MedicationAdministrationSite".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
@@ -1931,10 +1931,6 @@ impl fhir_validation::r6::R6Validatable for Dosage {
                 let child_issues = value.validate_invariants(validator, evaluator);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Dosage.asNeededFor[{idx}]")));
             }
-        }
-        if let Some(value) = &self.site {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Dosage.site"));
         }
         if let Some(value) = &self.route {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -2191,7 +2187,7 @@ static DOSAGE_CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types:
     fhir_validation_types::BindingDef {
         path: "DosageCondition.operation".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/comparison-operation|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/comparison-operation|6.0.0-ballot4".to_string(),
         binding_name: Some("ComparisonOperation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2790,11 +2786,11 @@ impl fhir_validation::r6::R6ValidatableAsync for DosageCondition {
 
 static DOSAGE_DETAILS_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
-        key: "dosdet-1".to_string(),
+        key: "dosdet-2".to_string(),
         severity: fhir_validation_types::Severity::Error,
         path: "DosageDetails".to_string(),
-        expression: "simple.empty() or step.empty()".to_string(),
-        human: "Can only have a simple dose, or one or more steps in a sequence".to_string(),
+        expression: "step.count() = 1 implies step.safety.empty()".to_string(),
+        human: "If only one step is present, DosageDetails.step.safety shall not be populated".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
@@ -2814,11 +2810,6 @@ impl fhir_validation::r6::R6Validatable for DosageDetails {
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
         let _ = (validator, terminology);
-
-        if let Some(value) = &self.simple {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "DosageDetails.simple"));
-        }
         issues
     }
 
@@ -2858,10 +2849,6 @@ impl fhir_validation::r6::R6Validatable for DosageDetails {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("DosageDetails.modifierExtension[{idx}]")));
             }
         }
-        if let Some(value) = &self.simple {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "DosageDetails.simple"));
-        }
         if let Some(values) = &self.step {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
@@ -2882,11 +2869,6 @@ impl fhir_validation::r6::R6ValidatableAsync for DosageDetails {
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
         let _ = (validator, terminology);
-
-        if let Some(value) = &self.simple {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "DosageDetails.simple"));
-        }
         issues
     }
     }
@@ -3086,7 +3068,7 @@ static DOSAGE_SAFETY_DOSE_LIMIT_BINDINGS: std::sync::LazyLock<Vec<fhir_validatio
     fhir_validation_types::BindingDef {
         path: "DosageSafety.doseLimit.scope".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/dose-limit-scope|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/dose-limit-scope|6.0.0-ballot4".to_string(),
         binding_name: Some("DoseLimitScope".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3231,7 +3213,7 @@ static DURATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
     fhir_validation_types::BindingDef {
         path: "Duration.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/quantity-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("QuantityComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3435,7 +3417,7 @@ static ELEMENT_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.representation".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/property-representation|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/property-representation|6.0.0-ballot4".to_string(),
         binding_name: Some("PropertyRepresentation".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5367,7 +5349,7 @@ static ELEMENT_DEFINITION_SLICING_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.slicing.rules".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/resource-slicing-rules|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/resource-slicing-rules|6.0.0-ballot4".to_string(),
         binding_name: Some("SlicingRules".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5463,7 +5445,7 @@ static ELEMENT_DEFINITION_SLICING_DISCRIMINATOR_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.slicing.discriminator.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/discriminator-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/discriminator-type|6.0.0-ballot4".to_string(),
         binding_name: Some("DiscriminatorType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5630,7 +5612,7 @@ static ELEMENT_DEFINITION_TYPE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.type.aggregation".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/resource-aggregation-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/resource-aggregation-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("AggregationMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5638,7 +5620,7 @@ static ELEMENT_DEFINITION_TYPE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.type.versioning".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/reference-version-rules|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/reference-version-rules|6.0.0-ballot4".to_string(),
         binding_name: Some("ReferenceVersionRules".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -6321,7 +6303,7 @@ static ELEMENT_DEFINITION_CONSTRAINT_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.constraint.severity".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/constraint-severity|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/constraint-severity|6.0.0-ballot4".to_string(),
         binding_name: Some("ConstraintSeverity".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -6420,7 +6402,7 @@ static ELEMENT_DEFINITION_BINDING_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.binding.strength".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/binding-strength|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/binding-strength|6.0.0-ballot4".to_string(),
         binding_name: Some("BindingStrength".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -6523,7 +6505,7 @@ static ELEMENT_DEFINITION_BINDING_ADDITIONAL_BINDINGS: std::sync::LazyLock<Vec<f
     fhir_validation_types::BindingDef {
         path: "ElementDefinition.binding.additional.purpose".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/additional-binding-purpose|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/additional-binding-purpose|6.0.0-ballot4".to_string(),
         binding_name: Some("AdditionalBindingPurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,

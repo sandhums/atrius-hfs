@@ -2,8 +2,9 @@
 use crate::r6::*;
 
 /// FHIR primitive type for Uniform Resource Identifiers (RFC 3986)
-///
+/// 
 /// uri Type: String of characters used to identify a name or a resource
-///
+/// 
 /// See: [uri](http://hl7.org/fhir/StructureDefinition/uri)
 pub type Uri = Element<std::string::String, Extension>;
+

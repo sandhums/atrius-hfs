@@ -2,8 +2,9 @@
 use crate::r4b::*;
 
 /// FHIR primitive type for boolean values (true/false)
-///
+/// 
 /// Base StructureDefinition for boolean Type: Value of "true" or "false"
-///
+/// 
 /// See: [boolean](http://hl7.org/fhir/StructureDefinition/boolean)
 pub type Boolean = Element<bool, Extension>;
+

@@ -1241,7 +1241,7 @@ static COVERAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
     fhir_validation_types::BindingDef {
         path: "Coverage.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1249,7 +1249,7 @@ static COVERAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
     fhir_validation_types::BindingDef {
         path: "Coverage.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
         binding_name: Some("CoverageStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1257,7 +1257,7 @@ static COVERAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
     fhir_validation_types::BindingDef {
         path: "Coverage.kind".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/coverage-kind|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-kind|6.0.0-ballot4".to_string(),
         binding_name: Some("CoverageKind".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2096,7 +2096,7 @@ static COVERAGE_ELIGIBILITY_REQUEST_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityRequest.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2104,7 +2104,7 @@ static COVERAGE_ELIGIBILITY_REQUEST_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityRequest.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
         binding_name: Some("EligibilityRequestStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2120,7 +2120,7 @@ static COVERAGE_ELIGIBILITY_REQUEST_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityRequest.purpose".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/eligibilityrequest-purpose|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/eligibilityrequest-purpose|6.0.0-ballot4".to_string(),
         binding_name: Some("EligibilityRequestPurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3090,7 +3090,7 @@ static COVERAGE_ELIGIBILITY_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityResponse.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3098,7 +3098,7 @@ static COVERAGE_ELIGIBILITY_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityResponse.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
         binding_name: Some("EligibilityResponseStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3106,7 +3106,7 @@ static COVERAGE_ELIGIBILITY_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityResponse.purpose".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/eligibilityresponse-purpose|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/eligibilityresponse-purpose|6.0.0-ballot4".to_string(),
         binding_name: Some("EligibilityResponsePurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3114,7 +3114,7 @@ static COVERAGE_ELIGIBILITY_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "CoverageEligibilityResponse.outcome".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/eligibility-outcome|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/eligibility-outcome|6.0.0-ballot4".to_string(),
         binding_name: Some("EligibilityOutcome".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4140,7 +4140,7 @@ static DETECTED_ISSUE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "DetectedIssue.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4148,7 +4148,7 @@ static DETECTED_ISSUE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "DetectedIssue.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/detectedissue-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/detectedissue-status|6.0.0-ballot4".to_string(),
         binding_name: Some("DetectedIssueStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4814,7 +4814,7 @@ static DEVICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDe
     fhir_validation_types::BindingDef {
         path: "Device.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4822,7 +4822,7 @@ static DEVICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDe
     fhir_validation_types::BindingDef {
         path: "Device.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/device-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/device-status|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRDeviceStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5262,7 +5262,7 @@ static DEVICE_UDI_CARRIER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "Device.udiCarrier.entryType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/udi-entry-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/udi-entry-type|6.0.0-ballot4".to_string(),
         binding_name: Some("UDIEntryType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5915,7 +5915,7 @@ static DEVICE_ALERT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "DeviceAlert.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5923,7 +5923,7 @@ static DEVICE_ALERT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "DeviceAlert.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-ballot4".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,

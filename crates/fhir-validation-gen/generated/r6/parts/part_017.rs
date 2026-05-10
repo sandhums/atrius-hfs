@@ -2,6 +2,141 @@
 // FHIR version: FHIR R6
 // shard parts/part_017.rs
 
+static STRUCTURE_MAP_GROUP_RULE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "StructureMap.group.rule".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for StructureMapGroupRule {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(values) = &self.source {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.source[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.target[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, STRUCTURE_MAP_GROUP_RULE_INVARIANTS.as_slice(), evaluator, "StructureMap.group.rule"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.source {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.source", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.source"));
+            }
+        }
+        if let Some(values) = &self.target {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.target", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.target"));
+            }
+        }
+        if let Some(values) = &self.rule {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.rule", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.rule"));
+            }
+        }
+        if let Some(values) = &self.dependent {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "StructureMap.group.rule.dependent", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("rule.dependent"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.source {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.source[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.target[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.dependent {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.dependent[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for StructureMapGroupRule {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(values) = &self.source {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.source[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("rule.target[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
 static STRUCTURE_MAP_GROUP_RULE_SOURCE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
@@ -23,7 +158,7 @@ static STRUCTURE_MAP_GROUP_RULE_SOURCE_BINDINGS: std::sync::LazyLock<Vec<fhir_va
     fhir_validation_types::BindingDef {
         path: "StructureMap.group.rule.source.listMode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/map-source-list-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/map-source-list-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("StructureMapSourceListMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -112,7 +247,7 @@ static STRUCTURE_MAP_GROUP_RULE_TARGET_BINDINGS: std::sync::LazyLock<Vec<fhir_va
     fhir_validation_types::BindingDef {
         path: "StructureMap.group.rule.target.listMode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/map-target-list-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/map-target-list-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("StructureMapTargetListMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -120,7 +255,7 @@ static STRUCTURE_MAP_GROUP_RULE_TARGET_BINDINGS: std::sync::LazyLock<Vec<fhir_va
     fhir_validation_types::BindingDef {
         path: "StructureMap.group.rule.target.transform".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/map-transform|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/map-transform|6.0.0-ballot4".to_string(),
         binding_name: Some("StructureMapTransform".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -464,7 +599,7 @@ static SUBSCRIPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Subscription.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -472,7 +607,7 @@ static SUBSCRIPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Subscription.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot4".to_string(),
         binding_name: Some("SubscriptionStatusCodes".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -488,7 +623,7 @@ static SUBSCRIPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Subscription.contentType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot4".to_string(),
         binding_name: Some("MimeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -496,7 +631,7 @@ static SUBSCRIPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Subscription.content".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-ballot4".to_string(),
         binding_name: Some("SubscriptionPayloadContent".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -745,7 +880,7 @@ static SUBSCRIPTION_FILTER_BY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "Subscription.filterBy.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -753,7 +888,7 @@ static SUBSCRIPTION_FILTER_BY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "Subscription.filterBy.modifier".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchModifierCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -967,7 +1102,7 @@ static SUBSCRIPTION_STATUS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
     fhir_validation_types::BindingDef {
         path: "SubscriptionStatus.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -975,7 +1110,7 @@ static SUBSCRIPTION_STATUS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
     fhir_validation_types::BindingDef {
         path: "SubscriptionStatus.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot4".to_string(),
         binding_name: Some("SubscriptionStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -983,7 +1118,7 @@ static SUBSCRIPTION_STATUS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
     fhir_validation_types::BindingDef {
         path: "SubscriptionStatus.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscription-notification-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscription-notification-type|6.0.0-ballot4".to_string(),
         binding_name: Some("SubscriptionNotificationType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1476,7 +1611,7 @@ static SUBSCRIPTION_TOPIC_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1492,7 +1627,7 @@ static SUBSCRIPTION_TOPIC_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1786,7 +1921,7 @@ static SUBSCRIPTION_TOPIC_TRIGGER_BINDINGS: std::sync::LazyLock<Vec<fhir_validat
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.trigger.supportedInteraction".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/interaction-trigger|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/interaction-trigger|6.0.0-ballot4".to_string(),
         binding_name: Some("MethodCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1945,7 +2080,7 @@ static SUBSCRIPTION_TOPIC_TRIGGER_QUERY_CRITERIA_BINDINGS: std::sync::LazyLock<V
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.trigger.queryCriteria.resultForCreate".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscriptiontopic-cr-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscriptiontopic-cr-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("CriteriaNotExistsBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1953,7 +2088,7 @@ static SUBSCRIPTION_TOPIC_TRIGGER_QUERY_CRITERIA_BINDINGS: std::sync::LazyLock<V
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.trigger.queryCriteria.resultForDelete".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/subscriptiontopic-cr-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/subscriptiontopic-cr-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("CriteriaNotExistsBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2043,7 +2178,7 @@ static SUBSCRIPTION_TOPIC_TRIGGER_CAN_FILTER_BY_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.trigger.canFilterBy.comparator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchComparator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2051,7 +2186,7 @@ static SUBSCRIPTION_TOPIC_TRIGGER_CAN_FILTER_BY_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "SubscriptionTopic.trigger.canFilterBy.modifier".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchModifierCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2349,7 +2484,7 @@ static SUBSTANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "Substance.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2357,7 +2492,7 @@ static SUBSTANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "Substance.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/substance-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/substance-status|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRSubstanceStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2589,7 +2724,7 @@ static SUBSTANCE_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "SubstanceDefinition.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3081,9 +3216,11 @@ impl fhir_validation::r6::R6Validatable for SubstanceDefinitionMoiety {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings(self, SUBSTANCE_DEFINITION_MOIETY_BINDINGS.as_slice(), terminology));
 
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "moiety.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("moiety.identifier[{idx}]")));
+            }
         }
 
         // Deferred recursive validation candidates.
@@ -3119,6 +3256,11 @@ impl fhir_validation::r6::R6Validatable for SubstanceDefinitionMoiety {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "SubstanceDefinition.moiety.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("moiety.modifierExtension"));
             }
         }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "SubstanceDefinition.moiety.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("moiety.identifier"));
+            }
+        }
 
         if let Some(values) = &self.extension {
             for (idx, value) in values.iter().enumerate() {
@@ -3136,9 +3278,11 @@ impl fhir_validation::r6::R6Validatable for SubstanceDefinitionMoiety {
             let child_issues = value.validate_invariants(validator, evaluator);
             issues.extend(validator.rebase_instance_paths(child_issues, "moiety.role"));
         }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "moiety.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("moiety.identifier[{idx}]")));
+            }
         }
         if let Some(value) = &self.stereochemistry {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -3180,9 +3324,11 @@ impl fhir_validation::r6::R6ValidatableAsync for SubstanceDefinitionMoiety {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings_async(self, SUBSTANCE_DEFINITION_MOIETY_BINDINGS.as_slice(), terminology).await);
 
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "moiety.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("moiety.identifier[{idx}]")));
+            }
         }
 
         // Deferred recursive validation candidates.
@@ -4022,7 +4168,7 @@ static SUBSTANCE_DEFINITION_NAME_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
     fhir_validation_types::BindingDef {
         path: "SubstanceDefinition.name.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -4553,7 +4699,7 @@ static SUBSTANCE_DEFINITION_SOURCE_MATERIAL_BINDINGS: std::sync::LazyLock<Vec<fh
     fhir_validation_types::BindingDef {
         path: "SubstanceDefinition.sourceMaterial.countryOfOrigin".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/country|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/country|6.0.0-ballot4".to_string(),
         binding_name: Some("Country".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -4704,7 +4850,7 @@ static TASK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
     fhir_validation_types::BindingDef {
         path: "Task.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4712,7 +4858,7 @@ static TASK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
     fhir_validation_types::BindingDef {
         path: "Task.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/task-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/task-status|6.0.0-ballot4".to_string(),
         binding_name: Some("TaskStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4736,7 +4882,7 @@ static TASK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
     fhir_validation_types::BindingDef {
         path: "Task.intent".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/task-intent|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/task-intent|6.0.0-ballot4".to_string(),
         binding_name: Some("TaskIntent".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4744,7 +4890,7 @@ static TASK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>
     fhir_validation_types::BindingDef {
         path: "Task.priority".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4".to_string(),
         binding_name: Some("TaskPriority".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -6131,613 +6277,6 @@ impl fhir_validation::r6::R6ValidatableAsync for TaskInput {
                 TaskInputValue::Meta(value) => {
                     let child_issues = value.validate_bindings_async(validator, terminology).await;
                     issues.extend(validator.rebase_instance_paths(child_issues, "input.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static TASK_OUTPUT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Task.output".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static TASK_OUTPUT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Task.output.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/task-inputoutput-parameter-type".to_string(),
-        binding_name: Some("TaskOutputParameterType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for TaskOutput {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, TASK_OUTPUT_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                TaskOutputValue::Base64Binary(_value) => {
-                }
-                TaskOutputValue::Boolean(_value) => {
-                }
-                TaskOutputValue::Canonical(_value) => {
-                }
-                TaskOutputValue::Code(_value) => {
-                }
-                TaskOutputValue::Date(_value) => {
-                }
-                TaskOutputValue::DateTime(_value) => {
-                }
-                TaskOutputValue::Decimal(_value) => {
-                }
-                TaskOutputValue::Id(_value) => {
-                }
-                TaskOutputValue::Instant(_value) => {
-                }
-                TaskOutputValue::Integer(_value) => {
-                }
-                TaskOutputValue::Integer64(_value) => {
-                }
-                TaskOutputValue::Markdown(_value) => {
-                }
-                TaskOutputValue::Oid(_value) => {
-                }
-                TaskOutputValue::PositiveInt(_value) => {
-                }
-                TaskOutputValue::String(_value) => {
-                }
-                TaskOutputValue::Time(_value) => {
-                }
-                TaskOutputValue::UnsignedInt(_value) => {
-                }
-                TaskOutputValue::Uri(_value) => {
-                }
-                TaskOutputValue::Url(_value) => {
-                }
-                TaskOutputValue::Uuid(_value) => {
-                }
-                TaskOutputValue::Address(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Age(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Annotation(_value) => {
-                }
-                TaskOutputValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::CodeableConcept(_value) => {
-                }
-                TaskOutputValue::CodeableReference(_value) => {
-                }
-                TaskOutputValue::Coding(_value) => {
-                }
-                TaskOutputValue::ContactPoint(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Count(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Distance(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Duration(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::HumanName(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Identifier(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Money(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Period(_value) => {
-                }
-                TaskOutputValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Range(_value) => {
-                }
-                TaskOutputValue::Ratio(_value) => {
-                }
-                TaskOutputValue::RatioRange(_value) => {
-                }
-                TaskOutputValue::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Signature(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Timing(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ContactDetail(_value) => {
-                }
-                TaskOutputValue::DataRequirement(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Expression(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ParameterDefinition(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::RelatedArtifact(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::TriggerDefinition(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::UsageContext(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Availability(_value) => {
-                }
-                TaskOutputValue::ExtendedContactDetail(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::VirtualServiceDetail(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Dosage(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Meta(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, TASK_OUTPUT_INVARIANTS.as_slice(), evaluator, "Task.output"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Task.output.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("output.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Task.output.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("output.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("output.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("output.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.r#type.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "output.type"));
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                TaskOutputValue::Base64Binary(_value) => {
-                }
-                TaskOutputValue::Boolean(_value) => {
-                }
-                TaskOutputValue::Canonical(_value) => {
-                }
-                TaskOutputValue::Code(_value) => {
-                }
-                TaskOutputValue::Date(_value) => {
-                }
-                TaskOutputValue::DateTime(_value) => {
-                }
-                TaskOutputValue::Decimal(_value) => {
-                }
-                TaskOutputValue::Id(_value) => {
-                }
-                TaskOutputValue::Instant(_value) => {
-                }
-                TaskOutputValue::Integer(_value) => {
-                }
-                TaskOutputValue::Integer64(_value) => {
-                }
-                TaskOutputValue::Markdown(_value) => {
-                }
-                TaskOutputValue::Oid(_value) => {
-                }
-                TaskOutputValue::PositiveInt(_value) => {
-                }
-                TaskOutputValue::String(_value) => {
-                }
-                TaskOutputValue::Time(_value) => {
-                }
-                TaskOutputValue::UnsignedInt(_value) => {
-                }
-                TaskOutputValue::Uri(_value) => {
-                }
-                TaskOutputValue::Url(_value) => {
-                }
-                TaskOutputValue::Uuid(_value) => {
-                }
-                TaskOutputValue::Address(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Age(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Annotation(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::CodeableReference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Coding(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ContactPoint(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Count(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Distance(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Duration(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::HumanName(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Identifier(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Money(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Period(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Range(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::RatioRange(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::SampledData(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Signature(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Timing(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ContactDetail(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::DataRequirement(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Expression(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ParameterDefinition(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::RelatedArtifact(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::TriggerDefinition(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::UsageContext(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Availability(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ExtendedContactDetail(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::VirtualServiceDetail(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Dosage(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Meta(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for TaskOutput {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, TASK_OUTPUT_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                TaskOutputValue::Base64Binary(_value) => {
-                }
-                TaskOutputValue::Boolean(_value) => {
-                }
-                TaskOutputValue::Canonical(_value) => {
-                }
-                TaskOutputValue::Code(_value) => {
-                }
-                TaskOutputValue::Date(_value) => {
-                }
-                TaskOutputValue::DateTime(_value) => {
-                }
-                TaskOutputValue::Decimal(_value) => {
-                }
-                TaskOutputValue::Id(_value) => {
-                }
-                TaskOutputValue::Instant(_value) => {
-                }
-                TaskOutputValue::Integer(_value) => {
-                }
-                TaskOutputValue::Integer64(_value) => {
-                }
-                TaskOutputValue::Markdown(_value) => {
-                }
-                TaskOutputValue::Oid(_value) => {
-                }
-                TaskOutputValue::PositiveInt(_value) => {
-                }
-                TaskOutputValue::String(_value) => {
-                }
-                TaskOutputValue::Time(_value) => {
-                }
-                TaskOutputValue::UnsignedInt(_value) => {
-                }
-                TaskOutputValue::Uri(_value) => {
-                }
-                TaskOutputValue::Url(_value) => {
-                }
-                TaskOutputValue::Uuid(_value) => {
-                }
-                TaskOutputValue::Address(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Age(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Annotation(_value) => {
-                }
-                TaskOutputValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::CodeableConcept(_value) => {
-                }
-                TaskOutputValue::CodeableReference(_value) => {
-                }
-                TaskOutputValue::Coding(_value) => {
-                }
-                TaskOutputValue::ContactPoint(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Count(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Distance(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Duration(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::HumanName(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Identifier(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Money(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Period(_value) => {
-                }
-                TaskOutputValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Range(_value) => {
-                }
-                TaskOutputValue::Ratio(_value) => {
-                }
-                TaskOutputValue::RatioRange(_value) => {
-                }
-                TaskOutputValue::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Signature(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Timing(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ContactDetail(_value) => {
-                }
-                TaskOutputValue::DataRequirement(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Expression(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::ParameterDefinition(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::RelatedArtifact(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::TriggerDefinition(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::UsageContext(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Availability(_value) => {
-                }
-                TaskOutputValue::ExtendedContactDetail(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::VirtualServiceDetail(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Dosage(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
-                }
-                TaskOutputValue::Meta(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "output.value[x]"));
                 }
             }
         }
