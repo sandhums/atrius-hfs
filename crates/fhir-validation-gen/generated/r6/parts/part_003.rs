@@ -402,7 +402,7 @@ static BUNDLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDe
     fhir_validation_types::BindingDef {
         path: "Bundle.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -410,7 +410,7 @@ static BUNDLE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDe
     fhir_validation_types::BindingDef {
         path: "Bundle.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4".to_string(),
         binding_name: Some("BundleType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -554,7 +554,7 @@ static BUNDLE_LINK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
     fhir_validation_types::BindingDef {
         path: "Bundle.link.relation".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4".to_string(),
         binding_name: None,
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -768,7 +768,7 @@ static BUNDLE_ENTRY_SEARCH_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
     fhir_validation_types::BindingDef {
         path: "Bundle.entry.search.mode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchEntryMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -850,7 +850,7 @@ static BUNDLE_ENTRY_REQUEST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "Bundle.entry.request.method".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4".to_string(),
         binding_name: Some("HTTPVerb".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1108,7 +1108,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1124,7 +1124,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1140,7 +1140,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.kind".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/capability-statement-kind|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/capability-statement-kind|6.0.0-ballot4".to_string(),
         binding_name: Some("CapabilityStatementKind".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1148,7 +1148,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.fhirVersion".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot4".to_string(),
         binding_name: Some("FHIRVersion".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1156,7 +1156,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.format".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/supplemented-mimetypes|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/supplemented-mimetypes|6.0.0-ballot4".to_string(),
         binding_name: Some("SupplementedMimeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1164,7 +1164,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.patchFormat".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/patchmimetypes|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/patchmimetypes|6.0.0-ballot4".to_string(),
         binding_name: Some("MimeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1172,7 +1172,7 @@ static CAPABILITY_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.acceptLanguage".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1681,7 +1681,7 @@ static CAPABILITY_STATEMENT_REST_BINDINGS: std::sync::LazyLock<Vec<fhir_validati
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.mode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/restful-capability-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/restful-capability-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("RestfulCapabilityMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1946,7 +1946,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_BINDINGS: std::sync::LazyLock<Vec<fhir
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.versioning".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/versioning-policy|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/versioning-policy|6.0.0-ballot4".to_string(),
         binding_name: Some("ResourceVersionPolicy".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1954,7 +1954,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_BINDINGS: std::sync::LazyLock<Vec<fhir
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.conditionalRead".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/conditional-read-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/conditional-read-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ConditionalReadStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1962,7 +1962,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_BINDINGS: std::sync::LazyLock<Vec<fhir
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.conditionalDelete".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/conditional-delete-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/conditional-delete-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ConditionalDeleteStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1970,7 +1970,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_BINDINGS: std::sync::LazyLock<Vec<fhir
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.referencePolicy".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/reference-handling-policy|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/reference-handling-policy|6.0.0-ballot4".to_string(),
         binding_name: Some("ReferenceHandlingPolicy".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2131,7 +2131,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_INTERACTION_BINDINGS: std::sync::LazyL
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.interaction.code".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/type-restful-interaction|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/type-restful-interaction|6.0.0-ballot4".to_string(),
         binding_name: Some("TypeRestfulInteraction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2213,7 +2213,7 @@ static CAPABILITY_STATEMENT_REST_RESOURCE_SEARCH_PARAM_BINDINGS: std::sync::Lazy
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.resource.searchParam.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-param-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/search-param-type|6.0.0-ballot4".to_string(),
         binding_name: Some("SearchParamType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2366,7 +2366,7 @@ static CAPABILITY_STATEMENT_REST_INTERACTION_BINDINGS: std::sync::LazyLock<Vec<f
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.rest.interaction.code".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/system-restful-interaction|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/system-restful-interaction|6.0.0-ballot4".to_string(),
         binding_name: Some("SystemRestfulInteraction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2651,7 +2651,7 @@ static CAPABILITY_STATEMENT_MESSAGING_SUPPORTED_MESSAGE_BINDINGS: std::sync::Laz
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.messaging.supportedMessage.mode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/event-capability-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/event-capability-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("EventCapabilityMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2733,7 +2733,7 @@ static CAPABILITY_STATEMENT_DOCUMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_vali
     fhir_validation_types::BindingDef {
         path: "CapabilityStatement.document.mode".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/document-mode|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/document-mode|6.0.0-ballot4".to_string(),
         binding_name: Some("DocumentMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2843,7 +2843,7 @@ static CARE_PLAN_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "CarePlan.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2851,7 +2851,7 @@ static CARE_PLAN_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "CarePlan.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4".to_string(),
         binding_name: Some("CarePlanStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2859,7 +2859,7 @@ static CARE_PLAN_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "CarePlan.intent".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/care-plan-intent|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/care-plan-intent|6.0.0-ballot4".to_string(),
         binding_name: Some("CarePlanIntent".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3435,7 +3435,7 @@ static CARE_TEAM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "CareTeam.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3443,7 +3443,7 @@ static CARE_TEAM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bindin
     fhir_validation_types::BindingDef {
         path: "CareTeam.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/care-team-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/care-team-status|6.0.0-ballot4".to_string(),
         binding_name: Some("CareTeamStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3951,7 +3951,7 @@ static CLAIM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef
     fhir_validation_types::BindingDef {
         path: "Claim.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3959,7 +3959,7 @@ static CLAIM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef
     fhir_validation_types::BindingDef {
         path: "Claim.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
         binding_name: Some("ClaimStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3983,7 +3983,7 @@ static CLAIM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef
     fhir_validation_types::BindingDef {
         path: "Claim.use".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/claim-use|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/claim-use|6.0.0-ballot4".to_string(),
         binding_name: Some("Use".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,

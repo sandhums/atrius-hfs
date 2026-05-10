@@ -2,6 +2,387 @@
 // FHIR version: FHIR R6
 // shard parts/part_015.rs
 
+static PROVENANCE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Provenance".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Provenance".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Provenance".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Provenance".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "Provenance".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PROVENANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Provenance.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Provenance.authorization".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://terminology.hl7.org/ValueSet/v3-PurposeOfUse".to_string(),
+        binding_name: Some("ProvenanceReason".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Provenance.activity".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/provenance-activity-type".to_string(),
+        binding_name: Some("ProvenanceActivity".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for Provenance {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PROVENANCE_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.text"));
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.target[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.location"));
+        }
+        if let Some(values) = &self.based_on {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.basedOn[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.patient"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.encounter"));
+        }
+        if let Some(values) = &self.agent {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.agent[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.entity {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.entity[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.signature {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.signature[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.occurred {
+            match choice {
+                ProvenanceOccurred::Period(_value) => {
+                }
+                ProvenanceOccurred::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PROVENANCE_INVARIANTS.as_slice(), evaluator, "Provenance"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.target {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.target", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.target"));
+            }
+        }
+        if let Some(values) = &self.policy {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.policy", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.policy"));
+            }
+        }
+        if let Some(values) = &self.authorization {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.authorization", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.authorization"));
+            }
+        }
+        if let Some(values) = &self.based_on {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.basedOn", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.basedOn"));
+            }
+        }
+        if let Some(values) = &self.agent {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.agent", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.agent"));
+            }
+        }
+        if let Some(values) = &self.entity {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.entity", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.entity"));
+            }
+        }
+        if let Some(values) = &self.signature {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Provenance.signature", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Provenance.signature"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.target[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.location"));
+        }
+        if let Some(values) = &self.authorization {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.authorization[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.activity {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.activity"));
+        }
+        if let Some(values) = &self.based_on {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.basedOn[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.patient"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.encounter"));
+        }
+        if let Some(values) = &self.agent {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.agent[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.entity {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.entity[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.signature {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.signature[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.occurred {
+            match choice {
+                ProvenanceOccurred::Period(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.occurred[x]"));
+                }
+                ProvenanceOccurred::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for Provenance {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PROVENANCE_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.text"));
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.target[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.location"));
+        }
+        if let Some(values) = &self.based_on {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.basedOn[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.patient"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Provenance.encounter"));
+        }
+        if let Some(values) = &self.agent {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.agent[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.entity {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.entity[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.signature {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.signature[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Provenance.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.occurred {
+            match choice {
+                ProvenanceOccurred::Period(_value) => {
+                }
+                ProvenanceOccurred::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
 static PROVENANCE_AGENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
@@ -169,7 +550,7 @@ static PROVENANCE_ENTITY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
     fhir_validation_types::BindingDef {
         path: "Provenance.entity.role".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/provenance-entity-role|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/provenance-entity-role|6.0.0-ballot4".to_string(),
         binding_name: Some("ProvenanceEntityRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -306,7 +687,7 @@ static QUESTIONNAIRE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "Questionnaire.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -322,7 +703,7 @@ static QUESTIONNAIRE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "Questionnaire.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -330,7 +711,7 @@ static QUESTIONNAIRE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bi
     fhir_validation_types::BindingDef {
         path: "Questionnaire.subjectType".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/resource-types|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/resource-types|6.0.0-ballot4".to_string(),
         binding_name: Some("ResourceType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -774,7 +1155,7 @@ static QUESTIONNAIRE_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "Questionnaire.item.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/item-type-useable|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/item-type-useable|6.0.0-ballot4".to_string(),
         binding_name: Some("QuestionnaireItemType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -782,7 +1163,7 @@ static QUESTIONNAIRE_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "Questionnaire.item.enableBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-enable-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-enable-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("EnableWhenBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -790,7 +1171,7 @@ static QUESTIONNAIRE_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "Questionnaire.item.disabledDisplay".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-disabled-display|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-disabled-display|6.0.0-ballot4".to_string(),
         binding_name: Some("DisabledDisplay".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -798,7 +1179,7 @@ static QUESTIONNAIRE_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_type
     fhir_validation_types::BindingDef {
         path: "Questionnaire.item.answerConstraint".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-answer-constraint|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-answer-constraint|6.0.0-ballot4".to_string(),
         binding_name: Some("QuestionnaireAnswerConstraint".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -986,7 +1367,7 @@ static QUESTIONNAIRE_ITEM_ENABLE_WHEN_BINDINGS: std::sync::LazyLock<Vec<fhir_val
     fhir_validation_types::BindingDef {
         path: "Questionnaire.item.enableWhen.operator".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-enable-operator|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-enable-operator|6.0.0-ballot4".to_string(),
         binding_name: Some("QuestionnaireItemOperator".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1655,7 +2036,7 @@ static QUESTIONNAIRE_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "QuestionnaireResponse.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -1663,7 +2044,7 @@ static QUESTIONNAIRE_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "QuestionnaireResponse.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-answers-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/questionnaire-answers-status|6.0.0-ballot4".to_string(),
         binding_name: Some("QuestionnaireResponseStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2301,7 +2682,7 @@ static REGULATED_AUTHORIZATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
     fhir_validation_types::BindingDef {
         path: "RegulatedAuthorization.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2660,9 +3041,11 @@ impl fhir_validation::r6::R6Validatable for RegulatedAuthorizationCase {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings(self, REGULATED_AUTHORIZATION_CASE_BINDINGS.as_slice(), terminology));
 
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "case.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("case.identifier[{idx}]")));
+            }
         }
 
         // Deferred recursive validation candidates.
@@ -2696,6 +3079,11 @@ impl fhir_validation::r6::R6Validatable for RegulatedAuthorizationCase {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "RegulatedAuthorization.case.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("case.modifierExtension"));
             }
         }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "RegulatedAuthorization.case.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("case.identifier"));
+            }
+        }
         if let Some(values) = &self.application {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "RegulatedAuthorization.case.application", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("case.application"));
@@ -2714,9 +3102,11 @@ impl fhir_validation::r6::R6Validatable for RegulatedAuthorizationCase {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("case.modifierExtension[{idx}]")));
             }
         }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "case.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("case.identifier[{idx}]")));
+            }
         }
         if let Some(value) = &self.r#type {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -2754,9 +3144,11 @@ impl fhir_validation::r6::R6ValidatableAsync for RegulatedAuthorizationCase {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings_async(self, REGULATED_AUTHORIZATION_CASE_BINDINGS.as_slice(), terminology).await);
 
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "case.identifier"));
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("case.identifier[{idx}]")));
+            }
         }
 
         // Deferred recursive validation candidates.
@@ -2815,7 +3207,7 @@ static RELATED_PERSON_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "RelatedPerson.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -2839,7 +3231,7 @@ static RELATED_PERSON_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "RelatedPerson.gender".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4".to_string(),
         binding_name: Some("AdministrativeGender".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3149,7 +3541,7 @@ static RELATED_PERSON_COMMUNICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RelatedPerson.communication.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -3261,7 +3653,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3269,7 +3661,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4".to_string(),
         binding_name: Some("RequestStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3277,7 +3669,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.intent".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4".to_string(),
         binding_name: Some("RequestIntent".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3285,7 +3677,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.priority".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4".to_string(),
         binding_name: Some("RequestPriority".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3293,7 +3685,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.code".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/action-code".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-code-example".to_string(),
         binding_name: Some("RequestCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -3301,7 +3693,7 @@ static REQUEST_ORCHESTRATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_t
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.reason".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/action-reason-code".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-reason-code-example".to_string(),
         binding_name: Some("ActionReasonCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
         choice_type_codes: None,
@@ -3647,7 +4039,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.priority".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4".to_string(),
         binding_name: Some("RequestPriority".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3655,7 +4047,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.code".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/action-code".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-code-example".to_string(),
         binding_name: Some("ActionCode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -3671,7 +4063,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.applicabilityBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionApplicabilityBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3679,7 +4071,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.groupingBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionGroupingBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3687,7 +4079,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.selectionBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionSelectionBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3695,7 +4087,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.requiredBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionRequiredBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3703,7 +4095,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.precheckBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionPrecheckBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -3711,7 +4103,7 @@ static REQUEST_ORCHESTRATION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_valid
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.cardinalityBehavior".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionCardinalityBehavior".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4094,7 +4486,7 @@ static REQUEST_ORCHESTRATION_ACTION_CONDITION_BINDINGS: std::sync::LazyLock<Vec<
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.condition.kind".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionConditionKind".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4374,7 +4766,7 @@ static REQUEST_ORCHESTRATION_ACTION_RELATED_ACTION_BINDINGS: std::sync::LazyLock
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.relatedAction.relationship".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionRelationshipType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4382,7 +4774,7 @@ static REQUEST_ORCHESTRATION_ACTION_RELATED_ACTION_BINDINGS: std::sync::LazyLock
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.relatedAction.endRelationship".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4".to_string(),
         binding_name: Some("ActionRelationshipType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4507,7 +4899,7 @@ static REQUEST_ORCHESTRATION_ACTION_PARTICIPANT_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.participant.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot4".to_string(),
         binding_name: Some("ActivityParticipantType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4523,7 +4915,7 @@ static REQUEST_ORCHESTRATION_ACTION_PARTICIPANT_BINDINGS: std::sync::LazyLock<Ve
     fhir_validation_types::BindingDef {
         path: "RequestOrchestration.action.participant.function".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/action-participant-function".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/action-participant-function-example".to_string(),
         binding_name: Some("ActionParticipantFunction".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -4793,7 +5185,7 @@ static REQUIREMENTS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Requirements.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -4809,7 +5201,7 @@ static REQUIREMENTS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bin
     fhir_validation_types::BindingDef {
         path: "Requirements.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5265,7 +5657,7 @@ static REQUIREMENTS_STATEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_
     fhir_validation_types::BindingDef {
         path: "Requirements.statement.conformance".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/conformance-expectation|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/conformance-expectation|6.0.0-ballot4".to_string(),
         binding_name: Some("versionAlgorithm".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5581,7 +5973,7 @@ static RESEARCH_STUDY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -5589,14 +5981,14 @@ static RESEARCH_STUDY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
         binding_name: Some("PublicationStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
-        path: "ResearchStudy.primaryPurposeType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
+        path: "ResearchStudy.purposeType".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://terminology.hl7.org/ValueSet/research-study-prim-purp-type".to_string(),
         binding_name: Some("ResearchStudyPrimaryPurposeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
@@ -5613,7 +6005,7 @@ static RESEARCH_STUDY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.studyDesign".to_string(),
         strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/study-design".to_string(),
+        value_set: "http://terminology.hl7.org/ValueSet/study-design".to_string(),
         binding_name: Some("StudyDesign".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -5806,6 +6198,11 @@ impl fhir_validation::r6::R6Validatable for ResearchStudy {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.relatesTo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ResearchStudy.relatesTo"));
             }
         }
+        if let Some(values) = &self.purpose_type {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.purposeType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ResearchStudy.purposeType"));
+            }
+        }
         if let Some(values) = &self.study_design {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.studyDesign", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ResearchStudy.studyDesign"));
@@ -5922,9 +6319,11 @@ impl fhir_validation::r6::R6Validatable for ResearchStudy {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("ResearchStudy.relatesTo[{idx}]")));
             }
         }
-        if let Some(value) = &self.primary_purpose_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ResearchStudy.primaryPurposeType"));
+        if let Some(values) = &self.purpose_type {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ResearchStudy.purposeType[{idx}]")));
+            }
         }
         if let Some(value) = &self.phase {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -6147,7 +6546,7 @@ static RESEARCH_STUDY_LABEL_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.label.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
@@ -6381,8 +6780,8 @@ static RESEARCH_STUDY_ASSOCIATED_PARTY_INVARIANTS: std::sync::LazyLock<Vec<fhir_
 static RESEARCH_STUDY_ASSOCIATED_PARTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.associatedParty.role".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/research-study-party-role".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://terminology.hl7.org/ValueSet/research-study-party-role".to_string(),
         binding_name: Some("ResearchStudyPartyRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -6509,8 +6908,8 @@ static RESEARCH_STUDY_PROGRESS_STATUS_INVARIANTS: std::sync::LazyLock<Vec<fhir_v
 static RESEARCH_STUDY_PROGRESS_STATUS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "ResearchStudy.progressStatus.state".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/research-study-status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://terminology.hl7.org/ValueSet/research-study-status".to_string(),
         binding_name: Some("ResearchStudyStudyStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -6773,117 +7172,6 @@ impl fhir_validation::r6::R6ValidatableAsync for ResearchStudyComparisonGroup {
         if let Some(value) = &self.observed_group {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
             issues.extend(validator.rebase_instance_paths(child_issues, "comparisonGroup.observedGroup"));
-        }
-        issues
-    }
-    }
-
-static RESEARCH_STUDY_OBJECTIVE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ResearchStudy.objective".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static RESEARCH_STUDY_OBJECTIVE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "ResearchStudy.objective.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://terminology.hl7.org/ValueSet/research-study-objective-type".to_string(),
-        binding_name: Some("ResearchStudyObjectiveType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ResearchStudyObjective {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, RESEARCH_STUDY_OBJECTIVE_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.outcome_measure {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("objective.outcomeMeasure[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, RESEARCH_STUDY_OBJECTIVE_INVARIANTS.as_slice(), evaluator, "ResearchStudy.objective"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.objective.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("objective.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.objective.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("objective.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.outcome_measure {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ResearchStudy.objective.outcomeMeasure", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("objective.outcomeMeasure"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("objective.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("objective.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "objective.type"));
-        }
-        if let Some(values) = &self.outcome_measure {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("objective.outcomeMeasure[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ResearchStudyObjective {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, RESEARCH_STUDY_OBJECTIVE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.outcome_measure {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("objective.outcomeMeasure[{idx}]")));
-            }
         }
         issues
     }

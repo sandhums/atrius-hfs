@@ -2,8 +2,9 @@
 use crate::r6::*;
 
 /// FHIR primitive type for non-negative whole number values (>= 0)
-///
+/// 
 /// unsignedInt type: An integer with a value that is not negative (e.g. \>= 0)
-///
+/// 
 /// See: [unsignedInt](http://hl7.org/fhir/StructureDefinition/unsignedInt)
 pub type UnsignedInt = Element<std::primitive::i32, Extension>;
+

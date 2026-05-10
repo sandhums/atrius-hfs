@@ -2,7 +2,7 @@
   "resourceType" : "Bundle",
   "id" : "profiles-others",
   "meta" : {
-    "lastUpdated" : "2025-12-17T09:50:17.012+00:00"
+    "lastUpdated" : "2026-05-08T18:25:34.059+00:00"
   },
   "type" : "collection",
   "entry" : [{
@@ -31,7 +31,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1229"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "FamilyMemberHistoryForGeneticsAnalysis",
       "title" : "Family member history for genetics analysis",
       "status" : "draft",
@@ -45,7 +45,7 @@
         }]
       }],
       "description" : "Adds additional information to a family member history supporting both the capture of mother/father relationships as well as additional observations necessary to enable genetics-based risk analysis for patients",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -74,7 +74,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "FamilyMemberHistory",
@@ -136,13 +136,6 @@
             "severity" : "error",
             "human" : "Can have age[x] or born[x], but not both",
             "expression" : "age.empty() or born.empty()",
-            "source" : "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory"
-          },
-          {
-            "key" : "fhs-2",
-            "severity" : "error",
-            "human" : "Can only have estimatedAge if age[x] is present",
-            "expression" : "age.exists() or estimatedAge.empty()",
             "source" : "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory"
           },
           {
@@ -283,7 +276,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -616,7 +609,7 @@
             }],
             "strength" : "required",
             "description" : "A code that identifies the status of the family history record.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/history-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/history-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -981,7 +974,6 @@
           "path" : "FamilyMemberHistory.age[x]",
           "short" : "(approximate) age",
           "definition" : "The age of the relative at the time the family member history is recorded.",
-          "comment" : "use estimatedAge to indicate whether the age is actual or not.",
           "requirements" : "While age can be calculated from date of birth, sometimes recording age directly is more natural for clinicians.",
           "min" : 0,
           "max" : "1",
@@ -999,8 +991,7 @@
           {
             "code" : "string"
           }],
-          "condition" : ["fhs-2",
-          "fhs-1",
+          "condition" : ["fhs-1",
           "fhs-3"],
           "constraint" : [{
             "key" : "ele-1",
@@ -1016,36 +1007,6 @@
             "identity" : "rim",
             "map" : "participation[typeCode=SBJ].act[classCode=OBS,moodCode=EVN, code=\"age\"].value"
           }]
-        },
-        {
-          "id" : "FamilyMemberHistory.estimatedAge",
-          "path" : "FamilyMemberHistory.estimatedAge",
-          "short" : "Age is estimated?",
-          "definition" : "If true, indicates that the age value specified is an estimated value.",
-          "comment" : "This element is labeled as a modifier because the fact that age is estimated can/should change the results of any algorithm that calculates based on the specified age.",
-          "requirements" : "Clinicians often prefer to specify an estimaged age rather than an age range.",
-          "min" : 0,
-          "max" : "1",
-          "base" : {
-            "path" : "FamilyMemberHistory.estimatedAge",
-            "min" : 0,
-            "max" : "1"
-          },
-          "type" : [{
-            "code" : "boolean"
-          }],
-          "meaningWhenMissing" : "It is unknown whether the age is an estimate or not",
-          "condition" : ["fhs-2"],
-          "constraint" : [{
-            "key" : "ele-1",
-            "severity" : "error",
-            "human" : "All FHIR elements must have a @value or children",
-            "expression" : "hasValue() or (children().count() > id.count())",
-            "source" : "http://hl7.org/fhir/StructureDefinition/Element"
-          }],
-          "mustSupport" : false,
-          "isModifier" : false,
-          "isSummary" : true
         },
         {
           "id" : "FamilyMemberHistory.deceased[x]",
@@ -1870,7 +1831,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1318"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "ProvenanceRelevantHistory",
       "title" : "Provenance  Relevant  History",
       "status" : "active",
@@ -1884,7 +1845,7 @@
         }]
       }],
       "description" : "This profile is provided for guidance purposes only.  There is no expectation that implementers must adhere to this profile.  It is included in the specification to help implementers understand how they might use Provenance to satisfy the typical needs envisioned by the 'relevantHistory' elements found in various Event and Request resources.\r\n\r\nThis profile identifies the data elements most likely to be relevant to implementers who are using Provenance to convey the `relevant history` of a resource, as discussed in the [request pattern](request.html#history).  For the purposes of this profile, mustSupport should be interpreted as 'SHOULD be considered for population and SHOULD be understood by consumers.'  Implementers are not obligated to handle all of these element and are not prohibited from also making use of additional data elements",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -1918,7 +1879,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Provenance",
@@ -2110,7 +2071,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -2465,7 +2426,6 @@
           "path" : "Provenance.authorization",
           "short" : "Authorization (purposeOfUse) related to the event",
           "definition" : "The authorization (e.g., PurposeOfUse) that was used during the event being recorded.",
-          "comment" : "Plain text reasons can be sent in the \"text\" component with no codings.  Domains MAY wish to define a constrained terminology.  The authorization for the resource's existence of the resource itself will be maintained on the resource, not here.",
           "requirements" : "Record of any relevant security context, not restricted to purposeOfUse valueSet. May include security compartments, refrain, obligation, or other security tags.",
           "alias" : ["PurposeOfEvent"],
           "min" : 0,
@@ -2476,7 +2436,7 @@
             "max" : "*"
           },
           "type" : [{
-            "code" : "CodeableReference"
+            "code" : "CodeableConcept"
           }],
           "constraint" : [{
             "key" : "ele-1",
@@ -2485,7 +2445,7 @@
             "expression" : "hasValue() or (children().count() > id.count())",
             "source" : "http://hl7.org/fhir/StructureDefinition/Element"
           }],
-          "mustSupport" : true,
+          "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
           "binding" : {
@@ -2519,6 +2479,7 @@
           "path" : "Provenance.why",
           "short" : "Why was the event performed?",
           "definition" : "Describes why the event recorded in this provenenace occurred in textual form.",
+          "comment" : "Plain/Markdown text reasons the action occurred.",
           "alias" : ["reason"],
           "min" : 0,
           "max" : "1",
@@ -2537,7 +2498,7 @@
             "expression" : "hasValue() or (children().count() > id.count())",
             "source" : "http://hl7.org/fhir/StructureDefinition/Element"
           }],
-          "mustSupport" : false,
+          "mustSupport" : true,
           "isModifier" : false,
           "isSummary" : false,
           "mapping" : [{
@@ -3619,7 +3580,7 @@
         {
           "id" : "Provenance.entity.role",
           "path" : "Provenance.entity.role",
-          "short" : "revision | quotation | source | instantiates | removal",
+          "short" : "revision | quotation | source | instantiates | removal | other",
           "definition" : "How the entity was used during the activity.",
           "min" : 1,
           "max" : "1",
@@ -3649,7 +3610,7 @@
             }],
             "strength" : "required",
             "description" : "How an entity was used in an activity.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/provenance-entity-role|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/provenance-entity-role|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -3796,9 +3757,9 @@
           "mustSupport" : true
         },
         {
-          "id" : "Provenance.authorization",
-          "path" : "Provenance.authorization",
-          "comment" : "Plain text reasons can be sent in the \"text\" component with no codings.  Domains MAY wish to define a constrained terminology.  The authorization for the resource's existence of the resource itself will be maintained on the resource, not here.",
+          "id" : "Provenance.why",
+          "path" : "Provenance.why",
+          "comment" : "Plain/Markdown text reasons the action occurred.",
           "mustSupport" : true
         },
         {
@@ -3912,7 +3873,7 @@
         "valueCode" : "normative"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/medicalproductofhumanorigin",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "MedicalProductOfHumanOrigin",
       "title" : "MedicalProductOfHumanOrigin",
       "status" : "draft",
@@ -3926,7 +3887,7 @@
         }]
       }],
       "description" : "This profile is designed for biologically derived products that are derived from a human donor and intended for clinical application in a human recipient. Donor and recipient might, or might not, be the same individual. Products of this nature are referred to as medical products of human origin (MPHO) and have specific traceability requirements to ensure that the bi-directional link between donor and recipient is maintained. The profile specifies the essential identifiers for traceability as required elements.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -3970,7 +3931,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "BiologicallyDerivedProduct",
@@ -4151,7 +4112,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -5036,7 +4997,7 @@
             }],
             "strength" : "required",
             "description" : "Identifies the purpose for this identifier, if known .",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "v2",
@@ -5254,6 +5215,36 @@
           }]
         },
         {
+          "id" : "BiologicallyDerivedProduct.therapyIdentifier",
+          "path" : "BiologicallyDerivedProduct.therapyIdentifier",
+          "short" : "Identifiers common to a given therapy",
+          "definition" : "A shared identifier common to multiple independent BiologicallyDerivedProduct instances that are intended to be administered in the course of the same given therapy. The presence of the same identifier on each BiologicallyDerivedProduct ties those products together.",
+          "min" : 0,
+          "max" : "*",
+          "base" : {
+            "path" : "BiologicallyDerivedProduct.therapyIdentifier",
+            "min" : 0,
+            "max" : "*"
+          },
+          "type" : [{
+            "code" : "Identifier"
+          }],
+          "constraint" : [{
+            "key" : "ele-1",
+            "severity" : "error",
+            "human" : "All FHIR elements must have a @value or children",
+            "expression" : "hasValue() or (children().count() > id.count())",
+            "source" : "http://hl7.org/fhir/StructureDefinition/Element"
+          }],
+          "mustSupport" : false,
+          "isModifier" : false,
+          "isSummary" : false,
+          "mapping" : [{
+            "identity" : "ISBT128Code",
+            "map" : "Chain of Identity Identifier. Required for some ISBT 128 labeled products"
+          }]
+        },
+        {
           "id" : "BiologicallyDerivedProduct.biologicalSourceEvent",
           "path" : "BiologicallyDerivedProduct.biologicalSourceEvent",
           "short" : "An identifier that supports traceability to the event during which material in this product from one or more biological entities was obtained or pooled",
@@ -5390,7 +5381,7 @@
             }],
             "strength" : "required",
             "description" : "Identifies the purpose for this identifier, if known .",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "v2",
@@ -6368,7 +6359,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1461"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationvitalsignsbase",
       "title" : "Vital Signs Base Profile",
       "status" : "draft",
@@ -6382,7 +6373,7 @@
         }]
       }],
       "description" : "FHIR Vital Signs Base Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -6421,7 +6412,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -6671,7 +6662,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -7093,7 +7084,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -7215,7 +7206,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -7988,15 +7979,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -9397,7 +9379,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1458"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationvitalspanel",
       "title" : "Observation Vital Signs Panel Profile",
       "status" : "draft",
@@ -9411,7 +9393,7 @@
         }]
       }],
       "description" : "FHIR Vital Signs Panel Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -9450,7 +9432,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -9700,7 +9682,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -10122,7 +10104,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -10244,7 +10226,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -11017,15 +10999,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -12277,7 +12250,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1466"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationresprate",
       "title" : "Observation Respiratory Rate Profile",
       "status" : "draft",
@@ -12291,7 +12264,7 @@
         }]
       }],
       "description" : "FHIR Respiratory Rate Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -12330,7 +12303,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -12586,7 +12559,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -13008,7 +12981,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -13130,7 +13103,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -13973,15 +13946,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -15251,7 +15215,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1457"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationoxygensat",
       "title" : "Observation Oxygen Saturation Profile",
       "status" : "draft",
@@ -15265,7 +15229,7 @@
         }]
       }],
       "description" : "FHIR Oxygen Saturation Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -15304,7 +15268,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -15560,7 +15524,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -15982,7 +15946,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -16104,7 +16068,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -16947,15 +16911,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -18225,7 +18180,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1454"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationheartrate",
       "title" : "Observation Heart Rate Profile",
       "status" : "draft",
@@ -18239,7 +18194,7 @@
         }]
       }],
       "description" : "FHIR Heart Rate Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -18278,7 +18233,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -18534,7 +18489,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -18956,7 +18911,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -19078,7 +19033,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -19921,15 +19876,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -21199,7 +21145,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1467"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationheadcircum",
       "title" : "Observation Head Circumference Profile",
       "status" : "draft",
@@ -21213,7 +21159,7 @@
         }]
       }],
       "description" : "FHIR Head Circumference Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -21252,7 +21198,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -21508,7 +21454,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -21930,7 +21876,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -22052,7 +21998,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -22895,15 +22841,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -24173,7 +24110,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1459"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationbp",
       "title" : "Observation Blood Pressure Profile",
       "status" : "draft",
@@ -24187,7 +24124,7 @@
         }]
       }],
       "description" : "FHIR Blood Pressure Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -24226,7 +24163,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -24476,7 +24413,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -24898,7 +24835,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -25020,7 +24957,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -25791,15 +25728,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -28114,7 +28042,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1465"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationbodyweight",
       "title" : "Observation Body Weight Profile",
       "status" : "draft",
@@ -28128,7 +28056,7 @@
         }]
       }],
       "description" : "FHIR Body Weight Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -28167,7 +28095,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -28423,7 +28351,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -28845,7 +28773,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -28967,7 +28895,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -29810,15 +29738,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -31088,7 +31007,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1455"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationbodytemp",
       "title" : "Observation Body Temperature Profile",
       "status" : "draft",
@@ -31102,7 +31021,7 @@
         }]
       }],
       "description" : "FHIR Body Temperature Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -31141,7 +31060,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -31397,7 +31316,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -31819,7 +31738,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -31941,7 +31860,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -32784,15 +32703,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -34062,7 +33972,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1463"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationbodyheight",
       "title" : "Observation Body Height Profile",
       "status" : "draft",
@@ -34076,7 +33986,7 @@
         }]
       }],
       "description" : "FHIR Body Height Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -34115,7 +34025,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -34371,7 +34281,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -34793,7 +34703,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -34915,7 +34825,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -35758,15 +35668,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -37036,7 +36937,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1464"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "Observationbmi",
       "title" : "Observation Body Mass Index Profile",
       "status" : "draft",
@@ -37050,7 +36951,7 @@
         }]
       }],
       "description" : "FHIR Body Mass Index (BMI) Profile",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -37089,7 +36990,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Observation",
@@ -37345,7 +37246,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -37767,7 +37668,7 @@
             }],
             "strength" : "required",
             "description" : "The type of TriggeredBy Observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "rim",
@@ -37889,7 +37790,7 @@
             }],
             "strength" : "required",
             "description" : "Codes providing the status of an observation.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -38732,15 +38633,6 @@
           "mustSupport" : false,
           "isModifier" : false,
           "isSummary" : false,
-          "binding" : {
-            "extension" : [{
-              "url" : "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
-              "valueString" : "BodySite"
-            }],
-            "strength" : "example",
-            "description" : "SNOMED CT Body site concepts",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/body-site"
-          },
           "mapping" : [{
             "identity" : "v2",
             "map" : "OBX-20"
@@ -40002,7 +39894,7 @@
         "system" : "urn:ietf:rfc:3986",
         "value" : "urn:oid:2.16.840.1.113883.4.642.5.1175"
       }],
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "ProfileForCatalog",
       "title" : "Profile for  Catalog",
       "status" : "draft",
@@ -40016,7 +39908,7 @@
         }]
       }],
       "description" : "A set of resources composed into a single coherent clinical statement with clinical attestation",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "workflow",
         "uri" : "http://hl7.org/fhir/workflow",
@@ -40050,7 +39942,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Composition",
@@ -40243,7 +40135,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -40659,7 +40551,7 @@
             }],
             "strength" : "required",
             "description" : "The workflow status of the composition.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/composition-status|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/composition-status|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "workflow",
@@ -41147,7 +41039,7 @@
         {
           "id" : "Composition.participant.type",
           "path" : "Composition.participant.type",
-          "short" : "AUT | AUTHEN | CST | LA | RCT | SBJ",
+          "short" : "Meaning and purpose of participation, in creation of the clinical document",
           "definition" : "Meaning and purpose of participation, in creation of the clinical document. The list includes: data entry person, informant, primary information recipient, and tracker. Other types are allowed.",
           "min" : 1,
           "max" : "*",
@@ -42765,14 +42657,14 @@
         "valueString" : "#### Complete Summary of the Mandatory Requirements\r\r1.  One code in `Observation.code` which must have\r    -   a fixed `Observation.code.coding.system`=**'http ://loinc.org'**\r    -   a fixed  `Observation.code.coding.code`= **'29463-7'**\r    -   Other additional Codings are allowed in `Observation.code`- e.g. more specific LOINC\r        Codes, SNOMED CT concepts, system specific codes. All codes\r        SHALL have an system value\r1. Either one Observation.valueQuantity or, if there is no value, one code in Observation.DataAbsentReason\r   - Each Observation.valueQuantity must have:\r     - One numeric value in Observation.valueQuantity.value\r     - a fixed Observation.valueQuantity.system=\"http://unitsofmeasure.org\"\r     - a UCUM unit code in Observation.valueQuantity.code = **'kg', 'g', or '[lb_av]'**"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/history-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "HistoryBundle",
       "title" : "History bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "description" : "This profile holds all the requirements and constraints related to a FHIR history bundle.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -42801,7 +42693,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -43066,7 +42958,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -43159,7 +43051,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -43381,7 +43273,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -43799,7 +43691,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -43989,7 +43881,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -44755,7 +44647,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -44946,7 +44838,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -45712,7 +45604,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -45903,7 +45795,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -46669,7 +46561,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -46860,7 +46752,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -47626,7 +47518,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -47817,7 +47709,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -48583,7 +48475,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -48773,7 +48665,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -49400,12 +49292,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/search-set-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "SearchSetBundle",
       "title" : "Search Set Bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -49414,7 +49306,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR search bundle.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -49443,7 +49335,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -49708,7 +49600,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -49801,7 +49693,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -50023,7 +49915,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -50441,7 +50333,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -50631,7 +50523,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -51398,7 +51290,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -51588,7 +51480,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -52354,7 +52246,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -52544,7 +52436,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -53084,12 +52976,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/subscription-notification-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "SubscriptionNotificationBundle",
       "title" : "Subscription Notification bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -53098,7 +52990,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a Subscription Notification Bundle.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -53127,7 +53019,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -53392,7 +53284,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -53485,7 +53377,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -53707,7 +53599,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -54125,7 +54017,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -54315,7 +54207,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -55081,7 +54973,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -55271,7 +55163,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -56037,7 +55929,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -56227,7 +56119,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -56759,12 +56651,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/batch-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "BatchBundle",
       "title" : "Batch bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -56773,7 +56665,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR batch bundle.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -56802,7 +56694,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -57067,7 +56959,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -57160,7 +57052,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -57382,7 +57274,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -57800,7 +57692,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -57990,7 +57882,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -58756,7 +58648,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -58947,7 +58839,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -59713,7 +59605,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -59904,7 +59796,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -60670,7 +60562,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -60861,7 +60753,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -61627,7 +61519,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -61818,7 +61710,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -62584,7 +62476,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -62775,7 +62667,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -63541,7 +63433,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -63732,7 +63624,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -64422,12 +64314,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/batch-response-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "BatchResponseBundle",
       "title" : "Batch response bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -64436,7 +64328,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR batch response.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -64465,7 +64357,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -64730,7 +64622,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -64823,7 +64715,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -65045,7 +64937,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -65454,7 +65346,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -65644,7 +65536,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -66131,12 +66023,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/transaction-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "TransactionBundle",
       "title" : "Transaction bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -66145,7 +66037,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR transaction.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -66174,7 +66066,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -66439,7 +66331,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -66532,7 +66424,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -66754,7 +66646,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -67172,7 +67064,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -67362,7 +67254,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -68128,7 +68020,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -68319,7 +68211,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -69085,7 +68977,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -69276,7 +69168,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -70042,7 +69934,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -70233,7 +70125,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -70999,7 +70891,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -71190,7 +71082,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -71956,7 +71848,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -72147,7 +72039,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -72913,7 +72805,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -73104,7 +72996,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -73794,12 +73686,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/transaction-response-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "TransactionResponseBundle",
       "title" : "Transaction response bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -73808,7 +73700,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR transaction response.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -73837,7 +73729,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -74102,7 +73994,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -74195,7 +74087,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -74417,7 +74309,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -74826,7 +74718,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -75016,7 +74908,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {
@@ -75503,12 +75395,12 @@
         "valueCode" : "fhir"
       }],
       "url" : "http://hl7.org/fhir/StructureDefinition/document-bundle",
-      "version" : "6.0.0-ballot3",
+      "version" : "6.0.0-ballot4",
       "name" : "DocumentBundle",
       "title" : "Document bundle",
       "status" : "active",
       "experimental" : false,
-      "date" : "2025-12-17T09:50:17+00:00",
+      "date" : "2026-05-08T18:25:34+00:00",
       "publisher" : "HL7 International / FHIR Infrastructure",
       "contact" : [{
         "telecom" : [{
@@ -75517,7 +75409,7 @@
         }]
       }],
       "description" : "This profile holds all the requirements and constraints related to a FHIR document.",
-      "fhirVersion" : "6.0.0-ballot3",
+      "fhirVersion" : "6.0.0-ballot4",
       "mapping" : [{
         "identity" : "v2",
         "uri" : "http://hl7.org/v2",
@@ -75546,7 +75438,7 @@
       "snapshot" : {
         "extension" : [{
           "url" : "http://hl7.org/fhir/tools/StructureDefinition/snapshot-base-version",
-          "valueString" : "6.0.0-ballot3"
+          "valueString" : "6.0.0-ballot4"
         }],
         "element" : [{
           "id" : "Bundle",
@@ -75811,7 +75703,7 @@
             }],
             "strength" : "required",
             "description" : "IETF language tag for a human language",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot3",
+            "valueSet" : "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
             "additional" : [{
               "purpose" : "starter",
               "valueSet" : "http://hl7.org/fhir/ValueSet/languages"
@@ -75957,7 +75849,7 @@
             }],
             "strength" : "required",
             "description" : "Identifies the purpose for this identifier, if known .",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/identifier-use|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "v2",
@@ -76225,7 +76117,7 @@
             }],
             "strength" : "required",
             "description" : "Indicates the purpose of a bundle - how it is intended to be used.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/bundle-type|6.0.0-ballot4"
           },
           "mapping" : [{
             "identity" : "w5",
@@ -76448,7 +76340,7 @@
           "isSummary" : true,
           "binding" : {
             "strength" : "required",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/iana-link-relations|6.0.0-ballot4"
           }
         },
         {
@@ -76857,7 +76749,7 @@
             }],
             "strength" : "required",
             "description" : "Why an entry is in the result set - whether it's included as a match or because of an _include requirement, or to convey information or warning information about the search process.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/search-entry-mode|6.0.0-ballot4"
           }
         },
         {
@@ -77047,7 +76939,7 @@
             }],
             "strength" : "required",
             "description" : "HTTP verbs (in the HTTP command line). See [HTTP rfc](https://tools.ietf.org/html/rfc7231) for details.",
-            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot3"
+            "valueSet" : "http://hl7.org/fhir/ValueSet/http-verb|6.0.0-ballot4"
           }
         },
         {

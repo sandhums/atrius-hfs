@@ -697,13 +697,14 @@ pub fn get_fhir_version_string() -> &'static str {
 
     match newest_version {
         #[cfg(feature = "R4")]
-        helios_fhir::FhirVersion::R4 => "4.0.1",
+        FhirVersion::R4 => "4.0.1",
         #[cfg(feature = "R4B")]
-        helios_fhir::FhirVersion::R4B => "4.3.0",
+        FhirVersion::R4B => "4.3.0",
         #[cfg(feature = "R5")]
-        helios_fhir::FhirVersion::R5 => "5.0.0",
+        FhirVersion::R5 => "5.0.0",
         #[cfg(feature = "R6")]
-        helios_fhir::FhirVersion::R6 => "6.0.0",
+        FhirVersion::R6 => "6.0.0",
+
     }
 }
 
@@ -2259,7 +2260,7 @@ where
                             ));
                             // Log primitive meta presence (if any)
                             let pm = result
-                                .primitive_meta()
+                                .primitive_element()
                                 .map(|m| format!("{:?}", m))
                                 .unwrap_or_else(|| "<none>".to_string());
                             sof_debug_where_println(format!("result.primitive_meta = {}", pm));

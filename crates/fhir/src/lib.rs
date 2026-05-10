@@ -42,9 +42,7 @@
 //! ```
 
 use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
-use helios_fhirpath_support::{
-    EvaluationResult, IntoEvaluationResult, PrimitiveMeta, TypeInfoResult,
-};
+use helios_fhirpath_support::{EvaluationResult, IntoEvaluationResult, TypeInfoResult};
 #[cfg(feature = "xml")]
 use helios_serde_support::SingleOrVec;
 
@@ -1433,13 +1431,13 @@ pub mod r5;
 #[cfg(feature = "R6")]
 pub mod r6;
 
-pub mod error;
 pub mod parameters;
+pub mod error;
 
 // Re-export commonly used types from parameters module
 pub use parameters::{ParameterValueAccessor, VersionIndependentParameters};
-
 pub use error::TerminologyValidationError;
+
 
 // Internal helpers used by the derive macro; not part of the public API
 #[doc(hidden)]
@@ -2793,172 +2791,145 @@ where
     }
 }
 
-// For Element<V, E> - Returns a FHIR primitive value with attached PrimitiveMeta if present.
-//
-// Important semantic distinction:
-// - valued primitive elements must preserve their FHIR primitive type (e.g. `FHIR.integer`)
-//   rather than collapsing to the underlying System type (e.g. `System.Integer`)
-// - metadata-only primitives (id/extension with no value) are represented as
-//   `EmptyWithMeta` carrying the FHIR primitive type
+// For Element<V, E> - Returns Object with id, extension, value if present
 impl<V, E> IntoEvaluationResult for Element<V, E>
 where
-    V: IntoEvaluationResult + Clone + FhirPrimitiveTypeCode + 'static,
+    V: IntoEvaluationResult + Clone + 'static,
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        if self.value.is_none()
-            && self.id.is_none()
-            && self.extension.as_ref().is_none_or(|e| e.is_empty())
-        {
-            return EvaluationResult::Empty;
-        }
+        use helios_fhirpath_support::PrimitiveElement;
+        use std::any::TypeId;
 
-        let meta: Option<PrimitiveMeta> = {
-            let extension = self.extension.as_ref().map(|ext| {
-                ext.iter()
-                    .map(|e| e.to_evaluation_result())
-                    .collect::<Vec<_>>()
-            });
-
-            let mut m = PrimitiveMeta {
-                id: self.id.clone(),
-                extension,
-            };
-
-            if let Some(ext) = m.extension.as_ref() {
-                if ext.is_empty() {
-                    m.extension = None;
-                }
+        // Build PrimitiveElement metadata from id/extension (used when value is also present)
+        let primitive_meta = if self.id.is_some() || self.extension.is_some() {
+            let mut meta = PrimitiveElement::default();
+            if let Some(id) = &self.id {
+                meta.id = Some(id.clone());
             }
-
-            if m.is_empty() { None } else { Some(m) }
+            if let Some(ext) = &self.extension {
+                meta.extension = ext.iter().map(|e| e.to_evaluation_result()).collect();
+            }
+            if !meta.is_empty() { Some(meta) } else { None }
+        } else {
+            None
         };
 
+        // Prioritize returning the primitive value if it exists
         if let Some(v) = &self.value {
-            let value_result = v.to_evaluation_result();
-
-            let typed_result = match value_result {
-                EvaluationResult::Boolean(b, _, _) => EvaluationResult::Boolean(
-                    b,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
-                EvaluationResult::Integer(i, _, _) => EvaluationResult::Integer(
-                    i,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
+            let result = v.to_evaluation_result();
+            // For primitive values, we need to preserve FHIR type information
+            let typed = match result {
+                EvaluationResult::Boolean(b, _, _) => EvaluationResult::fhir_boolean(b),
+                EvaluationResult::Integer(i, _, _) => EvaluationResult::fhir_integer(i),
                 #[cfg(not(any(feature = "R4", feature = "R4B")))]
-                EvaluationResult::Integer64(i, _, _) => EvaluationResult::Integer64(
-                    i,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
-                EvaluationResult::String(s, _, _) => EvaluationResult::fhir_string(s, V::FHIR_CODE),
-                EvaluationResult::Date(s, _, _) => {
-                    EvaluationResult::Date(s, Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)), None)
-                }
-                EvaluationResult::DateTime(s, _, _) => EvaluationResult::DateTime(
-                    s,
-                    Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)),
-                    None,
-                ),
-                EvaluationResult::Time(s, _, _) => {
-                    EvaluationResult::Time(s, Some(TypeInfoResult::new("FHIR", V::FHIR_CODE)), None)
-                }
-                EvaluationResult::Empty => {
-                    return meta
-                        .map(|meta| {
-                            EvaluationResult::empty_fhir_primitive_with_meta(meta, V::FHIR_CODE)
-                        })
-                        .unwrap_or(EvaluationResult::Empty);
+                EvaluationResult::Integer64(i, _, _) => EvaluationResult::fhir_integer64(i),
+                EvaluationResult::String(s, _, _) => EvaluationResult::fhir_string(s, "string"),
+                EvaluationResult::DateTime(dt, type_info, _) => {
+                    if TypeId::of::<V>() == TypeId::of::<PrecisionInstant>() {
+                        EvaluationResult::DateTime(
+                            dt,
+                            Some(TypeInfoResult::new("FHIR", "instant")),
+                            None,
+                        )
+                    } else {
+                        EvaluationResult::DateTime(dt, type_info, None)
+                    }
                 }
                 other => other,
             };
-
-            return typed_result.with_primitive_meta(meta);
+            return match primitive_meta {
+                Some(meta) => typed.with_primitive_element(meta),
+                None => typed,
+            };
+        } else if self.id.is_some() || self.extension.is_some() {
+            // If value is None, but id or extension exist, return an Object with those
+            let mut map = std::collections::HashMap::new();
+            if let Some(id) = &self.id {
+                map.insert("id".to_string(), EvaluationResult::string(id.clone()));
+            }
+            if let Some(ext) = &self.extension {
+                let ext_collection: Vec<EvaluationResult> =
+                    ext.iter().map(|e| e.to_evaluation_result()).collect();
+                if !ext_collection.is_empty() {
+                    map.insert(
+                        "extension".to_string(),
+                        EvaluationResult::collection(ext_collection),
+                    );
+                }
+            }
+            // Only return Object if map is not empty (i.e., id or extension was actually present)
+            if !map.is_empty() {
+                return EvaluationResult::typed_object(map, "FHIR", "Element");
+            }
         }
 
-        if let Some(meta) = meta {
-            return EvaluationResult::empty_fhir_primitive_with_meta(meta, V::FHIR_CODE);
-        }
-
+        // If value, id, and extension are all None, return Empty
         EvaluationResult::Empty
     }
 }
-/// Converts FHIR decimal primitives into evaluation results while preserving
-/// primitive element metadata (`id` / `extension`) even when the decimal has
-/// no numeric value.
-///
-/// Semantics:
-/// - valued decimal -> `EvaluationResult::fhir_decimal(...)` with attached meta
-/// - metadata-only decimal -> `EvaluationResult::EmptyWithMeta { ... }` typed as `FHIR.decimal`
-/// - completely empty decimal element -> `EvaluationResult::Empty`
+
+// For DecimalElement<E> - Returns Decimal value if present, otherwise handles id/extension
 impl<E> IntoEvaluationResult for DecimalElement<E>
 where
     E: IntoEvaluationResult + Clone,
 {
     fn to_evaluation_result(&self) -> EvaluationResult {
-        if self.value.is_none()
-            && self.id.is_none()
-            && self.extension.as_ref().is_none_or(|e| e.is_empty())
-        {
-            return EvaluationResult::Empty;
-        }
+        use helios_fhirpath_support::PrimitiveElement;
 
-        let meta: Option<PrimitiveMeta> = {
-            let extension = self.extension.as_ref().map(|ext| {
-                ext.iter()
-                    .map(|e| e.to_evaluation_result())
-                    .collect::<Vec<_>>()
-            });
-
-            let mut m = PrimitiveMeta {
-                id: self.id.clone(),
-                extension,
-            };
-
-            if let Some(ext) = m.extension.as_ref() {
-                if ext.is_empty() {
-                    m.extension = None;
-                }
+        // Build PrimitiveElement metadata from id/extension
+        let primitive_meta = if self.id.is_some() || self.extension.is_some() {
+            let mut meta = PrimitiveElement::default();
+            if let Some(id) = &self.id {
+                meta.id = Some(id.clone());
             }
-
-            if m.is_empty() { None } else { Some(m) }
+            if let Some(ext) = &self.extension {
+                meta.extension = ext.iter().map(|e| e.to_evaluation_result()).collect();
+            }
+            if !meta.is_empty() { Some(meta) } else { None }
+        } else {
+            None
         };
 
+        // Prioritize returning the primitive decimal value if it exists
         if let Some(precise_decimal) = &self.value {
             if let Some(decimal_val) = precise_decimal.value() {
-                return EvaluationResult::fhir_decimal(decimal_val).with_primitive_meta(meta);
+                let result = EvaluationResult::fhir_decimal(decimal_val);
+                return match primitive_meta {
+                    Some(meta) => result.with_primitive_element(meta),
+                    None => result,
+                };
             }
-
-            return meta
-                .map(|meta| EvaluationResult::empty_fhir_primitive_with_meta(meta, "decimal"))
-                .unwrap_or(EvaluationResult::Empty);
+            // If PreciseDecimal holds None for value, fall through to check id/extension
         }
 
-        if let Some(meta) = meta {
-            return EvaluationResult::empty_fhir_primitive_with_meta(meta, "decimal");
+        // If value is None, but id or extension exist, return an Object with those
+        if self.id.is_some() || self.extension.is_some() {
+            let mut map = std::collections::HashMap::new();
+            if let Some(id) = &self.id {
+                map.insert("id".to_string(), EvaluationResult::string(id.clone()));
+            }
+            if let Some(ext) = &self.extension {
+                let ext_collection: Vec<EvaluationResult> =
+                    ext.iter().map(|e| e.to_evaluation_result()).collect();
+                if !ext_collection.is_empty() {
+                    map.insert(
+                        "extension".to_string(),
+                        EvaluationResult::collection(ext_collection),
+                    );
+                }
+            }
+            // Only return Object if map is not empty
+            if !map.is_empty() {
+                return EvaluationResult::typed_object(map, "FHIR", "decimal");
+            }
         }
 
+        // If value, id, and extension are all None, return Empty
         EvaluationResult::Empty
     }
 }
-impl FhirPrimitiveTypeCode for PrecisionDate {
-    const FHIR_CODE: &'static str = "date";
-}
 
-impl FhirPrimitiveTypeCode for PrecisionTime {
-    const FHIR_CODE: &'static str = "time";
-}
-
-impl FhirPrimitiveTypeCode for PrecisionDateTime {
-    const FHIR_CODE: &'static str = "dateTime";
-}
-
-impl FhirPrimitiveTypeCode for PrecisionInstant {
-    const FHIR_CODE: &'static str = "instant";
-}
 // Implement the trait for the top-level enum
 impl IntoEvaluationResult for FhirResource {
     fn to_evaluation_result(&self) -> EvaluationResult {
@@ -2976,39 +2947,7 @@ impl IntoEvaluationResult for FhirResource {
         }
     }
 }
-/// Maps a Rust primitive carrier type to its default FHIR primitive code.
-///
-/// Note: this is exact for carriers like `bool`, `i32`, `i64`, `Decimal`,
-/// but only a default for `std::string::String`, because many FHIR primitives
-/// (`string`, `code`, `uri`, `canonical`, `id`, etc.) share the same Rust type.
-/// Generated code can override that later when it knows the exact alias.
-pub trait FhirPrimitiveTypeCode {
-    const FHIR_CODE: &'static str;
-}
 
-impl FhirPrimitiveTypeCode for bool {
-    const FHIR_CODE: &'static str = "boolean";
-}
-
-impl FhirPrimitiveTypeCode for std::string::String {
-    const FHIR_CODE: &'static str = "string";
-}
-
-impl FhirPrimitiveTypeCode for i32 {
-    const FHIR_CODE: &'static str = "integer";
-}
-
-impl FhirPrimitiveTypeCode for i64 {
-    const FHIR_CODE: &'static str = "integer64";
-}
-
-impl FhirPrimitiveTypeCode for PreciseDecimal {
-    const FHIR_CODE: &'static str = "decimal";
-}
-
-impl FhirPrimitiveTypeCode for f64 {
-    const FHIR_CODE: &'static str = "decimal";
-}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -9,15 +9,15 @@ rust-version.workspace = true
 
 [features]
 default = ["R4"]
-R4 = ["helios-fhir/R4"]
-R4B = ["helios-fhir/R4B"]
-R5 = ["helios-fhir/R5"]
-R6 = ["helios-fhir/R6"]
+R4 = ["helios-fhir/R4", "helios-fhir-gen/R4"]
+R4B = ["helios-fhir/R4B", "helios-fhir-gen/R4B"]
+R5 = ["helios-fhir/R5", "helios-fhir-gen/R5"]
+R6 = ["helios-fhir/R6", "helios-fhir-gen/R6"]
 
 [dependencies]
 fhir-validation-types = { path = "../fhir-validation-types" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-helios-fhir = { path = "../fhir" }
-helios-fhir-gen = { path = "../fhir-gen"}
+helios-fhir = { path = "../fhir", default-features = false}
+helios-fhir-gen = { path = "../fhir-gen", default-features = false}
 
