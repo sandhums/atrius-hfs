@@ -12,6 +12,7 @@ use helios_persistence::core::ResourceStorage;
 
 use crate::config::ServerConfig;
 use crate::middleware::auth::AuthMiddlewareState;
+use crate::profile_validation::ProfileValidationService;
 
 /// Shared application state for the REST API.
 ///
@@ -55,6 +56,9 @@ pub struct AppState<S> {
     /// Optional subscription engine for FHIR topic-based subscriptions.
     #[cfg(feature = "subscriptions")]
     subscription_engine: Option<Arc<helios_subscriptions::SubscriptionEngine>>,
+
+    /// NDHM/ABDM profile validation (from `HFS_PROFILE_MANIFEST`).
+    profile_validation: Option<Arc<ProfileValidationService>>,
 }
 
 // Manually implement Clone since S is wrapped in Arc and doesn't need to be Clone
@@ -69,6 +73,7 @@ impl<S> Clone for AppState<S> {
             audit_source_observer: self.audit_source_observer.clone(),
             #[cfg(feature = "subscriptions")]
             subscription_engine: self.subscription_engine.clone(),
+            profile_validation: self.profile_validation.clone(),
         }
     }
 }
@@ -90,6 +95,7 @@ impl<S: ResourceStorage> AppState<S> {
             audit_source_observer: "Device/hfs".to_string(),
             #[cfg(feature = "subscriptions")]
             subscription_engine: None,
+            profile_validation: None,
         }
     }
 
@@ -121,7 +127,19 @@ impl<S: ResourceStorage> AppState<S> {
             audit_source_observer: audit_source_observer.into(),
             #[cfg(feature = "subscriptions")]
             subscription_engine: None,
+            profile_validation: None,
         }
+    }
+
+    /// Attaches profile validation (NDHM/ABDM manifest).
+    pub fn with_profile_validation(mut self, service: Arc<ProfileValidationService>) -> Self {
+        self.profile_validation = Some(service);
+        self
+    }
+
+    /// Returns profile validation service when configured.
+    pub fn profile_validation(&self) -> Option<&ProfileValidationService> {
+        self.profile_validation.as_deref()
     }
 
     /// Sets the subscription engine on this AppState.
@@ -211,6 +229,22 @@ impl<S: ResourceStorage> AppState<S> {
     #[cfg(feature = "subscriptions")]
     pub fn subscription_engine(&self) -> Option<&Arc<helios_subscriptions::SubscriptionEngine>> {
         self.subscription_engine.as_ref()
+    }
+
+    /// Profile validation on write when mode is `warn` or `strict`.
+    pub fn enforce_profile_on_write(
+        &self,
+        resource: &serde_json::Value,
+        fhir_version: helios_fhir::FhirVersion,
+        resource_type: &str,
+    ) -> Result<(), crate::error::RestError> {
+        let Some(svc) = self.profile_validation() else {
+            return Ok(());
+        };
+        if svc.mode == crate::config::ProfileValidationMode::Off {
+            return Ok(());
+        }
+        svc.enforce_on_write(resource, fhir_version, resource_type)
     }
 }
 

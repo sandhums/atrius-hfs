@@ -1,19 +1,13 @@
 mod tests {
     use crate::common::fixtures::{
         assert_has_binding_issue, assert_has_error, load_resource, local_terminology_r4,
+        r4_evaluator_for,
     };
     use fhir_validation::binding::common::BindingCheckContextSync;
     use fhir_validation::r4::binding::validate_primitive_code_binding;
-    use fhir_validation::{LocalTerminologyService, R4FhirPathEvaluator};
-    use fhir_validation::{ValidationConfig, Validator};
+    use fhir_validation::{LocalTerminologyService, ValidationConfig, Validator};
     use fhir_validation_types::{BindingStrength, Severity};
-    use helios_fhir::{FhirResource, FhirVersion, TerminologyValidationError};
-    pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else {
-            panic!("expected R4 resource");
-        };
-        R4FhirPathEvaluator::new((**r).clone())
-    }
+    use helios_fhir::{FhirVersion, TerminologyValidationError};
     fn validator() -> Validator {
         Validator::new(ValidationConfig::default())
     }

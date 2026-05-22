@@ -117,6 +117,8 @@ where
         }
     }
 
+    state.enforce_profile_on_write(&patched_content, existing.fhir_version(), &resource_type)?;
+
     // Update the resource
     let stored = state
         .storage()

@@ -74,6 +74,49 @@ pub async fn validate_r6_resource_async_with_profiles(
     );
     issues
 }
+
+#[cfg(feature = "R6")]
+pub async fn validate_r6_manifest_profiles_async(
+    validator: &Validator,
+    resource: &helios_fhir::r6::Resource,
+    terminology: Option<&dyn TerminologyService>,
+    evaluator: &dyn FhirPathEvaluator,
+    profile_registry: &ProfileRegistry,
+) -> Vec<ValidationIssue> {
+    validate_r6_declared_profiles_async(
+        validator,
+        resource,
+        terminology,
+        evaluator,
+        profile_registry,
+    )
+    .await
+}
+
+#[cfg(feature = "R6")]
+pub async fn validate_r6_manifest_profiles_with_addons_async(
+    validator: &Validator,
+    resource: &helios_fhir::r6::Resource,
+    terminology: Option<&dyn TerminologyService>,
+    evaluator: &dyn FhirPathEvaluator,
+    profile_registry: &ProfileRegistry,
+) -> Vec<ValidationIssue> {
+    let mut issues = validate_r6_declared_profiles_async(
+        validator,
+        resource,
+        terminology,
+        evaluator,
+        profile_registry,
+    )
+    .await;
+    issues.extend(validator.apply_validation_addons(
+        resource,
+        resource.resource_name(),
+        profile_registry,
+    ));
+    issues
+}
+
 #[cfg(feature = "R6")]
 fn validate_r6_declared_profiles(
     validator: &Validator,

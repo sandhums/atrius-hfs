@@ -24,9 +24,8 @@
 
 use crate::binding::common::{
     BindingCheckContextAsync, BindingCheckContextSync, bindable_primitive_string_value,
-    binding_issue_summary, choice_declared_allows_kind, get_json_values_with_instance_paths,
-    prettify_remote_terminology_error, primitive_choice_target_kind, relative_binding_path,
-    root_instance_path,
+    binding_issue_summary, choice_declared_allows_kind, field_values_for_binding,
+    prettify_remote_terminology_error, primitive_choice_target_kind, stamp_binding_instance_path,
 };
 use crate::binding::engine::{
     BindingVersionAdapter, evaluate_local_codeable_concept_binding,
@@ -825,24 +824,6 @@ where
         }
     }
 }
-/// Convert a matched JSON instance path into a local binding instance path.
-///
-/// Binding paths are declared relative to the resource root,
-/// but matches are found using absolute JSON paths.
-/// This helper rebases the path so that the final `ValidationIssue`
-/// points to the correct local element.
-fn local_binding_instance_path(binding_path: &str, matched_instance_path: &str) -> String {
-    let root = root_instance_path(binding_path);
-
-    if let Some((_, local_root)) = root.rsplit_once('.') {
-        if let Some(suffix) = matched_instance_path.strip_prefix(root) {
-            return format!("{}{}", local_root, suffix);
-        }
-    }
-
-    matched_instance_path.to_string()
-}
-
 /// Infer a concrete [`BindingTargetKind`] from instance JSON for choice `[x]` elements.
 ///
 /// `declared` is [`BindingDef::choice_type_codes`](fhir_validation_types::BindingDef::choice_type_codes)
@@ -1041,12 +1022,7 @@ where
     };
 
     for binding in bindings {
-        let relative_path = relative_binding_path(&binding.path);
-        let field_values = get_json_values_with_instance_paths(
-            &focus_json,
-            root_instance_path(&binding.path),
-            relative_path,
-        );
+        let field_values = field_values_for_binding(&focus_json, &binding.path);
         for (field_value, instance_path) in &field_values {
             match binding.target_kind {
                 BindingTargetKind::Unsupported => {}
@@ -1062,7 +1038,7 @@ where
                             terminology,
                         );
                         let stamped_instance_path =
-                            local_binding_instance_path(&binding.path, instance_path);
+                            stamp_binding_instance_path(&binding.path, instance_path, &focus_json);
                         for issue in &mut child_issues {
                             issue.instance_path = Some(stamped_instance_path.clone());
                         }
@@ -1078,7 +1054,7 @@ where
                         terminology,
                     );
                     let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
+                        stamp_binding_instance_path(&binding.path, instance_path, &focus_json);
                     for issue in &mut child_issues {
                         issue.instance_path = Some(stamped_instance_path.clone());
                     }
@@ -1125,12 +1101,7 @@ where
     };
 
     for binding in bindings {
-        let relative_path = relative_binding_path(&binding.path);
-        let field_values = get_json_values_with_instance_paths(
-            &focus_json,
-            root_instance_path(&binding.path),
-            relative_path,
-        );
+        let field_values = field_values_for_binding(&focus_json, &binding.path);
         for (field_value, instance_path) in &field_values {
             match binding.target_kind {
                 BindingTargetKind::Unsupported => {}
@@ -1147,7 +1118,7 @@ where
                         )
                         .await;
                         let stamped_instance_path =
-                            local_binding_instance_path(&binding.path, instance_path);
+                            stamp_binding_instance_path(&binding.path, instance_path, &focus_json);
                         for issue in &mut child_issues {
                             issue.instance_path = Some(stamped_instance_path.clone());
                         }
@@ -1164,7 +1135,7 @@ where
                     )
                     .await;
                     let stamped_instance_path =
-                        local_binding_instance_path(&binding.path, instance_path);
+                        stamp_binding_instance_path(&binding.path, instance_path, &focus_json);
                     for issue in &mut child_issues {
                         issue.instance_path = Some(stamped_instance_path.clone());
                     }

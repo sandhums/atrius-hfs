@@ -22,6 +22,5 @@ AGENTS.md
 # Test artifacts
 /test-artifacts
 
-# Local env files (HFS / HTS dotenv); may contain secrets
-.env
-.env.local
+# Local KR deployment env (may contain paths/secrets)
+deploy/kr/.env.kr

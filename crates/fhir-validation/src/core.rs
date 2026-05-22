@@ -826,6 +826,122 @@ impl Validator {
         }
     }
 
+    /// Validate only declared `meta.profile` URLs against the registry (no generated HL7 bindings).
+    ///
+    /// Use this for IG / manifest-backed validation (for example HFS `ProfileValidationService`)
+    /// so profile snapshot bindings can use remote terminology without also enforcing codegen
+    /// ValueSet bindings on the same resource.
+    pub async fn validate_manifest_profiles_async(
+        &self,
+        resource: &helios_fhir::FhirResource,
+        terminology: Option<&dyn TerminologyService>,
+        evaluator: &dyn FhirPathEvaluator,
+        profile_registry: &ProfileRegistry,
+    ) -> Vec<ValidationIssue> {
+        match resource {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirResource::R4(res) => {
+                crate::r4::validate_resource::validate_r4_manifest_profiles_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirResource::R4B(res) => {
+                crate::r4b::validate_resource::validate_r4b_manifest_profiles_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirResource::R5(res) => {
+                crate::r5::validate_resource::validate_r5_manifest_profiles_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirResource::R6(res) => {
+                crate::r6::validate_resource::validate_r6_manifest_profiles_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+        }
+    }
+
+    /// [`validate_manifest_profiles_async`] plus optional validation add-ons.
+    pub async fn validate_manifest_profiles_with_addons_async(
+        &self,
+        resource: &helios_fhir::FhirResource,
+        terminology: Option<&dyn TerminologyService>,
+        evaluator: &dyn FhirPathEvaluator,
+        profile_registry: &ProfileRegistry,
+    ) -> Vec<ValidationIssue> {
+        match resource {
+            #[cfg(feature = "R4")]
+            helios_fhir::FhirResource::R4(res) => {
+                crate::r4::validate_resource::validate_r4_manifest_profiles_with_addons_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R4B")]
+            helios_fhir::FhirResource::R4B(res) => {
+                crate::r4b::validate_resource::validate_r4b_manifest_profiles_with_addons_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R5")]
+            helios_fhir::FhirResource::R5(res) => {
+                crate::r5::validate_resource::validate_r5_manifest_profiles_with_addons_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+            #[cfg(feature = "R6")]
+            helios_fhir::FhirResource::R6(res) => {
+                crate::r6::validate_resource::validate_r6_manifest_profiles_with_addons_async(
+                    self,
+                    res.as_ref(),
+                    terminology,
+                    evaluator,
+                    profile_registry,
+                )
+                .await
+            }
+        }
+    }
+
     #[cfg(any(feature = "R4", feature = "R5"))]
     pub fn apply_bindings_for_version_sync<T: serde::Serialize>(
         &self,

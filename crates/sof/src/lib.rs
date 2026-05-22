@@ -704,7 +704,6 @@ pub fn get_fhir_version_string() -> &'static str {
         FhirVersion::R5 => "5.0.0",
         #[cfg(feature = "R6")]
         FhirVersion::R6 => "6.0.0",
-
     }
 }
 

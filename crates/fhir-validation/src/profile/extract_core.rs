@@ -398,24 +398,24 @@ fn extract_binding_name(b: &Map<String, Value>) -> Option<String> {
     None
 }
 
-fn extract_value_set(b: &Map<String, Value>) -> Result<String, ValidationError> {
+fn extract_value_set_optional(b: &Map<String, Value>) -> Option<String> {
     if let Some(v) = b.get("valueSet") {
         if let Some(s) = v.as_str() {
-            return Ok(s.to_string());
+            return Some(s.to_string());
         }
         if let Some(o) = v.as_object() {
             if let Some(s) = o.get(FHIR_JSON_VALUE).and_then(|x| x.as_str()) {
-                return Ok(s.to_string());
+                return Some(s.to_string());
             }
         }
     }
     if let Some(v) = b.get("valueSetCanonical").and_then(|v| v.as_str()) {
-        return Ok(v.to_string());
+        return Some(v.to_string());
     }
     if let Some(v) = b.get("valueSetUri").and_then(|v| v.as_str()) {
-        return Ok(v.to_string());
+        return Some(v.to_string());
     }
-    Err(ValidationError::from(SdMsg::BindingMissingValueSet))
+    None
 }
 
 fn extract_type_codes(obj: &Map<String, Value>) -> Vec<String> {
@@ -451,7 +451,12 @@ fn extract_binding(path: String, resolved: &Value) -> Result<Option<BindingDef>,
         })
     })?;
 
-    let value_set = extract_value_set(b)?;
+    let value_set = match extract_value_set_optional(b) {
+        Some(vs) => vs,
+        // FHIR allows example bindings with bindingName only (common in base/IG snapshots).
+        None if strength == BindingStrength::Example => return Ok(None),
+        None => return Err(ValidationError::from(SdMsg::BindingMissingValueSet)),
+    };
 
     let binding_name = extract_binding_name(b);
 
@@ -705,5 +710,60 @@ mod snapshot_only_tests {
         });
         let p = extract_structure_definition_profile_from_json(&v).expect("extract");
         assert!(p.element_rules.iter().any(|r| r.path == "Patient.active"));
+    }
+
+    /// NDHM/base profiles often declare example bindings with bindingName but no valueSet.
+    #[test]
+    fn example_binding_without_value_set_is_ignored() {
+        let v = json!({
+            "resourceType": "StructureDefinition",
+            "url": "http://example.org/fhir/StructureDefinition/TaskExample",
+            "kind": "resource",
+            "derivation": "constraint",
+            "type": "Task",
+            "differential": {
+                "element": [
+                    {
+                        "path": "Task",
+                        "id": "Task"
+                    },
+                    {
+                        "path": "Task.statusReason",
+                        "id": "Task.statusReason",
+                        "binding": {
+                            "strength": "example",
+                            "extension": [{
+                                "url": "http://hl7.org/fhir/StructureDefinition/elementdefinition-bindingName",
+                                "valueString": "TaskStatusReason"
+                            }]
+                        }
+                    },
+                    {
+                        "path": "Task.status",
+                        "id": "Task.status",
+                        "min": 1,
+                        "binding": {
+                            "strength": "required",
+                            "valueSet": "http://hl7.org/fhir/ValueSet/task-status"
+                        }
+                    }
+                ]
+            }
+        });
+        let p = extract_structure_definition_profile_from_json(&v).expect("extract");
+        let binding_paths = |path: &str| {
+            p.element_rules
+                .iter()
+                .find(|r| r.path == path)
+                .and_then(|r| r.binding.as_ref())
+        };
+        assert!(
+            binding_paths("Task.statusReason").is_none(),
+            "example binding without valueSet must not be enforced"
+        );
+        assert!(
+            binding_paths("Task.status").is_some_and(|b| b.value_set.contains("task-status")),
+            "required binding with valueSet must be retained"
+        );
     }
 }

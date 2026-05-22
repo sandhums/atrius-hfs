@@ -1,15 +1,9 @@
 mod tests {
     use crate::common::fixtures::{assert_has_invariant, assert_issue_count, assert_no_errors};
-    use crate::common::fixtures::{assert_has_warning, load_resource, local_terminology_r4};
-    use fhir_validation::R4FhirPathEvaluator;
-    use helios_fhir::{FhirResource, FhirVersion};
-
-    pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else {
-            panic!("expected R4 resource");
-        };
-        R4FhirPathEvaluator::new((**r).clone())
-    }
+    use crate::common::fixtures::{
+        assert_has_warning, load_resource, local_terminology_r4, r4_evaluator_for,
+    };
+    use helios_fhir::FhirVersion;
     #[test]
     fn local_reference_with_matching_contained_resource_is_valid() {
         let r = load_resource(

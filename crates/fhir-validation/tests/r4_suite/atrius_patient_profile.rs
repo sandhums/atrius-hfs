@@ -4,28 +4,19 @@
 //! rewrites it to static JSON via [`fhir_validation::profile::base_definition_fetch_url`].
 
 mod tests {
-    use crate::common::fixtures::{load_profile, local_terminology_r4};
+    use crate::common::fixtures::{load_profile, local_terminology_r4, r4_evaluator_for};
     use fhir_validation::profile::base_definition_fetch_url::structure_definition_json_fetch_url;
     use fhir_validation::profile::extract::extract_structure_definition_profile_from_json;
     use fhir_validation::profile::profile_registry::ProfileRegistry;
     use fhir_validation::profile::types::ExtractedProfile;
     use fhir_validation::profile::validate::remote_structure_definition_fetch_user_agent;
     use fhir_validation::strict_properties::validate_json_against_extracted_profile;
-    use fhir_validation::{R4FhirPathEvaluator, Severity, ValidationIssue, Validator};
+    use fhir_validation::{Severity, ValidationIssue, Validator};
     use helios_fhir::FhirResource;
     use helios_fhir::FhirVersion;
     use helios_fhir::r4::{Patient, Resource};
     use serde_json::json;
     use std::time::Duration;
-
-    fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        match resource {
-            FhirResource::R4(r) => R4FhirPathEvaluator::new((**r).clone()),
-            // Exhaustive when only `R4` is enabled; keep arm for multi-version test builds.
-            #[allow(unreachable_patterns)]
-            _ => panic!("expected R4 resource"),
-        }
-    }
 
     const ATRIUS_PATIENT_PROFILE_URL: &str = "http://atrius.in/StructureDefinition/AtriusPatient";
     const NDHM_PATIENT_PROFILE_URL: &str =

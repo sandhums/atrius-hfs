@@ -95,6 +95,52 @@ pub async fn validate_r4_resource_async_with_profiles(
     );
     dedupe_issues(issues)
 }
+
+/// Validate only declared `meta.profile` URLs (no generated HL7 bindings).
+///
+/// Intended for IG / manifest-driven servers such as HFS profile validation.
+#[cfg(feature = "R4")]
+pub async fn validate_r4_manifest_profiles_async(
+    validator: &Validator,
+    resource: &helios_fhir::r4::Resource,
+    terminology: Option<&dyn TerminologyService>,
+    evaluator: &dyn FhirPathEvaluator,
+    profile_registry: &ProfileRegistry,
+) -> Vec<ValidationIssue> {
+    validate_r4_declared_profiles_async(
+        validator,
+        resource,
+        terminology,
+        evaluator,
+        profile_registry,
+    )
+    .await
+}
+
+#[cfg(feature = "R4")]
+pub async fn validate_r4_manifest_profiles_with_addons_async(
+    validator: &Validator,
+    resource: &helios_fhir::r4::Resource,
+    terminology: Option<&dyn TerminologyService>,
+    evaluator: &dyn FhirPathEvaluator,
+    profile_registry: &ProfileRegistry,
+) -> Vec<ValidationIssue> {
+    let mut issues = validate_r4_declared_profiles_async(
+        validator,
+        resource,
+        terminology,
+        evaluator,
+        profile_registry,
+    )
+    .await;
+    issues.extend(validator.apply_validation_addons(
+        resource,
+        resource.resource_name(),
+        profile_registry,
+    ));
+    dedupe_issues(issues)
+}
+
 #[cfg(feature = "R4")]
 fn validate_r4_declared_profiles(
     validator: &Validator,

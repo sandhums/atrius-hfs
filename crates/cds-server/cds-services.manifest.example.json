@@ -1,0 +1,30 @@
+{
+  "services": [
+    {
+      "id": "hello-world-name",
+      "hook": "patient-view",
+      "title": "Patient name",
+      "description": "Example KR-driven CDS service",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "HelloWorld",
+      "expression": "PatientName",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0"
+    },
+    {
+      "id": "second-rule-placeholder",
+      "hook": "patient-view",
+      "title": "Second rule",
+      "description": "Another Library/expression pair",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "AnotherLibrary",
+      "expression": "SomeDefine",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0"
+    }
+  ]
+}

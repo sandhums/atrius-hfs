@@ -118,6 +118,16 @@ pub fn local_terminology_r4() -> fhir_validation::LocalTerminologyService {
     fhir_validation::LocalTerminologyService::new(FhirVersion::R4)
 }
 
+/// Build an R4 FHIRPath evaluator from a versioned [`FhirResource`].
+#[cfg(feature = "R4")]
+pub fn r4_evaluator_for(resource: &FhirResource) -> fhir_validation::R4FhirPathEvaluator {
+    match resource {
+        FhirResource::R4(r) => fhir_validation::R4FhirPathEvaluator::new((**r).clone()),
+        #[allow(unreachable_patterns)]
+        _ => panic!("expected R4 FhirResource"),
+    }
+}
+
 #[cfg(feature = "R5")]
 #[allow(dead_code)] // Not every integration test crate that includes this module calls it.
 pub fn local_terminology_r5() -> fhir_validation::LocalTerminologyService {

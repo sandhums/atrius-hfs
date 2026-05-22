@@ -382,6 +382,12 @@ where
                 }
             };
 
+            let fhir_version = FhirVersion::default();
+            if let Err(e) = state.enforce_profile_on_write(&resource, fhir_version, &resource_type)
+            {
+                return batch_validation_error_result(e);
+            }
+
             // Use default FHIR version for batch operations
             match state
                 .storage()
@@ -405,6 +411,12 @@ where
                     return create_error_result(400, "PUT entry missing resource");
                 }
             };
+
+            let fhir_version = FhirVersion::default();
+            if let Err(e) = state.enforce_profile_on_write(&resource, fhir_version, &resource_type)
+            {
+                return batch_validation_error_result(e);
+            }
 
             // Use default FHIR version for batch operations
             match state
@@ -665,6 +677,14 @@ fn parse_request_url(url: &str) -> Result<(String, String), String> {
 }
 
 /// Creates an error BundleEntryResult.
+fn batch_validation_error_result(err: RestError) -> BundleEntryResult {
+    match err {
+        RestError::ValidationOutcome { outcome } => BundleEntryResult::error(422, outcome),
+        RestError::BadRequest { message } => create_error_result(400, &message),
+        other => create_error_result(500, &other.to_string()),
+    }
+}
+
 fn create_error_result(status: u16, message: &str) -> BundleEntryResult {
     let outcome = serde_json::json!({
         "resourceType": "OperationOutcome",

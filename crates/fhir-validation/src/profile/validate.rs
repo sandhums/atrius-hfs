@@ -89,6 +89,7 @@ use crate::validation_context::AsyncValidationContext;
 pub use crate::validation_context::{ValidationContext, ValidationState};
 use crate::validation_issue_detail::ValidationIssueDetailCode;
 use crate::{FhirPathEvaluator, InvariantDef, TypeProfileMatchMode, ValidationIssue};
+use fhir_validation_types::BindingDef;
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeSet, HashSet};
@@ -120,6 +121,15 @@ fn dedupe_exact_issues(issues: Vec<ValidationIssue>) -> Vec<ValidationIssue> {
         }
     }
     out
+}
+
+/// Collect terminology bindings declared on profile element rules.
+fn collect_profile_bindings(profile: &ExtractedProfile) -> Vec<BindingDef> {
+    profile
+        .element_rules
+        .iter()
+        .filter_map(|rule| rule.binding.clone())
+        .collect()
 }
 
 /// Validate a resource instance against a single extracted profile.
@@ -348,11 +358,7 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
             .await,
         );
 
-        let bindings: Vec<_> = profile
-            .element_rules
-            .iter()
-            .filter_map(|rule| rule.binding.clone())
-            .collect();
+        let bindings = collect_profile_bindings(profile);
 
         if !bindings.is_empty() {
             issues.extend(
@@ -511,11 +517,7 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
         profile.element_rules.as_slice(),
     ));
 
-    let bindings: Vec<_> = profile
-        .element_rules
-        .iter()
-        .filter_map(|rule| rule.binding.clone())
-        .collect();
+    let bindings = collect_profile_bindings(profile);
 
     if !bindings.is_empty() {
         issues.extend(ctx.validator.apply_bindings_for_version_sync(

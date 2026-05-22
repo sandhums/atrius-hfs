@@ -1,19 +1,30 @@
 mod tests {
     use crate::common::fixtures::load_resource;
     use crate::common::fixtures::{
-        assert_has_invariant, assert_issue_count, assert_no_errors, local_terminology_r4,
+        assert_has_binding_issue, assert_has_invariant, assert_issue_count, assert_no_errors,
+        local_terminology_r4, r4_evaluator_for,
     };
-    use fhir_validation::R4FhirPathEvaluator;
-    use helios_fhir::{FhirResource, FhirVersion};
+    use helios_fhir::FhirVersion;
     use helios_fhirpath::evaluator::apply_additive;
     use helios_fhirpath_support::EvaluationResult;
+    #[test]
+    fn patient_invalid_identifier_type_binding_on_nested_path() {
+        let r = load_resource(
+            FhirVersion::R4,
+            "invalid/patient/patient-invalid-identifier-type.json",
+        );
+        let validator = fhir_validation::Validator::default();
+        let evaluator = r4_evaluator_for(&r);
+        let term = local_terminology_r4();
+        let issues = validator.validate_resource(&r, Some(&term), &evaluator);
 
-    pub fn r4_evaluator_for(resource: &FhirResource) -> R4FhirPathEvaluator {
-        let FhirResource::R4(r) = resource else {
-            panic!("expected R4 resource");
-        };
-        R4FhirPathEvaluator::new((**r).clone())
+        assert_has_binding_issue(
+            &issues,
+            "Patient.identifier[0].type",
+            "http://hl7.org/fhir/ValueSet/identifier-type",
+        );
     }
+
     #[test]
     fn patient_example_validates_without_issues() {
         let r = load_resource(FhirVersion::R4, "valid/patient/patient-example.json");

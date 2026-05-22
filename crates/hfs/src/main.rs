@@ -30,7 +30,8 @@ use helios_audit::{
 use helios_auth::{AuthConfig, InMemoryJtiCache, JtiCache, JwksBearerAuthProvider, JwksCache};
 use helios_persistence::{BackendKind, ResourceStorage, TenantContext};
 use helios_rest::{
-    AuthMiddlewareState, ServerConfig, StorageBackendMode, create_app_with_auth, init_logging,
+    AuthMiddlewareState, ProfileValidationMode, ProfileValidationService, ServerConfig,
+    StorageBackendMode, create_app_with_auth, init_logging,
 };
 use tracing::{info, warn};
 
@@ -39,6 +40,38 @@ use helios_persistence::backends::sqlite::{SqliteBackend, SqliteBackendConfig};
 
 #[cfg(feature = "mongodb")]
 use helios_persistence::backends::mongodb::MongoBackend;
+/// Load NDHM/ABDM [`ProfileValidationService`] from `HFS_PROFILE_MANIFEST`.
+fn load_profile_validation(
+    config: &ServerConfig,
+) -> Option<std::sync::Arc<ProfileValidationService>> {
+    match ProfileValidationService::try_from_config(config) {
+        Ok(opt) => {
+            if let Some(ref svc) = opt {
+                info!(
+                    profile_count = svc.profile_count(),
+                    mode = ?svc.mode,
+                    "Loaded ABDM/NDHM profile manifest for validation"
+                );
+            }
+            opt
+        }
+        Err(e) => {
+            if config.profile_validation_mode != ProfileValidationMode::Off {
+                warn!(
+                    error = %e,
+                    "Profile manifest failed to load; write validation disabled"
+                );
+            } else {
+                warn!(
+                    error = %e,
+                    "HFS_PROFILE_MANIFEST failed to load (validation disabled)"
+                );
+            }
+            None
+        }
+    }
+}
+
 fn is_database_audit_dedicated(config: &AuditConfig, backend_kind: BackendKind) -> bool {
     match backend_kind {
         BackendKind::Sqlite | BackendKind::Postgres => config.database_url.is_some(),
@@ -420,6 +453,7 @@ async fn start_mongodb(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     let backend = if let Some(ref url) = config.database_url {
         if url.starts_with("mongodb://") || url.starts_with("mongodb+srv://") {
@@ -445,6 +479,7 @@ async fn start_mongodb(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -456,6 +491,7 @@ async fn start_mongodb(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The mongodb backend requires the 'mongodb' feature. \
@@ -670,6 +706,15 @@ fn bootstrap_dotenv() {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     bootstrap_dotenv();
+    // Ensure `RUST_LOG` exists before the subscriber is built so the `hfs` binary target
+    // is not hidden by legacy per-crate filters (see `init_logging`).
+    if std::env::var_os("RUST_LOG").is_none() {
+        let level = std::env::var("HFS_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+        // SAFETY: single-threaded at process entry before the runtime starts.
+        unsafe {
+            std::env::set_var("RUST_LOG", level);
+        }
+    }
     let config = ServerConfig::parse();
     init_logging(&config.log_level);
 
@@ -699,28 +744,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    // Optional IG/profile materialization manifest for validation contexts.
-    // This does not yet wire runtime validation in `helios-rest`; it verifies and
-    // reports manifest loadability at startup so deployments can fail fast.
-    if let Ok(manifest_path) = std::env::var("HFS_PROFILE_MANIFEST") {
-        let path = std::path::Path::new(&manifest_path);
-        match fhir_validation::load_profile_registry_from_manifest_file(path) {
-            Ok(reg) => {
-                info!(
-                    manifest = %path.display(),
-                    profile_count = reg.len(),
-                    "Loaded profile manifest for validation context"
-                );
-            }
-            Err(err) => {
-                warn!(
-                    manifest = %path.display(),
-                    error = %err,
-                    "Failed to load HFS_PROFILE_MANIFEST (continuing startup)"
-                );
-            }
-        }
-    }
+    let profile_validation = load_profile_validation(&config);
 
     // Initialize audit subsystem
     let (audit_sink, audit_state) = init_audit(&config, backend_mode).await?;
@@ -758,28 +782,84 @@ async fn main() -> anyhow::Result<()> {
 
     match backend_mode {
         StorageBackendMode::Sqlite => {
-            start_sqlite(config, auth_config, auth_state, audit_state).await?;
+            start_sqlite(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::SqliteElasticsearch => {
-            start_sqlite_elasticsearch(config, auth_config, auth_state, audit_state).await?;
+            start_sqlite_elasticsearch(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::Postgres => {
-            start_postgres(config, auth_config, auth_state, audit_state).await?;
+            start_postgres(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::PostgresElasticsearch => {
-            start_postgres_elasticsearch(config, auth_config, auth_state, audit_state).await?;
+            start_postgres_elasticsearch(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::MongoDB => {
-            start_mongodb(config, auth_config, auth_state, audit_state).await?;
+            start_mongodb(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::MongoDBElasticsearch => {
-            start_mongodb_elasticsearch(config, auth_config, auth_state, audit_state).await?;
+            start_mongodb_elasticsearch(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::S3 => {
-            start_s3(config, auth_config, auth_state, audit_state).await?;
+            start_s3(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
         StorageBackendMode::S3Elasticsearch => {
-            start_s3_elasticsearch(config, auth_config, auth_state, audit_state).await?;
+            start_s3_elasticsearch(
+                config,
+                auth_config,
+                auth_state,
+                audit_state,
+                profile_validation,
+            )
+            .await?;
         }
     }
 
@@ -793,6 +873,7 @@ async fn start_sqlite(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     let backend = create_sqlite_backend(&config)?;
     let serve_audit_state = audit_state.clone();
@@ -802,6 +883,7 @@ async fn start_sqlite(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -813,6 +895,7 @@ async fn start_sqlite(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The sqlite backend requires the 'sqlite' feature. \
@@ -827,6 +910,7 @@ async fn start_sqlite_elasticsearch(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -931,6 +1015,7 @@ async fn start_sqlite_elasticsearch(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -942,6 +1027,7 @@ async fn start_sqlite_elasticsearch(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The sqlite-elasticsearch backend requires the 'elasticsearch' feature. \
@@ -956,6 +1042,7 @@ async fn start_postgres(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use helios_persistence::backends::postgres::PostgresBackend;
 
@@ -981,7 +1068,9 @@ async fn start_postgres(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
+    println!("server created");
     serve(app, &config, serve_audit_state).await
 }
 
@@ -992,6 +1081,7 @@ async fn start_postgres(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The postgres backend requires the 'postgres' feature. \
@@ -1006,6 +1096,7 @@ async fn start_postgres_elasticsearch(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -1127,6 +1218,7 @@ async fn start_postgres_elasticsearch(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1138,6 +1230,7 @@ async fn start_postgres_elasticsearch(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The postgres-elasticsearch backend requires both 'postgres' and 'elasticsearch' features. \
@@ -1152,6 +1245,7 @@ async fn start_mongodb_elasticsearch(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -1273,6 +1367,7 @@ async fn start_mongodb_elasticsearch(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1284,6 +1379,7 @@ async fn start_mongodb_elasticsearch(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The mongodb-elasticsearch backend requires both 'mongodb' and 'elasticsearch' features. \
@@ -1298,6 +1394,7 @@ async fn start_s3(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use helios_persistence::backends::s3::{S3Backend, S3BackendConfig, S3TenancyMode};
 
@@ -1342,6 +1439,7 @@ async fn start_s3(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1353,6 +1451,7 @@ async fn start_s3(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The s3 backend requires the 's3' feature. \
@@ -1394,6 +1493,7 @@ async fn start_s3_elasticsearch(
     auth_config: AuthConfig,
     auth_state: Option<Arc<AuthMiddlewareState>>,
     audit_state: Option<Arc<AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -1521,6 +1621,7 @@ async fn start_s3_elasticsearch(
         auth_config,
         auth_state,
         audit_state,
+        profile_validation,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1532,6 +1633,7 @@ async fn start_s3_elasticsearch(
     _auth_config: AuthConfig,
     _auth_state: Option<Arc<AuthMiddlewareState>>,
     _audit_state: Option<Arc<AuditMiddlewareState>>,
+    _profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> anyhow::Result<()> {
     anyhow::bail!(
         "The s3-elasticsearch backend requires both 's3' and 'elasticsearch' features. \

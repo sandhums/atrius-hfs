@@ -75,7 +75,7 @@ pub async fn import_snomed_rf2(
                 .map_err(|e| HtsError::InvalidRequest(format!("Cannot open concept file: {e}")))?;
             parse_active_concepts(BufReader::new(entry), &mut parse_errors)
         };
-
+        tracing::info!("active concepts: {:?}", active_concepts);
         let preferred_terms = {
             let mut zip = open_zip(&path_owned)?;
             let entry = zip.by_name(&desc_path).map_err(|e| {
@@ -83,7 +83,7 @@ pub async fn import_snomed_rf2(
             })?;
             parse_preferred_terms(BufReader::new(entry), &active_concepts, &mut parse_errors)
         };
-
+        // tracing::info!("preferred terms: {:?}", preferred_terms);
         let is_a_edges = {
             let mut zip = open_zip(&path_owned)?;
             let entry = zip.by_name(&rel_path).map_err(|e| {
@@ -93,6 +93,8 @@ pub async fn import_snomed_rf2(
         };
 
         let release_version = extract_release_date(&concept_path);
+
+        tracing::info!("release date: {:?}", release_version);
 
         Ok(SnomedParseResult {
             preferred_terms,
@@ -113,7 +115,7 @@ pub async fn import_snomed_rf2(
 
     let concept_count = preferred_terms.len() as u32;
     let edge_count = is_a_edges.len();
-
+    tracing::info!("concept count: {}", concept_count);
     let mut stats = ImportStats {
         code_systems: 1,
         errors: parse_errors,

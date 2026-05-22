@@ -144,6 +144,7 @@ pub mod extractors;
 pub mod fhir_types;
 pub mod handlers;
 pub mod middleware;
+pub mod profile_validation;
 pub mod responses;
 pub mod routing;
 pub mod state;
@@ -151,9 +152,12 @@ pub mod tenant;
 pub mod terminology;
 
 // Re-export commonly used types
-pub use config::{MultitenancyConfig, ServerConfig, StorageBackendMode, TenantRoutingMode};
+pub use config::{
+    MultitenancyConfig, ProfileValidationMode, ServerConfig, StorageBackendMode, TenantRoutingMode,
+};
 pub use error::{RestError, RestResult};
 pub use middleware::auth::AuthMiddlewareState;
+pub use profile_validation::ProfileValidationService;
 pub use state::AppState;
 pub use tenant::{ResolvedTenant, TenantResolver, TenantSource};
 
@@ -244,6 +248,7 @@ where
         helios_auth::AuthConfig::default(),
         None,
         None,
+        None,
     )
 }
 
@@ -260,6 +265,7 @@ pub fn create_app_with_auth<S>(
     auth_config: helios_auth::AuthConfig,
     auth_state: Option<Arc<middleware::auth::AuthMiddlewareState>>,
     audit_state: Option<Arc<helios_audit::AuditMiddlewareState>>,
+    profile_validation: Option<Arc<ProfileValidationService>>,
 ) -> Router
 where
     S: ResourceStorage
@@ -295,7 +301,7 @@ where
     let outbound_auth_provider = auth_config.outbound_provider();
 
     // Create application state
-    let state = AppState::with_auth_and_audit(
+    let mut state = AppState::with_auth_and_audit(
         Arc::new(storage),
         config.clone(),
         auth_config,
@@ -303,6 +309,15 @@ where
         app_audit_sink,
         app_audit_source_observer,
     );
+
+    if let Some(pv) = profile_validation {
+        info!(
+            profile_count = pv.profile_count(),
+            mode = ?pv.mode,
+            "ABDM/NDHM profile validation enabled"
+        );
+        state = state.with_profile_validation(pv);
+    }
 
     // Inject subscription engine if enabled
     #[cfg(feature = "subscriptions")]
@@ -575,10 +590,7 @@ pub fn init_logging(level: &str) {
     use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(format!(
-            "helios_hfs={},helios_rest={},helios_persistence={},helios_subscriptions={},tower_http=debug",
-            level, level, level, level
-        ))
+        EnvFilter::try_new(level.to_ascii_lowercase()).unwrap_or_else(|_| EnvFilter::new("info"))
     });
 
     tracing_subscriber::registry()

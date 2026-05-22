@@ -417,20 +417,86 @@ pub(crate) fn collect_json_values_with_paths<'a>(
         _ => {}
     }
 }
-/// Extract the current generated-type root from a generated binding path.
+/// How [`resolve_binding_traversal`] maps a declared binding path onto serialized JSON.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct BindingTraversalRoots<'a> {
+    /// Instance-path prefix where traversal starts (e.g. `Patient` or `Patient.contact`).
+    pub instance_prefix: &'a str,
+    /// Dot-separated segments to walk under `instance_prefix` (e.g. `gender` or `identifier.type`).
+    pub relative_suffix: &'a str,
+    /// `true` when focus is a full resource (`resourceType` matches the first path segment).
+    pub resource_root: bool,
+}
+
+/// Resolve binding path segments for JSON traversal and issue stamping.
 ///
-/// Binding definitions are attached to direct child fields of the current
-/// generated type, so runtime path resolution needs the parent path of the
-/// bound field rather than only the first segment.
+/// **Resource-root mode** — focus JSON has `resourceType` equal to the first path segment
+/// (profile validation and top-level `apply_*_bindings` on a resource instance):
+/// - `Patient.identifier.type` → prefix `Patient`, suffix `identifier.type`
+///
+/// **Nested-helper mode** — focus is a generated nested type without that `resourceType`
+/// (codegen `Identifier.validate_bindings`, `PatientContact.validate_bindings`, etc.):
+/// - `Identifier.type` on Identifier JSON → prefix `Identifier`, suffix `type`
+/// - `Patient.contact.relationship` on PatientContact JSON → prefix `Patient.contact`, suffix `relationship`
+pub(crate) fn resolve_binding_traversal<'a>(
+    binding_path: &'a str,
+    focus_json: &Value,
+) -> BindingTraversalRoots<'a> {
+    let resource_type = focus_json.get("resourceType").and_then(Value::as_str);
+
+    if let Some((first, rest)) = binding_path.split_once('.') {
+        if resource_type == Some(first) {
+            return BindingTraversalRoots {
+                instance_prefix: first,
+                relative_suffix: rest,
+                resource_root: true,
+            };
+        }
+    }
+
+    BindingTraversalRoots {
+        instance_prefix: root_instance_path(binding_path),
+        relative_suffix: relative_binding_path(binding_path),
+        resource_root: false,
+    }
+}
+
+/// Collect bound values and indexed instance paths for a binding on serialized focus JSON.
+pub(crate) fn field_values_for_binding<'a>(
+    focus_json: &'a Value,
+    binding_path: &str,
+) -> Vec<(&'a Value, String)> {
+    let roots = resolve_binding_traversal(binding_path, focus_json);
+    get_json_values_with_instance_paths(focus_json, roots.instance_prefix, roots.relative_suffix)
+}
+
+/// Stamp `ValidationIssue.instance_path` after a binding match.
+pub(crate) fn stamp_binding_instance_path(
+    binding_path: &str,
+    matched_instance_path: &str,
+    focus_json: &Value,
+) -> String {
+    if resolve_binding_traversal(binding_path, focus_json).resource_root {
+        return matched_instance_path.to_string();
+    }
+
+    let root = root_instance_path(binding_path);
+    if let Some((_, local_root)) = root.rsplit_once('.') {
+        if let Some(suffix) = matched_instance_path.strip_prefix(root) {
+            return format!("{local_root}{suffix}");
+        }
+    }
+
+    matched_instance_path.to_string()
+}
+
+/// Parent path of the final segment — used for nested generated-type focus (helper mode).
 ///
 /// Examples:
 /// - `Patient.gender` -> `Patient`
 /// - `HumanName.use` -> `HumanName`
 /// - `Patient.contact.relationship` -> `Patient.contact`
-/// - `Observation.component.code` -> `Observation.component`
-///
-/// Version-specific binding modules then resolve the final child segment
-/// relative to this root to build concrete indexed instance paths.
+/// - `Patient.identifier.type` -> `Patient.identifier`
 pub(crate) fn root_instance_path(binding_path: &str) -> &str {
     binding_path
         .rsplit_once('.')
@@ -438,21 +504,9 @@ pub(crate) fn root_instance_path(binding_path: &str) -> &str {
         .unwrap_or(binding_path)
 }
 
-/// Return the direct child binding path relative to the serialized focus object
-/// being validated.
+/// Final path segment — the direct child field name on nested-helper focus JSON.
 ///
-/// Generated binding definitions are always attached to direct child fields of
-/// the current generated type. For top-level types this means:
-/// - `Patient.gender` → `gender`
-/// - `HumanName.use` → `use`
-///
-/// For nested helper types such as `Patient.contact`, the generated binding path
-/// still carries the full logical path:
-/// - `Patient.contact.relationship` → `relationship`
-/// - `Patient.contact.gender` → `gender`
-///
-/// Using the final path segment keeps runtime binding resolution aligned with
-/// the local serialized helper object shape.
+/// See [`resolve_binding_traversal`] for resource-root vs helper-mode selection.
 pub(crate) fn relative_binding_path(binding_path: &str) -> &str {
     binding_path
         .rsplit_once('.')
@@ -965,5 +1019,97 @@ fn binding_miss_detail_code(strength: BindingStrength) -> ValidationIssueDetailC
         BindingStrength::Extensible => ValidationIssueDetailCode::ExtensibleBindingMiss,
         BindingStrength::Preferred => ValidationIssueDetailCode::PreferredBindingMiss,
         BindingStrength::Example => ValidationIssueDetailCode::ExampleBindingMiss,
+    }
+}
+
+#[cfg(test)]
+mod binding_path_resolution_tests {
+    use super::{
+        BindingTraversalRoots, field_values_for_binding, resolve_binding_traversal,
+        stamp_binding_instance_path,
+    };
+    use serde_json::json;
+
+    #[test]
+    fn patient_resource_root_resolves_nested_identifier_type() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "identifier": [{
+                "type": { "coding": [{ "system": "http://example.org/cs", "code": "MR" }] }
+            }]
+        });
+        let roots = resolve_binding_traversal("Patient.identifier.type", &patient);
+        assert_eq!(
+            roots,
+            BindingTraversalRoots {
+                instance_prefix: "Patient",
+                relative_suffix: "identifier.type",
+                resource_root: true,
+            }
+        );
+        let hits = field_values_for_binding(&patient, "Patient.identifier.type");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].1, "Patient.identifier[0].type");
+    }
+
+    #[test]
+    fn patient_resource_root_resolves_top_level_gender() {
+        let patient = json!({
+            "resourceType": "Patient",
+            "gender": "male"
+        });
+        let hits = field_values_for_binding(&patient, "Patient.gender");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].1, "Patient.gender");
+        assert_eq!(hits[0].0, "male");
+    }
+
+    #[test]
+    fn identifier_helper_focus_uses_last_segment_only() {
+        let identifier = json!({
+            "type": { "coding": [{ "code": "MR" }] }
+        });
+        let roots = resolve_binding_traversal("Identifier.type", &identifier);
+        assert_eq!(
+            roots,
+            BindingTraversalRoots {
+                instance_prefix: "Identifier",
+                relative_suffix: "type",
+                resource_root: false,
+            }
+        );
+        let hits = field_values_for_binding(&identifier, "Identifier.type");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].1, "Identifier.type");
+    }
+
+    #[test]
+    fn patient_contact_helper_focus_uses_parent_plus_last_segment() {
+        let contact = json!({
+            "relationship": { "coding": [{ "code": "C" }] }
+        });
+        let roots = resolve_binding_traversal("Patient.contact.relationship", &contact);
+        assert_eq!(
+            roots,
+            BindingTraversalRoots {
+                instance_prefix: "Patient.contact",
+                relative_suffix: "relationship",
+                resource_root: false,
+            }
+        );
+        let hits = field_values_for_binding(&contact, "Patient.contact.relationship");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].1, "Patient.contact.relationship");
+    }
+
+    #[test]
+    fn stamp_resource_root_preserves_full_matched_path() {
+        let patient = json!({ "resourceType": "Patient" });
+        let stamped = stamp_binding_instance_path(
+            "Patient.identifier.type",
+            "Patient.identifier[0].type",
+            &patient,
+        );
+        assert_eq!(stamped, "Patient.identifier[0].type");
     }
 }

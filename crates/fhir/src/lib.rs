@@ -1431,13 +1431,12 @@ pub mod r5;
 #[cfg(feature = "R6")]
 pub mod r6;
 
-pub mod parameters;
 pub mod error;
+pub mod parameters;
 
 // Re-export commonly used types from parameters module
-pub use parameters::{ParameterValueAccessor, VersionIndependentParameters};
 pub use error::TerminologyValidationError;
-
+pub use parameters::{ParameterValueAccessor, VersionIndependentParameters};
 
 // Internal helpers used by the derive macro; not part of the public API
 #[doc(hidden)]
