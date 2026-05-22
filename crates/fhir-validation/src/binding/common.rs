@@ -7,8 +7,8 @@
 //! - utilities for mapping a generated binding path to the root resource/datatype
 //!   instance path used during validation
 //!
-//! Version-specific binding modules (`r4/binding.rs`, `r5/binding.rs`, etc.) use these
-//! helpers to validate ValueSet bindings on the
+//! Version-specific binding modules (`r4/binding.rs`, `r5/binding.rs`, etc.) and
+//! [`crate::binding::dispatch`] use these helpers to validate ValueSet bindings on the
 //! [FHIR bindable types](https://hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition.binding):
 //! primitive `code`, `string`, `uri`, `Coding`, `CodeableConcept`, `Quantity`,
 //! and `CodeableReference` (where the version supports it), while preserving

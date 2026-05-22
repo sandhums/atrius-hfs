@@ -5,15 +5,17 @@
 //!
 //! - **Local terminology**: [`LocalTerminologyService`] (safe for CI without a terminology server).
 //! - **Remote terminology**: several `#[tokio::test]` cases call [`RemoteTerminologyService`] against
-//!   a real FHIR server (e.g. local [Snowstorm](https://github.com/IHTSDO/snowstorm) on
-//!   `http://localhost:8080/fhir`). Set `FHIR_TERMINOLOGY_BASE_URL` to override the default base URL
-//!   in [`crate::harness::remote_terminology_for_tests`]. Without a reachable server, those tests fail fast.
+//!   [HTS](https://github.com/) (Helios Terminology Server; default `http://localhost:9091`).
+//!   Set `FHIR_TERMINOLOGY_BASE_URL` to override. HTS needs **FHIR core** ValueSets/CodeSystems for
+//!   the HL7 bindings exercised here (not SNOMED, not R4 ABDM). **ABDM/NDHM** validation is R4-only:
+//!   see **`r4_suite`** (`ndhm_patient_hts`, profile manifests under `manifests/`).
 //!
 //! Example JSON primarily lives under `crates/fhir/tests/data/json/R5/`; a few focused fixtures
 //! under `tests/fixtures/r5/` cover types not present in that corpus (e.g. `StructureDefinition`
 //! language, `Slot.serviceType`).
 //!
-//! Related integration crates: **`invariants_r5`**, **`profiles_r5`**, **`examples_r5`**, **`framework`**, **`r4_suite`**.
+//! Related integration crates: **`invariants_r5`**, **`profiles_r5`** (R5 `StructureDefinition` / `meta.profile`),
+//! **`examples_r5`**, **`framework`**, **`r4_suite`** (R4 ABDM profiles + HTS).
 
 #![cfg(feature = "R5")]
 pub mod common;

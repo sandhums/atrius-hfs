@@ -1,6 +1,10 @@
 {
   "resourceType": "ServiceRequest",
   "id": "minimal-codeableref",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">ServiceRequest with display mismatch for binding tests</div>"
+  },
   "status": "active",
   "intent": "order",
   "subject": {

@@ -7,8 +7,6 @@ pub trait BindingVersionAdapter {
     type CodeableReference;
     type PrimitiveCode;
 
-    fn primitive_code_value(value: &Self::PrimitiveCode) -> Option<&str>;
-
     fn coding_system(coding: &Self::Coding) -> Option<&str>;
     fn coding_code(coding: &Self::Coding) -> Option<&str>;
     fn coding_display(coding: &Self::Coding) -> Option<&str>;
@@ -16,6 +14,8 @@ pub trait BindingVersionAdapter {
     fn codeable_concept_codings(
         cc: &Self::CodeableConcept,
     ) -> Box<dyn Iterator<Item = &Self::Coding> + '_>;
+
+    fn codeable_concept_has_codings(cc: &Self::CodeableConcept) -> bool;
 
     fn quantity_system(quantity: &Self::Quantity) -> Option<&str>;
     fn quantity_code(quantity: &Self::Quantity) -> Option<&str>;
@@ -25,7 +25,97 @@ pub trait BindingVersionAdapter {
         value: &Self::CodeableReference,
     ) -> Option<&Self::CodeableConcept>;
 
-    fn summarize_codeable_concept_codings(cc: &Self::CodeableConcept) -> String;
+    /// Rebuild a `Coding` for generated local ValueSet checks from system/code/display parts.
+    fn coding_for_local_check(
+        coding: &Self::Coding,
+        system: Option<&str>,
+        code: &str,
+        display: Option<&str>,
+    ) -> Self::Coding;
+
+    /// Rebuild a `CodeableConcept` with a single coding for local ValueSet checks.
+    fn codeable_concept_for_local_check(
+        cc: &Self::CodeableConcept,
+        system: Option<&str>,
+        code: &str,
+        display: Option<&str>,
+    ) -> Self::CodeableConcept;
+
+    /// Build a one-coding `CodeableConcept` (e.g. `CodeableReference` local evaluation).
+    fn single_coding_codeable_concept(
+        system: Option<&str>,
+        code: &str,
+        display: Option<&str>,
+    ) -> Self::CodeableConcept;
+
+    fn summarize_codeable_concept_codings(cc: &Self::CodeableConcept) -> String {
+        let mut rendered = Vec::new();
+        for coding in Self::codeable_concept_codings(cc) {
+            let system = Self::coding_system(coding).filter(|s| !s.is_empty());
+            let code = Self::coding_code(coding).filter(|c| !c.is_empty());
+
+            match (system, code) {
+                (Some(system), Some(code)) => rendered.push(format!("{}#{}", system, code)),
+                (None, Some(code)) => rendered.push(code.to_string()),
+                (Some(system), None) => rendered.push(format!("{}#<missing-code>", system)),
+                (None, None) => rendered.push("<empty-coding>".to_string()),
+            }
+        }
+
+        if rendered.is_empty() {
+            "CodeableConcept has no codings".to_string()
+        } else {
+            rendered.join(", ")
+        }
+    }
+}
+
+/// Implements [`BindingVersionAdapter`] local-rebuild helpers for a FHIR version module.
+#[macro_export]
+macro_rules! impl_binding_version_adapter_rebuild {
+    ($code_ty:path, $string_ty:path, $coding:ty, $cc:ty) => {
+        fn coding_for_local_check(
+            coding: &$coding,
+            system: Option<&str>,
+            code: &str,
+            display: Option<&str>,
+        ) -> $coding {
+            let mut local = coding.clone();
+            local.system = system.map(|s| <$code_ty>::from(s.to_string()));
+            local.code = Some(<$code_ty>::from(code.to_string()));
+            local.display = display.map(|d| <$string_ty>::from(d.to_string()));
+            local
+        }
+
+        fn codeable_concept_for_local_check(
+            cc: &$cc,
+            system: Option<&str>,
+            code: &str,
+            display: Option<&str>,
+        ) -> $cc {
+            let mut local_cc = cc.clone();
+            let mut local_coding = <$coding as Default>::default();
+            local_coding.system = system.map(|s| <$code_ty>::from(s.to_string()));
+            local_coding.code = Some(<$code_ty>::from(code.to_string()));
+            local_coding.display = display.map(|d| <$string_ty>::from(d.to_string()));
+            local_cc.coding = Some(vec![local_coding]);
+            local_cc
+        }
+
+        fn single_coding_codeable_concept(
+            system: Option<&str>,
+            code: &str,
+            display: Option<&str>,
+        ) -> $cc {
+            let mut local_cc = <$cc as Default>::default();
+            let mut local_coding = <$coding as Default>::default();
+            local_coding.system = system.map(|s| <$code_ty>::from(s.to_string()));
+            local_coding.code = Some(<$code_ty>::from(code.to_string()));
+            local_coding.display = display.map(|d| <$string_ty>::from(d.to_string()));
+            local_cc.coding = Some(vec![local_coding]);
+            local_cc
+        }
+    };
 }
 
 pub enum LocalBindingOutcome {
@@ -139,84 +229,6 @@ where
             "CodeableConcept does not contain any usable codings: {}",
             A::summarize_codeable_concept_codings(cc)
         ))),
-    }
-}
-
-pub fn evaluate_local_primitive_code_binding<A, F>(
-    valueset_url: &str,
-    value: &A::PrimitiveCode,
-    check_local: F,
-) -> LocalBindingOutcome
-where
-    A: BindingVersionAdapter,
-    F: Fn(Option<&str>, &str, Option<&str>) -> Result<(), TerminologyValidationError>,
-{
-    let code = match A::primitive_code_value(value) {
-        Some(code) => code.to_string(),
-        None => {
-            return LocalBindingOutcome::Error(TerminologyValidationError::InvalidInput(
-                "Missing code".to_string(),
-            ));
-        }
-    };
-
-    match check_local(None, &code, None) {
-        Ok(()) => LocalBindingOutcome::Valid,
-        Err(TerminologyValidationError::RemoteValidationRequired(_)) => {
-            LocalBindingOutcome::NeedsRemote {
-                valueset_url: valueset_url.to_string(),
-                system: None,
-                code,
-                display: None,
-            }
-        }
-        Err(TerminologyValidationError::NotInValueSet { .. }) => {
-            LocalBindingOutcome::Error(TerminologyValidationError::NotInValueSet {
-                valueset_url: valueset_url.to_string(),
-                system: None,
-                code,
-            })
-        }
-        Err(other) => LocalBindingOutcome::Error(other),
-    }
-}
-
-pub fn evaluate_local_primitive_value_binding<A, F>(
-    valueset_url: &str,
-    value: &A::PrimitiveCode,
-    check_local: F,
-) -> LocalBindingOutcome
-where
-    A: BindingVersionAdapter,
-    F: Fn(Option<&str>, &str, Option<&str>) -> Result<(), TerminologyValidationError>,
-{
-    let code = match A::primitive_code_value(value) {
-        Some(code) => code.to_string(),
-        None => {
-            return LocalBindingOutcome::Error(TerminologyValidationError::InvalidInput(
-                "Missing code".to_string(),
-            ));
-        }
-    };
-
-    match check_local(None, &code, None) {
-        Ok(()) => LocalBindingOutcome::Valid,
-        Err(TerminologyValidationError::RemoteValidationRequired(_)) => {
-            LocalBindingOutcome::NeedsRemote {
-                valueset_url: valueset_url.to_string(),
-                system: None,
-                code,
-                display: None,
-            }
-        }
-        Err(TerminologyValidationError::NotInValueSet { .. }) => {
-            LocalBindingOutcome::Error(TerminologyValidationError::NotInValueSet {
-                valueset_url: valueset_url.to_string(),
-                system: None,
-                code,
-            })
-        }
-        Err(other) => LocalBindingOutcome::Error(other),
     }
 }
 

@@ -401,14 +401,14 @@ mod tests {
             &evaluator,
             &atrius_patient_registry(),
         );
-        let err_atrius_only = issues_atrius_only
+        let _err_atrius_only = issues_atrius_only
             .iter()
             .filter(|i| matches!(i.severity, Severity::Error | Severity::Fatal))
             .count();
 
         let issues_with_ndhm_base = validator_with_ndhm_base_recursion_offline()
             .validate_resource_with_profiles(&resource, Some(&term), &evaluator, &registry);
-        let err_with_ndhm = issues_with_ndhm_base
+        let _err_with_ndhm = issues_with_ndhm_base
             .iter()
             .filter(|i| matches!(i.severity, Severity::Error | Severity::Fatal))
             .count();

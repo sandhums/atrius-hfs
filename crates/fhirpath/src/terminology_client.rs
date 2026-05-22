@@ -607,10 +607,14 @@ impl TerminologyClient {
         }
     }
 
-    fn local_valueset_id_from_canonical(valueset_url: &str) -> Option<&str> {
-        let (base, _version) = Self::split_valueset_canonical(valueset_url);
-        base.strip_prefix("http://hl7.org/fhir/ValueSet/")
-            .filter(|id| !id.is_empty())
+    /// Returns a server-local ValueSet id only when the canonical is clearly intended
+    /// for instance-level `$validate-code` on the terminology server.
+    ///
+    /// HL7 core canonicals (`http://hl7.org/fhir/ValueSet/{name}`) use `{name}` as the
+    /// definition name, not necessarily a stored resource id. Those are validated via
+    /// type-level `POST [base]/ValueSet/$validate-code` with a `url` input parameter.
+    fn local_valueset_id_from_canonical(_valueset_url: &str) -> Option<&str> {
+        None
     }
 }
 
