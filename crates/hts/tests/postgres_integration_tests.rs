@@ -58,18 +58,43 @@ fn cleanup_integration_pg_container() {
     }
 }
 
+/// Start a labeled Postgres testcontainer, retrying transient failures.
+///
+/// Why: the testcontainers postgres image's wait-for-log strategy occasionally
+/// hits `EndOfStream` before the "ready" line on hosts where initdb emits a
+/// `locale: not found` warning during bootstrap. Retry a few times before
+/// giving up so a single unlucky first-caller doesn't fail an otherwise green
+/// suite.
+async fn start_postgres_for_test(label_key: &str, label_value: &str) -> ContainerAsync<Postgres> {
+    use testcontainers::{ImageExt, runners::AsyncRunner};
+    let mut last_err = None;
+    for attempt in 1..=3u32 {
+        match Postgres::default()
+            .with_label(label_key, label_value)
+            .start()
+            .await
+        {
+            Ok(c) => return c,
+            Err(e) => {
+                eprintln!("postgres container start attempt {attempt}/3 failed: {e:?}");
+                last_err = Some(e);
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+        }
+    }
+    panic!(
+        "Failed to start Postgres container after 3 attempts: {:?}",
+        last_err.unwrap()
+    )
+}
+
 /// Returns the PostgreSQL URL for the shared test container, starting it on the
 /// first call.
 async fn db_url() -> &'static str {
     DB_URL
         .get_or_init(|| async {
-            use testcontainers::{ImageExt, runners::AsyncRunner};
-
-            let container = Postgres::default()
-                .with_label(INTEGRATION_PG_LABEL_KEY, INTEGRATION_PG_LABEL_VALUE)
-                .start()
-                .await
-                .expect("Failed to start Postgres container");
+            let container =
+                start_postgres_for_test(INTEGRATION_PG_LABEL_KEY, INTEGRATION_PG_LABEL_VALUE).await;
 
             let host = container
                 .get_host()
@@ -149,11 +174,8 @@ async fn backend_name_is_postgres() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn supported_systems_empty_initially() {
     // Use a dedicated container to guarantee a truly empty DB.
-    use testcontainers::runners::AsyncRunner;
-    let container = Postgres::default()
-        .start()
-        .await
-        .expect("Failed to start Postgres container");
+    let container =
+        start_postgres_for_test(INTEGRATION_PG_LABEL_KEY, INTEGRATION_PG_LABEL_VALUE).await;
     let host = container.get_host().await.unwrap();
     let port = container.get_host_port_ipv4(5432).await.unwrap();
     let url = format!("postgres://postgres:postgres@{host}:{port}/postgres");
@@ -1589,7 +1611,7 @@ async fn translate_reverse_mode() {
     let base = base_url!("tr-rev");
     seed_concept_map(&backend, &base).await;
 
-    // Reverse: look up target "200" → should find source "100"
+    // Reverse: look up target "200" → resolve source "100".
     let resp = ConceptMapOperations::translate(
         &backend,
         &ctx(),
@@ -1605,7 +1627,10 @@ async fn translate_reverse_mode() {
 
     assert!(resp.result, "Reverse translation should succeed");
     assert_eq!(resp.matches.len(), 1);
-    assert_eq!(resp.matches[0].concept_code, "100");
+    // `concept_*` reflects the target side (the looked-up code), `source_*`
+    // reflects the resolved source side — independent of forward vs reverse.
+    assert_eq!(resp.matches[0].concept_code, "200");
+    assert_eq!(resp.matches[0].source_code.as_deref(), Some("100"));
 }
 
 #[tokio::test]

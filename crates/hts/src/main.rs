@@ -313,7 +313,22 @@ async fn run_import(args: ImportArgs) -> anyhow::Result<i32> {
         #[cfg(feature = "postgres")]
         {
             let backend = PostgresTerminologyBackend::new(&args.database_url).await?;
-            run_import_for_path(&backend, &ctx, &args, rxnorm_dir).await?
+            let result = run_import_for_path(&backend, &ctx, &args, rxnorm_dir).await?;
+
+            // Pre-build concept closures now so server startup only needs to
+            // observe them present (idempotent migration sees no work). Without
+            // this the first ?fhir_vs=isa request would block on a SNOMED
+            // closure build, blowing past the 60 s health-check timeout.
+            if !args.dry_run {
+                info!("Building concept closures (this may take ~30–60 s for SNOMED CT)…");
+                backend
+                    .rebuild_missing_closures()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("failed to build concept closures: {e}"))?;
+                info!("Concept closures ready");
+            }
+
+            result
         }
         #[cfg(not(feature = "postgres"))]
         anyhow::bail!(
@@ -331,7 +346,31 @@ async fn run_import(args: ImportArgs) -> anyhow::Result<i32> {
                 args.database_url.clone()
             };
             let backend = SqliteTerminologyBackend::new(&database_url)?;
-            run_import_for_path(&backend, &ctx, &args, rxnorm_dir).await?
+            let result = run_import_for_path(&backend, &ctx, &args, rxnorm_dir).await?;
+
+            // Pre-build concept closures now so server startup only needs to
+            // rebuild the FTS index (~10–25 s) instead of also running
+            // migrate_concept_closure (~40 s for SNOMED). Without this, the
+            // combined startup time can exceed the 60-second health-check timeout.
+            if !args.dry_run {
+                info!("Building concept closures (this may take ~40 s for SNOMED CT)…");
+                let pool = backend.pool().clone();
+                tokio::task::spawn_blocking(move || {
+                    let conn = pool.get().map_err(|e| {
+                        rusqlite::Error::SqliteFailure(
+                            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
+                            Some(format!("pool error: {e}")),
+                        )
+                    })?;
+                    helios_hts::backends::sqlite::schema::migrate_concept_closure(&conn)
+                })
+                .await
+                .map_err(|e| anyhow::anyhow!("task join error: {e}"))?
+                .map_err(|e| anyhow::anyhow!("failed to build concept closures: {e}"))?;
+                info!("Concept closures ready");
+            }
+
+            result
         }
         #[cfg(not(feature = "sqlite"))]
         anyhow::bail!(
@@ -388,8 +427,8 @@ async fn run_import_for_path(
                 "Cannot auto-detect format from '{}'. \
                  Use --format to specify one of: hl7-npm, snomed-rf2, loinc, \
                  icd10-cm, icd9-cm, rxnorm, ucum, nci-thesaurus, mesh, dicom, \
-                 hl7-v2-tables, nucc, ndc. Note: .zip files may require \
-                 --format if auto-detection is ambiguous.",
+                 hl7-v2-tables, nucc, ndc, fhir-bundle. Note: .zip files may \
+                 require --format if auto-detection is ambiguous.",
                 args.path.display()
             ))
         })?,
@@ -558,7 +597,37 @@ async fn dispatch_import(
         }
         ImportFormat::Nucc => import_nucc(backend, ctx, path, batch_size, dry_run).await,
         ImportFormat::Ndc => import_ndc(backend, ctx, path, batch_size, dry_run).await,
+        ImportFormat::FhirBundle => import_fhir_bundle_file(backend, ctx, path, dry_run).await,
     }
+}
+
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
+async fn import_fhir_bundle_file(
+    backend: &dyn BundleImportBackend,
+    ctx: &TenantContext,
+    path: &std::path::Path,
+    dry_run: bool,
+) -> Result<helios_hts::import::ImportStats, helios_hts::error::HtsError> {
+    use helios_hts::error::HtsError;
+
+    let data = tokio::fs::read(path)
+        .await
+        .map_err(|e| HtsError::InvalidRequest(format!("Cannot read '{}': {e}", path.display())))?;
+
+    if dry_run {
+        let parsed = helios_hts::import::bundle_parser::parse_bundle(&data)?;
+        let concepts: usize = parsed.code_systems.iter().map(|cs| cs.concepts.len()).sum();
+        let stats = helios_hts::import::ImportStats {
+            code_systems: parsed.code_systems.len() as u32,
+            value_sets: parsed.value_sets.len() as u32,
+            concept_maps: parsed.concept_maps.len() as u32,
+            concepts: concepts as u32,
+            ..Default::default()
+        };
+        return Ok(stats);
+    }
+
+    backend.import_bundle(ctx, &data).await
 }
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
