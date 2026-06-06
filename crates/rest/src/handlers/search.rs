@@ -179,6 +179,19 @@ where
         state.max_page_size(),
     );
 
+    // `:not-in` requires negated value-set filtering, which no backend
+    // implements. Reject it explicitly (501) regardless of whether a terminology
+    // server is configured, rather than silently ignoring it (which would return
+    // a superset of the intended results).
+    if let Some(key) = params.keys().find(|k| k.ends_with(":not-in")) {
+        return Err(RestError::NotImplemented {
+            feature: format!(
+                "search modifier ':not-in' is not supported ({key}); \
+                 use ':in' or remove this modifier"
+            ),
+        });
+    }
+
     // Pre-process :in / :not-in modifiers via the terminology server (if configured).
     if let Some(ts_url) = state.terminology_server_url() {
         params = expand_terminology_params(params, ts_url).await?;
@@ -190,6 +203,19 @@ where
     let query = {
         let registry = state.storage().search_param_registry().read();
         build_search_query_from_map(resource_type, &params, &registry)?
+    };
+
+    // Resolve chained / reverse-chained (`_has`) parameters into an `_id` filter
+    // via application-side joins, so any backend's `search()` can execute them.
+    let query = if helios_persistence::search::query_has_chains(&query) {
+        helios_persistence::search::resolve_chains(state.storage(), tenant.context(), &query)
+            .await
+            .map_err(|e| {
+                warn!(error = %e, "Chained search resolution failed");
+                RestError::from(e)
+            })?
+    } else {
+        query
     };
 
     // Execute the search
@@ -515,12 +541,92 @@ async fn expand_terminology_params(
                      ValueSet: {value}); use ':in' or remove this modifier"
                 ),
             });
+        } else if let Some((param_name, op)) = key
+            .strip_suffix(":below")
+            .map(|p| (p, "is-a"))
+            .or_else(|| key.strip_suffix(":above").map(|p| (p, "generalizes")))
+        {
+            // Token hierarchy: `code:below=system|code` expands to the code and
+            // its descendants (is-a) / ancestors (generalizes) via the
+            // terminology server. A bare value with no `system|code` is left
+            // untouched — that is the URI form, resolved natively by the backend.
+            if let Some((system, code)) = value.split_once('|') {
+                let modifier = if op == "is-a" { ":below" } else { ":above" };
+                expand_subsumption_into(
+                    &mut result,
+                    &client,
+                    param_name,
+                    &key,
+                    system,
+                    code,
+                    op,
+                    modifier,
+                )
+                .await;
+            } else {
+                result.insert(key, value);
+            }
         } else {
             result.insert(key, value);
         }
     }
 
     Ok(result)
+}
+
+/// Sentinel token that cannot match any indexed code, used to force an empty
+/// result when a terminology expansion legitimately yields no codes.
+const HTS_EMPTY_EXPANSION: &str = "__hts_empty_expansion__";
+
+/// Expands a token hierarchy modifier (`:below`/`:above`) and inserts the
+/// resulting comma-joined token list under `param_name`. Mirrors the `:in`
+/// policy: empty expansion → sentinel (match nothing); request error →
+/// fail-open (drop the filter).
+#[allow(clippy::too_many_arguments)]
+async fn expand_subsumption_into(
+    result: &mut HashMap<String, String>,
+    client: &TerminologyServiceClient,
+    param_name: &str,
+    key: &str,
+    system: &str,
+    code: &str,
+    op: &str,
+    modifier: &str,
+) {
+    match client.expand_subsumption(system, code, op).await {
+        Ok(codes) if !codes.is_empty() => {
+            let token_list = codes
+                .iter()
+                .map(|c| c.as_token())
+                .collect::<Vec<_>>()
+                .join(",");
+            debug!(
+                param = %param_name,
+                system = %system,
+                code = %code,
+                modifier = %modifier,
+                codes = codes.len(),
+                "Expanded token hierarchy modifier"
+            );
+            result.insert(param_name.to_string(), token_list);
+        }
+        Ok(_) => {
+            warn!(
+                param = %key,
+                modifier = %modifier,
+                "Token hierarchy expansion returned no codes; injecting sentinel so no resources match"
+            );
+            result.insert(param_name.to_string(), HTS_EMPTY_EXPANSION.to_string());
+        }
+        Err(e) => {
+            warn!(
+                param = %key,
+                modifier = %modifier,
+                error = %e,
+                "Token hierarchy expansion failed; skipping parameter (fail-open)"
+            );
+        }
+    }
 }
 
 #[cfg(test)]
@@ -623,5 +729,84 @@ mod tests {
         // The :in key is gone; no code key was injected either (fail-open)
         assert!(!result.contains_key("code:in"));
         assert!(!result.contains_key("code"));
+    }
+
+    /// A token `:below` (`system|code`) is fail-open dropped on network error.
+    #[tokio::test]
+    async fn test_expand_terminology_params_below_token_dropped_on_network_error() {
+        let mut params = HashMap::new();
+        params.insert(
+            "code:below".to_string(),
+            "http://snomed.info/sct|73211009".to_string(),
+        );
+
+        let result = expand_terminology_params(params, "http://127.0.0.1:19999")
+            .await
+            .unwrap();
+
+        assert!(!result.contains_key("code:below"));
+        assert!(!result.contains_key("code"));
+    }
+
+    /// Happy path: a token `:below` expands to the code and its descendants via
+    /// a mock terminology server, rewriting to a comma-joined token list.
+    #[tokio::test]
+    async fn test_expand_terminology_params_below_success() {
+        use axum::{Json, Router, routing::post};
+        use serde_json::json;
+
+        let app = Router::new().route(
+            "/ValueSet/$expand",
+            post(|| async {
+                Json(json!({
+                    "resourceType": "ValueSet",
+                    "expansion": { "contains": [
+                        { "system": "http://snomed.info/sct", "code": "73211009" },
+                        { "system": "http://snomed.info/sct", "code": "44054006" },
+                        { "system": "http://snomed.info/sct", "code": "46635009" }
+                    ]}
+                }))
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        let mut params = HashMap::new();
+        params.insert(
+            "code:below".to_string(),
+            "http://snomed.info/sct|73211009".to_string(),
+        );
+        let result = expand_terminology_params(params, &format!("http://{addr}"))
+            .await
+            .unwrap();
+
+        // Modifier consumed; rewritten to a plain token OR list of descendants.
+        assert!(!result.contains_key("code:below"));
+        let codes = result.get("code").expect("code param injected");
+        assert!(codes.contains("http://snomed.info/sct|73211009"));
+        assert!(codes.contains("http://snomed.info/sct|44054006"));
+        assert!(codes.contains("http://snomed.info/sct|46635009"));
+    }
+
+    /// A `:below` value without a `system|code` (the URI form) is left untouched
+    /// so the backend can resolve URI hierarchy natively — no terminology call.
+    #[tokio::test]
+    async fn test_expand_terminology_params_below_uri_passthrough() {
+        let mut params = HashMap::new();
+        params.insert(
+            "url:below".to_string(),
+            "http://example.org/fhir/ValueSet/x".to_string(),
+        );
+
+        let result = expand_terminology_params(params, "http://127.0.0.1:19999")
+            .await
+            .unwrap();
+
+        // Unchanged — no `|`, so not treated as a token subsumption.
+        assert_eq!(
+            result.get("url:below"),
+            Some(&"http://example.org/fhir/ValueSet/x".to_string())
+        );
     }
 }

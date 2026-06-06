@@ -539,11 +539,7 @@ impl MongoBackend {
             SearchParamType::Number => self.build_number_filter(value),
             SearchParamType::Reference => self.build_reference_filter(param, value),
             SearchParamType::Uri => self.build_uri_filter(param, value),
-            SearchParamType::Quantity => Err(StorageError::Search(
-                SearchError::UnsupportedParameterType {
-                    param_type: "quantity".to_string(),
-                },
-            )),
+            SearchParamType::Quantity => self.build_quantity_filter(value),
             SearchParamType::Composite => {
                 Err(StorageError::Search(SearchError::InvalidComposite {
                     message: "Composite search is not supported in MongoDB Phase 4".to_string(),
@@ -579,7 +575,9 @@ impl MongoBackend {
                 }
             }),
             Some(SearchModifier::Exact) => Ok(doc! { "value_string": lowered }),
-            Some(SearchModifier::Contains) => Ok(doc! {
+            // `:text` on a string is a case-insensitive partial match,
+            // implemented here as a substring match (same as `:contains`).
+            Some(SearchModifier::Contains | SearchModifier::Text) => Ok(doc! {
                 "value_string": {
                     "$regex": regex_escape(&lowered)
                 }
@@ -607,6 +605,19 @@ impl MongoBackend {
 
         match param.modifier.as_ref() {
             None | Some(SearchModifier::CodeOnly) => {}
+            // `:text` (contains) and `:code-text` (starts-with) match the
+            // token's display text (Coding.display / CodeableConcept.text).
+            Some(m @ (SearchModifier::Text | SearchModifier::CodeText)) => {
+                let escaped = regex_escape(&value.value);
+                let regex = if *m == SearchModifier::CodeText {
+                    format!("^{}", escaped)
+                } else {
+                    escaped
+                };
+                return Ok(doc! {
+                    "value_token_display": { "$regex": regex, "$options": "i" }
+                });
+            }
             Some(other) => {
                 return Err(StorageError::Search(SearchError::UnsupportedModifier {
                     modifier: other.to_string(),
@@ -643,6 +654,32 @@ impl MongoBackend {
                     value.prefix, param.name
                 ),
             }));
+        }
+
+        // :contains - case-insensitive substring match on the stored reference.
+        if matches!(param.modifier.as_ref(), Some(SearchModifier::Contains)) {
+            return Ok(doc! {
+                "value_reference": {
+                    "$regex": regex_escape(&value.value),
+                    "$options": "i"
+                }
+            });
+        }
+
+        // :text (contains) / :code-text (starts-with) match Reference.display.
+        if matches!(
+            param.modifier.as_ref(),
+            Some(SearchModifier::Text | SearchModifier::CodeText)
+        ) {
+            let escaped = regex_escape(&value.value);
+            let regex = if matches!(param.modifier.as_ref(), Some(SearchModifier::CodeText)) {
+                format!("^{}", escaped)
+            } else {
+                escaped
+            };
+            return Ok(doc! {
+                "value_reference_display": { "$regex": regex, "$options": "i" }
+            });
         }
 
         if let Some(modifier) = &param.modifier {
@@ -725,6 +762,54 @@ impl MongoBackend {
                 })
             }
         }
+    }
+
+    /// Builds a MongoDB filter for a quantity parameter.
+    ///
+    /// Value form: `[prefix]number[|system|code]` (or the `number|code` shorthand).
+    /// The comparison runs on `value_quantity_value`; an optional system/code
+    /// further constrain `value_quantity_system` / `value_quantity_unit` (the
+    /// extractor stores the quantity code under the unit field).
+    fn build_quantity_filter(&self, value: &SearchValue) -> StorageResult<Document> {
+        let parts: Vec<&str> = value.value.splitn(3, '|').collect();
+        let parsed = parts[0].parse::<f64>().map_err(|e| {
+            StorageError::Search(SearchError::QueryParseError {
+                message: format!("Invalid quantity value '{}': {}", value.value, e),
+            })
+        })?;
+
+        let value_condition = match value.prefix {
+            SearchPrefix::Ap => {
+                let delta = (parsed.abs() * 0.1).max(0.1);
+                doc! { "$gte": parsed - delta, "$lte": parsed + delta }
+            }
+            _ => {
+                let op = Self::prefix_to_mongo_operator(value.prefix)?;
+                doc! { op: parsed }
+            }
+        };
+
+        let mut filter = doc! { "value_quantity_value": value_condition };
+        match parts.as_slice() {
+            // number|system|code
+            [_, system, code] => {
+                if !system.is_empty() {
+                    filter.insert("value_quantity_system", *system);
+                }
+                if !code.is_empty() {
+                    filter.insert("value_quantity_unit", *code);
+                }
+            }
+            // number|code shorthand
+            [_, code] => {
+                if !code.is_empty() {
+                    filter.insert("value_quantity_unit", *code);
+                }
+            }
+            _ => {}
+        }
+
+        Ok(filter)
     }
 
     fn build_number_filter(&self, value: &SearchValue) -> StorageResult<Document> {

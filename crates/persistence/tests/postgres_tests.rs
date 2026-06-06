@@ -206,6 +206,191 @@ mod query_builder_tests {
     }
 
     #[test]
+    fn test_token_parameter_code_text() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "code".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: Some(SearchModifier::CodeText),
+            values: vec![SearchValue::eq("Heart")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        assert!(result.is_some());
+        let fragment = result.unwrap();
+        assert!(fragment.sql.contains("value_token_display ILIKE"));
+        // starts-with: param is "Heart%"
+        match &fragment.params[0] {
+            SqlParam::Text(s) => {
+                assert!(!s.starts_with('%'));
+                assert!(s.ends_with('%'));
+            }
+            _ => panic!("Expected Text param"),
+        }
+    }
+
+    #[test]
+    fn test_token_parameter_text_contains() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "code".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: Some(SearchModifier::Text),
+            values: vec![SearchValue::eq("Heart")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        assert!(result.is_some());
+        let fragment = result.unwrap();
+        assert!(fragment.sql.contains("value_token_display ILIKE"));
+        // contains: param is "%Heart%"
+        match &fragment.params[0] {
+            SqlParam::Text(s) => {
+                assert!(s.starts_with('%'));
+                assert!(s.ends_with('%'));
+            }
+            _ => panic!("Expected Text param"),
+        }
+    }
+
+    #[test]
+    fn test_string_parameter_text() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("Patient").with_parameter(SearchParameter {
+            name: "name".to_string(),
+            param_type: SearchParamType::String,
+            modifier: Some(SearchModifier::Text),
+            values: vec![SearchValue::eq("mit")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        assert!(result.is_some());
+        let fragment = result.unwrap();
+        assert!(fragment.sql.contains("value_string ILIKE"));
+        // Substring match: param wrapped as %mit%
+        match &fragment.params[0] {
+            SqlParam::Text(s) => {
+                assert!(s.starts_with('%'));
+                assert!(s.ends_with('%'));
+            }
+            _ => panic!("Expected Text param"),
+        }
+    }
+
+    #[test]
+    fn test_reference_parameter_below_above() {
+        use helios_persistence::types::SearchModifier;
+
+        for modifier in [SearchModifier::Below, SearchModifier::Above] {
+            let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "subject".to_string(),
+                param_type: SearchParamType::Reference,
+                modifier: Some(modifier),
+                values: vec![SearchValue::eq("http://x.org/Questionnaire/q")],
+                chain: vec![],
+                components: vec![],
+            });
+            let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+            assert!(fragment.sql.contains("value_reference"));
+            assert!(fragment.sql.contains("|| '/%'"));
+        }
+    }
+
+    #[test]
+    fn test_reference_parameter_identifier() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "subject".to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: Some(SearchModifier::Identifier),
+            values: vec![SearchValue::eq("http://hospital.org|12345")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+        // Correlated subquery against the target's 'identifier' index rows.
+        assert!(fragment.sql.contains("param_name = 'identifier'"));
+        assert!(fragment.sql.contains("idx.value_token_system"));
+        assert!(fragment.sql.contains("idx.value_token_code"));
+    }
+
+    #[test]
+    fn test_uri_parameter_contains() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("ValueSet").with_parameter(SearchParameter {
+            name: "url".to_string(),
+            param_type: SearchParamType::Uri,
+            modifier: Some(SearchModifier::Contains),
+            values: vec![SearchValue::eq("example.org")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        assert!(result.is_some());
+        let fragment = result.unwrap();
+        assert!(fragment.sql.contains("value_uri ILIKE"));
+    }
+
+    #[test]
+    fn test_reference_parameter_text_and_code_text() {
+        use helios_persistence::types::SearchModifier;
+
+        for (modifier, expect_leading_pct) in [
+            (SearchModifier::Text, true),
+            (SearchModifier::CodeText, false),
+        ] {
+            let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "subject".to_string(),
+                param_type: SearchParamType::Reference,
+                modifier: Some(modifier),
+                values: vec![SearchValue::eq("John")],
+                chain: vec![],
+                components: vec![],
+            });
+
+            let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+            assert!(fragment.sql.contains("value_reference_display ILIKE"));
+            // :text wraps as %John%; :code-text is starts-with John%
+            assert_eq!(
+                fragment.sql.contains("'%' || $3 || '%'"),
+                expect_leading_pct
+            );
+        }
+    }
+
+    #[test]
+    fn test_reference_parameter_contains() {
+        use helios_persistence::types::SearchModifier;
+
+        let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "subject".to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: Some(SearchModifier::Contains),
+            values: vec![SearchValue::eq("patient-1")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        assert!(result.is_some());
+        let fragment = result.unwrap();
+        assert!(fragment.sql.contains("value_reference ILIKE"));
+    }
+
+    #[test]
     fn test_token_system_and_code() {
         let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
             name: "code".to_string(),
@@ -504,7 +689,7 @@ mod postgres_integration {
     use testcontainers::ImageExt;
     use testcontainers::runners::AsyncRunner;
     use testcontainers_modules::postgres::Postgres;
-    use tokio::sync::OnceCell;
+    use tokio::sync::{Mutex, OnceCell};
 
     /// Shared PostgreSQL container reused across all tests in this module.
     struct SharedPg {
@@ -515,6 +700,7 @@ mod postgres_integration {
     }
 
     static SHARED_PG: OnceCell<SharedPg> = OnceCell::const_new();
+    static BULK_EXPORT_TEST_LOCK: Mutex<()> = Mutex::const_new(());
 
     async fn shared_pg() -> &'static SharedPg {
         SHARED_PG
@@ -1186,6 +1372,344 @@ mod postgres_integration {
             !result.resources.items.is_empty(),
             "Search by gender should find the patient"
         );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_sort_by_id() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchQuery, SortDirective};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Create in non-sorted insertion order to prove ORDER BY is applied.
+        for id in ["p3", "p1", "p2"] {
+            let patient = json!({ "resourceType": "Patient", "id": id });
+            backend
+                .create(&tenant, "Patient", patient, FhirVersion::default())
+                .await
+                .unwrap();
+        }
+
+        // Ascending _sort=_id
+        let asc = SearchQuery::new("Patient").with_sort(SortDirective::parse("_id"));
+        let result = backend.search(&tenant, &asc).await.unwrap();
+        let ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["p1", "p2", "p3"],
+            "_sort=_id should return ascending id order"
+        );
+
+        // Descending _sort=-_id
+        let desc = SearchQuery::new("Patient").with_sort(SortDirective::parse("-_id"));
+        let result = backend.search(&tenant, &desc).await.unwrap();
+        let ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["p3", "p2", "p1"],
+            "_sort=-_id should return descending id order"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_cursor_with_custom_sort() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchParamType, SearchQuery, SortDirective};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Insert out of order; page size 1 to force keyset paging across pages.
+        for (id, family) in [
+            ("p-charlie", "Charlie"),
+            ("p-alice", "Alice"),
+            ("p-bob", "Bob"),
+        ] {
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({ "resourceType": "Patient", "id": id, "name": [{ "family": family }] }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+
+        let mut collected = Vec::new();
+        let mut cursor: Option<String> = None;
+        for _ in 0..5 {
+            let mut q = SearchQuery::new("Patient")
+                .with_sort(
+                    SortDirective::parse("family").with_param_type(Some(SearchParamType::String)),
+                )
+                .with_count(1);
+            q.cursor = cursor.clone();
+            let result = backend.search(&tenant, &q).await.unwrap();
+            for r in &result.resources.items {
+                collected.push(r.id().to_string());
+            }
+            match result.resources.page_info.next_cursor {
+                Some(c) => cursor = Some(c),
+                None => break,
+            }
+        }
+
+        // Keyset paging must yield the full set in family order, no dups/gaps.
+        assert_eq!(
+            collected,
+            vec!["p-alice", "p-bob", "p-charlie"],
+            "cursor paging with custom sort must preserve global order"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_sort_by_indexed_param() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchParamType, SearchQuery, SortDirective};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        for (id, family) in [
+            ("p-charlie", "Charlie"),
+            ("p-alice", "Alice"),
+            ("p-bob", "Bob"),
+        ] {
+            let patient = json!({
+                "resourceType": "Patient",
+                "id": id,
+                "name": [{ "family": family }],
+            });
+            backend
+                .create(&tenant, "Patient", patient, FhirVersion::default())
+                .await
+                .unwrap();
+        }
+
+        let collect_ids = |result: helios_persistence::core::SearchResult| {
+            result
+                .resources
+                .items
+                .iter()
+                .map(|r| r.id().to_string())
+                .collect::<Vec<_>>()
+        };
+
+        let asc = SearchQuery::new("Patient").with_sort(
+            SortDirective::parse("family").with_param_type(Some(SearchParamType::String)),
+        );
+        let ids = collect_ids(backend.search(&tenant, &asc).await.unwrap());
+        assert_eq!(
+            ids,
+            vec!["p-alice", "p-bob", "p-charlie"],
+            "sort by family asc"
+        );
+
+        let desc = SearchQuery::new("Patient").with_sort(
+            SortDirective::parse("-family").with_param_type(Some(SearchParamType::String)),
+        );
+        let ids = collect_ids(backend.search(&tenant, &desc).await.unwrap());
+        assert_eq!(
+            ids,
+            vec!["p-charlie", "p-bob", "p-alice"],
+            "sort by family desc"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_missing_modifier() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchModifier, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({ "resourceType": "Patient", "id": "with-gender", "gender": "male" }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({ "resourceType": "Patient", "id": "no-gender" }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        let missing = |present: &str| {
+            SearchQuery::new("Patient").with_parameter(SearchParameter {
+                name: "gender".to_string(),
+                param_type: SearchParamType::Token,
+                modifier: Some(SearchModifier::Missing),
+                values: vec![SearchValue::eq(present)],
+                chain: vec![],
+                components: vec![],
+            })
+        };
+
+        let result = backend.search(&tenant, &missing("true")).await.unwrap();
+        let ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(ids, vec!["no-gender"], "gender:missing=true → no-gender");
+
+        let result = backend.search(&tenant, &missing("false")).await.unwrap();
+        let ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["with-gender"],
+            "gender:missing=false → with-gender"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_not_modifier() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchModifier, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        for (id, gender) in [("male1", Some("male")), ("female1", Some("female"))] {
+            let mut patient = json!({ "resourceType": "Patient", "id": id });
+            if let Some(g) = gender {
+                patient["gender"] = json!(g);
+            }
+            backend
+                .create(&tenant, "Patient", patient, FhirVersion::default())
+                .await
+                .unwrap();
+        }
+        // A patient with no gender at all should also be returned by :not.
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({ "resourceType": "Patient", "id": "none1" }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        let query = SearchQuery::new("Patient").with_parameter(SearchParameter {
+            name: "gender".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: Some(SearchModifier::Not),
+            values: vec![SearchValue::eq("male")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = backend.search(&tenant, &query).await.unwrap();
+        let mut ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        ids.sort();
+        assert_eq!(
+            ids,
+            vec!["female1", "none1"],
+            "gender:not=male → non-male incl. resources with no gender"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_composite_code_value_quantity() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            CompositeSearchComponent, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        let observation = json!({
+            "resourceType": "Observation",
+            "id": "obs-bp",
+            "status": "final",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6" }] },
+            "valueQuantity": { "value": 107, "unit": "mmHg", "system": "http://unitsofmeasure.org" }
+        });
+        backend
+            .create(&tenant, "Observation", observation, FhirVersion::default())
+            .await
+            .unwrap();
+
+        let query = |value: &str| {
+            SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "code-value-quantity".to_string(),
+                param_type: SearchParamType::Composite,
+                modifier: None,
+                values: vec![SearchValue::eq(value)],
+                chain: vec![],
+                components: vec![
+                    CompositeSearchComponent {
+                        param_type: SearchParamType::Token,
+                        param_name: "code".to_string(),
+                    },
+                    CompositeSearchComponent {
+                        param_type: SearchParamType::Quantity,
+                        param_name: "value-quantity".to_string(),
+                    },
+                ],
+            })
+        };
+
+        let result = backend
+            .search(&tenant, &query("8480-6$ge100"))
+            .await
+            .unwrap();
+        assert_eq!(
+            result.resources.items.len(),
+            1,
+            "code + value match → 1 hit"
+        );
+        assert_eq!(result.resources.items[0].id(), "obs-bp");
+
+        let result = backend
+            .search(&tenant, &query("8480-6$ge200"))
+            .await
+            .unwrap();
+        assert!(result.resources.items.is_empty(), "value too low → no hit");
+
+        let result = backend
+            .search(&tenant, &query("9999-9$ge100"))
+            .await
+            .unwrap();
+        assert!(result.resources.items.is_empty(), "code mismatch → no hit");
     }
 
     // ========================================================================
@@ -2119,6 +2643,77 @@ mod postgres_integration {
     }
 
     #[tokio::test]
+    async fn postgres_integration_search_reference_identifier() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchModifier, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Patient with a known identifier, plus a decoy patient.
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": "p-ident-1",
+                    "identifier": [{"system": "http://hospital.org", "value": "MRN-42"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": "p-ident-2",
+                    "identifier": [{"system": "http://hospital.org", "value": "MRN-99"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        for (oid, pid) in [("obs-i1", "p-ident-1"), ("obs-i2", "p-ident-2")] {
+            backend
+                .create(
+                    &tenant,
+                    "Observation",
+                    json!({
+                        "resourceType": "Observation",
+                        "id": oid,
+                        "subject": {"reference": format!("Patient/{pid}")},
+                        "status": "final"
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+
+        // subject:identifier matches the observation whose subject patient has
+        // the given identifier.
+        let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "subject".to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: Some(SearchModifier::Identifier),
+            values: vec![SearchValue::eq("http://hospital.org|MRN-42")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = backend.search(&tenant, &query).await.unwrap();
+        let ids: Vec<&str> = result.resources.items.iter().map(|r| r.id()).collect();
+        assert_eq!(ids, vec!["obs-i1"]);
+    }
+
+    #[tokio::test]
     async fn postgres_integration_search_tenant_isolation() {
         use helios_persistence::core::SearchProvider;
         use helios_persistence::types::{
@@ -2824,5 +3419,166 @@ mod postgres_integration {
             .await
             .unwrap();
         assert_eq!(ids, vec!["p1".to_string()]);
+    }
+
+    // ========================================================================
+    // Bulk Export — Phase 2 multi-instance job state on Postgres.
+    // ========================================================================
+
+    use chrono::Utc;
+    use helios_persistence::core::bulk_export::{
+        BulkExportStorage, ExportRequest, ExportStatus, StartExportInput, TypeExportProgress,
+    };
+    use helios_persistence::core::bulk_export_worker::{
+        ExportClaimStrategy, ExportWorkerStorage, LeaseError, WorkerId,
+    };
+    use std::time::Duration as StdDuration;
+
+    fn export_input(request: ExportRequest) -> StartExportInput {
+        StartExportInput {
+            request,
+            transaction_time: Utc::now(),
+            request_url: "http://localhost/$export".to_string(),
+            owner_subject: Some("pg-test".to_string()),
+            fhir_version: FhirVersion::default(),
+        }
+    }
+
+    /// Claims jobs in a loop until the lease for `target` is returned;
+    /// releases any other jobs claimed along the way. Robust to concurrent
+    /// tests sharing the testcontainers PostgreSQL instance.
+    async fn claim_specific(
+        backend: &helios_persistence::backends::postgres::PostgresBackend,
+        worker_id: &WorkerId,
+        target: &helios_persistence::core::bulk_export::ExportJobId,
+        lease_duration: StdDuration,
+    ) -> helios_persistence::core::bulk_export_worker::ExportJobLease {
+        for _ in 0..100 {
+            match backend.claim_next(worker_id, lease_duration).await.unwrap() {
+                Some(lease) if &lease.job_id == target => return lease,
+                Some(other) => {
+                    // Drain other tests' jobs out of the queue by completing
+                    // them (so the claim ordering moves on instead of
+                    // looping back to the same job after `release`).
+                    let _ = backend
+                        .finish_export_job(
+                            &other.tenant,
+                            &other.job_id,
+                            &other.worker_id,
+                            other.fencing_token,
+                        )
+                        .await;
+                }
+                None => {
+                    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                }
+            }
+        }
+        panic!("never claimed the expected job");
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_export_claim_skip_locked() {
+        let _guard = BULK_EXPORT_TEST_LOCK.lock().await;
+        let backend = create_backend().await;
+        let tenant = create_tenant("export-claim");
+
+        let job_id = backend
+            .start_export(&tenant, export_input(ExportRequest::system()))
+            .await
+            .unwrap();
+
+        let worker_a = WorkerId::new(format!("pg-worker-a-{}", uuid::Uuid::new_v4()));
+        let lease_a =
+            claim_specific(&backend, &worker_a, &job_id, StdDuration::from_secs(60)).await;
+        assert!(lease_a.fencing_token >= 1);
+
+        // Worker A finishes via the fenced ExportWorkerStorage.
+        backend
+            .mark_export_in_progress(&tenant, &job_id, &worker_a, lease_a.fencing_token)
+            .await
+            .unwrap();
+        backend
+            .update_export_type_progress(
+                &tenant,
+                &job_id,
+                &worker_a,
+                lease_a.fencing_token,
+                &TypeExportProgress::new("Patient"),
+            )
+            .await
+            .unwrap();
+        backend
+            .finish_export_job(&tenant, &job_id, &worker_a, lease_a.fencing_token)
+            .await
+            .unwrap();
+
+        let progress = backend.get_export_status(&tenant, &job_id).await.unwrap();
+        assert_eq!(progress.status, ExportStatus::Complete);
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_export_stale_worker_fenced_out() {
+        let _guard = BULK_EXPORT_TEST_LOCK.lock().await;
+        let backend = create_backend().await;
+        let tenant = create_tenant("export-fence");
+
+        let job_id = backend
+            .start_export(&tenant, export_input(ExportRequest::system()))
+            .await
+            .unwrap();
+
+        // Worker A takes a very short lease, then Worker B reclaims.
+        let worker_a = WorkerId::new(format!("pg-stale-a-{}", uuid::Uuid::new_v4()));
+        let lease_a =
+            claim_specific(&backend, &worker_a, &job_id, StdDuration::from_millis(1)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let worker_b = WorkerId::new(format!("pg-stale-b-{}", uuid::Uuid::new_v4()));
+        let lease_b =
+            claim_specific(&backend, &worker_b, &job_id, StdDuration::from_secs(60)).await;
+        assert!(lease_b.fencing_token > lease_a.fencing_token);
+
+        // Worker A is fenced out from every mutation.
+        assert!(matches!(
+            backend
+                .mark_export_in_progress(&tenant, &job_id, &worker_a, lease_a.fencing_token)
+                .await,
+            Err(LeaseError::LeaseLost { .. })
+        ));
+        assert!(matches!(
+            backend
+                .finish_export_job(&tenant, &job_id, &worker_a, lease_a.fencing_token)
+                .await,
+            Err(LeaseError::LeaseLost { .. })
+        ));
+
+        // Worker B can still finish.
+        backend
+            .finish_export_job(&tenant, &job_id, &worker_b, lease_b.fencing_token)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_export_count_active_and_expire() {
+        let _guard = BULK_EXPORT_TEST_LOCK.lock().await;
+        let backend = create_backend().await;
+        let tenant = create_tenant("export-cleanup");
+
+        for _ in 0..2 {
+            backend
+                .start_export(&tenant, export_input(ExportRequest::system()))
+                .await
+                .unwrap();
+        }
+        assert_eq!(backend.count_active_exports(&tenant).await.unwrap(), 2);
+
+        // Nothing is expired yet.
+        let expired_now = backend
+            .list_expired_exports(Utc::now(), StdDuration::from_secs(3600), 100)
+            .await
+            .unwrap();
+        // Only completed/error/cancelled jobs can expire — these are accepted.
+        assert!(expired_now.is_empty());
     }
 }
