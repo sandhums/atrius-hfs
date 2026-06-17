@@ -249,15 +249,45 @@ jobs:
       - name: Run security audit
         # Vulnerability-class advisories cannot be ignored via audit.toml
         # (cargo-audit only honors that for warning-class entries), so they
-        # are listed here. Remove once mongodb releases a build with
-        # hickory >= 0.26.1 (tracked: mongodb/mongo-rust-driver#1682).
-        # Neither path is reachable in our build:
+        # are listed here.
+        #
+        # mongodb (via hickory-resolver → hickory-proto 0.25.2). Remove once
+        # mongodb releases a build with hickory >= 0.26.1
+        # (tracked: mongodb/mongo-rust-driver#1682). Neither path is reachable:
         #   - RUSTSEC-2026-0118 requires the dnssec-ring/dnssec-aws-lc-rs
         #     hickory features, which we don't enable.
         #   - RUSTSEC-2026-0119 fires when encoding outbound messages with
         #     many compressible records; mongodb only encodes single-question
         #     resolver queries.
-        run: cargo audit --ignore RUSTSEC-2026-0118 --ignore RUSTSEC-2026-0119
+        #
+        # The pyo3 advisories below only affect `pysof`, which is excluded from
+        # the default workspace build and shipped separately as a Python wheel.
+        # The fix (pyo3 >= 0.29) is blocked upstream: pysof depends on
+        # `pythonize`, whose latest release (0.28) only supports pyo3 0.28.
+        # Neither advisory path is reachable in pysof:
+        #   - RUSTSEC-2026-0176 affects `nth`/`nth_back` on PyList/PyTuple
+        #     iterators; pysof never calls those methods.
+        #   - RUSTSEC-2026-0177 affects `PyCFunction::new_closure`; pysof never
+        #     creates closures. Remove once pythonize ships a pyo3 0.29 build.
+        #
+        # rustls-webpki 0.101.7 (via rustls 0.21.x ← aws-smithy-http-client
+        # 1.1.10). The 0.101.x line is no longer patched; AWS SDK pins it.
+        # None of the three are reachable through the AWS SDK path:
+        #   - RUSTSEC-2026-0098 (URI name constraints): rustls-webpki has no
+        #     API for asserting URI names.
+        #   - RUSTSEC-2026-0099 (wildcard name constraints): requires a
+        #     misissued certificate with name constraints; AWS endpoints
+        #     don't use name-constrained intermediates.
+        #   - RUSTSEC-2026-0104 (CRL panic): the AWS SDK doesn't parse CRLs.
+        run: >-
+          cargo audit
+          --ignore RUSTSEC-2026-0118
+          --ignore RUSTSEC-2026-0119
+          --ignore RUSTSEC-2026-0176
+          --ignore RUSTSEC-2026-0177
+          --ignore RUSTSEC-2026-0098
+          --ignore RUSTSEC-2026-0099
+          --ignore RUSTSEC-2026-0104
  
   coverage:
     name: Code Coverage
@@ -868,7 +898,7 @@ jobs:
               # Flatten the artifact structure: move binaries from target/release/ to root
               staging=$(mktemp -d)
               # Copy known binaries by name (artifacts lose executable permission)
-              for bin in hfs fhirpath-server fhirpath-cli sof-server sof-cli config-advisor; do
+              for bin in hfs fhirpath-server fhirpath-cli sof-server sof-cli config-advisor hts; do
                 if [[ "$target" == *"windows"* ]]; then
                   found=$(find "$dir/target" -maxdepth 3 -type f -name "${bin}.exe" 2>/dev/null | head -1)
                 else
@@ -1207,6 +1237,14 @@ jobs:
             SERVICE_DESCRIPTION="Helios FHIR Server"
             SERVICE_EXEC_START="/opt/$SERVER_NAME/$SERVER_NAME --host 0.0.0.0"
             SERVICE_ENV="Environment=\"HFS_SERVER_HOST=0.0.0.0\"\nEnvironment=\"HFS_BASE_URL=${HFS_PUBLIC_URL}\""
+          elif [ "$SERVER_NAME" = "hts" ]; then
+            SERVICE_DESCRIPTION="Helios Terminology Server"
+            # hts uses a subcommand CLI: host/port/db flags live under `run`
+            # (top-level `hts` only takes an optional subcommand), unlike the
+            # other servers which accept --host at the top level.
+            SERVICE_EXEC_START="/opt/$SERVER_NAME/$SERVER_NAME run --host 0.0.0.0"
+            # SQLite backend (default); DB lives under the service WorkingDirectory (/opt/hts/data/hts.db)
+            SERVICE_ENV="Environment=\"HTS_SERVER_HOST=0.0.0.0\"\nEnvironment=\"HTS_STORAGE_BACKEND=sqlite\"\nEnvironment=\"HTS_DATABASE_URL=/opt/$SERVER_NAME/data/hts.db\""
           fi
 
           $SSH_CMD "if [ ! -f /etc/systemd/system/$SERVER_NAME.service ]; then

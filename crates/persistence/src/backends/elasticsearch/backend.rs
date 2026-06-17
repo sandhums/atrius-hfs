@@ -78,7 +78,7 @@ pub struct ElasticsearchConfig {
     pub disable_certificate_validation: bool,
 
     /// FHIR version for SearchParameter loading.
-    #[serde(default)]
+    #[serde(default = "crate::default_fhir_version")]
     pub fhir_version: FhirVersion,
 }
 
@@ -118,7 +118,7 @@ impl Default for ElasticsearchConfig {
             request_timeout_ms: default_request_timeout_ms(),
             auth: None,
             disable_certificate_validation: false,
-            fhir_version: FhirVersion::default(),
+            fhir_version: FhirVersion::default_enabled(),
         }
     }
 }
@@ -549,7 +549,7 @@ impl ElasticsearchBackend {
     /// Returns supported modifiers for a parameter type.
     ///
     /// ES supports more modifiers than SQLite, especially for full-text.
-    fn modifiers_for_type(param_type: SearchParamType) -> Vec<&'static str> {
+    pub(super) fn modifiers_for_type(param_type: SearchParamType) -> Vec<&'static str> {
         match param_type {
             SearchParamType::String => vec!["exact", "contains", "text", "missing"],
             SearchParamType::Token => {

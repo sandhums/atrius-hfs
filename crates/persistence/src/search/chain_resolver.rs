@@ -46,9 +46,23 @@ where
     let base_type = query.resource_type.clone();
     let mut id_sets: Vec<HashSet<String>> = Vec::new();
 
+    let max_forward_depth = crate::types::ChainConfig::default().max_forward_depth;
     for param in &query.parameters {
         if param.chain.is_empty() {
             continue;
+        }
+        // Forward-chain depth = number of reference hops. Cap it (mirroring the
+        // reverse `_has` cap) so a pathological chain can't fan out unboundedly.
+        let depth = param.chain.len();
+        if depth > max_forward_depth {
+            return Err(crate::error::StorageError::Search(
+                crate::error::SearchError::QueryParseError {
+                    message: format!(
+                        "forward chain depth {} exceeds the maximum of {}",
+                        depth, max_forward_depth
+                    ),
+                },
+            ));
         }
         let chain = reconstruct_chain_string(param);
         let value = param
@@ -555,9 +569,19 @@ mod tests {
     }
 }
 
-/// Heuristic fallback for ambiguous reference targets, matching the SQLite /
-/// PostgreSQL chain builders so all backends agree.
-fn infer_target_type(ref_param: &str) -> String {
+/// Heuristic fallback for inferring the target resource type of a reference
+/// search parameter when the registry has no (or an ambiguous) target list.
+///
+/// This is the single source of truth shared by every backend's chain builder
+/// (SQLite, PostgreSQL) and the composite storage layer, so all of them agree on
+/// which type an untyped chain link resolves to. Callers reach it via
+/// `crate::search::chain_resolver::infer_target_type`.
+///
+/// Note: this remains a hand-maintained heuristic rather than spec-derived data;
+/// the longer-term fix is to pick the first declared target from the
+/// SearchParameter registry. Keeping it in one place is the prerequisite for that
+/// migration.
+pub(crate) fn infer_target_type(ref_param: &str) -> String {
     match ref_param {
         "patient" | "subject" => "Patient".to_string(),
         "practitioner" | "performer" | "requester" | "author" => "Practitioner".to_string(),

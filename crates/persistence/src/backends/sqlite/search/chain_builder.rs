@@ -7,9 +7,6 @@
 //! Uses the search_index table to resolve chains efficiently via SQL subqueries
 //! instead of in-memory iteration.
 
-// Error enum variant fields are self-documenting
-#![allow(missing_docs)]
-
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -44,26 +41,40 @@ pub struct ParsedChain {
 #[derive(Debug, Clone)]
 pub enum ChainError {
     /// Chain exceeds maximum allowed depth.
-    MaxDepthExceeded { depth: usize, max: usize },
+    MaxDepthExceeded {
+        /// Depth of the chain that was rejected.
+        depth: usize,
+        /// Configured maximum forward-chain depth.
+        max: usize,
+    },
     /// Reference parameter not found in registry.
     UnknownReferenceParam {
+        /// Resource type the reference parameter was looked up against.
         resource_type: String,
+        /// Reference parameter name.
         param: String,
     },
     /// Cannot determine target type for reference.
     AmbiguousTargetType {
+        /// Resource type the reference parameter belongs to.
         resource_type: String,
+        /// Reference parameter name whose target is ambiguous.
         param: String,
     },
     /// Terminal parameter not found.
     UnknownTerminalParam {
+        /// Resource type the terminal parameter was looked up against.
         resource_type: String,
+        /// Terminal parameter name.
         param: String,
     },
     /// Chain is empty.
     EmptyChain,
     /// Invalid chain syntax.
-    InvalidSyntax { message: String },
+    InvalidSyntax {
+        /// Human-readable parser failure detail.
+        message: String,
+    },
 }
 
 impl std::fmt::Display for ChainError {
@@ -270,41 +281,18 @@ impl ChainQueryBuilder {
                     return Ok(targets[0].clone());
                 } else if targets.is_empty() {
                     // Fallback to inference
-                    return Ok(self.infer_target_type(ref_param));
+                    return Ok(crate::search::chain_resolver::infer_target_type(ref_param));
                 } else {
                     // Multiple targets - use inference for common patterns
                     // This allows queries like `Observation?subject.name=Smith` to work
                     // by defaulting `subject` to `Patient`
-                    return Ok(self.infer_target_type(ref_param));
+                    return Ok(crate::search::chain_resolver::infer_target_type(ref_param));
                 }
             }
         }
 
         // Fall back to inference based on common parameter names
-        Ok(self.infer_target_type(ref_param))
-    }
-
-    /// Infers target type based on common parameter naming conventions.
-    fn infer_target_type(&self, ref_param: &str) -> String {
-        match ref_param {
-            "patient" | "subject" => "Patient".to_string(),
-            "practitioner" | "performer" | "requester" | "author" => "Practitioner".to_string(),
-            "organization" | "managingOrganization" | "custodian" => "Organization".to_string(),
-            "encounter" | "context" => "Encounter".to_string(),
-            "location" => "Location".to_string(),
-            "device" => "Device".to_string(),
-            "specimen" => "Specimen".to_string(),
-            "medication" => "Medication".to_string(),
-            "condition" => "Condition".to_string(),
-            _ => {
-                // Default: capitalize first letter
-                let mut chars = ref_param.chars();
-                match chars.next() {
-                    Some(c) => c.to_uppercase().chain(chars).collect(),
-                    None => ref_param.to_string(),
-                }
-            }
-        }
+        Ok(crate::search::chain_resolver::infer_target_type(ref_param))
     }
 
     /// Resolves the type of the terminal parameter.

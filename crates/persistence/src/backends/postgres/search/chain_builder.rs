@@ -10,8 +10,6 @@
 //! Postgres syntax adaptations: `$N` placeholders, `ILIKE`, `POSITION(... in ...)`
 //! for substring index, and `LIKE ESCAPE '\'`.
 
-#![allow(missing_docs)]
-
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -25,35 +23,52 @@ use super::query_builder::{SqlFragment, SqlParam};
 /// A single link in a forward chain.
 #[derive(Debug, Clone)]
 pub struct ChainLink {
+    /// Reference parameter being chained through.
     pub reference_param: String,
+    /// Target resource type resolved from the registry or explicit modifier.
     pub target_type: String,
 }
 
 /// A parsed forward chain with resolved types.
 #[derive(Debug, Clone)]
 pub struct ParsedChain {
+    /// Chain links from base to target.
     pub links: Vec<ChainLink>,
+    /// Terminal parameter name to search on.
     pub terminal_param: String,
+    /// Search parameter type of the terminal parameter.
     pub terminal_type: SearchParamType,
 }
 
 /// Errors specific to chain parsing.
 #[derive(Debug, Clone)]
 pub enum ChainError {
+    /// Chain exceeds maximum allowed depth.
     MaxDepthExceeded {
+        /// Depth of the chain that was rejected.
         depth: usize,
+        /// Configured maximum forward-chain depth.
         max: usize,
     },
+    /// Reference parameter not found in registry.
     UnknownReferenceParam {
+        /// Resource type the reference parameter was looked up against.
         resource_type: String,
+        /// Reference parameter name.
         param: String,
     },
+    /// Terminal parameter not found.
     UnknownTerminalParam {
+        /// Resource type the terminal parameter was looked up against.
         resource_type: String,
+        /// Terminal parameter name.
         param: String,
     },
+    /// Chain is empty.
     EmptyChain,
+    /// Invalid chain syntax.
     InvalidSyntax {
+        /// Human-readable parser failure detail.
         message: String,
     },
 }
@@ -115,6 +130,7 @@ pub struct ChainQueryBuilder {
 }
 
 impl ChainQueryBuilder {
+    /// Creates a new chain query builder rooted at `base_type` in the given tenant.
     pub fn new(
         tenant_id: impl Into<String>,
         base_type: impl Into<String>,
@@ -129,11 +145,13 @@ impl ChainQueryBuilder {
         }
     }
 
+    /// Sets the chain depth configuration.
     pub fn with_config(mut self, config: ChainConfig) -> Self {
         self.config = config;
         self
     }
 
+    /// Sets the parameter offset used when allocating `$N` placeholders.
     pub fn with_param_offset(mut self, offset: usize) -> Self {
         self.param_offset = offset;
         self
@@ -213,7 +231,7 @@ impl ChainQueryBuilder {
             }
         }
 
-        Ok(infer_target_type(ref_param))
+        Ok(crate::search::chain_resolver::infer_target_type(ref_param))
     }
 
     fn resolve_terminal_type(
@@ -625,31 +643,6 @@ fn parse_chain_part(part: &str) -> (String, Option<String>) {
         (param.to_string(), Some(type_mod.to_string()))
     } else {
         (part.to_string(), None)
-    }
-}
-
-/// Hardcoded fallback for ambiguous reference targets, matching SQLite's
-/// `chain_builder::infer_target_type` so chained queries pick the same
-/// default on both backends. See the open-question note in the plan about
-/// migrating this to a registry-driven first-target pick later.
-fn infer_target_type(ref_param: &str) -> String {
-    match ref_param {
-        "patient" | "subject" => "Patient".to_string(),
-        "practitioner" | "performer" | "requester" | "author" => "Practitioner".to_string(),
-        "organization" | "managingOrganization" | "custodian" => "Organization".to_string(),
-        "encounter" | "context" => "Encounter".to_string(),
-        "location" => "Location".to_string(),
-        "device" => "Device".to_string(),
-        "specimen" => "Specimen".to_string(),
-        "medication" => "Medication".to_string(),
-        "condition" => "Condition".to_string(),
-        _ => {
-            let mut chars = ref_param.chars();
-            match chars.next() {
-                Some(c) => c.to_uppercase().chain(chars).collect(),
-                None => ref_param.to_string(),
-            }
-        }
     }
 }
 

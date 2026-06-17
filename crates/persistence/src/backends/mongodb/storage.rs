@@ -342,7 +342,7 @@ fn parse_history_row(
     let last_updated = extract_last_updated(doc, now);
     let is_deleted = doc.get_bool("is_deleted").unwrap_or(false);
     let deleted_at = extract_deleted_at(doc).or(if is_deleted { Some(last_updated) } else { None });
-    let fhir_version = extract_fhir_version(doc, FhirVersion::default());
+    let fhir_version = extract_fhir_version(doc, FhirVersion::default_enabled());
 
     Ok(ParsedHistoryRow {
         resource_type,
@@ -406,7 +406,7 @@ fn document_to_stored_resource(
     let created_at = extract_created_at(doc, now);
     let last_updated = extract_last_updated(doc, now);
     let deleted_at = extract_deleted_at(doc);
-    let fhir_version = extract_fhir_version(doc, FhirVersion::default());
+    let fhir_version = extract_fhir_version(doc, FhirVersion::default_enabled());
 
     Ok(StoredResource::from_storage(
         resource_type,
@@ -515,6 +515,16 @@ async fn commit_best_effort_multi_write_session(
 impl ResourceStorage for MongoBackend {
     fn backend_name(&self) -> &'static str {
         "mongodb"
+    }
+
+    fn sof_runner(&self) -> Option<std::sync::Arc<dyn crate::core::sof_runner::SofRunner>> {
+        use crate::sof::mongodb::MongoInDbRunner;
+        // Native in-DB runner: compiles the ViewDefinition to an aggregation
+        // pipeline executed against the `resources` collection.
+        Some(std::sync::Arc::new(MongoInDbRunner::new(
+            self.client_cell(),
+            self.config().clone(),
+        )))
     }
 
     async fn create(
@@ -740,7 +750,7 @@ impl ResourceStorage for MongoBackend {
         let now = Utc::now();
         let created_at = extract_created_at(&doc, now);
         let last_updated = extract_last_updated(&doc, now);
-        let fhir_version = extract_fhir_version(&doc, FhirVersion::default());
+        let fhir_version = extract_fhir_version(&doc, FhirVersion::default_enabled());
 
         Ok(Some(StoredResource::from_storage(
             resource_type,
@@ -1168,7 +1178,7 @@ impl MongoBackend {
         self.delete_search_index(db, tenant_id, resource_type, resource_id, session)
             .await?;
 
-        let index_docs = match self.search_extractor().extract(resource, resource_type) {
+        let mut index_docs = match self.search_extractor().extract(resource, resource_type) {
             Ok(values) => values
                 .iter()
                 .filter_map(|value| {
@@ -1190,6 +1200,25 @@ impl MongoBackend {
                 )
             }
         };
+
+        // Also index any contained resources for `_contained` search. These rows
+        // share the container's (resource_type, resource_id) — so the earlier
+        // delete-by-(type,id) cleans them too — but are flagged `is_contained`
+        // and carry the contained resource's type and local id.
+        for contained in self.search_extractor().extract_contained(resource) {
+            for value in &contained.values {
+                if let Some(d) = self.build_contained_index_document(
+                    tenant_id,
+                    resource_type,
+                    resource_id,
+                    &contained.contained_type,
+                    &contained.local_id,
+                    value,
+                ) {
+                    index_docs.push(d);
+                }
+            }
+        }
 
         if index_docs.is_empty() {
             return Ok(());
@@ -1342,6 +1371,27 @@ impl MongoBackend {
             doc.insert("composite_group", group as i32);
         }
 
+        Some(doc)
+    }
+
+    /// Builds a contained-resource search-index document (`_contained` search):
+    /// the same value columns as [`Self::build_search_index_document`], with the
+    /// container's `(resource_type, resource_id)`, flagged `is_contained` and
+    /// carrying the contained resource's type and local id.
+    fn build_contained_index_document(
+        &self,
+        tenant_id: &str,
+        container_type: &str,
+        container_id: &str,
+        contained_type: &str,
+        contained_local_id: &str,
+        value: &ExtractedValue,
+    ) -> Option<Document> {
+        let mut doc =
+            self.build_search_index_document(tenant_id, container_type, container_id, value)?;
+        doc.insert("is_contained", true);
+        doc.insert("contained_type", contained_type);
+        doc.insert("contained_local_id", contained_local_id);
         Some(doc)
     }
 
@@ -2270,7 +2320,7 @@ impl MongoBackend {
         let now = Utc::now();
         let now_bson = chrono_to_bson(now);
         let version_id = "1".to_string();
-        let fhir_version = FhirVersion::default();
+        let fhir_version = FhirVersion::default_enabled();
         let fhir_version_str = fhir_version.as_mime_param().to_string();
 
         resources
