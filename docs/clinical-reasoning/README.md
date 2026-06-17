@@ -186,6 +186,7 @@ Checklist before expecting CMS165 (or similar eCQM) to evaluate cleanly:
 - [Data import](./data-import.md) — terminology, clinical, **KR libraries (eCQM + Atrius)**
 - [CDS prefetch](./cds-prefetch.md) — client vs backend responsibilities
 - [Troubleshooting](./troubleshooting.md) — empty ValueSet expansions, 404s, version mismatches
+- [Upstream merge guide](./upstream-merge.md) — syncing Helios `main` into feat branches cleanly
 - [HTS ↔ CQFramework](../../crates/hts/docs/cqframework_terminology.md) — terminology provider compatibility
 
 ## JVM sidecar (external)

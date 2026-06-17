@@ -24,3 +24,6 @@ AGENTS.md
 /test-artifacts
 
 /crates/fhir/tests/
+/crates/hts/terminology-data/
+/crates/hts/data/
+/deploy/kr/.env.kr
