@@ -1,0 +1,23 @@
+[Unit]
+Description=Atrius cds-server (CDS Hooks discovery and invoke)
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+After=network-online.target atrius-cql-sidecar.service
+Wants=atrius-cql-sidecar.service
+
+[Service]
+Type=simple
+User=atrius
+Group=atrius
+WorkingDirectory=/opt/atrius
+EnvironmentFile=-/etc/atrius/cds-server.env
+ExecStart=/opt/atrius/bin/cds-server
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=atrius-clinical-reasoning.target

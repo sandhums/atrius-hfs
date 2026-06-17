@@ -291,7 +291,7 @@ mod resolve_function;
 mod resource_type;
 mod set_operations;
 mod subset_functions;
-mod terminology_client;
+pub mod terminology_client;
 mod terminology_functions;
 mod trace_function;
 mod type_function;

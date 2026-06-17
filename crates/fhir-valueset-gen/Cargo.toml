@@ -1,0 +1,22 @@
+[package]
+name = "atrius-fhir-valueset-gen"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["R4"]
+R4 = ["helios-fhir-gen/R4"]
+R4B = ["helios-fhir-gen/R4B"]
+R5 = ["helios-fhir-gen/R5"]
+R6 = ["helios-fhir-gen/R6"]
+
+[dependencies]
+helios-fhir-gen = { path = "../fhir-gen", default-features = false}
+serde = { workspace = true}
+serde_json =  { workspace = true }
+anyhow = "1.0"
+rust_decimal = "1.40.0"

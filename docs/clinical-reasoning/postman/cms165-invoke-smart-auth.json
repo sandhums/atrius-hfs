@@ -1,0 +1,21 @@
+{
+  "hook": "patient-view",
+  "hookInstance": "postman-smart-auth",
+  "fhirServer": "https://ehr.example.com/fhir",
+  "fhirAuthorization": {
+    "access_token": "REPLACE_WITH_EHR_ISSUED_TOKEN",
+    "token_type": "Bearer",
+    "expires_in": 300,
+    "scope": "user/Patient.read user/Observation.read user/Condition.read user/Encounter.read",
+    "subject": "atriuscms165controllinghighbp"
+  },
+  "context": {
+    "patientId": "cms165-demo",
+    "userId": "Practitioner/example",
+    "measurementPeriod": {
+      "low": "2026-01-01",
+      "high": "2026-12-31"
+    }
+  },
+  "prefetch": {}
+}

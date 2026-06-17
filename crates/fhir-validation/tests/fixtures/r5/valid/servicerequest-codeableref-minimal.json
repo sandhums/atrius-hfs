@@ -1,0 +1,24 @@
+{
+  "resourceType": "ServiceRequest",
+  "id": "minimal-codeableref",
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Minimal ServiceRequest for binding tests</div>"
+  },
+  "status": "active",
+  "intent": "order",
+  "subject": {
+    "reference": "Patient/example"
+  },
+  "code": {
+    "concept": {
+      "coding": [
+        {
+          "system": "http://snomed.info/sct",
+          "code": "3981005",
+          "display": "Carrier detection, molecular genetics (procedure)"
+        }
+      ]
+    }
+  }
+}

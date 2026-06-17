@@ -1597,7 +1597,7 @@ fn generate_type_hierarchy_module(
 /// assert_eq!(make_rust_safe("type"), "r#type");
 /// assert_eq!(make_rust_safe("abstract"), "r#abstract");
 /// ```
-fn make_rust_safe(input: &str) -> String {
+pub fn make_rust_safe(input: &str) -> String {
     let snake_case = input
         .chars()
         .enumerate()

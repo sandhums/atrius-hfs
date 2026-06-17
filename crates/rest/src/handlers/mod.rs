@@ -35,6 +35,7 @@ pub mod subscription_event;
 #[cfg(feature = "subscriptions")]
 pub mod subscriptions;
 pub mod update;
+pub mod validate;
 pub mod versions;
 pub mod vread;
 #[cfg(feature = "subscriptions")]

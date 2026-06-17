@@ -23,6 +23,9 @@
 //! | `HFS_TENANT_STRICT_VALIDATION` | false | Error if URL and header tenant disagree |
 //! | `HFS_JWT_TENANT_CLAIM` | tenant_id | JWT claim name for tenant (future use) |
 //! | `HFS_TERMINOLOGY_SERVER` | (none) | HTS base URL for `:in`/`:not-in` search and FHIRPath terminology functions |
+//! | `HFS_PROFILE_MANIFEST` | (none) | JSON manifest of NDHM/ABDM StructureDefinitions for profile validation |
+//! | `HFS_PROFILE_VALIDATION_MODE` | off | Profile validation on writes: `off`, `warn`, `strict` |
+//! | `HFS_PROFILE_VALIDATION_ADDONS` | false | Optional: strict JSON keys + HL7 base SD add-ons (needs core SD in manifest; off for full-snapshot NDHM) |
 //!
 //! # Example
 //!
@@ -45,9 +48,21 @@ use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use helios_fhir::FhirVersion;
 use helios_persistence::BackendKind;
+
+/// How profile validation affects create/update/patch/batch writes.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum ProfileValidationMode {
+    /// No profile validation on writes (`$validate` still available when manifest is loaded).
+    #[default]
+    Off,
+    /// Log validation issues but persist resources.
+    Warn,
+    /// Reject writes with error-level validation issues (HTTP 422 + OperationOutcome).
+    Strict,
+}
 
 /// Storage backend mode.
 ///
@@ -838,6 +853,19 @@ pub struct ServerConfig {
     #[arg(long, env = "HFS_TERMINOLOGY_SERVER")]
     pub terminology_server: Option<String>,
 
+    /// Path to IG profile manifest JSON (`structure_definition_files` for NDHM/ABDM).
+    #[arg(long, env = "HFS_PROFILE_MANIFEST")]
+    pub profile_manifest: Option<PathBuf>,
+
+    /// Profile validation on writes: `off`, `warn`, or `strict`.
+    #[arg(long, env = "HFS_PROFILE_VALIDATION_MODE", default_value = "off")]
+    pub profile_validation_mode: ProfileValidationMode,
+
+    /// Optional strict JSON / HL7-base add-ons (requires HL7 core `StructureDefinition` in the
+    /// manifest). Off by default: NDHM/ABDM snapshots already embed the R4 base tree.
+    #[arg(long, env = "HFS_PROFILE_VALIDATION_ADDONS", default_value_t = false)]
+    pub profile_validation_addons: bool,
+
     /// Multitenancy configuration (loaded from environment variables).
     #[arg(skip)]
     pub multitenancy: MultitenancyConfig,
@@ -900,6 +928,9 @@ impl Default for ServerConfig {
             sof_sqlquery_max_vds: 16,
             sof_sqlquery_timeout_secs: 30,
             terminology_server: None,
+            profile_manifest: None,
+            profile_validation_mode: ProfileValidationMode::Off,
+            profile_validation_addons: false,
             multitenancy: MultitenancyConfig::default(),
             bulk_export: BulkExportConfig::default(),
             bulk_submit: BulkSubmitConfig::default(),
@@ -1018,6 +1049,9 @@ impl ServerConfig {
             sof_sqlquery_max_vds: 16,
             sof_sqlquery_timeout_secs: 30,
             terminology_server: None,
+            profile_manifest: None,
+            profile_validation_mode: ProfileValidationMode::Off,
+            profile_validation_addons: false,
             multitenancy: MultitenancyConfig::default(),
             bulk_export: BulkExportConfig::default(),
             bulk_submit: BulkSubmitConfig::default(),

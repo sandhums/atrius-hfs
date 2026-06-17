@@ -43,6 +43,40 @@ impl SmartConfiguration {
             grant_types_supported.push("authorization_code".to_string());
         }
 
+        let mut scopes_supported = vec![
+            "system/*.cruds".to_string(),
+            "system/*.rs".to_string(),
+            "system/*.r".to_string(),
+        ];
+        let mut capabilities = vec![
+            "permission-v2".to_string(),
+            "client-confidential-asymmetric".to_string(),
+        ];
+        let mut token_endpoint_auth_methods_supported = vec!["private_key_jwt".to_string()];
+
+        if config.smart_authorize_endpoint.is_some() {
+            scopes_supported.extend([
+                "openid".to_string(),
+                "profile".to_string(),
+                "fhirUser".to_string(),
+                "launch/patient".to_string(),
+                "launch/encounter".to_string(),
+                "user/Patient.rs".to_string(),
+                "user/Encounter.rs".to_string(),
+                "user/QuestionnaireResponse.c".to_string(),
+                "user/QuestionnaireResponse.rs".to_string(),
+                "user/Condition.rs".to_string(),
+                "user/Observation.rs".to_string(),
+            ]);
+            capabilities.extend([
+                "launch-ehr".to_string(),
+                "context-ehr-launch".to_string(),
+                "client-public".to_string(),
+            ]);
+            token_endpoint_auth_methods_supported.push("client_secret_post".to_string());
+            token_endpoint_auth_methods_supported.push("none".to_string());
+        }
+
         Self {
             issuer: config.expected_issuer.clone(),
             jwks_uri: config
@@ -55,23 +89,16 @@ impl SmartConfiguration {
             management_endpoint: config.smart_management_endpoint.clone(),
             registration_endpoint: config.smart_registration_endpoint.clone(),
             revocation_endpoint: config.smart_revocation_endpoint.clone(),
-            scopes_supported: vec![
-                "system/*.cruds".to_string(),
-                "system/*.rs".to_string(),
-                "system/*.r".to_string(),
-            ],
+            scopes_supported,
             response_types_supported,
             grant_types_supported,
-            token_endpoint_auth_methods_supported: vec!["private_key_jwt".to_string()],
+            token_endpoint_auth_methods_supported,
             code_challenge_methods_supported: vec!["S256".to_string()],
             token_endpoint_auth_signing_alg_values_supported: vec![
                 "RS384".to_string(),
                 "ES384".to_string(),
             ],
-            capabilities: vec![
-                "permission-v2".to_string(),
-                "client-confidential-asymmetric".to_string(),
-            ],
+            capabilities,
         }
     }
 
@@ -122,6 +149,12 @@ mod tests {
             smart.jwks_uri.as_deref(),
             Some("https://idp.example.com/.well-known/jwks.json")
         );
+        assert!(
+            smart
+                .scopes_supported
+                .contains(&"launch/patient".to_string())
+        );
+        assert!(smart.capabilities.contains(&"launch-ehr".to_string()));
     }
 
     #[test]

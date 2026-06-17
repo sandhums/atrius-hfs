@@ -1,0 +1,43 @@
+[package]
+name = "cr-fhir-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "HTTP reverse proxy: clinical HFS reads with Atrius→QI-Core runtime projection for CQL sidecar hfsBaseUrl."
+readme = "README.md"
+keywords = ["fhir", "qicore", "clinical-reasoning", "proxy", "atrius"]
+
+[lib]
+name = "cr_fhir_bridge"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cr-fhir-bridge"
+path = "src/main.rs"
+
+[dependencies]
+atrius-clinical-reasoning = { path = "../atrius-clinical-reasoning" }
+atrius-runtime-mapper = { path = "../atrius-runtime-mapper" }
+anyhow = "1"
+axum = { version = "0.8", features = ["json"] }
+bytes = "1"
+chrono = { workspace = true }
+clap = { version = "4", features = ["derive", "env"] }
+http = "1"
+http-body-util = "0.1"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.5", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+axum = { version = "0.8", features = ["json"] }
+tower = { version = "0.5", features = ["full"] }
+wiremock = "0.6"

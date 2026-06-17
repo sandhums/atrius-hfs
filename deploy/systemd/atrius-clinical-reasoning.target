@@ -1,0 +1,14 @@
+[Unit]
+Description=Atrius Clinical Reasoning Stack (HTS, HFS, bridge, sidecar, cds-server)
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+Wants=atrius-hts.service
+Wants=atrius-hfs-clinical.service
+Wants=atrius-hfs-kr.service
+Wants=atrius-cr-fhir-bridge.service
+Wants=atrius-cql-sidecar.service
+Wants=atrius-cds-server.service
+After=atrius-hts.service atrius-hfs-clinical.service atrius-hfs-kr.service
+After=atrius-cr-fhir-bridge.service atrius-cql-sidecar.service atrius-cds-server.service
+
+[Install]
+WantedBy=multi-user.target

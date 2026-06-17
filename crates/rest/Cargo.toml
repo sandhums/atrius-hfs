@@ -15,10 +15,10 @@ categories = ["web-programming", "database"]
 default = ["R4", "sqlite"]
 
 # FHIR version features (pass through to helios-fhir, helios-persistence, helios-audit, helios-serde, helios-sof, helios-subscriptions)
-R4 = ["helios-fhir/R4", "helios-persistence/R4", "helios-audit/R4", "helios-serde?/R4", "helios-sof/R4", "helios-subscriptions?/R4"]
-R4B = ["helios-fhir/R4B", "helios-persistence/R4B", "helios-audit/R4B", "helios-serde?/R4B", "helios-sof/R4B", "helios-subscriptions?/R4B"]
-R5 = ["helios-fhir/R5", "helios-persistence/R5", "helios-audit/R5", "helios-serde?/R5", "helios-sof/R5", "helios-subscriptions?/R5"]
-R6 = ["helios-fhir/R6", "helios-persistence/R6", "helios-audit/R6", "helios-serde?/R6", "helios-sof/R6", "helios-subscriptions?/R6"]
+R4 = ["helios-fhir/R4", "helios-persistence/R4", "helios-audit/R4", "helios-serde?/R4", "helios-sof/R4", "helios-subscriptions?/R4", "fhir-validation/R4"]
+R4B = ["helios-fhir/R4B", "helios-persistence/R4B", "helios-audit/R4B", "helios-serde?/R4B", "helios-sof/R4B", "helios-subscriptions?/R4B", "fhir-validation/R4B"]
+R5 = ["helios-fhir/R5", "helios-persistence/R5", "helios-audit/R5", "helios-serde?/R5", "helios-sof/R5", "helios-subscriptions?/R5", "fhir-validation/R5"]
+R6 = ["helios-fhir/R6", "helios-persistence/R6", "helios-audit/R6", "helios-serde?/R6", "helios-sof/R6", "helios-subscriptions?/R6", "fhir-validation/R6"]
 
 # Serialization format features
 xml = ["helios-fhir/xml", "dep:helios-serde", "helios-serde?/xml"]
@@ -44,6 +44,7 @@ bulk-submit-jwe = ["dep:aes-gcm"]
 [dependencies]
 # Core dependencies
 helios-fhir = { path = "../fhir", version = "0.2.0", default-features = false }
+fhir-validation = { path = "../fhir-validation", version = "0.2.0", default-features = false }
 helios-persistence = { path = "../persistence", version = "0.2.0", default-features = false }
 helios-serde = { path = "../serde", version = "0.2.0", optional = true, default-features = false }
 helios-sof = { path = "../sof", version = "0.2.0", default-features = false }

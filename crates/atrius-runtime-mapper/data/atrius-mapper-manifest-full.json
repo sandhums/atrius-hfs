@@ -1,0 +1,321 @@
+{
+  "profile_mappings": [
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-patient",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-patient",
+      "resource_type": "Patient"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-encounter",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter",
+      "resource_type": "Encounter"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-familymemberhistory",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-familymemberhistory",
+      "resource_type": "FamilyMemberHistory"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-flag",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-flag",
+      "resource_type": "Flag"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-goal",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-goal",
+      "resource_type": "Goal"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-practitioner",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-practitioner",
+      "resource_type": "Practitioner"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-practitionerrole",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-practitionerrole",
+      "resource_type": "PractitionerRole"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-organization",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-organization",
+      "resource_type": "Organization"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-relatedperson",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-relatedperson",
+      "resource_type": "RelatedPerson"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-coverage",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-coverage",
+      "resource_type": "Coverage"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-encounter-diagnosis",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-encounter-diagnosis",
+      "resource_type": "Condition"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-problems-health-concerns",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns",
+      "resource_type": "Condition"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-allergyintolerance",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-allergyintolerance",
+      "resource_type": "AllergyIntolerance"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-adverseevent",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-adverseevent",
+      "resource_type": "AdverseEvent"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-bodystructure",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-bodystructure",
+      "resource_type": "BodyStructure"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-device",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-device",
+      "resource_type": "Device"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-devicerequest",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-devicerequest",
+      "resource_type": "DeviceRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-devicerequest-requested",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-devicerequest-requested",
+      "resource_type": "DeviceRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-devicerequest-prohibited",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-devicerequest-prohibited",
+      "resource_type": "DeviceRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-deviceusestatement",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-deviceusestatement",
+      "resource_type": "DeviceUseStatement"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-diagnosticreport-lab",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-diagnosticreport-lab",
+      "resource_type": "DiagnosticReport"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-diagnosticreport-note",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-diagnosticreport-note",
+      "resource_type": "DiagnosticReport"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-imagingstudy",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-imagingstudy",
+      "resource_type": "ImagingStudy"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-immunization",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-immunization",
+      "resource_type": "Immunization"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-immunization-done",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-immunization-done",
+      "resource_type": "Immunization"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-immunization-not-done",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-immunization-not-done",
+      "resource_type": "Immunization"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-immunizationrecommendation",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-immunizationrecommendation",
+      "resource_type": "ImmunizationRecommendation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-immunizationevaluation",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-immunizationevaluation",
+      "resource_type": "ImmunizationEvaluation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-location",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-location",
+      "resource_type": "Location"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-observation-lab",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-body-measurement",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-simple-observation",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-general-assessment",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-observation-screening-assessment",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-lifestyle",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-observation-screening-assessment",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-physical-activity",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-simple-observation",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-vital-signs",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-simple-observation",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-women-health",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-observation-screening-assessment",
+      "resource_type": "Observation"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-careplan",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-careplan",
+      "resource_type": "CarePlan"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-careplan-assess-plan",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-careplan",
+      "resource_type": "CarePlan"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-careteam",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-careteam",
+      "resource_type": "CareTeam"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-communication",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-communication",
+      "resource_type": "Communication"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-communication-not-done",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-communication-not-done",
+      "resource_type": "Communication"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-communicationrequest",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-communicationrequest",
+      "resource_type": "CommunicationRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-claim",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-claim",
+      "resource_type": "Claim"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-claimresponse",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-claimresponse",
+      "resource_type": "ClaimResponse"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medication",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medication",
+      "resource_type": "Medication"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationrequest",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationrequest",
+      "resource_type": "MedicationRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationrequest-requested",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationrequest-requested",
+      "resource_type": "MedicationRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationrequest-prohibited",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationrequest-prohibited",
+      "resource_type": "MedicationRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationstatement",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationstatement",
+      "resource_type": "MedicationStatement"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationadministration",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationadministration",
+      "resource_type": "MedicationAdministration"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationadministration-not-done",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationadministration-not-done",
+      "resource_type": "MedicationAdministration"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationdispense",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationdispense",
+      "resource_type": "MedicationDispense"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-medicationdispense-declined",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationdispense-declined",
+      "resource_type": "MedicationDispense"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-nutritionorder",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-nutritionorder",
+      "resource_type": "NutritionOrder"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-procedure",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure",
+      "resource_type": "Procedure"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-procedure-not-done",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure-not-done",
+      "resource_type": "Procedure"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-servicerequest",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-servicerequest",
+      "resource_type": "ServiceRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-servicerequest-not-requested",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-servicerequest-not-requested",
+      "resource_type": "ServiceRequest"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-questionnaireresponse",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-questionnaireresponse",
+      "resource_type": "QuestionnaireResponse"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-specimen",
+      "evaluation_profile": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-specimen",
+      "resource_type": "Specimen"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-substance",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-substance",
+      "resource_type": "Substance"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-task",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-task",
+      "resource_type": "Task"
+    },
+    {
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-task-rejected",
+      "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-task-rejected",
+      "resource_type": "Task"
+    }
+  ],
+  "condition_encounter_diagnosis_evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-encounter-diagnosis",
+  "condition_problems_health_concerns_evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns"
+}

@@ -1,0 +1,24 @@
+[Unit]
+Description=Atrius Clinical HFS (Atrius-profile patient chart)
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+After=network-online.target atrius-hts.service
+Wants=network-online.target atrius-hts.service
+
+[Service]
+Type=simple
+User=atrius
+Group=atrius
+WorkingDirectory=/opt/atrius
+EnvironmentFile=-/etc/atrius/hfs-clinical.env
+ExecStart=/opt/atrius/bin/hfs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+ReadWritePaths=/opt/atrius/data
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=atrius-clinical-reasoning.target

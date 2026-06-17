@@ -1,0 +1,25 @@
+[Unit]
+Description=Atrius HTS (Helios Terminology Server)
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=atrius
+Group=atrius
+WorkingDirectory=/opt/atrius
+EnvironmentFile=-/etc/atrius/hts.env
+ExecStart=/opt/atrius/bin/hts run
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# SQLite + imports under /opt/atrius/data
+ReadWritePaths=/opt/atrius/data
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=atrius-clinical-reasoning.target

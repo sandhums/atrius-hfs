@@ -99,8 +99,9 @@ pub mod service;
 // Re-export primary types at the crate root for convenience.
 pub use hooks::{
     AllergyIntoleranceCreateContext, AppointmentBookContext, EncounterDischargeContext,
-    EncounterStartContext, MedicationRefillContext, OrderDispatchContext, OrderSelectContext,
-    OrderSignContext, PatientViewContext, ProblemListItemCreateContext,
+    EncounterStartContext, LIBRARY_HOOK_NAMES, MeasurementPeriodContext, MedicationRefillContext,
+    OrderDispatchContext, OrderSelectContext, OrderSignContext, PatientViewContext,
+    ProblemListItemCreateContext, is_library_hook,
 };
 pub use models::{
     AcceptedSuggestion, Action, ActionSelectionBehavior, ActionType, Card, CdsRequest, CdsResponse,

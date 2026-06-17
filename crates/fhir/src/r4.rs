@@ -191276,3 +191276,6 @@ pub fn get_field_type(parent_type: &str, field_name: &str) -> Option<(&'static s
             (ty, coll)
         })
 }
+
+/// Generated ValueSet / CodeSystem binding tables for validation.
+pub mod terminology;

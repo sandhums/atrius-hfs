@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 ///     user_id: "Practitioner/123".to_string(),
 ///     patient_id: "456".to_string(),
 ///     encounter_id: None,
+///     measurement_period: None,
 /// };
 ///
 /// assert_eq!(PatientViewContext::HOOK_NAME, "patient-view");
@@ -59,6 +60,20 @@ pub trait HookContext: Serialize + for<'de> Deserialize<'de> + Send + Sync {
 // patient-view (Maturity 5 - Mature)
 // ---------------------------------------------------------------------------
 
+/// eCQM measure **reporting interval** supplied on CDS hook context (Atrius extension).
+///
+/// Maps to the CQL `Measurement Period` parameter. The EHR / CDS client sets this on each
+/// `POST /cds-services/{id}` invoke for the reporting window being evaluated.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MeasurementPeriodContext {
+    /// Interval start (inclusive). Alias: `start`.
+    #[serde(alias = "start")]
+    pub low: String,
+    /// Interval end (inclusive). Alias: `end`.
+    #[serde(alias = "end")]
+    pub high: String,
+}
+
 /// Context for the **patient-view** hook.
 ///
 /// Fires when a user opens a patient's record. Typically called only once at
@@ -79,7 +94,8 @@ pub trait HookContext: Serialize + for<'de> Deserialize<'de> + Send + Sync {
 /// {
 ///   "userId": "PractitionerRole/123",
 ///   "patientId": "1288992",
-///   "encounterId": "456"
+///   "encounterId": "456",
+///   "measurementPeriod": { "low": "2026-01-01", "high": "2026-12-31" }
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -99,6 +115,11 @@ pub struct PatientViewContext {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "encounterId")]
     pub encounter_id: Option<String>,
+
+    /// eCQM reporting interval for this hook invocation (→ CQL `Measurement Period`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "measurementPeriod")]
+    pub measurement_period: Option<MeasurementPeriodContext>,
 }
 
 impl HookContext for PatientViewContext {
@@ -705,6 +726,29 @@ impl HookContext for ProblemListItemCreateContext {
 }
 
 // ---------------------------------------------------------------------------
+// Hook registry (CDS Hooks Library)
+// ---------------------------------------------------------------------------
+
+/// All hook names from the [CDS Hooks Library](https://cds-hooks.hl7.org/hooks/) implemented in this crate.
+pub const LIBRARY_HOOK_NAMES: &[&str] = &[
+    AllergyIntoleranceCreateContext::HOOK_NAME,
+    AppointmentBookContext::HOOK_NAME,
+    EncounterDischargeContext::HOOK_NAME,
+    EncounterStartContext::HOOK_NAME,
+    MedicationRefillContext::HOOK_NAME,
+    OrderDispatchContext::HOOK_NAME,
+    OrderSelectContext::HOOK_NAME,
+    OrderSignContext::HOOK_NAME,
+    PatientViewContext::HOOK_NAME,
+    ProblemListItemCreateContext::HOOK_NAME,
+];
+
+/// Returns true when `name` is a supported CDS Hooks Library hook.
+pub fn is_library_hook(name: &str) -> bool {
+    LIBRARY_HOOK_NAMES.contains(&name)
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -713,11 +757,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn library_hook_registry_lists_all_hooks() {
+        assert_eq!(LIBRARY_HOOK_NAMES.len(), 10);
+        assert!(is_library_hook("encounter-start"));
+        assert!(is_library_hook("order-sign"));
+        assert!(!is_library_hook("medication-prescribe"));
+    }
+
+    #[test]
     fn test_patient_view_context() {
         let ctx = PatientViewContext {
             user_id: "PractitionerRole/123".to_string(),
             patient_id: "1288992".to_string(),
             encounter_id: Some("456".to_string()),
+            measurement_period: None,
         };
 
         let json = serde_json::to_value(&ctx).unwrap();
@@ -733,10 +786,24 @@ mod tests {
             user_id: "Practitioner/abc".to_string(),
             patient_id: "1288992".to_string(),
             encounter_id: None,
+            measurement_period: None,
         };
 
         let json = serde_json::to_string(&ctx).unwrap();
         assert!(!json.contains("encounterId"));
+    }
+
+    #[test]
+    fn test_patient_view_measurement_period_context() {
+        let json = serde_json::json!({
+            "userId": "Practitioner/example",
+            "patientId": "cms165-demo",
+            "measurementPeriod": { "low": "2026-01-01", "high": "2026-12-31" }
+        });
+        let ctx: PatientViewContext = serde_json::from_value(json).unwrap();
+        let mp = ctx.measurement_period.expect("mp");
+        assert_eq!(mp.low, "2026-01-01");
+        assert_eq!(mp.high, "2026-12-31");
     }
 
     #[test]

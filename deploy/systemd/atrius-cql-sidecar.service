@@ -1,0 +1,23 @@
+[Unit]
+Description=Atrius JVM CQL clinical reasoning sidecar
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+After=network-online.target atrius-cr-fhir-bridge.service atrius-hts.service atrius-hfs-kr.service
+Wants=atrius-cr-fhir-bridge.service atrius-hts.service atrius-hfs-kr.service
+
+[Service]
+Type=simple
+User=atrius
+Group=atrius
+WorkingDirectory=/opt/atrius
+EnvironmentFile=-/etc/atrius/cql-sidecar.env
+ExecStart=/opt/atrius/bin/run-cql-sidecar.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60
+
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=atrius-clinical-reasoning.target

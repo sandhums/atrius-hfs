@@ -1,0 +1,171 @@
+{
+  "info": {
+    "name": "Atrius CDS Hooks — CMS165",
+    "description": "CDS Hooks discovery and invoke examples for Atrius CMS165 (atriuscms165controllinghighbp).\n\nContract: GET /cds-services returns prefetch *templates*; the CDS client resolves them and POSTs populated prefetch on invoke. See docs/clinical-reasoning/startup-guide.md (CDS client responsibilities).\n\nPrerequisites: cr-fhir-bridge (8081), cds-server (8095), sidecar (8088), import-cms165-demo.py --verify.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "cds_base",
+      "value": "http://127.0.0.1:8095"
+    },
+    {
+      "key": "bridge_base",
+      "value": "http://127.0.0.1:8081"
+    },
+    {
+      "key": "patient_id",
+      "value": "cms165-demo"
+    },
+    {
+      "key": "service_id",
+      "value": "atriuscms165controllinghighbp"
+    },
+    {
+      "key": "measurement_period_low",
+      "value": "2026-01-01"
+    },
+    {
+      "key": "measurement_period_high",
+      "value": "2026-12-31"
+    },
+    {
+      "key": "cds_invoke_body",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Discovery — CMS165 prefetch templates",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{cds_base}}/cds-services",
+        "description": "Returns CDS service catalog. Each service includes prefetch templates (FHIR search URLs with {{context.patientId}}). The CDS client resolves these — cds-server does not."
+      },
+      "response": []
+    },
+    {
+      "name": "Invoke — context + measurement period only",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"hook\": \"patient-view\",\n  \"hookInstance\": \"postman-context-only\",\n  \"context\": {\n    \"patientId\": \"{{patient_id}}\",\n    \"userId\": \"Practitioner/example\",\n    \"measurementPeriod\": {\n      \"low\": \"{{measurement_period_low}}\",\n      \"high\": \"{{measurement_period_high}}\"\n    }\n  },\n  \"prefetch\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{cds_base}}/cds-services/{{service_id}}",
+        "description": "Minimal invoke: hook context includes measurementPeriod; empty prefetch. Sidecar fetches clinical data via REST (CDS_HFS_BASE_URL / bridge). Expect cards JSON on 200; plain text on 502/412."
+      },
+      "response": []
+    },
+    {
+      "name": "Invoke — client-simulated prefetch",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const bridge = pm.collectionVariables.get('bridge_base').replace(/\\/$/, '');",
+              "const patient = pm.collectionVariables.get('patient_id');",
+              "const mpLow = pm.collectionVariables.get('measurement_period_low');",
+              "const mpHigh = pm.collectionVariables.get('measurement_period_high');",
+              "",
+              "const fetches = [",
+              "  ['patient', `/Patient/${patient}`],",
+              "  ['conditions', `/Condition?patient=${patient}`],",
+              "  ['encounters', `/Encounter?patient=${patient}`],",
+              "  ['observations', `/Observation?patient=${patient}`],",
+              "  ['procedures', `/Procedure?patient=${patient}`],",
+              "  ['medicationRequests', `/MedicationRequest?patient=${patient}`],",
+              "  ['immunizations', `/Immunization?patient=${patient}`],",
+              "  ['diagnosticReports', `/DiagnosticReport?patient=${patient}`],",
+              "  ['serviceRequests', `/ServiceRequest?patient=${patient}`],",
+              "  ['allergies', `/AllergyIntolerance?patient=${patient}`],",
+              "  ['coverage', `/Coverage?beneficiary=Patient/${patient}`]",
+              "];",
+              "",
+              "const prefetch = {};",
+              "let pending = fetches.length;",
+              "",
+              "function emptyBundle() {",
+              "  return { resourceType: 'Bundle', type: 'searchset', entry: [] };",
+              "}",
+              "",
+              "function done() {",
+              "  if (--pending > 0) return;",
+              "  const body = {",
+              "    hook: 'patient-view',",
+              "    hookInstance: 'postman-client-simulated',",
+              "    context: {",
+              "      patientId: patient,",
+              "      userId: 'Practitioner/example',",
+              "      measurementPeriod: { low: mpLow, high: mpHigh }",
+              "    },",
+              "    prefetch",
+              "  };",
+              "  pm.variables.set('cds_invoke_body', JSON.stringify(body));",
+              "}",
+              "",
+              "fetches.forEach(([key, path]) => {",
+              "  pm.sendRequest(",
+              "    {",
+              "      url: bridge + path,",
+              "      method: 'GET',",
+              "      header: { Accept: 'application/fhir+json' }",
+              "    },",
+              "    (err, res) => {",
+              "      if (err || res.code !== 200) {",
+              "        console.warn('Prefetch fetch failed:', path, err || res.code);",
+              "        prefetch[key] = key === 'patient' ? null : emptyBundle();",
+              "      } else {",
+              "        prefetch[key] = res.json();",
+              "      }",
+              "      done();",
+              "    }",
+              "  );",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{cds_invoke_body}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{cds_base}}/cds-services/{{service_id}}",
+        "description": "Simulates a CDS client: pre-request script fetches standard chart prefetch from bridge_base, then POSTs populated prefetch + measurementPeriod. Equivalent to ./scripts/cds-cms165-prefetch-smoke.sh."
+      },
+      "response": []
+    }
+  ]
+}

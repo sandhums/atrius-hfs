@@ -290,6 +290,10 @@ where
             delete(handlers::conditional_delete_handler::<S>),
         )
         .route(
+            "/{resource_type}/$validate",
+            post(handlers::validate::type_validate_handler::<S>),
+        )
+        .route(
             "/{resource_type}/_search",
             post(handlers::search_post_handler::<S>),
         )
@@ -303,6 +307,10 @@ where
         .route(
             "/{resource_type}/{id}",
             head(handlers::head_read_handler::<S>),
+        )
+        .route(
+            "/{resource_type}/{id}/$validate",
+            post(handlers::validate::instance_validate_handler::<S>),
         )
         .route("/{resource_type}/{id}", put(handlers::update_handler::<S>))
         .route("/{resource_type}/{id}", patch(handlers::patch_handler::<S>))

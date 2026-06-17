@@ -1,0 +1,9 @@
+{
+  "_comment": "Paths are relative to repo root when HFS cwd is workspace root. Regenerate full NDHM manifest with: cargo run -p fhir-validation --example build_ig_profile_manifest -- /path/to/ndhm/package manifests/ndhm-r4-profile-manifest.json",
+  "structure_definition_files": [
+    "crates/fhir-validation/tests/fixtures/r4/profiles/StructureDefinition-Patient.json",
+    "crates/fhir-validation/tests/fixtures/r4/profiles/StructureDefinition-AtriusPatient.json"
+  ],
+  "code_system_files": [],
+  "value_set_files": []
+}

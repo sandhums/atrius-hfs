@@ -1,0 +1,24 @@
+[Unit]
+Description=Atrius Knowledge Repository HFS (eCQM libraries)
+Documentation=file:///opt/atrius/share/docs/production-deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=atrius
+Group=atrius
+WorkingDirectory=/opt/atrius
+EnvironmentFile=-/etc/atrius/hfs-kr.env
+ExecStart=/opt/atrius/bin/hfs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+ReadWritePaths=/opt/atrius/data
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=atrius-clinical-reasoning.target

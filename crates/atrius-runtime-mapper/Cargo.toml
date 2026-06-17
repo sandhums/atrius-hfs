@@ -1,0 +1,23 @@
+[package]
+name = "atrius-runtime-mapper"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Project Atrius/ABDM FHIR resources into QI-Core evaluation shapes for CQL sidecar execution."
+keywords = ["atrius", "fhir", "qicore", "clinical-reasoning", "mapper"]
+readme = "README.md"
+
+[lib]
+name = "atrius_runtime_mapper"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "2"
+
+[dev-dependencies]
+serde_json = { workspace = true }
