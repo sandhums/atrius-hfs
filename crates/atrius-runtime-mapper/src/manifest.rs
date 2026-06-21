@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{MapperError, MapperResult};
 
 /// Canonical Atrius StructureDefinition base from the Atrius IG.
-pub const ATRIUS_PROFILE_BASE: &str = "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/";
+pub const ATRIUS_PROFILE_BASE: &str = "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/";
 
 /// Default QI-Core evaluation targets for Condition branches (QI-Core STU6).
 pub const QICORE_CONDITION_ENCOUNTER_DIAGNOSIS: &str =
@@ -68,15 +68,15 @@ impl MapperManifest {
     pub fn default_v0_1() -> Self {
         Self {
             profile_mappings: vec![
-                profile_pair("atrius-patient", "qicore-patient", "Patient"),
-                profile_pair("atrius-encounter", "qicore-encounter", "Encounter"),
+                profile_pair("atrius-in-patient", "qicore-patient", "Patient"),
+                profile_pair("atrius-in-encounter", "qicore-encounter", "Encounter"),
                 profile_pair(
-                    "atrius-condition-encounter-diagnosis",
+                    "atrius-in-condition-encounter-diagnosis",
                     "qicore-condition-encounter-diagnosis",
                     "Condition",
                 ),
                 profile_pair(
-                    "atrius-condition-problems-health-concerns",
+                    "atrius-in-condition-problems-health-concerns",
                     "qicore-condition-problems-health-concerns",
                     "Condition",
                 ),
@@ -158,7 +158,7 @@ mod tests {
         m.validate().unwrap();
         assert!(
             m.evaluation_profile_index()
-                .contains_key(&format!("{ATRIUS_PROFILE_BASE}atrius-patient"))
+                .contains_key(&format!("{ATRIUS_PROFILE_BASE}atrius-in-patient"))
         );
     }
 

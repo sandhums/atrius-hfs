@@ -86,7 +86,7 @@ mod tests {
             "entry": [{
                 "resource": {
                     "resourceType": "Condition",
-                    "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-encounter-diagnosis"] },
+                    "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis"] },
                     "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "encounter-diagnosis" }] }],
                     "code": { "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "I10" }] }
                 }

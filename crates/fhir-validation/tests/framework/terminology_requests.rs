@@ -275,3 +275,25 @@ fn to_parameters_json_emits_date_and_flags() {
         Some(true)
     );
 }
+
+#[test]
+fn to_parameters_splits_piped_valueset_canonical() {
+    let req = ValidateVsRequest {
+        valueset_url: "http://hl7.org/fhir/ValueSet/encounter-participant-type|4.0.1".into(),
+        code: Some("ATND".into()),
+        system: Some("http://terminology.hl7.org/CodeSystem/v3-ParticipationType".into()),
+        ..Default::default()
+    };
+
+    let params = parameters(&req);
+    let url = find_param(&params, "url");
+    assert_eq!(
+        url.get("valueUri").and_then(|v| v.as_str()),
+        Some("http://hl7.org/fhir/ValueSet/encounter-participant-type")
+    );
+    let version = find_param(&params, "valueSetVersion");
+    assert_eq!(
+        version.get("valueString").and_then(|v| v.as_str()),
+        Some("4.0.1")
+    );
+}

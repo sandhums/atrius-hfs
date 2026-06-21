@@ -204,15 +204,14 @@ pub fn extract_structure_definition_profile_from_json(
                 .get("path")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| ValidationError::from(SdMsg::SnapshotElementMissingPath))?;
-            let id = differential_id_by_path
-                .get(path)
-                .cloned()
-                .or_else(|| {
-                    snapshot_obj
-                        .get("id")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                })
+            // Prefer snapshot `id` (includes slice qualifiers) over differential path-only
+            // hints — the latter collapse multiple slices that share the same `path`.
+            let id = snapshot_obj
+                .get("id")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .or_else(|| differential_id_by_path.get(path).cloned())
                 .unwrap_or_else(|| path.to_string());
 
             if path == resource_type {
@@ -277,6 +276,23 @@ pub fn extract_structure_definition_profile_from_json(
     })
 }
 
+fn infer_slice_name(id: &str, explicit: Option<&str>) -> Option<String> {
+    if let Some(name) = explicit {
+        if name.is_empty() {
+            return None;
+        }
+        return Some(name.to_string());
+    }
+
+    let after_colon = id.split_once(':')?.1;
+    let name = after_colon.split('.').next()?;
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
 fn extract_element_rule(
     id: String,
     path: String,
@@ -285,6 +301,11 @@ fn extract_element_rule(
     let obj = resolved
         .as_object()
         .ok_or_else(|| ValidationError::from(SdMsg::ElementMustBeObject))?;
+
+    let slice_name = infer_slice_name(
+        &id,
+        obj.get("sliceName").and_then(|v| v.as_str()),
+    );
 
     Ok(ExtractedElementRule {
         id,
@@ -299,10 +320,7 @@ fn extract_element_rule(
         value_constraint: extract_value_constraint(resolved),
         type_constraints: extract_type_constraints(obj)?,
         slicing: extract_slicing(obj)?,
-        slice_name: obj
-            .get("sliceName")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string()),
+        slice_name,
         max_length: obj
             .get("maxLength")
             .and_then(|v| v.as_u64())
@@ -765,5 +783,83 @@ mod snapshot_only_tests {
             binding_paths("Task.status").is_some_and(|b| b.value_set.contains("task-status")),
             "required binding with valueSet must be retained"
         );
+    }
+
+    /// Snapshot element ids that include slice qualifiers must not be overwritten by
+    /// differential path-only hints (multiple slices share the same `path`).
+    #[test]
+    fn snapshot_element_id_prefers_snapshot_over_differential_path_hint() {
+        use crate::profile::types::ExtractedValueConstraint;
+
+        let v = json!({
+            "resourceType": "StructureDefinition",
+            "url": "http://example.org/fhir/StructureDefinition/nested-ext",
+            "kind": "complex-type",
+            "derivation": "constraint",
+            "type": "Extension",
+            "differential": {
+                "element": [
+                    { "id": "Extension.extension", "path": "Extension.extension", "min": 2 },
+                    { "id": "Extension.extension:RRULE", "path": "Extension.extension", "sliceName": "RRULE", "max": "1" },
+                    { "id": "Extension.extension:TZID", "path": "Extension.extension", "sliceName": "TZID", "max": "1" }
+                ]
+            },
+            "snapshot": {
+                "element": [
+                    { "path": "Extension", "id": "Extension" },
+                    {
+                        "path": "Extension.extension",
+                        "id": "Extension.extension",
+                        "slicing": {
+                            "discriminator": [{ "type": "value", "path": "url" }],
+                            "rules": "open"
+                        },
+                        "min": 2,
+                        "max": "*"
+                    },
+                    {
+                        "path": "Extension.extension",
+                        "id": "Extension.extension:RRULE",
+                        "sliceName": "RRULE",
+                        "max": "1"
+                    },
+                    {
+                        "path": "Extension.extension.url",
+                        "id": "Extension.extension:RRULE.url",
+                        "fixedUri": "RRULE"
+                    },
+                    {
+                        "path": "Extension.extension",
+                        "id": "Extension.extension:TZID",
+                        "sliceName": "TZID",
+                        "max": "1"
+                    },
+                    {
+                        "path": "Extension.extension.url",
+                        "id": "Extension.extension:TZID.url",
+                        "fixedUri": "TZID"
+                    }
+                ]
+            }
+        });
+
+        let profile = extract_structure_definition_profile_from_json(&v).expect("extract");
+        let rrule_url = profile
+            .element_rules
+            .iter()
+            .find(|rule| rule.id == "Extension.extension:RRULE.url")
+            .expect("RRULE.url rule");
+        assert_eq!(rrule_url.slice_name.as_deref(), Some("RRULE"));
+        assert!(matches!(
+            rrule_url.value_constraint,
+            Some(ExtractedValueConstraint::Fixed(_))
+        ));
+
+        let tzid_url = profile
+            .element_rules
+            .iter()
+            .find(|rule| rule.id == "Extension.extension:TZID.url")
+            .expect("TZID.url rule");
+        assert_eq!(tzid_url.slice_name.as_deref(), Some("TZID"));
     }
 }

@@ -299,20 +299,20 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
         issues.extend(validate_min_cardinality(
             resource,
             resource_type,
-            profile.element_rules.as_slice(),
+            profile,
         ));
 
         issues.extend(validate_must_support(
             resource,
             resource_type,
-            profile.element_rules.as_slice(),
+            profile,
             &ctx.validator.config,
         ));
 
         issues.extend(validate_max_cardinality(
             resource,
             resource_type,
-            profile.element_rules.as_slice(),
+            profile,
         ));
 
         issues.extend(validate_slicing(resource, resource_type, profile));
@@ -320,7 +320,7 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
         issues.extend(validate_value_constraints(
             resource,
             resource_type,
-            profile.element_rules.as_slice(),
+            profile,
         ));
 
         issues.extend(validate_element_bounds(
@@ -332,12 +332,13 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
         issues.extend(validate_type_constraints(
             resource,
             resource_type,
-            profile.element_rules.as_slice(),
+            profile,
         ));
 
         issues.extend(validate_target_profile_constraints(
             resource,
             resource_type,
+            profile,
             profile.element_rules.as_slice(),
         ));
 
@@ -461,20 +462,20 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
     issues.extend(validate_min_cardinality(
         resource,
         resource_type,
-        profile.element_rules.as_slice(),
+        profile,
     ));
 
     issues.extend(validate_must_support(
         resource,
         resource_type,
-        profile.element_rules.as_slice(),
+        profile,
         &ctx.validator.config,
     ));
 
     issues.extend(validate_max_cardinality(
         resource,
         resource_type,
-        profile.element_rules.as_slice(),
+        profile,
     ));
 
     issues.extend(validate_slicing(resource, resource_type, profile));
@@ -482,7 +483,7 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
     issues.extend(validate_value_constraints(
         resource,
         resource_type,
-        profile.element_rules.as_slice(),
+        profile,
     ));
 
     issues.extend(validate_element_bounds(
@@ -494,12 +495,13 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
     issues.extend(validate_type_constraints(
         resource,
         resource_type,
-        profile.element_rules.as_slice(),
+        profile,
     ));
 
     issues.extend(validate_target_profile_constraints(
         resource,
         resource_type,
+        profile,
         profile.element_rules.as_slice(),
     ));
 
@@ -906,7 +908,7 @@ fn prefix_single_issue_path(
 fn validate_type_constraints<T: Serialize>(
     resource: &T,
     resource_type: &str,
-    rules: &[crate::profile::types::ExtractedElementRule],
+    profile: &crate::profile::types::ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let root = match serde_json::to_value(resource) {
         Ok(value) => value,
@@ -933,7 +935,7 @@ fn validate_type_constraints<T: Serialize>(
 
     let mut issues = Vec::new();
 
-    for rule in rules {
+    for rule in &profile.element_rules {
         if rule.type_constraints.is_empty() {
             continue;
         }
@@ -947,79 +949,106 @@ fn validate_type_constraints<T: Serialize>(
             continue;
         };
 
-        let Some(choice_info) = actual_choice_type_codes(&root, relative_path) else {
-            continue;
+        let display_path = crate::profile::slice_matching::profile_element_display_path(rule);
+
+        let choice_infos: Vec<ChoiceTypeInfo> = if rule.slice_name.is_some() {
+            let Some(base_path) =
+                crate::profile::slice_matching::slice_repeating_base_path(profile, rule)
+            else {
+                continue;
+            };
+            let Some(relative_base) = relative_profile_path(resource_type, base_path) else {
+                continue;
+            };
+            let Some(parent_choice_path) = rule.path.strip_prefix(&format!("{base_path}.")) else {
+                continue;
+            };
+
+            crate::profile::helpers::get_values_at_relative_path(&root, relative_base)
+                .into_iter()
+                .filter(|instance| {
+                    crate::profile::slice_matching::matches_slice_instance(profile, rule, instance)
+                })
+                .filter_map(|instance| actual_choice_type_codes(instance, parent_choice_path))
+                .collect()
+        } else if let Some(choice_info) = actual_choice_type_codes(&root, relative_path) {
+            vec![choice_info]
+        } else {
+            Vec::new()
         };
 
-        if choice_info.has_multiple_in_same_parent {
+        for choice_info in choice_infos {
+            if choice_info.has_multiple_in_same_parent {
+                issues.push(ValidationIssue {
+                    severity: crate::Severity::Error,
+                    code: issue_code::STRUCTURE.to_string(),
+                    summary: Some(
+                        "Polymorphic [x] element has multiple type representations at once"
+                            .to_string(),
+                    ),
+                    expression_kind: None,
+                    source_invariant_key: None,
+                    detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
+                    diagnostics: format!(
+                        "Element '{}' has multiple [x] representations present in the same object: {}.",
+                        display_path,
+                        choice_info
+                            .actual_type_codes
+                            .iter()
+                            .map(String::as_str)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    expression: None,
+                    fhir_path: display_path.clone(),
+                    instance_path: Some(display_path.clone()),
+                });
+                continue;
+            }
+
+            let allowed_codes: Vec<&str> = rule
+                .type_constraints
+                .iter()
+                .map(|constraint| constraint.code.as_str())
+                .collect();
+
+            let disallowed_actual_types: Vec<&str> = choice_info
+                .actual_type_codes
+                .iter()
+                .map(String::as_str)
+                .filter(|actual_type_code| {
+                    !allowed_codes
+                        .iter()
+                        .any(|allowed| type_code_matches_choice_suffix(allowed, actual_type_code))
+                })
+                .collect();
+
+            if disallowed_actual_types.is_empty() {
+                continue;
+            }
+
             issues.push(ValidationIssue {
                 severity: crate::Severity::Error,
                 code: issue_code::STRUCTURE.to_string(),
-                summary: Some(
-                    "Polymorphic [x] element has multiple type representations at once".to_string(),
-                ),
+                summary: Some("Choice element type is not allowed by the profile".to_string()),
                 expression_kind: None,
                 source_invariant_key: None,
                 detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                 diagnostics: format!(
-                    "Element '{}' has multiple [x] representations present in the same object: {}.",
-                    rule.path,
-                    choice_info
-                        .actual_type_codes
+                    "Element '{}' uses disallowed type(s) '{}'. Allowed types: {}.",
+                    display_path,
+                    disallowed_actual_types.join(", "),
+                    rule.type_constraints
                         .iter()
-                        .map(String::as_str)
+                        .map(|constraint| constraint.code.as_str())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
                 expression: None,
-                fhir_path: rule.path.clone(),
-                instance_path: Some(rule.path.clone()),
+                fhir_path: display_path.clone(),
+                instance_path: Some(display_path.clone()),
             });
-            continue;
         }
-
-        let allowed_codes: Vec<&str> = rule
-            .type_constraints
-            .iter()
-            .map(|constraint| constraint.code.as_str())
-            .collect();
-
-        let disallowed_actual_types: Vec<&str> = choice_info
-            .actual_type_codes
-            .iter()
-            .map(String::as_str)
-            .filter(|actual_type_code| {
-                !allowed_codes
-                    .iter()
-                    .any(|allowed| type_code_matches_choice_suffix(allowed, actual_type_code))
-            })
-            .collect();
-
-        if disallowed_actual_types.is_empty() {
-            continue;
-        }
-
-        issues.push(ValidationIssue {
-            severity: crate::Severity::Error,
-            code: issue_code::STRUCTURE.to_string(),
-            summary: Some("Choice element type is not allowed by the profile".to_string()),
-            expression_kind: None,
-            source_invariant_key: None,
-            detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
-            diagnostics: format!(
-                "Element '{}' uses disallowed type(s) '{}'. Allowed types: {}.",
-                rule.path,
-                disallowed_actual_types.join(", "),
-                rule.type_constraints
-                    .iter()
-                    .map(|constraint| constraint.code.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            expression: None,
-            fhir_path: rule.path.clone(),
-            instance_path: Some(rule.path.clone()),
-        });
     }
 
     issues
@@ -1127,6 +1156,7 @@ fn normalize_choice_type_code(type_code: &str) -> &str {
 fn validate_target_profile_constraints<T: Serialize>(
     resource: &T,
     resource_type: &str,
+    profile: &crate::profile::types::ExtractedProfile,
     rules: &[crate::profile::types::ExtractedElementRule],
 ) -> Vec<ValidationIssue> {
     let root = match serde_json::to_value(resource) {
@@ -1170,10 +1200,22 @@ fn validate_target_profile_constraints<T: Serialize>(
             continue;
         };
 
-        let actual_values = get_values_at_relative_path(&root, relative_path);
+        let actual_values: Vec<&Value> = if rule.slice_name.is_some() {
+            crate::profile::slice_matching::get_slice_scoped_values(
+                &root,
+                resource_type,
+                profile,
+                rule,
+            )
+        } else {
+            get_values_at_relative_path(&root, relative_path)
+        };
+
         if actual_values.is_empty() {
             continue;
         }
+
+        let display_path = crate::profile::slice_matching::profile_element_display_path(rule);
 
         for actual in actual_values {
             let Some(actual_target_type) = actual_reference_target_type(actual, &root) else {
@@ -1198,13 +1240,13 @@ fn validate_target_profile_constraints<T: Serialize>(
                 detail_code: Some(ValidationIssueDetailCode::StructureInvalid),
                 diagnostics: format!(
                     "Element '{}' references resource type '{}', which is not allowed by the profile. Allowed target types: {}.",
-                    rule.path,
+                    display_path,
                     actual_target_type,
                     allowed_target_types.join(", ")
                 ),
                 expression: None,
-                fhir_path: rule.path.clone(),
-                instance_path: Some(rule.path.clone()),
+                fhir_path: display_path.clone(),
+                instance_path: Some(display_path.clone()),
             });
         }
     }
@@ -1641,6 +1683,17 @@ pub fn target_profile_resource_type(url: &str) -> Option<String> {
         other if other.ends_with("-location") => "Location",
         other if other.ends_with("-observation") => "Observation",
         other if other.ends_with("-encounter") => "Encounter",
+        other if other.ends_with("-condition") => "Condition",
+        other if other.ends_with("-procedure") => "Procedure",
+        other if other.ends_with("-allergyintolerance") => "AllergyIntolerance",
+        other if other.ends_with("-familymemberhistory") => "FamilyMemberHistory",
+        other if other.ends_with("-servicerequest") => "ServiceRequest",
+        other if other.ends_with("-medicationstatement") => "MedicationStatement",
+        other if other.ends_with("-medicationrequest") => "MedicationRequest",
+        other if other.ends_with("-careplan") => "CarePlan",
+        other if other.ends_with("-appointment") => "Appointment",
+        other if other.ends_with("-documentreference") => "DocumentReference",
+        other if other.contains("diagnosticreport") => "DiagnosticReport",
         _ => return None,
     };
 
@@ -1709,6 +1762,10 @@ fn validate_type_profile_constraints<T: Serialize>(
         }
 
         for (actual, actual_path) in actual_values {
+            if !type_profile_instance_matches_slice(rule, &required_profiles, actual) {
+                continue;
+            }
+
             let mut unknown_required_profiles: Vec<&str> = Vec::new();
             let mut known_required_profiles: Vec<&str> = Vec::new();
 
@@ -2053,6 +2110,10 @@ fn validate_type_profile_constraints_async<'a, T: Serialize + 'a>(
             }
 
             for (actual, actual_path) in actual_values {
+                if !type_profile_instance_matches_slice(rule, &required_profiles, actual) {
+                    continue;
+                }
+
                 let mut unknown_required_profiles: Vec<&str> = Vec::new();
                 let mut known_required_profiles: Vec<&str> = Vec::new();
 
@@ -2375,6 +2436,22 @@ fn declared_profiles_on_value(value: &Value) -> Vec<String> {
         .collect()
 }
 
+/// For sliced `type.profile` rules, only validate instances whose declared profile/url
+/// matches one of the slice's required profiles (e.g. birthPlace vs nationality).
+fn type_profile_instance_matches_slice(
+    rule: &crate::profile::types::ExtractedElementRule,
+    required_profiles: &[&str],
+    actual: &Value,
+) -> bool {
+    if rule.slice_name.is_none() {
+        return true;
+    }
+    let declared_profiles = declared_profiles_for_type_profile_instance(actual);
+    required_profiles
+        .iter()
+        .any(|required| declared_profiles.iter().any(|declared| declared == *required))
+}
+
 /// Declared profiles from `meta.profile`, or — when absent — the Extension `url`,
 /// which identifies the extension definition the same way as a StructureDefinition URL.
 fn declared_profiles_for_type_profile_instance(actual: &Value) -> Vec<String> {
@@ -2550,7 +2627,7 @@ fn extract_declared_profile_urls(value: &Value) -> Vec<String> {
 fn validate_value_constraints<T: Serialize>(
     resource: &T,
     resource_type: &str,
-    rules: &[crate::profile::types::ExtractedElementRule],
+    profile: &crate::profile::types::ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let root = match serde_json::to_value(resource) {
         Ok(value) => value,
@@ -2577,7 +2654,7 @@ fn validate_value_constraints<T: Serialize>(
 
     let mut issues = Vec::new();
 
-    for rule in rules {
+    for rule in &profile.element_rules {
         let Some(value_constraint) = &rule.value_constraint else {
             continue;
         };
@@ -2586,49 +2663,63 @@ fn validate_value_constraints<T: Serialize>(
             continue;
         };
 
-        let actual = get_relative_path(&root, relative_path);
-        let matched = match value_constraint {
-            ExtractedValueConstraint::Fixed(expected) => actual
-                .map(|value| values_equal(value, expected))
-                .unwrap_or(false),
-            ExtractedValueConstraint::Pattern(expected) => actual
-                .map(|value| value_matches_pattern(value, expected))
-                .unwrap_or(false),
+        let actual_values: Vec<&Value> = if rule.slice_name.is_some() {
+            crate::profile::slice_matching::get_slice_scoped_values(
+                &root,
+                resource_type,
+                profile,
+                rule,
+            )
+        } else if let Some(actual) = get_relative_path(&root, relative_path) {
+            vec![actual]
+        } else {
+            Vec::new()
         };
 
-        if matched {
-            continue;
+        let display_path = crate::profile::slice_matching::profile_element_display_path(rule);
+
+        for actual in actual_values {
+            let matched = match value_constraint {
+                ExtractedValueConstraint::Fixed(expected) => values_equal(actual, expected),
+                ExtractedValueConstraint::Pattern(expected) => {
+                    value_matches_pattern(actual, expected)
+                }
+            };
+
+            if matched {
+                continue;
+            }
+            let (kind, expected, detail_code, summary) = match value_constraint {
+                ExtractedValueConstraint::Fixed(expected) => (
+                    "fixed",
+                    expected,
+                    Some(ValidationIssueDetailCode::FixedConstraintMismatch),
+                    Some("Element value does not match fixed constraint".to_string()),
+                ),
+                ExtractedValueConstraint::Pattern(expected) => (
+                    "pattern",
+                    expected,
+                    Some(ValidationIssueDetailCode::PatternConstraintMismatch),
+                    Some("Element value does not match pattern constraint".to_string()),
+                ),
+            };
+
+            issues.push(ValidationIssue {
+                severity: crate::Severity::Error,
+                code: issue_code::VALUE.to_string(),
+                summary,
+                expression_kind: None,
+                source_invariant_key: None,
+                detail_code,
+                diagnostics: format!(
+                    "Element '{}' does not satisfy {} constraint. Expected pattern/value: {}",
+                    display_path, kind, expected
+                ),
+                expression: None,
+                fhir_path: display_path.clone(),
+                instance_path: Some(display_path.clone()),
+            });
         }
-        let (kind, expected, detail_code, summary) = match value_constraint {
-            ExtractedValueConstraint::Fixed(expected) => (
-                "fixed",
-                expected,
-                Some(ValidationIssueDetailCode::FixedConstraintMismatch),
-                Some("Element value does not match fixed constraint".to_string()),
-            ),
-            ExtractedValueConstraint::Pattern(expected) => (
-                "pattern",
-                expected,
-                Some(ValidationIssueDetailCode::PatternConstraintMismatch),
-                Some("Element value does not match pattern constraint".to_string()),
-            ),
-        };
-
-        issues.push(ValidationIssue {
-            severity: crate::Severity::Error,
-            code: issue_code::VALUE.to_string(),
-            summary,
-            expression_kind: None,
-            source_invariant_key: None,
-            detail_code,
-            diagnostics: format!(
-                "Element '{}' does not satisfy {} constraint. Expected pattern/value: {}",
-                rule.path, kind, expected
-            ),
-            expression: None,
-            fhir_path: rule.path.clone(),
-            instance_path: Some(rule.path.clone()),
-        });
     }
 
     issues
@@ -2929,5 +3020,166 @@ mod reference_aggregate_versioning_tests {
             )],
         );
         assert!(issues.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod target_profile_slice_scoping_tests {
+    use super::*;
+    use crate::profile::types::{
+        ExtractedDiscriminatorType, ExtractedElementRule, ExtractedProfile,
+        ExtractedSliceDiscriminator, ExtractedSlicing, ExtractedSlicingRules,
+    };
+    use fhir_validation_types::{StructureDefinitionKind, TypeDerivationRule};
+    use serde_json::json;
+
+    fn op_consult_section_entry_profile() -> ExtractedProfile {
+        ExtractedProfile {
+            url: "http://example.org/StructureDefinition/op-consult".to_string(),
+            version: None,
+            name: Some("OpConsult".to_string()),
+            title: None,
+            resource_type: "Composition".to_string(),
+            base_definition: None,
+            snapshot_base_version: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
+            invariants: Vec::new(),
+            element_rules: vec![
+                ExtractedElementRule {
+                    id: "Composition.section".to_string(),
+                    path: "Composition.section".to_string(),
+                    slicing: Some(ExtractedSlicing {
+                        ordered: false,
+                        rules: ExtractedSlicingRules::OpenAtEnd,
+                        discriminators: vec![ExtractedSliceDiscriminator {
+                            path: "code.coding.code".to_string(),
+                            discriminator_type: ExtractedDiscriminatorType::Value,
+                        }],
+                    }),
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:ChiefComplaints".to_string(),
+                    path: "Composition.section".to_string(),
+                    slice_name: Some("ChiefComplaints".to_string()),
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:ChiefComplaints.code.coding.code".to_string(),
+                    path: "Composition.section.code.coding.code".to_string(),
+                    slice_name: Some("ChiefComplaints".to_string()),
+                    value_constraint: Some(ExtractedValueConstraint::Fixed(
+                        json!("422843007"),
+                    )),
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:ChiefComplaints.entry".to_string(),
+                    path: "Composition.section.entry".to_string(),
+                    slice_name: Some("ChiefComplaints".to_string()),
+                    type_constraints: vec![ExtractedTypeConstraint {
+                        code: "Reference".to_string(),
+                        target_profiles: vec![
+                            "http://hl7.org/fhir/StructureDefinition/Condition".to_string(),
+                        ],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:PhysicalExamination".to_string(),
+                    path: "Composition.section".to_string(),
+                    slice_name: Some("PhysicalExamination".to_string()),
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:PhysicalExamination.code.coding.code".to_string(),
+                    path: "Composition.section.code.coding.code".to_string(),
+                    slice_name: Some("PhysicalExamination".to_string()),
+                    value_constraint: Some(ExtractedValueConstraint::Fixed(
+                        json!("425044008"),
+                    )),
+                    ..Default::default()
+                },
+                ExtractedElementRule {
+                    id: "Composition.section:PhysicalExamination.entry".to_string(),
+                    path: "Composition.section.entry".to_string(),
+                    slice_name: Some("PhysicalExamination".to_string()),
+                    type_constraints: vec![ExtractedTypeConstraint {
+                        code: "Reference".to_string(),
+                        target_profiles: vec![
+                            "http://hl7.org/fhir/StructureDefinition/Observation".to_string(),
+                        ],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn sliced_target_profile_allows_matching_reference_per_slice() {
+        let profile = op_consult_section_entry_profile();
+        let composition = json!({
+            "resourceType": "Composition",
+            "section": [
+                {
+                    "code": {
+                        "coding": [{
+                            "system": "http://snomed.info/sct",
+                            "code": "422843007"
+                        }]
+                    },
+                    "entry": [{ "reference": "Condition/cc-1" }]
+                },
+                {
+                    "code": {
+                        "coding": [{
+                            "system": "http://snomed.info/sct",
+                            "code": "425044008"
+                        }]
+                    },
+                    "entry": [{ "reference": "Observation/pe-1" }]
+                }
+            ]
+        });
+
+        let issues = validate_target_profile_constraints(
+            &composition,
+            "Composition",
+            &profile,
+            profile.element_rules.as_slice(),
+        );
+
+        assert!(issues.is_empty(), "unexpected issues: {issues:?}");
+    }
+
+    #[test]
+    fn sliced_target_profile_rejects_wrong_reference_in_matching_slice() {
+        let profile = op_consult_section_entry_profile();
+        let composition = json!({
+            "resourceType": "Composition",
+            "section": [{
+                "code": {
+                    "coding": [{
+                        "system": "http://snomed.info/sct",
+                        "code": "422843007"
+                    }]
+                },
+                "entry": [{ "reference": "Observation/wrong" }]
+            }]
+        });
+
+        let issues = validate_target_profile_constraints(
+            &composition,
+            "Composition",
+            &profile,
+            profile.element_rules.as_slice(),
+        );
+
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].fhir_path, "Composition.section.entry:ChiefComplaints");
     }
 }

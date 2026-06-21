@@ -133,7 +133,7 @@ mod tests {
             "entry": [{
                 "resource": {
                     "resourceType": "Condition",
-                    "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-encounter-diagnosis"] },
+                    "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis"] },
                     "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-category", "code": "encounter-diagnosis" }] }],
                     "code": { "coding": [{ "system": "http://hl7.org/fhir/sid/icd-10", "code": "I10" }] },
                     "subject": { "reference": "Patient/p1" }
@@ -155,7 +155,7 @@ mod tests {
         let manifest = MapperManifest::full_inventory();
         let mut resource = json!({
             "resourceType": "Patient",
-            "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-patient"] }
+            "meta": { "profile": ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"] }
         });
         assert!(project_profile_swap(&manifest, &mut resource).unwrap());
         assert_eq!(

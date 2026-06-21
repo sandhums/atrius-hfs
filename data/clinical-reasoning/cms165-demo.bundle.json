@@ -9,7 +9,7 @@
         "id": "cms165-demo",
         "meta": {
           "profile": [
-            "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-patient"
+            "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"
           ]
         },
         "identifier": [
@@ -50,7 +50,7 @@
         "id": "cms165-demo-enc-1",
         "meta": {
           "profile": [
-            "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-encounter"
+            "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"
           ]
         },
         "status": "finished",
@@ -91,7 +91,7 @@
         "id": "cms165-demo-htn",
         "meta": {
           "profile": [
-            "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-problems-health-concerns"
+            "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-problems-health-concerns"
           ]
         },
         "clinicalStatus": {
@@ -147,7 +147,7 @@
         "id": "cms165-demo-bp",
         "meta": {
           "profile": [
-            "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-observation-vital-signs"
+            "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation-vital-signs"
           ]
         },
         "status": "final",

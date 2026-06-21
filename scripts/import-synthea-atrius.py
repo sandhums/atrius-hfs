@@ -44,7 +44,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-ATRIUS_SD = "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/"
+ATRIUS_SD = "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/"
 HL7_CONDITION_CATEGORY = "http://terminology.hl7.org/CodeSystem/condition-category"
 HL7_CONDITION_CLINICAL = "http://terminology.hl7.org/CodeSystem/condition-clinical"
 HL7_CONDITION_VER = "http://terminology.hl7.org/CodeSystem/condition-ver-status"
@@ -54,37 +54,37 @@ HL7_ALLERGY_VER = "http://terminology.hl7.org/CodeSystem/allergyintolerance-veri
 
 # Default Atrius storage profile per FHIR type (runtime-mapper.md inventory)
 DEFAULT_PROFILE: dict[str, str] = {
-    "Patient": f"{ATRIUS_SD}atrius-patient",
-    "Organization": f"{ATRIUS_SD}atrius-organization",
-    "Practitioner": f"{ATRIUS_SD}atrius-practitioner",
-    "PractitionerRole": f"{ATRIUS_SD}atrius-practitionerrole",
-    "Location": f"{ATRIUS_SD}atrius-location",
-    "RelatedPerson": f"{ATRIUS_SD}atrius-relatedperson",
-    "Coverage": f"{ATRIUS_SD}atrius-coverage",
-    "Encounter": f"{ATRIUS_SD}atrius-encounter",
-    "AllergyIntolerance": f"{ATRIUS_SD}atrius-allergyintolerance",
-    "ConditionProblemsHealthConcerns": f"{ATRIUS_SD}atrius-condition-problems-health-concerns",
-    "ConditionEncounterDiagnosis": f"{ATRIUS_SD}atrius-condition-encounter-diagnosis",
-    "ObservationLab": f"{ATRIUS_SD}atrius-observation",
-    "ObservationVitalSigns": f"{ATRIUS_SD}atrius-observation-vital-signs",
-    "ObservationBodyMeasurement": f"{ATRIUS_SD}atrius-observation-body-measurement",
-    "ObservationGeneralAssessment": f"{ATRIUS_SD}atrius-observation-general-assessment",
-    "ObservationLifestyle": f"{ATRIUS_SD}atrius-observation-lifestyle",
-    "ObservationPhysicalActivity": f"{ATRIUS_SD}atrius-observation-physical-activity",
-    "Procedure": f"{ATRIUS_SD}atrius-procedure",
-    "MedicationRequest": f"{ATRIUS_SD}atrius-medicationrequest",
-    "MedicationRequestRequested": f"{ATRIUS_SD}atrius-medicationrequest-requested",
-    "MedicationStatement": f"{ATRIUS_SD}atrius-medicationstatement",
-    "Immunization": f"{ATRIUS_SD}atrius-immunization",
-    "ImmunizationDone": f"{ATRIUS_SD}atrius-immunization-done",
-    "DiagnosticReportLab": f"{ATRIUS_SD}atrius-diagnosticreport-lab",
-    "DiagnosticReportNote": f"{ATRIUS_SD}atrius-diagnosticreport-note",
-    "Claim": f"{ATRIUS_SD}atrius-claim",
-    "ClaimResponse": f"{ATRIUS_SD}atrius-claimresponse",
-    "Device": f"{ATRIUS_SD}atrius-device",
-    "CareTeam": f"{ATRIUS_SD}atrius-careteam",
-    "Goal": f"{ATRIUS_SD}atrius-goal",
-    "ServiceRequest": f"{ATRIUS_SD}atrius-servicerequest",
+    "Patient": f"{ATRIUS_SD}atrius-in-patient",
+    "Organization": f"{ATRIUS_SD}atrius-in-organization",
+    "Practitioner": f"{ATRIUS_SD}atrius-in-practitioner",
+    "PractitionerRole": f"{ATRIUS_SD}atrius-in-practitionerrole",
+    "Location": f"{ATRIUS_SD}atrius-in-location",
+    "RelatedPerson": f"{ATRIUS_SD}atrius-in-relatedperson",
+    "Coverage": f"{ATRIUS_SD}atrius-in-coverage",
+    "Encounter": f"{ATRIUS_SD}atrius-in-encounter",
+    "AllergyIntolerance": f"{ATRIUS_SD}atrius-in-allergyintolerance",
+    "ConditionProblemsHealthConcerns": f"{ATRIUS_SD}atrius-in-condition-problems-health-concerns",
+    "ConditionEncounterDiagnosis": f"{ATRIUS_SD}atrius-in-condition-encounter-diagnosis",
+    "ObservationLab": f"{ATRIUS_SD}atrius-in-observation",
+    "ObservationVitalSigns": f"{ATRIUS_SD}atrius-in-observation-vital-signs",
+    "ObservationBodyMeasurement": f"{ATRIUS_SD}atrius-in-observation-body-measurement",
+    "ObservationGeneralAssessment": f"{ATRIUS_SD}atrius-in-observation-general-assessment",
+    "ObservationLifestyle": f"{ATRIUS_SD}atrius-in-observation-lifestyle",
+    "ObservationPhysicalActivity": f"{ATRIUS_SD}atrius-in-observation-physical-activity",
+    "Procedure": f"{ATRIUS_SD}atrius-in-procedure",
+    "MedicationRequest": f"{ATRIUS_SD}atrius-in-medicationrequest",
+    "MedicationRequestRequested": f"{ATRIUS_SD}atrius-in-medicationrequest-requested",
+    "MedicationStatement": f"{ATRIUS_SD}atrius-in-medicationstatement",
+    "Immunization": f"{ATRIUS_SD}atrius-in-immunization",
+    "ImmunizationDone": f"{ATRIUS_SD}atrius-in-immunization-done",
+    "DiagnosticReportLab": f"{ATRIUS_SD}atrius-in-diagnosticreport-lab",
+    "DiagnosticReportNote": f"{ATRIUS_SD}atrius-in-diagnosticreport-note",
+    "Claim": f"{ATRIUS_SD}atrius-in-claim",
+    "ClaimResponse": f"{ATRIUS_SD}atrius-in-claimresponse",
+    "Device": f"{ATRIUS_SD}atrius-in-device",
+    "CareTeam": f"{ATRIUS_SD}atrius-in-careteam",
+    "Goal": f"{ATRIUS_SD}atrius-in-goal",
+    "ServiceRequest": f"{ATRIUS_SD}atrius-in-servicerequest",
 }
 
 # Actor-first import order (runtime-mapper.md bundle ordering)

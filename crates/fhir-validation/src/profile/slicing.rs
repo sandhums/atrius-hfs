@@ -664,6 +664,75 @@ fn validate_nested_profile_candidate(
 ///
 /// The expected value constraint may live either on the slice root element or on
 /// a slice-specific child rule such as `component:systolic.code`.
+/// Return `true` when `instance` belongs to the named slice `slice`.
+///
+/// Used by [`crate::profile::slice_matching`] to scope child-element validation
+/// (targetProfile, fixed/pattern, etc.) without requiring [`ValidationState`].
+/// Extension URL slicing is handled separately in slice matching.
+pub(crate) fn instance_matches_named_slice(
+    profile: &ExtractedProfile,
+    slice: &ExtractedElementRule,
+    instance: &Value,
+    item_index: usize,
+) -> bool {
+    let Some(base_rule) = profile.element_rules.iter().find(|rule| {
+        rule.path == slice.path && rule.slice_name.is_none() && rule.slicing.is_some()
+    }) else {
+        return false;
+    };
+
+    let Some(slicing) = &base_rule.slicing else {
+        return false;
+    };
+
+    if slicing.discriminators.is_empty() {
+        return false;
+    }
+
+    if slicing
+        .discriminators
+        .iter()
+        .any(|d| d.discriminator_type == ExtractedDiscriminatorType::Profile)
+    {
+        return false;
+    }
+
+    let slices: Vec<&ExtractedElementRule> = profile
+        .element_rules
+        .iter()
+        .filter(|rule| rule.path == base_rule.path && rule.slice_name.is_some())
+        .collect();
+
+    let slice_order: HashMap<String, usize> = slices
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, candidate)| {
+            candidate
+                .slice_name
+                .as_ref()
+                .map(|name| (name.clone(), idx))
+        })
+        .collect();
+
+    slicing.discriminators.iter().all(|discriminator| {
+        match discriminator.discriminator_type {
+            ExtractedDiscriminatorType::Value | ExtractedDiscriminatorType::Pattern => {
+                matches_value_discriminator(instance, slice, discriminator, profile)
+            }
+            ExtractedDiscriminatorType::Type => {
+                matches_type_discriminator(instance, slice, discriminator, profile)
+            }
+            ExtractedDiscriminatorType::Exists => {
+                matches_exists_discriminator(instance, slice, discriminator, profile)
+            }
+            ExtractedDiscriminatorType::Position => {
+                matches_position_discriminator(item_index, slice, &slice_order)
+            }
+            ExtractedDiscriminatorType::Profile => false,
+        }
+    })
+}
+
 fn matches_value_discriminator(
     actual: &Value,
     slice: &ExtractedElementRule,

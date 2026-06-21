@@ -171,12 +171,28 @@ impl ValidateVsRequest {
         Ok(())
     }
 
+    /// Split `url|version` canonical into base URL and optional version (FHIR canonical form).
+    fn split_valueset_canonical(valueset_url: &str) -> (String, Option<String>) {
+        match valueset_url.split_once('|') {
+            Some((base, version)) if !version.is_empty() => {
+                (base.to_string(), Some(version.to_string()))
+            }
+            _ => (valueset_url.to_string(), None),
+        }
+    }
+
     pub fn to_parameters_json(&self) -> serde_json::Value {
         let mut params = Vec::new();
 
+        let (valueset_url, version_from_canonical) = Self::split_valueset_canonical(&self.valueset_url);
+        let value_set_version = self
+            .value_set_version
+            .clone()
+            .or(version_from_canonical);
+
         params.push(serde_json::json!({
             "name": "url",
-            "valueUri": self.valueset_url
+            "valueUri": valueset_url
         }));
 
         if let Some(v) = &self.context {
@@ -193,7 +209,7 @@ impl ValidateVsRequest {
             }));
         }
 
-        if let Some(v) = &self.value_set_version {
+        if let Some(v) = value_set_version {
             params.push(serde_json::json!({
                 "name": "valueSetVersion",
                 "valueString": v

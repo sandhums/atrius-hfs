@@ -12,15 +12,12 @@
 //! `{path}:{sliceName}` (e.g. `Patient.extension:birthPlace`), consistent with
 //! [`crate::profile::slicing`].
 //!
-//! # Limitation: counting vs slice semantics
+//! For rules with [`ExtractedElementRule::slice_name`], counts are limited to repeated items
+//! that match the slice (typically via nested extension `url` fixed values). Slice base-path
+//! min/max on profiles with explicit slicing is also enforced in [`crate::profile::slicing`].
 //!
-//! For **unsliced** paths, `min` / `max` / mustSupport checks count JSON nodes along the dotted
-//! path (descending into arrays). For a rule whose [`ExtractedElementRule::path`] is still the
-//! **base** path (e.g. `Patient.extension`) but `slice_name` identifies a **slice**, counting
-//! is currently **not** slice-aware: it may count *all* `extension` entries rather than only
-//! instances that match that slice’s profile/discriminator. Messages still name the slice for
-//! clarity; tighter slice-specific population checks are handled in [`crate::profile::slicing`]
-//! where discriminators are evaluated.
+//! For **nested** paths (`participant.actor`, `name.given`, …), min/max are evaluated **per
+//! repeating parent instance** (each `participant` entry), not as a flat total across the resource.
 //!
 //! # Optional parents
 //!
@@ -28,7 +25,12 @@
 //! not fire when the parent repeat (`communication`) is absent—matching common IG expectations.
 
 use crate::issue_code;
-use crate::profile::types::ExtractedElementRule;
+use crate::profile::helpers::get_values_at_relative_path;
+use crate::profile::slice_matching::{
+    count_slice_instances, get_slice_scoped_values, matches_slice_instance,
+    profile_element_display_path, slice_repeating_base_path,
+};
+use crate::profile::types::{ExtractedElementRule, ExtractedProfile};
 use crate::{Severity, ValidationConfig, ValidationIssue, ValidationIssueDetailCode};
 use serde::Serialize;
 use serde_json::Value;
@@ -38,7 +40,7 @@ use serde_json::Value;
 pub fn validate_min_cardinality<T: Serialize>(
     resource: &T,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let root = match serde_json::to_value(resource) {
         Ok(value) => value,
@@ -63,14 +65,14 @@ pub fn validate_min_cardinality<T: Serialize>(
         }
     };
 
-    validate_min_cardinality_from_json(&root, resource_type, rules)
+    validate_min_cardinality_from_json(&root, resource_type, profile)
 }
 
 /// Emit issues when repeated elements exceed `ElementDefinition.max` (non-`*`) for a rule.
 pub fn validate_max_cardinality<T: Serialize>(
     resource: &T,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let root = match serde_json::to_value(resource) {
         Ok(value) => value,
@@ -95,7 +97,7 @@ pub fn validate_max_cardinality<T: Serialize>(
         }
     };
 
-    validate_max_cardinality_from_json(&root, resource_type, rules)
+    validate_max_cardinality_from_json(&root, resource_type, profile)
 }
 
 /// When [`crate::ValidationConfig::validate_must_support`] is enabled, warn or error if
@@ -106,7 +108,7 @@ pub fn validate_max_cardinality<T: Serialize>(
 pub fn validate_must_support<T: Serialize>(
     resource: &T,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
     config: &ValidationConfig,
 ) -> Vec<ValidationIssue> {
     if !config.validate_must_support {
@@ -136,18 +138,18 @@ pub fn validate_must_support<T: Serialize>(
         }
     };
 
-    validate_must_support_from_json(&root, resource_type, rules, config)
+    validate_must_support_from_json(&root, resource_type, profile, config)
 }
 
 fn validate_must_support_from_json(
     root: &Value,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
     config: &ValidationConfig,
 ) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
-    for rule in rules {
+    for rule in &profile.element_rules {
         if rule.must_support != Some(true) {
             continue;
         }
@@ -160,7 +162,11 @@ fn validate_must_support_from_json(
             continue;
         }
 
-        let count = count_relative_path(root, relative_path);
+        if skip_when_optional_slice_absent(root, resource_type, profile, rule) {
+            continue;
+        }
+
+        let count = slice_rule_populated_count(root, resource_type, profile, rule, relative_path);
         if count > 0 {
             continue;
         }
@@ -192,11 +198,11 @@ fn validate_must_support_from_json(
 fn validate_min_cardinality_from_json(
     root: &Value,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
-    for rule in rules {
+    for rule in &profile.element_rules {
         let Some(min) = rule.min else {
             continue;
         };
@@ -213,8 +219,11 @@ fn validate_min_cardinality_from_json(
             continue;
         }
 
-        let count = count_relative_path(root, relative_path);
-        if count >= min as usize {
+        if skip_when_optional_slice_absent(root, resource_type, profile, rule) {
+            continue;
+        }
+
+        if cardinality_meets_min(root, resource_type, profile, rule, relative_path, min as usize) {
             continue;
         }
 
@@ -242,11 +251,11 @@ fn validate_min_cardinality_from_json(
 fn validate_max_cardinality_from_json(
     root: &Value,
     resource_type: &str,
-    rules: &[ExtractedElementRule],
+    profile: &ExtractedProfile,
 ) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
 
-    for rule in rules {
+    for rule in &profile.element_rules {
         let Some(max) = rule.max.as_deref() else {
             continue;
         };
@@ -267,8 +276,11 @@ fn validate_max_cardinality_from_json(
             continue;
         }
 
-        let count = count_relative_path(root, relative_path);
-        if count <= max_value {
+        if skip_when_optional_slice_absent(root, resource_type, profile, rule) {
+            continue;
+        }
+
+        if !cardinality_above_max(root, resource_type, profile, rule, relative_path, max_value) {
             continue;
         }
 
@@ -305,15 +317,6 @@ pub fn relative_profile_path<'a>(resource_type: &str, absolute_path: &'a str) ->
     absolute_path.strip_prefix(&prefix)
 }
 
-/// FHIR element path for user-facing messages — includes slice discriminator when present
-/// (`Patient.extension:birthPlace`), matching [`crate::profile::slicing`].
-fn profile_element_display_path(rule: &ExtractedElementRule) -> String {
-    match rule.slice_name.as_deref() {
-        Some(slice) => format!("{}:{}", rule.path, slice),
-        None => rule.path.clone(),
-    }
-}
-
 /// `true` when `structure_path` is only the resource root (e.g. `Patient`).
 ///
 /// Constraints on the root are evaluated with the resource as FHIRPath context (same as
@@ -330,26 +333,190 @@ fn count_relative_path(root: &Value, relative_path: &str) -> usize {
         return terminal_count(root);
     }
 
-    let segments: Vec<&str> = relative_path.split('.').collect();
-    count_path_segments(root, &segments)
+    get_values_at_relative_path(root, relative_path).len()
 }
 
-fn count_path_segments(current: &Value, segments: &[&str]) -> usize {
-    if segments.is_empty() {
-        return terminal_count(current);
+/// Return `true` when the instance has more values than `max` allows for this rule.
+fn cardinality_above_max(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    relative_path: &str,
+    max: usize,
+) -> bool {
+    cardinality_exceeds_max(root, resource_type, profile, rule, relative_path, max)
+}
+
+fn cardinality_meets_min(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    relative_path: &str,
+    min: usize,
+) -> bool {
+    if rule.slice_name.is_some() {
+        return slice_cardinality_meets_min(root, resource_type, profile, rule, relative_path, min);
     }
 
-    match current {
-        Value::Object(map) => map
-            .get(segments[0])
-            .map(|next| count_path_segments(next, &segments[1..]))
-            .unwrap_or(0),
-        Value::Array(items) => items
-            .iter()
-            .map(|item| count_path_segments(item, segments))
-            .sum(),
-        _ => 0,
+    per_parent_cardinality_meets_min(root, relative_path, min)
+}
+
+fn cardinality_exceeds_max(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    relative_path: &str,
+    max: usize,
+) -> bool {
+    if rule.slice_name.is_some() {
+        return slice_cardinality_exceeds_max(root, resource_type, profile, rule, relative_path, max);
     }
+
+    per_parent_cardinality_exceeds_max(root, relative_path, max)
+}
+
+fn slice_rule_populated_count(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    relative_path: &str,
+) -> usize {
+    if rule.slice_name.is_some() {
+        if slice_repeating_base_path(profile, rule) == Some(rule.path.as_str()) {
+            return count_slice_instances(root, resource_type, profile, rule);
+        }
+        return get_slice_scoped_values(root, resource_type, profile, rule).len();
+    }
+
+    count_relative_path(root, relative_path)
+}
+
+fn per_parent_cardinality_meets_min(root: &Value, relative_path: &str, min: usize) -> bool {
+    let Some((parent_rel, child_rel)) = relative_path.rsplit_once('.') else {
+        return count_relative_path(root, relative_path) >= min;
+    };
+
+    let parents = get_values_at_relative_path(root, parent_rel);
+    if parents.is_empty() {
+        return min == 0;
+    }
+
+    parents.iter().all(|parent| {
+        get_values_at_relative_path(parent, child_rel).len() >= min
+    })
+}
+
+fn per_parent_cardinality_exceeds_max(root: &Value, relative_path: &str, max: usize) -> bool {
+    let Some((parent_rel, child_rel)) = relative_path.rsplit_once('.') else {
+        return count_relative_path(root, relative_path) > max;
+    };
+
+    let parents = get_values_at_relative_path(root, parent_rel);
+    if parents.is_empty() {
+        return false;
+    }
+
+    parents.iter().any(|parent| {
+        get_values_at_relative_path(parent, child_rel).len() > max
+    })
+}
+
+fn slice_cardinality_meets_min(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    _relative_path: &str,
+    min: usize,
+) -> bool {
+    let Some(base_path) = slice_repeating_base_path(profile, rule) else {
+        return false;
+    };
+
+    if rule.path == base_path {
+        return count_slice_instances(root, resource_type, profile, rule) >= min;
+    }
+
+    let Some(child_rel) = rule.path.strip_prefix(&format!("{base_path}.")) else {
+        return false;
+    };
+    let Some(relative_base) = relative_profile_path(resource_type, base_path) else {
+        return false;
+    };
+
+    if min == 0 {
+        return true;
+    }
+
+    get_values_at_relative_path(root, relative_base)
+        .into_iter()
+        .filter(|instance| matches_slice_instance(profile, rule, instance))
+        .all(|instance| get_values_at_relative_path(instance, child_rel).len() >= min)
+}
+
+fn slice_cardinality_exceeds_max(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+    _relative_path: &str,
+    max: usize,
+) -> bool {
+    let Some(base_path) = slice_repeating_base_path(profile, rule) else {
+        return false;
+    };
+
+    if rule.path == base_path {
+        return count_slice_instances(root, resource_type, profile, rule) > max;
+    }
+
+    let Some(child_rel) = rule.path.strip_prefix(&format!("{base_path}.")) else {
+        return false;
+    };
+    let Some(relative_base) = relative_profile_path(resource_type, base_path) else {
+        return false;
+    };
+
+    get_values_at_relative_path(root, relative_base)
+        .into_iter()
+        .filter(|instance| matches_slice_instance(profile, rule, instance))
+        .any(|instance| get_values_at_relative_path(instance, child_rel).len() > max)
+}
+
+/// Skip child-element cardinality on optional slices that have no matching instances.
+fn skip_when_optional_slice_absent(
+    root: &Value,
+    resource_type: &str,
+    profile: &ExtractedProfile,
+    rule: &ExtractedElementRule,
+) -> bool {
+    let Some(slice_name) = rule.slice_name.as_deref() else {
+        return false;
+    };
+    let Some(base_path) = slice_repeating_base_path(profile, rule) else {
+        return false;
+    };
+    if rule.path == base_path {
+        return false;
+    }
+
+    let slice_root = profile.element_rules.iter().find(|candidate| {
+        candidate.path == base_path && candidate.slice_name.as_deref() == Some(slice_name)
+    });
+    let Some(slice_root) = slice_root else {
+        return false;
+    };
+
+    let required = slice_root.min.unwrap_or(0) > 0;
+    if required {
+        return false;
+    }
+
+    count_slice_instances(root, resource_type, profile, slice_root) == 0
 }
 
 fn terminal_count(value: &Value) -> usize {
@@ -377,10 +544,19 @@ mod tests {
     use super::{validate_max_cardinality, validate_min_cardinality, validate_must_support};
     use crate::ValidationConfig;
     use crate::ValidationIssueDetailCode;
-    use crate::profile::types::ExtractedElementRule;
+    use crate::profile::types::{ExtractedElementRule, ExtractedProfile};
     use fhir_validation_types::BindingDef;
     use fhir_validation_types::Severity;
     use serde_json::json;
+
+    fn test_profile(resource_type: &str, rules: Vec<ExtractedElementRule>) -> ExtractedProfile {
+        ExtractedProfile {
+            url: "http://example.org/fhir/test-profile".to_string(),
+            resource_type: resource_type.to_string(),
+            element_rules: rules,
+            ..Default::default()
+        }
+    }
 
     fn rule(path: &str, min: Option<u32>, max: Option<&str>) -> ExtractedElementRule {
         ExtractedElementRule {
@@ -418,15 +594,34 @@ mod tests {
     }
 
     #[test]
+    fn min_cardinality_counts_polymorphic_value_address() {
+        let ext = json!({
+            "url": "http://hl7.org/fhir/StructureDefinition/patient-birthPlace",
+            "valueAddress": { "city": "Mysuru", "country": "IN" }
+        });
+        let issues = validate_min_cardinality(
+            &ext,
+            "Extension",
+            &test_profile("Extension", vec![rule("Extension.value[x]", Some(1), None)]),
+        );
+        assert!(
+            issues.is_empty(),
+            "valueAddress should satisfy Extension.value[x] min cardinality, got {issues:?}"
+        );
+    }
+
+    #[test]
     fn must_support_slice_name_in_issue_paths() {
         let patient = json!({ "resourceType": "Patient" });
-        let rules = vec![must_support_rule_slice(
-            "Patient.extension",
-            "birthPlace",
-            true,
-        )];
-        let issues =
-            validate_must_support(&patient, "Patient", &rules, &ValidationConfig::default());
+        let profile = test_profile(
+            "Patient",
+            vec![must_support_rule_slice(
+                "Patient.extension",
+                "birthPlace",
+                true,
+            )],
+        );
+        let issues = validate_must_support(&patient, "Patient", &profile, &ValidationConfig::default());
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].fhir_path, "Patient.extension:birthPlace");
         assert_eq!(
@@ -445,9 +640,9 @@ mod tests {
     #[test]
     fn must_support_missing_emits_warning_by_default() {
         let patient = json!({ "resourceType": "Patient" });
-        let rules = vec![must_support_rule("Patient.active", true)];
+        let profile = test_profile("Patient", vec![must_support_rule("Patient.active", true)]);
         let issues =
-            validate_must_support(&patient, "Patient", &rules, &ValidationConfig::default());
+            validate_must_support(&patient, "Patient", &profile, &ValidationConfig::default());
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Warning);
         assert_eq!(issues[0].fhir_path, "Patient.active");
@@ -459,29 +654,29 @@ mod tests {
             "resourceType": "Patient",
             "active": true
         });
-        let rules = vec![must_support_rule("Patient.active", true)];
+        let profile = test_profile("Patient", vec![must_support_rule("Patient.active", true)]);
         let issues =
-            validate_must_support(&patient, "Patient", &rules, &ValidationConfig::default());
+            validate_must_support(&patient, "Patient", &profile, &ValidationConfig::default());
         assert!(issues.is_empty());
     }
 
     #[test]
     fn must_support_disabled_emits_nothing() {
         let patient = json!({ "resourceType": "Patient" });
-        let rules = vec![must_support_rule("Patient.active", true)];
+        let profile = test_profile("Patient", vec![must_support_rule("Patient.active", true)]);
         let mut cfg = ValidationConfig::default();
         cfg.validate_must_support = false;
-        let issues = validate_must_support(&patient, "Patient", &rules, &cfg);
+        let issues = validate_must_support(&patient, "Patient", &profile, &cfg);
         assert!(issues.is_empty());
     }
 
     #[test]
     fn must_support_respects_configured_severity() {
         let patient = json!({ "resourceType": "Patient" });
-        let rules = vec![must_support_rule("Patient.active", true)];
+        let profile = test_profile("Patient", vec![must_support_rule("Patient.active", true)]);
         let mut cfg = ValidationConfig::default();
         cfg.must_support_missing_severity = Severity::Error;
-        let issues = validate_must_support(&patient, "Patient", &rules, &cfg);
+        let issues = validate_must_support(&patient, "Patient", &profile, &cfg);
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].severity, Severity::Error);
     }
@@ -491,8 +686,8 @@ mod tests {
         let patient = json!({
             "resourceType": "Patient"
         });
-        let rules = vec![rule("Patient.contact.name", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.contact.name", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
         assert!(
             issues.is_empty(),
             "min on contact.name should not apply when contact is absent: {issues:?}"
@@ -505,8 +700,8 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let rules = vec![rule("Patient.identifier", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.identifier", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].fhir_path, "Patient.identifier");
@@ -533,8 +728,8 @@ mod tests {
             ]
         });
 
-        let rules = vec![rule("Patient.identifier", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.identifier", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
     }
@@ -545,8 +740,8 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let rules = vec![rule("Patient.maritalStatus", Some(0), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.maritalStatus", Some(0), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
     }
@@ -564,8 +759,8 @@ mod tests {
             ]
         });
 
-        let rules = vec![rule("Patient.contact.name", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.contact.name", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
         assert!(issues.is_empty());
     }
 
@@ -576,8 +771,8 @@ mod tests {
             "contact": [{}]
         });
 
-        let rules = vec![rule("Patient.contact.name", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.contact.name", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert_eq!(issues.len(), 1);
     }
@@ -592,8 +787,8 @@ mod tests {
             ]
         });
 
-        let rules = vec![rule("Patient.identifier", None, Some("1"))];
-        let issues = validate_max_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.identifier", None, Some("1"))]);
+        let issues = validate_max_cardinality(&patient, "Patient", &profile);
 
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].fhir_path, "Patient.identifier");
@@ -622,10 +817,40 @@ mod tests {
             ]
         });
 
-        let rules = vec![rule("Patient.identifier", None, Some("1"))];
-        let issues = validate_max_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.identifier", None, Some("1"))]);
+        let issues = validate_max_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn nested_max_cardinality_is_per_repeating_parent() {
+        let appointment = json!({
+            "resourceType": "Appointment",
+            "participant": [
+                {
+                    "actor": { "reference": "Patient/p1" },
+                    "status": "accepted"
+                },
+                {
+                    "actor": { "reference": "Practitioner/pr1" },
+                    "status": "accepted"
+                }
+            ]
+        });
+
+        let profile = test_profile(
+            "Appointment",
+            vec![
+                rule("Appointment.participant.actor", None, Some("1")),
+                rule("Appointment.participant.status", None, Some("1")),
+            ],
+        );
+        let issues = validate_max_cardinality(&appointment, "Appointment", &profile);
+        assert!(
+            issues.is_empty(),
+            "max 1 actor/status per participant should allow multiple participants: {issues:?}"
+        );
     }
 
     #[test]
@@ -639,8 +864,8 @@ mod tests {
             ]
         });
 
-        let rules = vec![rule("Patient.identifier", None, Some("*"))];
-        let issues = validate_max_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.identifier", None, Some("*"))]);
+        let issues = validate_max_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
     }

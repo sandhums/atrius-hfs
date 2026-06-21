@@ -7,6 +7,9 @@ Architecture and implementation plan for building hospital operations on the Hel
 | Document | Description |
 |----------|-------------|
 | [fhir-native-his-plan.md](./fhir-native-his-plan.md) | Comprehensive phased plan — registration, scheduling, ADT, staffing, orders, integration |
+| [atrius-his repo](../../../atrius-his) | **Layer 2 domain services** — platform hardening, `his-server`, future registration/scheduling/ADT crates |
+
+> **Implementation:** HIS domain services live in the sibling [`atrius-his`](../../../atrius-his) repository. Platform hardening (Phase 0) is underway there.
 
 ## Related documentation
 
@@ -18,12 +21,14 @@ Architecture and implementation plan for building hospital operations on the Hel
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| 0 | Platform hardening + IG profiles + seed data | Pending |
-| 1 | Patient registration & MPI | Pending |
-| 2 | Scheduling & appointments | Pending |
-| 3 | ADT (admit, transfer, discharge) | Pending |
+| 0 | Platform hardening + IG profiles + seed data | ✓ atrius-his |
+| 1 | Patient registration & MPI | ✓ smoke |
+| 2 | Scheduling & appointments (base R4) | ✓ smoke |
+| 3 | ADT (admit, transfer, discharge) | ✓ smoke |
+| **3.5** | **Scheduling/ADT hardening — Schedule+Slot+Appointment profiles, iCalendar RRULE, start-visit, `$validate`** | **Active** |
 | 4 | Staff rostering & duty assignment | Pending |
-| 5 | Orders, CPOE & care coordination | Pending |
+| 5a | Consultation notes (Composition on Encounter) | Pending |
+| 5b | Lab orders & CPOE (ServiceRequest + Task) | Pending |
 | 6 | External integrations & analytics | Pending |
 
 See [fhir-native-his-plan.md](./fhir-native-his-plan.md) for full detail, architecture diagrams, and success criteria.

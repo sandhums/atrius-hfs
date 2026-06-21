@@ -51,6 +51,7 @@ pub mod extract;
 pub mod extract_core;
 pub mod helpers;
 pub mod profile_registry;
+pub mod slice_matching;
 pub mod slicing;
 pub mod structure_definition_extract;
 pub mod types;

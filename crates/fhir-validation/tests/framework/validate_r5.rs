@@ -2717,4 +2717,110 @@ mod tests {
             "extension url should satisfy type.profile like meta.profile, got {issues:?}"
         );
     }
+
+    #[test]
+    fn type_profile_slice_validates_only_matching_extension_instances() {
+        let birth_place_url = "http://hl7.org/fhir/StructureDefinition/patient-birthPlace";
+        let nationality_url = "http://hl7.org/fhir/StructureDefinition/patient-nationality";
+
+        let birth_place_profile = ExtractedProfile {
+            url: birth_place_url.to_string(),
+            version: None,
+            name: None,
+            title: None,
+            resource_type: "Extension".to_string(),
+            base_definition: None,
+            snapshot_base_version: None,
+            kind: StructureDefinitionKind::ComplexType,
+            derivation: TypeDerivationRule::Constraint,
+            invariants: Vec::new(),
+            element_rules: vec![ExtractedElementRule {
+                id: "Extension.value[x]".to_string(),
+                path: "Extension.value[x]".to_string(),
+                min: Some(1),
+                max: Some("1".to_string()),
+                binding: None,
+                constraints: Vec::new(),
+                value_constraint: None,
+                type_constraints: vec![ExtractedTypeConstraint {
+                    code: "Address".to_string(),
+                    profiles: Vec::new(),
+                    target_profiles: Vec::new(),
+                    ..Default::default()
+                }],
+                slicing: None,
+                slice_name: None,
+                ..Default::default()
+            }],
+        };
+
+        let mut patient_profile = empty_profile();
+        patient_profile.url =
+            "http://example.org/fhir/StructureDefinition/test-patient-slices".to_string();
+        patient_profile.element_rules = vec![
+            ExtractedElementRule {
+                id: "Patient.extension:birthPlace".to_string(),
+                path: "Patient.extension".to_string(),
+                slice_name: Some("birthPlace".to_string()),
+                type_constraints: vec![ExtractedTypeConstraint {
+                    code: "Extension".to_string(),
+                    profiles: vec![birth_place_url.to_string()],
+                    target_profiles: Vec::new(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+            ExtractedElementRule {
+                id: "Patient.extension:patient-nationality".to_string(),
+                path: "Patient.extension".to_string(),
+                slice_name: Some("patient-nationality".to_string()),
+                type_constraints: vec![ExtractedTypeConstraint {
+                    code: "Extension".to_string(),
+                    profiles: vec![nationality_url.to_string()],
+                    target_profiles: Vec::new(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        ];
+
+        let mut registry = ProfileRegistry::new();
+        registry.insert(birth_place_profile);
+
+        let patient = json!({
+            "resourceType": "Patient",
+            "extension": [{
+                "url": birth_place_url,
+                "valueAddress": { "city": "Mysuru", "country": "IN" }
+            }]
+        });
+
+        let patient_typed: Patient =
+            serde_json::from_value(patient.clone()).expect("Patient JSON should deserialize");
+        let evaluator = R5FhirPathEvaluator::new(Resource::Patient(Box::new(patient_typed)));
+
+        let issues = run_validate_profile(
+            &validator(),
+            &patient,
+            "Patient",
+            &patient_profile,
+            &evaluator,
+            Some(&registry),
+        );
+
+        assert!(
+            !issues.iter().any(|i| {
+                i.summary.as_deref()
+                    == Some("Declared profiles do not satisfy type.profile requirement")
+            }),
+            "birthPlace-only patient should not fail other extension slice profiles, got {issues:?}"
+        );
+        assert!(
+            !issues.iter().any(|i| {
+                i.diagnostics.contains("Extension.value[x]")
+                    && i.code == "required"
+            }),
+            "valueAddress should satisfy nested Extension.value[x], got {issues:?}"
+        );
+    }
 }

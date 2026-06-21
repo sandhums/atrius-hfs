@@ -1,7 +1,7 @@
 mod tests {
 
     use fhir_validation::profile::cardinality::validate_min_cardinality;
-    use fhir_validation::profile::types::ExtractedElementRule;
+    use fhir_validation::profile::types::{ExtractedElementRule, ExtractedProfile};
     use fhir_validation_types::{BindingDef, Severity};
     use serde_json::json;
 
@@ -21,19 +21,31 @@ mod tests {
         }
     }
 
+    fn test_profile(resource_type: &str, rules: Vec<ExtractedElementRule>) -> ExtractedProfile {
+        ExtractedProfile {
+            url: "http://example.org/fhir/test-profile".to_string(),
+            resource_type: resource_type.to_string(),
+            element_rules: rules,
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn missing_top_level_required_fields_produce_issues() {
         let patient = json!({
             "resourceType": "Patient"
         });
 
-        let rules = vec![
-            rule("Patient.identifier", Some(1), None),
-            rule("Patient.gender", Some(1), None),
-            rule("Patient.birthDate", Some(1), None),
-        ];
+        let profile = test_profile(
+            "Patient",
+            vec![
+                rule("Patient.identifier", Some(1), None),
+                rule("Patient.gender", Some(1), None),
+                rule("Patient.birthDate", Some(1), None),
+            ],
+        );
 
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert_eq!(issues.len(), 3);
         assert!(issues.iter().all(|i| i.severity == Severity::Error));
@@ -51,13 +63,16 @@ mod tests {
             "birthDate": "1980-01-01"
         });
 
-        let rules = vec![
-            rule("Patient.identifier", Some(1), None),
-            rule("Patient.gender", Some(1), None),
-            rule("Patient.birthDate", Some(1), None),
-        ];
+        let profile = test_profile(
+            "Patient",
+            vec![
+                rule("Patient.identifier", Some(1), None),
+                rule("Patient.gender", Some(1), None),
+                rule("Patient.birthDate", Some(1), None),
+            ],
+        );
 
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
         assert!(issues.is_empty());
     }
 
@@ -67,8 +82,8 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let rules = vec![rule("Patient.maritalStatus", Some(0), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.maritalStatus", Some(0), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
     }
@@ -84,8 +99,8 @@ mod tests {
             }
         });
 
-        let rules = vec![rule("Patient.contact.name", Some(1), None)];
-        let issues = validate_min_cardinality(&patient, "Patient", &rules);
+        let profile = test_profile("Patient", vec![rule("Patient.contact.name", Some(1), None)]);
+        let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());
     }

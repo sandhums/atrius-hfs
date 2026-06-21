@@ -599,12 +599,12 @@ impl Validator {
             issues.extend(cardinality::validate_min_cardinality(
                 resource,
                 resource_type,
-                &base.element_rules,
+                base,
             ));
             issues.extend(cardinality::validate_max_cardinality(
                 resource,
                 resource_type,
-                &base.element_rules,
+                base,
             ));
         }
         issues

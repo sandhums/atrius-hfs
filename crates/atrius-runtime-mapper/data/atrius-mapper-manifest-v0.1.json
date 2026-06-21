@@ -1,22 +1,22 @@
 {
   "profile_mappings": [
     {
-      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-patient",
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient",
       "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-patient",
       "resource_type": "Patient"
     },
     {
-      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-encounter",
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter",
       "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter",
       "resource_type": "Encounter"
     },
     {
-      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-encounter-diagnosis",
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis",
       "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-encounter-diagnosis",
       "resource_type": "Condition"
     },
     {
-      "atrius_profile": "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-problems-health-concerns",
+      "atrius_profile": "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-problems-health-concerns",
       "evaluation_profile": "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns",
       "resource_type": "Condition"
     }

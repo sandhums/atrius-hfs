@@ -50,10 +50,10 @@ pub fn encounter_reference_present(resource: &Value) -> bool {
 
 /// Deterministic category selection from Atrius IG `runtime-mapper.md`.
 pub fn select_condition_branch(resource: &Value) -> ConditionBranch {
-    if has_profile_suffix(resource, "atrius-condition-encounter-diagnosis") {
+    if has_profile_suffix(resource, "atrius-in-condition-encounter-diagnosis") {
         return ConditionBranch::EncounterDiagnosis;
     }
-    if has_profile_suffix(resource, "atrius-condition-problems-health-concerns") {
+    if has_profile_suffix(resource, "atrius-in-condition-problems-health-concerns") {
         return ConditionBranch::ProblemsHealthConcerns;
     }
 
@@ -112,7 +112,7 @@ mod tests {
     fn branch_from_atrius_ed_profile() {
         let resource = json!({
             "resourceType": "Condition",
-            "meta": { "profile": [format!("{ATRIUS_PROFILE_BASE}atrius-condition-encounter-diagnosis")] },
+            "meta": { "profile": [format!("{ATRIUS_PROFILE_BASE}atrius-in-condition-encounter-diagnosis")] },
             "category": [{ "coding": [{ "system": HL7_CONDITION_CATEGORY, "code": "encounter-diagnosis" }] }]
         });
         assert_eq!(
@@ -149,7 +149,7 @@ mod tests {
     fn project_sets_qicore_profile() {
         let mut resource = json!({
             "resourceType": "Condition",
-            "meta": { "profile": [format!("{ATRIUS_PROFILE_BASE}atrius-condition-problems-health-concerns")] },
+            "meta": { "profile": [format!("{ATRIUS_PROFILE_BASE}atrius-in-condition-problems-health-concerns")] },
             "category": [{ "coding": [{ "system": HL7_CONDITION_CATEGORY, "code": "problem-list-item" }] }],
             "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "38341003" }] }
         });

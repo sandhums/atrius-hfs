@@ -1,6 +1,6 @@
 # FHIR-Native Hospital Information System — Comprehensive Plan
 
-> **Status:** Draft for review (2026-06). Stepwise implementation to follow phase order below.
+> **Status:** Living plan (updated 2026-06). Phases 0–3 have initial implementations in [`atrius-his`](../../../atrius-his); **Phase 3.5** (scheduling/ADT hardening + IG) is the active track before clinical documentation and orders.
 
 ## Executive summary
 
@@ -80,11 +80,12 @@ flowchart TB
 
 **Critical gaps for hospital ops** (must be built):
 
-- No **Scheduling IG operations** (`$find`, `$book`, `$hold`) — only CRUD on Appointment/Schedule/Slot
-- No **ADT workflow** — Encounter CRUD without admit/transfer/discharge orchestration
+- No **Scheduling IG operations** (`$find`, `$book`, `$hold`) — only CRUD on Appointment/Schedule/Slot (domain services implement booking via transaction bundles today)
+- **ADT workflow** — initial `AdtService` in atrius-his (admit/transfer/discharge/bed board); EpisodeOfCare and strict encounter validation still pending
 - No **Task lifecycle operations** (`$accept`, `$start`, `$complete`) — Task is passive storage
-- No **Appointment / EpisodeOfCare Atrius profiles** yet
+- No **Appointment / Schedule / Slot / EpisodeOfCare Atrius profiles** yet — scheduling and ADT writes use base R4 resources without `meta.profile`
 - No **MPI / patient match** (`$match`, `$everything`, merge)
+- **HFS Location search** — `part-of` and `physical-type` not indexed; bed board uses client-side filter (platform fix deferred)
 - **UI/BFF** for admin workflows lives mostly outside this repo ([`atrius-bff`](../clinical-reasoning/forward-plan.md), `atrius-clinical-ui`)
 
 ---
@@ -149,12 +150,15 @@ Extend profiles for hospital operations not yet covered:
 
 | Resource | New Atrius profile needs |
 |----------|-------------------------|
-| **Appointment** | OPD/IPD visit types, status lifecycle, slot linkage, service type |
-| **EpisodeOfCare** | Care program enrollment (chronic disease, maternity) |
-| **Encounter** | ADT extensions: admission source, discharge disposition, bed/ward refs |
-| **Location** | Bed, ward, room, department hierarchy; occupancy status extension |
+| **Schedule** | Actor linkage (Practitioner / HealthcareService / Location), `planningHorizon`, service category/type, **iCalendar recurrence extension** (RRULE/TZID/EXDATE) |
+| **Slot** | Schedule reference, start/end, status lifecycle, service type; must align with parent Schedule actors |
+| **Appointment** | OPD/IPD visit types, status lifecycle, slot linkage, service type, participant roles |
+| **EpisodeOfCare** | Care program enrollment (chronic disease, maternity); links inpatient Encounter chain |
+| **Encounter** | ADT extensions: admission source, discharge disposition, bed/ward refs; OPD visit from Appointment |
+| **Location** | Bed, ward, room, department hierarchy; occupancy via HL7 v2-0116 `operationalStatus` |
 | **Task** | Nursing tasks, duty assignments, shift handoff; owner/period constraints |
 | **Basic** | Shift roster, bed status board (common FHIR pattern for non-clinical admin) |
+| **Composition** | Consultation note structure (Phase 5a) |
 
 Publish manifest updates consumed by HFS via `HFS_PROFILE_MANIFEST`.
 
@@ -228,15 +232,32 @@ Consent (data sharing, treatment)
 
 **Goal:** Book OPD/specialist appointments with slot management.
 
-### FHIR resource model
+> **Implementation status (atrius-his):** `his-scheduling` + smoke tests pass (find slots, book, cancel, reschedule, 409 on double-book). Resources are **base R4** without Atrius profiles. Slot seeding uses a Python loop in `seed-hospital-foundation.py`. **Profile constraints, iCalendar recurrence, and `$validate` move to Phase 3.5.**
+
+### FHIR resource model — the scheduling triad
+
+Schedule, Slot, and Appointment are **one constraint chain** — profile and validate them together, not in isolation:
 
 ```
 HealthcareService (clinic/specialty)
 Schedule (actor = Practitioner | HealthcareService | Location)
+  ├── planningHorizon (Period) — outer bounds of bookable time
+  ├── serviceCategory / serviceType / specialty (optional filters)
+  └── extension: atrius-schedule-recurrence (RRULE, TZID, EXDATE) — see Phase 3.5
+
 Slot (status: free | busy | busy-unavailable | busy-tentative)
+  ├── schedule → Schedule (required under profile)
+  ├── start / end (instant)
+  └── serviceCategory / serviceType (should match Schedule when present)
+
 Appointment (status lifecycle: proposed → pending → booked → arrived → fulfilled | cancelled)
-Appointment.participant (Patient, Practitioner, Location)
+  ├── slot[] → Slot (booked appointments)
+  ├── start / end (must match linked Slot)
+  ├── participant[] (Patient, Practitioner, Location with status)
+  └── serviceType / appointmentType (OPD follow-up, new visit, procedure)
 ```
+
+**Design principle:** A bookable Slot must be provably consistent with its Schedule (actor, horizon, service). An Appointment must be provably consistent with its Slot (times, status, participants). IG cardinality and terminology bindings enforce this at write time once profiles land in Phase 3.5.
 
 ### Domain service: `SchedulingService`
 
@@ -281,13 +302,15 @@ Define SubscriptionTopic (R4 backport via Basic):
 
 ### Profiles (AtriusIGDraft)
 
-Author `atrius-appointment`, `atrius-slot` with required fields for your hospital's workflow.
+Author **`atrius-in-schedule`**, **`atrius-in-slot`**, and **`atrius-in-appointment`** as a **single IG slice** (shared terminology bindings, invariants, examples). See **Phase 3.5** for iCalendar recurrence and implementation order.
 
 ---
 
 ## Phase 3 — ADT: Admit, Transfer, Discharge (weeks 15–20)
 
 **Goal:** Manage inpatient stays, bed assignment, and encounter lifecycle.
+
+> **Implementation status (atrius-his):** `his-adt` + smoke tests pass (admit, transfer, discharge, bed board, 409 on occupied bed). Encounters use **`atrius-in-encounter`** profile; beds use **`atrius-in-location`**. EpisodeOfCare, encounter `$validate` smoke, ADT subscriptions, and encounter-start CDS are deferred to Phase 3.5.
 
 ### FHIR resource model
 
@@ -341,7 +364,117 @@ Topics: `encounter-admitted`, `encounter-transferred`, `encounter-discharged` �
 
 ---
 
-## Phase 4 — Staff Rostering & Duty Assignment (weeks 21–26)
+## Phase 3.5 — Scheduling & ADT hardening (weeks 21–24)
+
+**Goal:** Close the gap between “working smoke tests” and **production-ready operational + clinical entry points**. Do **not** start consultation notes or lab orders until this phase completes — they depend on validated encounters linked to appointments.
+
+This phase deliberately **tightens Phases 2 and 3** before Phase 4 (staffing) or Phase 5 (clinical documentation and orders).
+
+### Why Schedule + Slot + Appointment together
+
+Appointment booking is a **three-resource invariant**:
+
+| Resource | Role in booking |
+|----------|-----------------|
+| **Schedule** | Defines *who/what/when* availability exists (actor, horizon, recurrence) |
+| **Slot** | Materialized bookable window; status transitions on book/cancel |
+| **Appointment** | Committed booking; references Slot; drives check-in and OPD Encounter |
+
+Profiling only Appointment leaves Slot and Schedule unconstrained — bad writes (orphan slots, actor mismatch, times out of horizon) slip through until book time. **Ship all three profiles in one IG PR** with shared ValueSets (appointment type, service category) and worked examples (OPD follow-up, new patient visit).
+
+### iCalendar / recurrence on Schedule
+
+**Recommendation: yes — constrain Schedule with iCalendar semantics**, but be precise about what FHIR R4 gives you:
+
+| Mechanism | Use |
+|-----------|-----|
+| **`Schedule.planningHorizon`** | Outer Period (start/end) — nothing bookable outside this |
+| **Atrius extension `atrius-schedule-recurrence`** | RFC 5545 `RRULE`, `TZID`, optional `EXDATE` / `RDATE` on Schedule |
+| **`Slot` materialization** | Expand recurrence into concrete Slots (what seed script does manually today) |
+| **Optional later** | `$find`-style façade; import/export full `.ics` for practitioner personal calendars |
+
+R4 **Schedule has no native RRULE element** (R6 adds richer Appointment recurrence). Hospital systems still think in weekly clinic hours — storing RRULE on Schedule is the right interoperability anchor. **`his-scheduling` owns expansion**: given Schedule + horizon, generate or refresh free Slots idempotently (PUT by deterministic slot id, e.g. `{scheduleId}-{start}`).
+
+**Do not block Phase 3.5 on full bi-directional iCal sync** (Google Calendar, Outlook). Start with:
+
+1. Author recurrence extension + profile constraints on Schedule
+2. Implement `expandScheduleRecurrence(schedule, from, to)` in `his-domain`
+3. Replace ad-hoc Python slot loop in `seed-hospital-foundation.py` with expansion API or shared Rust library
+4. Validate expanded Slots against `atrius-in-slot` before write
+
+### Phase 3.5 work breakdown
+
+#### 3.5.1 IG authoring (AtriusIGDraft)
+
+| Profile | Key constraints |
+|---------|-----------------|
+| **`atrius-in-schedule`** | `actor` (1+), `active`, `planningHorizon`, optional recurrence extension, serviceCategory/type |
+| **`atrius-in-slot`** | `schedule` (required), `status`, `start`, `end`; start/end within parent Schedule.planningHorizon |
+| **`atrius-in-appointment`** | `status`, `slot` or explicit start/end, `participant` (Patient + Practitioner minimum), serviceType/appointmentType |
+
+Also:
+
+- ValueSets: appointment-type, visit-mode (in-person/tele), OPD service types
+- Examples: Schedule with RRULE `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR`, Slots, booked Appointment
+- Publish via `build-atrius-profile-manifest.sh`; enable strict validation on writes
+
+#### 3.5.2 Domain layer (atrius-his)
+
+| Task | Crate / area |
+|------|----------------|
+| Add `meta.profile` to Schedule/Slot/Appointment builders | `his-domain/scheduling.rs` |
+| Recurrence expansion + slot id strategy | `his-domain` (new `schedule_recurrence` module) |
+| `POST /schedules/{id}/expand-slots?from=&to=` (or internal only at first) | `his-scheduling` / `his-server` |
+| `$validate` in smoke tests for all three resources | `scripts/smoke-scheduling.sh` |
+| **OPD Encounter from Appointment** — `POST /encounters/start-visit` (AMB class, links `appointment`, patient, practitioner) | `his-adt` or new `his-encounter` helper |
+| Check-in status transition: Appointment `booked` → `arrived` → `fulfilled` | `his-scheduling` |
+| EpisodeOfCare on inpatient admit (optional link to originating Appointment) | `his-adt` |
+| ADT `$validate` smoke; bed board patient display name | `his-adt`, smoke scripts |
+| HFS indexing for `Location.part-of`, `Location.physical-type` (or document as platform backlog) | atrius-hfs persistence |
+
+#### 3.5.3 Subscriptions & CDS (optional in 3.5, required before UI)
+
+- Topics: `appointment-booked`, `appointment-cancelled`, `encounter-started`, `encounter-admitted`, `encounter-discharged`
+- Wire **encounter-start** CDS hook on OPD visit start and IP admit (existing chest-pain pathway as reference)
+
+### Phase 3.5 success criteria
+
+| Demo | Pass |
+|------|------|
+| Schedule with RRULE loads; expansion creates profile-valid Slots for 14 days | ✓ |
+| Book Appointment → `$validate` clean on Schedule, Slot, Appointment | ✓ |
+| Cancel / reschedule still pass smoke with profiled resources | ✓ |
+| `start-visit` from booked Appointment → AMB Encounter with `appointment` link | ✓ |
+| Admit / transfer / discharge still pass; Encounter `$validate` clean | ✓ |
+| Bed board shows patient name; vacant after discharge | ✓ |
+
+```mermaid
+flowchart LR
+  subgraph phase35 [Phase 3.5]
+    IG[Schedule + Slot + Appointment profiles]
+    ICAL[iCalendar RRULE on Schedule]
+    EXP[Slot expansion]
+    VAL["$validate smokes"]
+    VISIT[start-visit Encounter]
+    ADT[ADT hardening]
+  end
+
+  subgraph phase5 [Phase 5 Clinical]
+    NOTE[Consultation notes]
+    LAB[Lab orders]
+  end
+
+  IG --> VAL
+  ICAL --> EXP --> VAL
+  VAL --> VISIT
+  VISIT --> NOTE
+  VISIT --> LAB
+  ADT --> LAB
+```
+
+---
+
+## Phase 4 — Staff Rostering & Duty Assignment (weeks 25–30)
 
 **Goal:** Assign staff duties, nursing tasks, and shift handoffs.
 
@@ -389,9 +522,66 @@ SMART scopes tied to PractitionerRole:
 
 ---
 
-## Phase 5 — Orders, CPOE & Care Coordination (weeks 27–32)
+## Phase 5 — Clinical documentation & orders (weeks 31–38)
 
-**Goal:** Close the loop from orders to fulfillment using existing clinical reasoning.
+**Goal:** OPD and inpatient clinical workflows on top of **validated Encounters** from Phase 3.5. Split into documentation and ordering tracks — both can progress in parallel once `start-visit` exists.
+
+### Phase 5a — Consultation notes (documentation)
+
+**Entry point:** OPD — book → check-in → `start-visit` → write note.
+
+| Resource | Pattern |
+|----------|---------|
+| **Composition** (preferred) or **DocumentReference** | Consult note sections: chief complaint, HPI, exam, assessment, plan |
+| **Encounter** | `status=in-progress` during visit; `finished` at checkout |
+| **Provenance** | Author Practitioner; signed/finalized status |
+| **Profile** | `atrius-in-composition` (author in AtriusIGDraft) |
+
+**Domain service:** `DocumentationService` (or extend `his-adt` initially)
+
+| Operation | FHIR orchestration |
+|-----------|-------------------|
+| **Create draft note** | POST Composition (status=preliminary) linked to Encounter |
+| **Update / amend** | PUT with version; retain history |
+| **Sign / finalize** | Composition.status=final + attester |
+| **Read by encounter** | `GET /Composition?encounter=` |
+
+**Smoke:** book appointment → start-visit → create note → finalize → read back.
+
+### Phase 5b — Lab orders & CPOE
+
+**Entry point:** OPD or IP — Encounter must exist.
+
+| Resource | Pattern |
+|----------|---------|
+| **ServiceRequest** | category=laboratory (LOINC-coded tests); `encounter`, `subject`, `requester` |
+| **Task** | Fulfillment tracking (lab collect, process, result) |
+| **DiagnosticReport** + **Observation** | Results (Phase 6 LIS integration) |
+
+**Domain service:** `OrderService`
+
+| Operation | FHIR orchestration |
+|-----------|-------------------|
+| **Place lab order** | POST ServiceRequest (+ optional Task) in transaction |
+| **Order set / pathway** | Reuse PlanDefinition `$apply` via cds-server + bridge (existing stack) |
+| **Discontinue** | ServiceRequest.status=revoked |
+| **List by encounter** | Search ServiceRequest?encounter= |
+
+**CDS Hooks:** `order-select`, `order-sign` for duplicate therapy, interaction checks ([`helios-cds-hooks`](../../crates/cds-hooks/)).
+
+### Phase 5 sequencing recommendation
+
+| Order | Track | Rationale |
+|-------|-------|-----------|
+| 1 | **5a Consultation notes** on OPD | Fast clinician-visible win; minimal external integration |
+| 2 | **5b Lab orders** (write path only) | ServiceRequest + Task; stub results |
+| 3 | Phase 6 LIS | DiagnosticReport inbound |
+
+---
+
+## Phase 5 (legacy summary) — Orders, CPOE & Care Coordination
+
+> **Superseded by Phase 5a/5b above** — retained for reference to existing clinical reasoning integration.
 
 ### Leverage existing stack
 
@@ -447,27 +637,34 @@ Enable `order-select`, `order-sign` hooks (already typed in [`helios-cds-hooks`]
 ## Recommended repository structure (new work)
 
 ```
-atrius-hfs/                          # existing platform
-  crates/
-    his-domain/                      # NEW: shared types, FHIR bundle builders
-    his-registration/                # NEW: RegistrationService
-    his-scheduling/                  # NEW: SchedulingService
-    his-adt/                         # NEW: AdtService
-    his-staffing/                    # NEW: StaffingService
-  bins/
-    his-server/                      # NEW: unified domain API (or split binaries)
-  manifests/
-    atrius-r4-profile-manifest-his.json   # expanded profile manifest
-  scripts/
-    seed-hospital-foundation.py
-    smoke-his-registration.sh
-    smoke-his-scheduling.sh
-    smoke-his-adt.sh
+atrius-hfs/                          # Layer 1 — FHIR platform
+  crates/fhir-validation/            # Profile validation (fix + extend as IG grows)
+  manifests/atrius-r4-profile-manifest-core.json
+  scripts/build-atrius-profile-manifest.sh
+  docs/his/                          # This plan
 
-AtriusIGDraft/                       # external: profiles, extensions, examples
-atrius-bff/                          # external: auth, API aggregation
-atrius-clinical-ui/                  # external: clinician UI
-atrius-admin-ui/                     # external: registration, scheduling, bed board
+atrius-his/                          # Layer 2 — domain services (active implementation)
+  crates/
+    his-domain/                      # FHIR client, builders (patient, scheduling, adt)
+    his-registration/                # RegistrationService ✓
+    his-scheduling/                  # SchedulingService ✓ — profiles + iCal in 3.5
+    his-adt/                         # AdtService ✓ — EpisodeOfCare + start-visit in 3.5
+    his-documentation/               # NEW Phase 5a
+    his-orders/                      # NEW Phase 5b (or his-cpoe)
+    his-staffing/                    # Phase 4
+    his-server/                      # Unified API ✓
+  scripts/
+    seed-hospital-foundation.py      # Foundation + slots (→ recurrence expansion in 3.5)
+    smoke-registration.sh            # ✓
+    smoke-scheduling.sh              # ✓ — add $validate in 3.5
+    smoke-adt.sh                     # ✓
+    smoke-start-visit.sh             # NEW Phase 3.5
+    smoke-consult-note.sh            # NEW Phase 5a
+
+AtriusIGDraft/                       # Profiles: schedule, slot, appointment, composition
+atrius-bff/                          # SMART auth, API aggregation
+atrius-clinical-ui/                  # Clinician UI
+atrius-admin-ui/                     # Registration, scheduling board, bed board
 ```
 
 Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a single API gateway — the FHIR bundle orchestration logic still belongs in a dedicated module either way.
@@ -480,7 +677,8 @@ Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a s
 |-------------------|-------------------|----------------|----------------------|
 | Register patient | Patient, RelatedPerson, Coverage | Registration | No — needs MPI rules |
 | Book appointment | Schedule, Slot, Appointment | Scheduling | No — needs atomic booking |
-| Check in | Appointment, Encounter (outpatient) | Scheduling + ADT | No |
+| Check in / start OPD visit | Appointment → Encounter (AMB) | Scheduling + ADT (Phase 3.5) | No — needs start-visit |
+| Write consultation note | Composition, Encounter | Documentation (5a) | No |
 | Admit inpatient | Encounter, Location, EpisodeOfCare | ADT | No |
 | Transfer bed | Encounter.location, Location | ADT | No |
 | Discharge | Encounter, Location, Account | ADT | No |
@@ -501,32 +699,38 @@ Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a s
 | UI strategy | Extend atrius-bff + new admin UI | API-only for integration-first |
 | Regulatory profiles | Atrius-core + NDHM identifiers | US Core / IPS for international |
 | Workflow engine | Task + PlanDefinition + Subscriptions (FHIR-native) | External BPM (Camunda) — avoid unless required |
-| Scheduling operations | Domain service with transaction bundles | Implement Scheduling IG `$find`/`$book` in helios-rest |
+| Scheduling operations | Domain service + transaction bundles; RRULE slot expansion (Phase 3.5) | Implement Scheduling IG `$find`/`$book` in helios-rest |
+| Scheduling profiles | **Schedule + Slot + Appointment as one IG slice** with iCalendar RRULE on Schedule | Appointment-only profile (insufficient constraints) |
+| Clinical entry | **Phase 3.5 before Phase 5** — start-visit + validated profiles | Jump directly to notes/orders on raw CRUD |
 
 ---
 
 ## Success criteria by phase
 
-| Phase | Demo scenario |
-|-------|---------------|
-| 0 | Hospital foundation data loaded; strict validation rejects bad Patient |
-| 1 | Register patient with MRN; search and retrieve; duplicate warning |
-| 2 | Book OPD appointment; cancel; reschedule; subscription notification |
-| 3 | Admit patient to bed; transfer ward; discharge; bed board updates |
-| 4 | Assign nursing tasks to shift; nurse accepts/completes; handoff |
-| 5 | Admit → encounter-start CDS → accept orders → lab Task fulfilled |
-| 6 | Bulk export all Encounters; SOF view for daily census |
+| Phase | Demo scenario | Status |
+|-------|---------------|--------|
+| 0 | Hospital foundation data loaded; strict validation rejects bad Patient | ✓ atrius-his |
+| 1 | Register patient with MRN; search and retrieve; duplicate warning | ✓ smoke |
+| 2 | Book OPD appointment; cancel; reschedule; 409 on double-book | ✓ smoke (base R4) |
+| 3 | Admit patient to bed; transfer ward; discharge; bed board updates | ✓ smoke |
+| **3.5** | **Profiled Schedule/Slot/Appointment; RRULE expansion; `$validate`; start-visit Encounter** | **Next** |
+| 4 | Assign nursing tasks to shift; nurse accepts/completes; handoff | Pending |
+| 5a | Book → start-visit → consultation note → finalize | Pending |
+| 5b | Place lab order on Encounter → Task created | Pending |
+| 6 | Bulk export all Encounters; SOF view for daily census; LIS results | Pending |
 
 ---
 
-## Immediate next steps (first 2 weeks)
+## Immediate next steps (Phase 3.5 — first 2–3 weeks)
 
-1. **Author Appointment, EpisodeOfCare, bed Location profiles** in AtriusIGDraft; publish manifest
-2. **Deploy production HFS stack**: postgres-es + auth + strict validation + HTS terminology
-3. **Create `seed-hospital-foundation.py`**: Organization, Locations, Practitioners, Schedules
-4. **Scaffold `his-domain` crate** with FHIR transaction bundle builders for Patient registration
-5. **Implement RegistrationService** with integration test against HFS
-6. **Extend atrius-bff** with `/api/v1/registration` routes proxying to RegistrationService
-7. **Smoke test**: register patient → book appointment → admit → assign task (manual curl scripts)
+1. **AtriusIGDraft:** Author **`atrius-in-schedule`**, **`atrius-in-slot`**, **`atrius-in-appointment`** + **`atrius-schedule-recurrence`** extension (RRULE/TZID/EXDATE); examples and ValueSets
+2. **Manifest:** Rebuild `atrius-r4-profile-manifest-core.json`; confirm strict `$validate` passes on examples
+3. **his-domain:** Profile constants + builders for Schedule/Slot/Appointment; recurrence expansion module
+4. **his-scheduling:** Apply profiles on write; `expand-slots`; extend smoke with `$validate`
+5. **his-adt:** `POST /encounters/start-visit` from Appointment; EpisodeOfCare on admit; ADT validate smoke
+6. **Seed:** Replace Python slot loop with recurrence-driven expansion from profiled Schedule
+7. **Smoke:** `smoke-start-visit.sh` — register → book → start-visit → read Encounter
+
+**After Phase 3.5:** Phase 5a (consultation notes) before Phase 5b (lab orders) for fastest OPD clinician demo; Phase 4 (staffing) when nursing task assignment is needed for order fulfillment.
 
 This plan keeps HFS as the **authoritative FHIR store**, uses your **validation and terminology** stack for data quality, connects **clinical reasoning** at encounter boundaries, and adds **thin domain services** for the operational semantics a hospital needs — staying FHIR-native throughout.

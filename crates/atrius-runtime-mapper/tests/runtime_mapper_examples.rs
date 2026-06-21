@@ -30,7 +30,7 @@ fn encounter_diagnosis_example_from_runtime_mapper_md() {
         "resourceType": "Condition",
         "meta": {
             "profile": [
-                "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-encounter-diagnosis"
+                "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis"
             ]
         },
         "clinicalStatus": {
@@ -76,7 +76,7 @@ fn problems_health_concerns_example_from_runtime_mapper_md() {
         "resourceType": "Condition",
         "meta": {
             "profile": [
-                "https://atrius.in/fhir/r4/atrius-core/StructureDefinition/atrius-condition-problems-health-concerns"
+                "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-problems-health-concerns"
             ]
         },
         "clinicalStatus": {
