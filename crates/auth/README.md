@@ -14,6 +14,23 @@ This crate provides [SMART Backend Services](https://hl7.org/fhir/smart-app-laun
 - **SMART Discovery**: Builds `/.well-known/smart-configuration` documents
 - **Pluggable Audit**: Trait-based audit event sink (noop default, extensible)
 
+## Atrius platform consumers
+
+In the Atrius stack, **helios-auth** is used in two places (JWKS validation is not duplicated in the BFF):
+
+| Service | Crate / path | Auth mode |
+|---------|--------------|-----------|
+| **Clinical HFS** | `helios-hfs` / `helios-rest` middleware | Authenticate + **SMART scope enforcement** on FHIR operations |
+| **his-server** | `atrius-his/crates/his-server` | **Authenticate only** on `/api/v1/*`; forwards same bearer to HFS |
+
+Documentation:
+
+- [Atrius AUTH_ARCHITECTURE.md](../../../atrius-bff/docs/AUTH_ARCHITECTURE.md)
+- [his-server README](../../../atrius-his/crates/his-server/README.md)
+- [his-domain README](../../../atrius-his/crates/his-domain/README.md)
+
+For Atrius Keycloak, set `HFS_AUTH_TENANT_CLAIM=organization_id` (and `HIS_AUTH_TENANT_CLAIM` when using HIS inbound auth).
+
 ## Quick Start
 
 ```rust
@@ -41,9 +58,10 @@ async fn main() -> anyhow::Result<()> {
     jwks_cache.initial_fetch().await?;
 
     let jti_cache = Arc::new(InMemoryJtiCache::new());
+    let jti_revocation = Arc::new(helios_auth::NoOpJtiRevocation);
 
     // Create provider
-    let provider = JwksBearerAuthProvider::new(jwks_cache, jti_cache, &config);
+    let provider = JwksBearerAuthProvider::new(jwks_cache, jti_cache, jti_revocation, &config);
 
     // Validate a token
     match provider.authenticate("Bearer eyJhbGciOi...").await {
@@ -67,7 +85,7 @@ The authentication flow follows the [SMART Backend Services](https://hl7.org/fhi
    - Rejects tokens using algorithms not in the allowed list
    - Fetches the public key from the cached JWKS keyset (refreshes on unknown `kid`)
    - Validates signature, expiration, issuer, and audience claims
-   - Checks the `jti` claim against the replay prevention cache
+   - Checks the `jti` claim against the revocation blocklist (when enabled) and optional replay cache
    - Parses SMART v2 scopes from the `scope` or `scp` claim
    - Extracts the tenant ID from the configured claim
 5. **HFS enforces authorization** by checking scopes against the requested FHIR operation
@@ -117,9 +135,11 @@ All configuration is via environment variables. Auth is a runtime toggle — no 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HFS_AUTH_JTI_BACKEND` | `memory` | JTI cache backend (`memory`, `redis`, or `disabled`) |
-| `HFS_AUTH_REDIS_URL` | *(none)* | Redis URL (required for `redis` backend) |
+| `HFS_AUTH_JTI_BACKEND` | `disabled` | JTI tracking: `disabled` (default for reusable access tokens), `memory`, or `redis` |
+| `HFS_AUTH_JTI_REVOCATION` | `false` | Reject tokens blocklisted in Redis (BFF writes on logout/refresh) |
+| `HFS_AUTH_REDIS_URL` | *(none)* | Redis URL (required for `redis` backend or JTI revocation) |
 | `HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL` | `10` | Min seconds between JWKS refreshes |
+| `HFS_AUTH_INSECURE_TLS` | `false` | Accept invalid TLS when fetching JWKS (**local dev only**; reqwest/rustls does not use the OS trust store) |
 
 ### SMART Discovery Endpoint
 

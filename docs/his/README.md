@@ -27,8 +27,8 @@ Architecture and implementation plan for building hospital operations on the Hel
 | 3 | ADT (admit, transfer, discharge) | ✓ smoke |
 | **3.5** | **Scheduling/ADT hardening — Schedule+Slot+Appointment profiles, iCalendar RRULE, start-visit, `$validate`** | **Active** |
 | 4 | Staff rostering & duty assignment | Pending |
-| 5a | Consultation notes (Composition on Encounter) | Pending |
-| 5b | Lab orders & CPOE (ServiceRequest + Task) | Pending |
+| 5a | Consultation notes (Composition on Encounter) | ✓ smoke |
+| 5b | Lab orders & CPOE (ServiceRequest write path) | ✓ smoke |
 | 6 | External integrations & analytics | Pending |
 
 See [fhir-native-his-plan.md](./fhir-native-his-plan.md) for full detail, architecture diagrams, and success criteria.

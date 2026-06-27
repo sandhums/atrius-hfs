@@ -1,22 +1,30 @@
 pub mod memory;
+pub mod revocation;
+
+pub use revocation::{
+    NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX, build_jti_revocation, JtiRevocation,
+};
 #[cfg(feature = "redis")]
 pub mod redis;
+
+
+#[cfg(feature = "redis")]
+pub use revocation::RedisJtiRevocation;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
 use crate::error::AuthError;
 
-/// Trait for JWT ID (jti) replay prevention.
+/// Trait for JWT ID (jti) tracking.
 ///
-/// Implementations store seen JTI values with TTLs matching
-/// the token's expiration time.
+/// For OAuth **access tokens**, the same `jti` appears on every request until
+/// expiry — implementations must **not** treat a duplicate as a replay attack.
+/// Use [`DisabledJtiCache`] when no tracking is needed.
 #[async_trait]
 pub trait JtiCache: Send + Sync + 'static {
-    /// Check if a JTI has been seen before, and store it if not.
-    ///
-    /// Returns `true` if the JTI was already seen (replay detected).
-    /// Returns `false` if the JTI is new (stored successfully).
+    /// Record a JTI if new. Always returns `false` (not a replay) for valid
+    /// reusable bearer access tokens.
     async fn check_and_store(
         &self,
         jti: &str,

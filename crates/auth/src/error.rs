@@ -40,6 +40,13 @@ pub enum AuthError {
         jti: String,
     },
 
+    /// Access token was revoked (e.g. user logged out).
+    #[error("Token revoked: {jti}")]
+    TokenRevoked {
+        /// The revoked JWT ID.
+        jti: String,
+    },
+
     /// Authenticated principal lacks required scopes.
     #[error("Forbidden: insufficient scope for {operation} on {resource_type}")]
     Forbidden {

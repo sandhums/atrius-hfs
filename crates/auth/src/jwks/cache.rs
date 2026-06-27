@@ -27,10 +27,18 @@ impl JwksCache {
     ///
     /// Does not fetch keys — call `initial_fetch()` before use.
     pub fn new(jwks_url: &str, min_refresh_interval_secs: u64) -> Self {
+        Self::with_insecure_tls(jwks_url, min_refresh_interval_secs, false)
+    }
+
+    pub fn with_insecure_tls(
+        jwks_url: &str,
+        min_refresh_interval_secs: u64,
+        insecure_tls: bool,
+    ) -> Self {
         Self {
             keys: Arc::new(RwLock::new(HashMap::new())),
             jwks_url: jwks_url.to_string(),
-            fetcher: JwksFetcher::new(),
+            fetcher: JwksFetcher::with_insecure_tls(insecure_tls),
             expires_at: Arc::new(RwLock::new(Instant::now())),
             last_refresh: Arc::new(RwLock::new(
                 Instant::now() - Duration::from_secs(min_refresh_interval_secs + 1),

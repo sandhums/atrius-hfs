@@ -36,7 +36,10 @@ pub mod scope;
 pub use config::AuthConfig;
 pub use discovery::SmartConfiguration;
 pub use error::{AuthError, FhirOperation};
-pub use jti::{DisabledJtiCache, JtiCache, memory::InMemoryJtiCache};
+pub use jti::{
+    DisabledJtiCache, JtiCache, JtiRevocation, NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX,
+    build_jti_revocation, memory::InMemoryJtiCache,
+};
 pub use jwks::JwksCache;
 pub use outbound::{
     NoOpOutboundAuthProvider, OutboundAuthProvider, StaticBearerOutboundAuthProvider,
@@ -48,4 +51,4 @@ pub use provider::{AuthProvider, jwks_bearer::JwksBearerAuthProvider};
 pub use scope::{ScopeSet, SmartPermissions};
 
 #[cfg(feature = "redis")]
-pub use jti::redis::RedisJtiCache;
+pub use jti::{redis::RedisJtiCache, revocation::RedisJtiRevocation};

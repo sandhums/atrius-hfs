@@ -42,15 +42,15 @@ impl JtiCache for InMemoryJtiCache {
         jti: &str,
         _expires_at: DateTime<Utc>,
     ) -> Result<bool, AuthError> {
-        // Check if already present
+        // OAuth access tokens are reused on every API call until expiry. A duplicate
+        // jti within TTL is normal, not a replay attack. Record first sighting only.
         if self.cache.get(jti).await.is_some() {
-            return Ok(true); // replay
+            return Ok(false);
         }
 
-        // Store the JTI (TTL is set at cache level)
         self.cache.insert(jti.to_string(), ()).await;
 
-        Ok(false) // not a replay
+        Ok(false)
     }
 }
 
@@ -69,7 +69,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_duplicate_jti_is_replay() {
+    async fn test_duplicate_jti_allowed_for_reusable_bearer_tokens() {
         let cache = InMemoryJtiCache::new();
         let expires = Utc::now() + ChronoDuration::hours(1);
 
@@ -77,7 +77,7 @@ mod tests {
         assert!(!first);
 
         let second = cache.check_and_store("jti-2", expires).await.unwrap();
-        assert!(second);
+        assert!(!second);
     }
 
     #[tokio::test]

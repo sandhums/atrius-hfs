@@ -48,7 +48,7 @@ fhir-validation = { path = "../fhir-validation", version = "0.2.0", default-feat
 helios-persistence = { path = "../persistence", version = "0.2.0", default-features = false }
 helios-serde = { path = "../serde", version = "0.2.0", optional = true, default-features = false }
 helios-sof = { path = "../sof", version = "0.2.0", default-features = false }
-helios-auth = { path = "../auth", version = "0.2.0" }
+helios-auth = { path = "../auth", version = "0.2.0", features = ["redis"] }
 helios-audit = { path = "../audit", version = "0.2.0", default-features = false }
 helios-subscriptions = { path = "../subscriptions", version = "0.2.0", optional = true, default-features = false }
 

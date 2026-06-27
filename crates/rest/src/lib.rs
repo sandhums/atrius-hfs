@@ -919,13 +919,20 @@ fn build_cors_layer(config: &ServerConfig) -> CorsLayer {
 ///
 /// * `level` - The log level (error, warn, info, debug, trace)
 pub fn init_logging(level: &str) {
+    use tracing_subscriber::filter::LevelFilter;
     use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(format!(
-            "helios_hfs={},helios_rest={},helios_persistence={},helios_subscriptions={},tower_http=debug",
-            level, level, level, level
-        ))
+        // The `hfs` binary logs under target `hfs` (bin name), not `helios_hfs` (package name).
+        let default = level
+            .parse::<LevelFilter>()
+            .unwrap_or(LevelFilter::INFO);
+        EnvFilter::builder()
+            .with_default_directive(default.into())
+            .parse_lossy(format!(
+                "hfs={level},helios_auth={level},helios_rest={level},helios_persistence={level},helios_subscriptions={level},tower_http=debug",
+                level = level
+            ))
     });
 
     tracing_subscriber::registry()

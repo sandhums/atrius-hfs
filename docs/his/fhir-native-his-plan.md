@@ -569,13 +569,46 @@ SMART scopes tied to PractitionerRole:
 
 **CDS Hooks:** `order-select`, `order-sign` for duplicate therapy, interaction checks ([`helios-cds-hooks`](../../crates/cds-hooks/)).
 
+**Smoke:** `./scripts/smoke-lab-orders.sh` — book → start-visit → place CBC order → `$validate` ServiceRequest → revoke.
+
+**Deferred:** Task fulfillment, CDS Hooks, PlanDefinition `$apply` bridge, Phase 6 LIS results.
+
 ### Phase 5 sequencing recommendation
 
 | Order | Track | Rationale |
 |-------|-------|-----------|
 | 1 | **5a Consultation notes** on OPD | Fast clinician-visible win; minimal external integration |
-| 2 | **5b Lab orders** (write path only) | ServiceRequest + Task; stub results |
-| 3 | Phase 6 LIS | DiagnosticReport inbound |
+| 2 | **5c Discharge summary + DocumentBundle export** on IP | NDHM-aligned inpatient artifact; reuses clinical module |
+| 3 | **5b Lab orders** (write path only) | ServiceRequest + Task; stub results |
+| 4 | Phase 6 LIS | DiagnosticReport inbound |
+
+### Phase 5c — NDHM record parity (documentation)
+
+**Architecture:** See [`clinical-documentation-architecture.md`](clinical-documentation-architecture.md).
+
+| Deliverable | Status |
+|-------------|--------|
+| Shared `his-domain/clinical/` module (lifecycle, entry builders, transaction, specs) | ✓ |
+| OP consult extended slices (Allergies, Investigations, Medications, Referral) | ✓ |
+| Discharge summary builder + `/discharge-summaries` API | ✓ |
+| DocumentBundle export (`POST .../export`) | ✓ |
+| IG entry slicing (Prescription, Immunization, Invoice, DiagnosticReport lab) | ✓ |
+| Prescription / Wellness / Immunization / Invoice record builders + APIs | ✓ |
+| Inpatient progress/procedure note section profiles + builders + APIs | ✓ |
+| Health document record (Pattern D) | Pending |
+
+**Smoke:** `./scripts/smoke-discharge-summary.sh`; `./scripts/smoke-clinical-documents.sh` (all Phase 5c/5d kinds).
+
+### Phase 5d — Inpatient & procedural notes ✓
+
+| Deliverable | Status |
+|-------------|--------|
+| Progress note + procedure note builders + APIs | ✓ |
+| Operative note + anesthesia record IG profiles + builders + APIs | ✓ |
+| `AtriusInInvoice` + `AtriusInInvoiceRecord` IG profiles | ✓ |
+| ED note variant | Pending (Phase 5e) |
+
+**Smoke:** `./scripts/smoke-clinical-documents.sh` (IP path: progress, procedure, operative, anesthesia).
 
 ---
 
@@ -649,7 +682,7 @@ atrius-his/                          # Layer 2 — domain services (active imple
     his-registration/                # RegistrationService ✓
     his-scheduling/                  # SchedulingService ✓ — profiles + iCal in 3.5
     his-adt/                         # AdtService ✓ — EpisodeOfCare + start-visit in 3.5
-    his-documentation/               # NEW Phase 5a
+    his-documentation/               # DocumentationService ✓ (5a, 5c, 5d)
     his-orders/                      # NEW Phase 5b (or his-cpoe)
     his-staffing/                    # Phase 4
     his-server/                      # Unified API ✓
@@ -658,13 +691,16 @@ atrius-his/                          # Layer 2 — domain services (active imple
     smoke-registration.sh            # ✓
     smoke-scheduling.sh              # ✓ — add $validate in 3.5
     smoke-adt.sh                     # ✓
-    smoke-start-visit.sh             # NEW Phase 3.5
-    smoke-consult-note.sh            # NEW Phase 5a
+    smoke-start-visit.sh             # ✓ Phase 3.5
+    smoke-consult-note.sh            # ✓ Phase 5a
+    smoke-discharge-summary.sh       # ✓ Phase 5c
+    smoke-clinical-documents.sh      # ✓ Phase 5c/5d (8 document kinds)
+    smoke-lab-orders.sh              # ✓ Phase 5b (LOINC ServiceRequest CPOE)
 
 AtriusIGDraft/                       # Profiles: schedule, slot, appointment, composition
-atrius-bff/                          # SMART auth, API aggregation
-atrius-clinical-ui/                  # Clinician UI
-atrius-admin-ui/                     # Registration, scheduling board, bed board
+atrius-bff/                          # SMART auth, API aggregation, HIS proxy
+atrius-admin-ui/                     # Front desk SPA (register / book / start-visit)
+atrius-clinical-ui/                  # Clinician UI (separate workspace)
 ```
 
 Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a single API gateway — the FHIR bundle orchestration logic still belongs in a dedicated module either way.
@@ -715,8 +751,10 @@ Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a s
 | 3 | Admit patient to bed; transfer ward; discharge; bed board updates | ✓ smoke |
 | **3.5** | **Profiled Schedule/Slot/Appointment; RRULE expansion; `$validate`; start-visit Encounter** | **Next** |
 | 4 | Assign nursing tasks to shift; nurse accepts/completes; handoff | Pending |
-| 5a | Book → start-visit → consultation note → finalize | Pending |
-| 5b | Place lab order on Encounter → Task created | Pending |
+| 5a | Book → start-visit → consultation note → finalize → `$validate` | ✓ smoke |
+| 5c | Admit → discharge summary → finalize → `$validate` → DocumentBundle export | ✓ smoke |
+| 5d | OPD + IP clinical documents (8 kinds) → finalize → `$validate` → export | ✓ smoke |
+| 5b | Place lab order on Encounter → `$validate` → revoke | ✓ smoke (Task deferred) |
 | 6 | Bulk export all Encounters; SOF view for daily census; LIS results | Pending |
 
 ---

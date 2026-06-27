@@ -23,12 +23,16 @@ pub struct AuthConfig {
     pub tenant_claim: String,
     /// Comma-separated list of allowed JWT signing algorithms.
     pub allowed_algorithms: Vec<String>,
-    /// JTI cache backend: `"memory"` or `"redis"`.
+    /// JTI cache backend: `"memory"`, `"redis"`, or `"disabled"`.
     pub jti_backend: String,
-    /// Redis connection URL (required when `jti_backend` is `"redis"`).
+    /// When true, reject tokens whose `jti` appears in the Redis revocation blocklist.
+    pub jti_revocation_enabled: bool,
+    /// Redis connection URL (required when `jti_backend` is `"redis"` or `jti_revocation_enabled`).
     pub redis_url: Option<String>,
     /// Minimum interval (seconds) between JWKS refreshes.
     pub jwks_min_refresh_interval: u64,
+    /// Accept invalid TLS certificates when fetching JWKS (local dev only).
+    pub jwks_insecure_tls: bool,
 
     // SMART discovery endpoint fields
     /// Token endpoint URL for `/.well-known/smart-configuration`.
@@ -70,12 +74,18 @@ impl AuthConfig {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),
-            jti_backend: env::var("HFS_AUTH_JTI_BACKEND").unwrap_or_else(|_| "memory".to_string()),
+            jti_backend: env::var("HFS_AUTH_JTI_BACKEND").unwrap_or_else(|_| "disabled".to_string()),
+            jti_revocation_enabled: env::var("HFS_AUTH_JTI_REVOCATION")
+                .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                .unwrap_or(false),
             redis_url: env::var("HFS_AUTH_REDIS_URL").ok(),
             jwks_min_refresh_interval: env::var("HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(10),
+            jwks_insecure_tls: env::var("HFS_AUTH_INSECURE_TLS")
+                .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                .unwrap_or(false),
             smart_token_endpoint: env::var("HFS_SMART_TOKEN_ENDPOINT").ok(),
             smart_authorize_endpoint: env::var("HFS_SMART_AUTHORIZE_ENDPOINT").ok(),
             smart_jwks_url: env::var("HFS_SMART_JWKS_URL").ok(),
@@ -111,9 +121,11 @@ impl Default for AuthConfig {
                 "ES256".to_string(),
                 "ES384".to_string(),
             ],
-            jti_backend: "memory".to_string(),
+            jti_backend: "disabled".to_string(),
+            jti_revocation_enabled: false,
             redis_url: None,
             jwks_min_refresh_interval: 10,
+            jwks_insecure_tls: false,
             smart_token_endpoint: None,
             smart_authorize_endpoint: None,
             smart_jwks_url: None,
@@ -135,7 +147,7 @@ mod tests {
         let config = AuthConfig::default();
         assert!(!config.enabled);
         assert_eq!(config.tenant_claim, "tenant_id");
-        assert_eq!(config.jti_backend, "memory");
+        assert_eq!(config.jti_backend, "disabled");
         assert_eq!(config.jwks_min_refresh_interval, 10);
         assert_eq!(config.allowed_algorithms.len(), 4);
     }

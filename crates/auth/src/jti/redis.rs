@@ -46,9 +46,8 @@ impl JtiCache for RedisJtiCache {
 
         let key = Self::key(jti);
 
-        // SET key value NX EX ttl — returns true if the key was set (new),
-        // false if it already existed (replay).
-        let was_set: bool = redis::cmd("SET")
+        // Record first sighting; duplicate jti within TTL is normal for bearer tokens.
+        let _: Option<String> = redis::cmd("SET")
             .arg(&key)
             .arg("1")
             .arg("NX")
@@ -56,9 +55,8 @@ impl JtiCache for RedisJtiCache {
             .arg(ttl_secs)
             .query_async(&mut conn)
             .await
-            .map(|v: Option<String>| v.is_some())
             .map_err(|e| AuthError::InternalError(format!("Redis SET error: {}", e)))?;
 
-        Ok(!was_set) // true = replay (key already existed)
+        Ok(false)
     }
 }

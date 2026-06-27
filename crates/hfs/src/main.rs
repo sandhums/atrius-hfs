@@ -631,14 +631,26 @@ async fn init_auth_with_audit(
     };
 
     // Create JWKS cache
-    let jwks_cache = Arc::new(JwksCache::new(
+    let jwks_cache = Arc::new(JwksCache::with_insecure_tls(
         jwks_url,
         auth_config.jwks_min_refresh_interval,
+        auth_config.jwks_insecure_tls,
     ));
     jwks_cache.initial_fetch().await?;
 
+    let jti_revocation = helios_auth::build_jti_revocation(&auth_config)
+        .map_err(|e| anyhow::anyhow!("JTI revocation init: {e}"))?;
+    if auth_config.jti_revocation_enabled {
+        info!("JTI revocation blocklist ENABLED (shared Redis)");
+    }
+
     // Create auth provider
-    let provider = JwksBearerAuthProvider::new(jwks_cache, jti_cache, &auth_config);
+    let provider = JwksBearerAuthProvider::new(
+        jwks_cache,
+        jti_cache,
+        jti_revocation,
+        &auth_config,
+    );
 
     info!(
         jwks_url = %jwks_url,
@@ -739,6 +751,7 @@ async fn main() -> anyhow::Result<()> {
     // Use `from_env()` (not `parse()`) so `multitenancy` and `bulk_export`
     // sub-structs — both `#[arg(skip)]` for clap — are populated from
     // their `HFS_*` environment variables.
+    info!("starting HFS server");
     let config = ServerConfig::from_env();
     init_logging(&config.log_level);
 

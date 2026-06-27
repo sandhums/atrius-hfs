@@ -7,7 +7,7 @@ use tracing::{debug, warn};
 use super::AuthProvider;
 use crate::config::AuthConfig;
 use crate::error::AuthError;
-use crate::jti::JtiCache;
+use crate::jti::{JtiCache, JtiRevocation};
 use crate::jwks::JwksCache;
 use crate::principal::Principal;
 use crate::scope::ScopeSet;
@@ -17,6 +17,7 @@ use crate::scope::ScopeSet;
 pub struct JwksBearerAuthProvider {
     jwks_cache: Arc<JwksCache>,
     jti_cache: Arc<dyn JtiCache>,
+    jti_revocation: Arc<dyn JtiRevocation>,
     expected_audience: Option<String>,
     expected_issuer: Option<String>,
     tenant_claim: String,
@@ -28,6 +29,7 @@ impl JwksBearerAuthProvider {
     pub fn new(
         jwks_cache: Arc<JwksCache>,
         jti_cache: Arc<dyn JtiCache>,
+        jti_revocation: Arc<dyn JtiRevocation>,
         config: &AuthConfig,
     ) -> Self {
         let allowed_algorithms = config
@@ -39,6 +41,7 @@ impl JwksBearerAuthProvider {
         Self {
             jwks_cache,
             jti_cache,
+            jti_revocation,
             expected_audience: config.expected_audience.clone(),
             expected_issuer: config.expected_issuer.clone(),
             tenant_claim: config.tenant_claim.clone(),
@@ -140,18 +143,17 @@ impl AuthProvider for JwksBearerAuthProvider {
         let expires_at = chrono::DateTime::from_timestamp(exp, 0)
             .ok_or_else(|| AuthError::ValidationError("Invalid 'exp' timestamp".to_string()))?;
 
-        // 8. JTI replay check
+        // 8. Reject revoked tokens, then record JTI (access tokens reuse jti until expiry)
         if let Some(ref jti_value) = jti {
-            let is_replay = self
-                .jti_cache
-                .check_and_store(jti_value, expires_at)
-                .await?;
-            if is_replay {
-                warn!(jti = %jti_value, sub = %subject, "JTI replay detected");
-                return Err(AuthError::ReplayDetected {
+            if self.jti_revocation.is_revoked(jti_value).await? {
+                return Err(AuthError::TokenRevoked {
                     jti: jti_value.clone(),
                 });
             }
+            let _is_replay = self
+                .jti_cache
+                .check_and_store(jti_value, expires_at)
+                .await?;
         }
 
         // 9. Parse scopes — handle both string ("scope") and array ("scp") formats
