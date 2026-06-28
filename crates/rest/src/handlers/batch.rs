@@ -620,7 +620,9 @@ fn emit_entry_audit<S>(
         builder = builder.patient(patient_ref);
     }
     if let Some(principal) = principal {
-        builder = builder.agent(principal.subject(), None, true);
+        if let Some(id) = principal.audit_agent_identity() {
+            builder = builder.agent(id, None, true).agent_issuer(principal.issuer());
+        }
     }
 
     let sink = Arc::clone(sink);

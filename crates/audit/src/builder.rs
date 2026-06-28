@@ -31,6 +31,7 @@ pub struct AuditEventBuilder {
     patient_reference: Option<String>,
     agent_who: Option<String>,
     agent_name: Option<String>,
+    agent_issuer: Option<String>,
     agent_requestor: bool,
     source_observer: String,
     query_string: Option<String>,
@@ -52,6 +53,7 @@ impl AuditEventBuilder {
             patient_reference: None,
             agent_who: None,
             agent_name: None,
+            agent_issuer: None,
             agent_requestor: true,
             source_observer: source_observer.into(),
             query_string: None,
@@ -99,6 +101,12 @@ impl AuditEventBuilder {
         self.agent_who = Some(who.into());
         self.agent_name = name;
         self.agent_requestor = requestor;
+        self
+    }
+
+    /// OIDC issuer for bare JWT subjects (used with [`agent`] when `who` is not a FHIR reference).
+    pub fn agent_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.agent_issuer = Some(issuer.into());
         self
     }
 
@@ -218,12 +226,18 @@ impl AuditEventBuilder {
             recorded: instant_now(),
             outcome: self.outcome.map(code),
             outcome_desc: self.outcome_desc.map(fhir_string),
-            agent: Some(vec![AuditEventAgent {
-                who: self.agent_who.as_deref().map(reference),
-                name: self.agent_name.map(fhir_string),
-                requestor: boolean(self.agent_requestor),
-                ..Default::default()
-            }]),
+            agent: self
+                .agent_who
+                .as_deref()
+                .filter(|id| !id.is_empty())
+                .map(|id| {
+                    vec![AuditEventAgent {
+                        who: Some(agent_who(id, self.agent_issuer.as_deref())),
+                        name: self.agent_name.map(fhir_string),
+                        requestor: boolean(self.agent_requestor),
+                        ..Default::default()
+                    }]
+                }),
             source: AuditEventSource {
                 observer: reference(&self.source_observer),
                 ..Default::default()
@@ -327,6 +341,33 @@ mod tests {
             Some("Dr. Smith")
         );
         assert_eq!(agent.requestor.value, Some(true));
+    }
+
+    #[test]
+    fn test_agent_jwt_subject_uses_identifier() {
+        let event = AuditEventBuilder::new("Device/hfs")
+            .agent("frontdesk", None, true)
+            .agent_issuer("https://localhost:8443/realms/fhir")
+            .build();
+        let who = event.agent.as_ref().unwrap()[0].who.as_ref().unwrap();
+        assert!(who.reference.is_none());
+        let id = who.identifier.as_ref().unwrap();
+        assert_eq!(
+            id.system.as_ref().and_then(|s| s.value.as_deref()),
+            Some("https://localhost:8443/realms/fhir/claims/sub")
+        );
+        assert_eq!(
+            id.value.as_ref().and_then(|s| s.value.as_deref()),
+            Some("frontdesk")
+        );
+    }
+
+    #[test]
+    fn test_agent_empty_identity_omitted() {
+        let event = AuditEventBuilder::new("Device/hfs")
+            .agent("", None, true)
+            .build();
+        assert!(event.agent.is_none());
     }
 
     #[test]

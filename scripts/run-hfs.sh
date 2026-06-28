@@ -33,5 +33,5 @@ mkdir -p "${ATRIUS_HFS_PATH}/data"
 
 cd "${ATRIUS_HFS_PATH}"
 echo "Starting Clinical HFS from ${ATRIUS_HFS_PATH} (env: ${ENV_FILE}) on port ${HFS_SERVER_PORT:-8082}..."
-echo "  auth=${HFS_AUTH_ENABLED:-false} jti_revocation=${HFS_AUTH_JTI_REVOCATION:-false} log=${HFS_LOG_LEVEL:-info}"
+echo "  auth=${HFS_AUTH_ENABLED:-false} jti_revocation=${HFS_AUTH_JTI_REVOCATION:-false} audit=${HFS_AUDIT_BACKEND:-none} log=${HFS_LOG_LEVEL:-info}"
 exec "${HFS_BIN}"

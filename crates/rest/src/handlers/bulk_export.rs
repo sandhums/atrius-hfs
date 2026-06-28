@@ -714,7 +714,9 @@ async fn emit_export_audit<S>(
         builder = builder.detail("resource-types", resource_types.join(","));
     }
     if let Some(p) = principal {
-        builder = builder.agent(&p.subject, None, true);
+        if let Some(id) = p.audit_agent_identity() {
+            builder = builder.agent(id, None, true).agent_issuer(p.issuer());
+        }
     }
     sink.record(builder.build()).await;
 }

@@ -133,6 +133,13 @@ impl AuthProvider for JwksBearerAuthProvider {
             .unwrap_or("")
             .to_string();
 
+        let fhir_user = claims
+            .get("fhirUser")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+
         let jti = claims.get("jti").and_then(|v| v.as_str()).map(String::from);
 
         let exp = claims
@@ -179,7 +186,7 @@ impl AuthProvider for JwksBearerAuthProvider {
         // 11. Build custom claims map (excluding standard claims)
         let custom_claims = if let serde_json::Value::Object(map) = claims {
             let standard = [
-                "sub", "iss", "exp", "iat", "nbf", "aud", "jti", "scope", "scp",
+                "sub", "iss", "exp", "iat", "nbf", "aud", "jti", "scope", "scp", "fhirUser",
             ];
             map.into_iter()
                 .filter(|(k, _)| !standard.contains(&k.as_str()) && k != &self.tenant_claim)
@@ -188,11 +195,17 @@ impl AuthProvider for JwksBearerAuthProvider {
             serde_json::Map::new()
         };
 
-        debug!(sub = %subject, iss = %issuer, "Token validated successfully");
+        debug!(
+            sub = %subject,
+            fhir_user = ?fhir_user,
+            iss = %issuer,
+            "Token validated successfully"
+        );
 
         Ok(Principal {
             subject,
             issuer,
+            fhir_user,
             tenant_id,
             scopes,
             jti,

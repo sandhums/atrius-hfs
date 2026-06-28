@@ -42,6 +42,7 @@ mod tests {
         Principal {
             subject: subject.to_string(),
             issuer: "test-issuer".to_string(),
+            fhir_user: None,
             tenant_id: None,
             scopes: ScopeSet::parse(scopes),
             jti: None,

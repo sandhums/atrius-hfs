@@ -140,6 +140,7 @@ mod tests {
             .action(AuditAction::Create)
             .outcome("0")
             .resource("Patient", "123")
+            .agent("Practitioner/test", None, true)
             .build();
         sink.record(event).await;
 

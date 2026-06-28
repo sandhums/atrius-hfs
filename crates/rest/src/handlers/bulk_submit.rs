@@ -1032,6 +1032,7 @@ mod tests {
         Principal {
             subject: subject.to_string(),
             issuer: "https://issuer".to_string(),
+            fhir_user: None,
             tenant_id: None,
             scopes: helios_auth::scope::ScopeSet::parse(scope),
             jti: None,

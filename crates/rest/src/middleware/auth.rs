@@ -116,13 +116,21 @@ pub async fn auth_middleware(
                 let event = AuditEventBuilder::new(&auth_state.audit_source_observer)
                     .action(AuditAction::Execute)
                     .outcome("0")
-                    .agent(principal.subject(), None, true)
+                    .agent(
+                        principal.audit_agent_identity().unwrap_or(""),
+                        None,
+                        true,
+                    )
+                    .agent_issuer(principal.issuer())
                     .build();
                 auth_state.audit_sink.record(event).await;
             }
-            request
-                .extensions_mut()
-                .insert(AuditAgent(principal.subject().to_string()));
+            request.extensions_mut().insert(AuditAgent(
+                principal
+                    .audit_agent_identity()
+                    .unwrap_or_default()
+                    .to_string(),
+            ));
             request.extensions_mut().insert(principal);
             next.run(request).await
         }
@@ -179,7 +187,12 @@ pub async fn authz_middleware(
                     .action(AuditAction::Execute)
                     .outcome("0")
                     .outcome_desc(format!("Granted: {operation} on {resource_type}"))
-                    .agent(principal.subject(), None, true)
+                    .agent(
+                        principal.audit_agent_identity().unwrap_or(""),
+                        None,
+                        true,
+                    )
+                    .agent_issuer(principal.issuer())
                     .resource(&resource_type, "")
                     .build();
                 auth_state.audit_sink.record(event).await;
@@ -195,7 +208,12 @@ pub async fn authz_middleware(
                     .action(AuditAction::Execute)
                     .outcome("8")
                     .outcome_desc(format!("Forbidden: {operation} on {resource_type}"))
-                    .agent(principal.subject(), None, true)
+                    .agent(
+                        principal.audit_agent_identity().unwrap_or(""),
+                        None,
+                        true,
+                    )
+                    .agent_issuer(principal.issuer())
                     .resource(&resource_type, "")
                     .build();
                 auth_state.audit_sink.record(event).await;

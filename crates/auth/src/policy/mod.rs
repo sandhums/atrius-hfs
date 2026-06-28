@@ -49,6 +49,7 @@ mod tests {
         Principal {
             subject: "test-client".to_string(),
             issuer: "https://idp.example.com".to_string(),
+            fhir_user: None,
             tenant_id: Some("tenant-1".to_string()),
             scopes: ScopeSet::parse(scope_str),
             jti: None,
