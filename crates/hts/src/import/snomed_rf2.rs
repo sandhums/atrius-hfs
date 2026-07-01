@@ -1033,11 +1033,18 @@ fn extract_release_date(path: &str) -> Option<String> {
     let stem = path.rsplit('/').next().unwrap_or(path);
     let without_ext = stem.strip_suffix(".txt")?;
     let date_part = without_ext.rsplit('_').next()?;
+    // Standard RF2 suffix: `_20260501`
     if date_part.len() == 8 && date_part.chars().all(|c| c.is_ascii_digit()) {
-        Some(date_part.to_string())
-    } else {
-        None
+        return Some(date_part.to_string());
     }
+    // India / some national Snapshot zips use `_20260313T120000Z`; take the date prefix.
+    if date_part.len() >= 8 {
+        let prefix: String = date_part.chars().take(8).collect();
+        if prefix.chars().all(|c| c.is_ascii_digit()) {
+            return Some(prefix);
+        }
+    }
+    None
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -1379,6 +1386,16 @@ BADLINE\r\n";
         assert_eq!(
             extract_release_date("Snapshot/Terminology/sct2_Concept_Snapshot_INT_20240101.txt"),
             Some("20240101".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_release_date_parses_snomed_release_timestamp_suffix() {
+        assert_eq!(
+            extract_release_date(
+                "Snapshot/Terminology/sct2_Concept_Snapshot_IN1000189_20260313T120000Z.txt"
+            ),
+            Some("20260313".to_string())
         );
     }
 

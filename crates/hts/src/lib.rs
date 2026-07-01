@@ -33,6 +33,12 @@
 //! integration tests can construct a test [`AppState`] and router without
 //! replicating the binary's bootstrap logic.
 //!
+//! ## Atrius fork notes
+//!
+//! Local enhancements for clinical SNOMED typeahead (ECL ValueSet + text filter)
+//! are documented in [`docs/fork-ecl-fts-typeahead-expand.md`](../docs/fork-ecl-fts-typeahead-expand.md)
+//! for upstream merge.
+//!
 //! [`AppState`]: state::AppState
 //! [`create_app`]: server::create_app
 

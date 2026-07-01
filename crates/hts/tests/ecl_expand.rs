@@ -479,3 +479,64 @@ async fn ecl_unrecognized_filter_yields_empty_expansion() {
         "unrecognised filter must produce an empty expansion, not all concepts"
     );
 }
+
+// ── ECL compose + text filter (FTS-first typeahead) ───────────────────────────
+//
+// Atrius fork — see docs/fork-ecl-fts-typeahead-expand.md
+//
+// Verifies that ECL ValueSet $expand with a text filter returns clinically ranked
+// results (FTS-first + filter_candidates), not concept-id order from full ECL expand.
+
+/// ECL compose + text filter uses FTS-first path: results are ranked, not concept-id order.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn ecl_constraint_with_text_filter_ranks_short_terms_first() {
+    let app = TestApp::new();
+    app.import_bundle_ok(bundles::ecl_bundle()).await;
+
+    let req = TestApp::params(&[
+        ("url", "valueUri", bundles::ECL_CONSTRAINT_VS_URL),
+        ("filter", "valueString", "ar"),
+        ("count", "valueInteger", "5"),
+    ]);
+    let (status, body) = app.post_fhir("/ValueSet/$expand", req).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let displays: Vec<String> = body["expansion"]["contains"]
+        .as_array()
+        .unwrap_or(&vec![])
+        .iter()
+        .filter_map(|e| e["display"].as_str().map(String::from))
+        .collect();
+
+    assert!(!displays.is_empty(), "expected matches for filter 'ar'");
+    assert_eq!(
+        displays[0], "Arm",
+        "exact short descendant should rank first, got: {displays:?}"
+    );
+}
+
+/// ECL OR compose + text filter returns union of branches, ranked.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn ecl_or_with_text_filter_returns_ranked_matches() {
+    let app = TestApp::new();
+    app.import_bundle_ok(bundles::ecl_bundle()).await;
+
+    let req = TestApp::params(&[
+        ("url", "valueUri", bundles::ECL_OR_VS_URL),
+        ("filter", "valueString", "he"),
+        ("count", "valueInteger", "10"),
+    ]);
+    let (status, body) = app.post_fhir("/ValueSet/$expand", req).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let codes: Vec<String> = body["expansion"]["contains"]
+        .as_array()
+        .unwrap_or(&vec![])
+        .iter()
+        .filter_map(|e| e["code"].as_str().map(String::from))
+        .collect();
+
+    assert!(codes.contains(&"head".to_string()) || codes.contains(&"arm".to_string()));
+}

@@ -369,13 +369,14 @@ impl SqliteTerminologyBackend {
                 let _ = conn.execute_batch(
                     "DELETE FROM concepts_fts;
                      DELETE FROM concepts_fts_built;
-                     DELETE FROM concepts_word_fts;",
-                );
+                     DELETE FROM concepts_word_fts;
+                     DELETE FROM concepts_search_fts;  -- Atrius fork: synonym typeahead index
+                ");
 
                 // Update query-planner statistics for large tables.
                 let _ = conn.execute_batch(
-                    "ANALYZE concept_hierarchy; ANALYZE concepts; ANALYZE concept_closure; \
-                     ANALYZE concept_properties; ANALYZE concept_designations; \
+                    "ANALYZE concept_hierarchy; ANALYZE concepts; ANALYZE concept_closure;
+                     ANALYZE concept_properties; ANALYZE concept_designations;
                      ANALYZE code_systems; ANALYZE value_sets; ANALYZE concept_maps;",
                 );
 
@@ -461,11 +462,13 @@ impl SqliteTerminologyBackend {
         let _ = conn.execute_batch(
             "DELETE FROM concepts_fts;
              DELETE FROM concepts_fts_built;
-             DELETE FROM concepts_word_fts;",
+             DELETE FROM concepts_word_fts;
+             DELETE FROM concepts_search_fts;  -- Atrius fork: synonym typeahead index
+            ",
         );
         let _ = conn.execute_batch(
-            "ANALYZE concept_hierarchy; ANALYZE concepts; ANALYZE concept_closure; \
-             ANALYZE concept_properties; ANALYZE concept_designations; \
+            "ANALYZE concept_hierarchy; ANALYZE concepts; ANALYZE concept_closure;
+             ANALYZE concept_properties; ANALYZE concept_designations;
              ANALYZE code_systems; ANALYZE value_sets; ANALYZE concept_maps;",
         );
         value_set::prebuild_concepts_fts(&conn);
@@ -594,9 +597,9 @@ impl TerminologyMetadata for SqliteTerminologyBackend {
                     return Some(url);
                 }
                 conn.query_row(
-                    "SELECT url FROM code_systems \
-                     WHERE json_extract(resource_json, '$.id') = ?1 \
-                     ORDER BY COALESCE(version, '') DESC \
+                    "SELECT url FROM code_systems
+                     WHERE json_extract(resource_json, '$.id') = ?1
+                     ORDER BY COALESCE(version, '') DESC
                      LIMIT 1",
                     rusqlite::params![id],
                     |row| row.get::<_, String>(0),
@@ -616,9 +619,9 @@ impl TerminologyMetadata for SqliteTerminologyBackend {
                 // resource_json scan and pick the latest version (matches how
                 // CodeSystem reads handle the same case).
                 conn.query_row(
-                    "SELECT url FROM value_sets \
-                     WHERE json_extract(resource_json, '$.id') = ?1 \
-                     ORDER BY COALESCE(version, '') DESC \
+                    "SELECT url FROM value_sets
+                     WHERE json_extract(resource_json, '$.id') = ?1
+                     ORDER BY COALESCE(version, '') DESC
                      LIMIT 1",
                     rusqlite::params![id],
                     |row| row.get::<_, String>(0),

@@ -30,6 +30,14 @@
 //! }
 //! ```
 //!
+//! ### ECL + text filter (FTS-first typeahead) — Atrius fork enhancement
+//!
+//! When `$expand` also carries a text `filter` (≥ 3 chars), upstream HTS used to
+//! expand the full ECL set then substring-filter in Rust (results ordered by concept
+//! id). This fork adds [`evaluator::filter_candidates`]: FTS narrows to text matches
+//! first, then ECL membership is checked per candidate via `concept_closure` without
+//! materialising the full expansion. See `docs/fork-ecl-fts-typeahead-expand.md`.
+//!
 //! The simpler `concept is-a` filter is also supported:
 //!
 //! ```json
@@ -52,7 +60,7 @@ pub mod evaluator;
 pub mod parser;
 
 #[cfg(feature = "sqlite")]
-pub use evaluator::ResolvedConcept;
+pub use evaluator::{filter_candidates, ResolvedConcept};
 pub use parser::{ConceptOperator, EclExpr, FocusConcept};
 
 #[cfg(feature = "sqlite")]

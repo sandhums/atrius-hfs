@@ -227,6 +227,15 @@ CREATE VIRTUAL TABLE IF NOT EXISTS concepts_word_fts
 USING fts5(system_id UNINDEXED, code, display,
            tokenize='unicode61 remove_diacritics 1');
 
+-- ── FTS5 typeahead search (preferred + synonym terms) ─────────────────────────
+-- Atrius fork (see crates/hts/docs/fork-ecl-fts-typeahead-expand.md):
+-- Indexes concepts.display AND concept_designations.value for ranked $expand
+-- filter on intensional/ECL ValueSets. Populated in populate_concepts_search_fts_for_system().
+-- `code` is UNINDEXED: stored for grouping; preferred display comes from concepts table.
+CREATE VIRTUAL TABLE IF NOT EXISTS concepts_search_fts
+USING fts5(system_id UNINDEXED, code UNINDEXED, term,
+           tokenize='trigram case_sensitive 0');
+
 -- ── FTS build tracker ─────────────────────────────────────────────────────────
 -- O(1) lookup to check whether concepts_fts is populated for a given system_id.
 -- Replaces the slow FTS content scan (O(N_total_concepts)) used previously.
@@ -646,6 +655,7 @@ mod tests {
             "implicit_expansion_cache",
             "implicit_expansion_fts",
             "concepts_word_fts",
+            "concepts_search_fts",
             "concepts_fts_built",
         ];
 

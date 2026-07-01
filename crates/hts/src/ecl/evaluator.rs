@@ -322,6 +322,174 @@ fn collect_query(
     Ok(rows.into_iter().map(|c| (c.code.clone(), c)).collect())
 }
 
+// ── Candidate filtering (FTS-first $expand) ───────────────────────────────────
+//
+// Atrius fork: see docs/fork-ecl-fts-typeahead-expand.md for merge/upstream notes.
+//
+// Used when ValueSet/$expand has BOTH an ECL compose constraint AND a text filter.
+// Avoids full ECL materialisation by intersecting FTS candidates with ECL membership
+// using the precomputed concept_closure table.
+
+/// Return the subset of `candidates` that satisfy `ecl`.
+///
+/// Used by `$expand` text-filter fast paths: FTS narrows to a small candidate
+/// set, then ECL membership is checked per candidate via the closure table
+/// without materialising the full ECL expansion.
+pub fn filter_candidates(
+    conn: &Connection,
+    system_id: &str,
+    ecl: &str,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    if candidates.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let expr = super::parser::parse(ecl)
+        .map_err(|e| HtsError::InvalidRequest(format!("Invalid ECL expression: {e}")))?;
+    filter_expr(conn, system_id, &expr, candidates)
+}
+
+fn filter_expr(
+    conn: &Connection,
+    system_id: &str,
+    expr: &EclExpr,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    match expr {
+        EclExpr::And(left, right) => {
+            let l = filter_expr(conn, system_id, left, candidates)?;
+            let r = filter_expr(conn, system_id, right, candidates)?;
+            Ok(l.intersection(&r).cloned().collect())
+        }
+        EclExpr::Or(left, right) => {
+            let l = filter_expr(conn, system_id, left, candidates)?;
+            let r = filter_expr(conn, system_id, right, candidates)?;
+            Ok(l.union(&r).cloned().collect())
+        }
+        EclExpr::Minus(left, right) => {
+            let l = filter_expr(conn, system_id, left, candidates)?;
+            let r = filter_expr(conn, system_id, right, candidates)?;
+            Ok(l.difference(&r).cloned().collect())
+        }
+        EclExpr::Focus { op, concept } => {
+            filter_focus(conn, system_id, op.as_ref(), concept, candidates)
+        }
+    }
+}
+
+fn filter_focus(
+    conn: &Connection,
+    system_id: &str,
+    op: Option<&ConceptOperator>,
+    concept: &FocusConcept,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    match (op, concept) {
+        (_, FocusConcept::Wildcard) => Ok(candidates.iter().cloned().collect()),
+        (None, FocusConcept::Id(id)) => Ok(candidates.iter().filter(|c| *c == id).cloned().collect()),
+        (Some(ConceptOperator::DescendantOf), FocusConcept::Id(id)) => {
+            batch_descendants_in_set(conn, system_id, id, false, candidates)
+        }
+        (Some(ConceptOperator::DescendantOrSelf), FocusConcept::Id(id)) => {
+            batch_descendants_in_set(conn, system_id, id, true, candidates)
+        }
+        (Some(ConceptOperator::AncestorOf), FocusConcept::Id(id)) => {
+            batch_strict_ancestors_in_set(conn, system_id, id, candidates)
+        }
+        (Some(ConceptOperator::AncestorOrSelf), FocusConcept::Id(id)) => {
+            batch_ancestors_in_set(conn, system_id, id, candidates)
+        }
+    }
+}
+
+fn batch_descendants_in_set(
+    conn: &Connection,
+    system_id: &str,
+    root_code: &str,
+    include_self: bool,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    if candidates.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let json_candidates =
+        serde_json::to_string(candidates).map_err(|e| HtsError::StorageError(e.to_string()))?;
+    let include_self_i = i64::from(include_self);
+    let mut stmt = conn
+        .prepare_cached(
+            "SELECT j.value
+             FROM   json_each(?3) j
+             JOIN   concept_closure cc
+                    ON cc.system_id = ?2 AND cc.ancestor_code = ?1 AND cc.descendant_code = j.value
+             WHERE  (j.value != ?1 OR ?4)",
+        )
+        .map_err(|e| HtsError::StorageError(e.to_string()))?;
+    stmt.query_map(
+        rusqlite::params![root_code, system_id, json_candidates, include_self_i],
+        |r| r.get(0),
+    )
+    .map_err(|e| HtsError::StorageError(e.to_string()))?
+    .collect::<rusqlite::Result<HashSet<String>>>()
+    .map_err(|e| HtsError::StorageError(e.to_string()))
+}
+
+fn batch_ancestors_in_set(
+    conn: &Connection,
+    system_id: &str,
+    value_code: &str,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    if candidates.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let json_candidates =
+        serde_json::to_string(candidates).map_err(|e| HtsError::StorageError(e.to_string()))?;
+    let mut stmt = conn
+        .prepare_cached(
+            "SELECT j.value
+             FROM   json_each(?3) j
+             JOIN   concept_closure cc
+                    ON cc.system_id = ?2 AND cc.descendant_code = ?1 AND cc.ancestor_code = j.value",
+        )
+        .map_err(|e| HtsError::StorageError(e.to_string()))?;
+    stmt.query_map(
+        rusqlite::params![value_code, system_id, json_candidates],
+        |r| r.get(0),
+    )
+    .map_err(|e| HtsError::StorageError(e.to_string()))?
+    .collect::<rusqlite::Result<HashSet<String>>>()
+    .map_err(|e| HtsError::StorageError(e.to_string()))
+}
+
+fn batch_strict_ancestors_in_set(
+    conn: &Connection,
+    system_id: &str,
+    value_code: &str,
+    candidates: &[String],
+) -> Result<HashSet<String>, HtsError> {
+    if candidates.is_empty() {
+        return Ok(HashSet::new());
+    }
+    let json_candidates =
+        serde_json::to_string(candidates).map_err(|e| HtsError::StorageError(e.to_string()))?;
+    let mut stmt = conn
+        .prepare_cached(
+            "SELECT j.value
+             FROM   json_each(?3) j
+             JOIN   concept_closure cc
+                    ON cc.system_id = ?2 AND cc.descendant_code = ?1 AND cc.ancestor_code = j.value
+             WHERE  j.value != ?1",
+        )
+        .map_err(|e| HtsError::StorageError(e.to_string()))?;
+    stmt.query_map(
+        rusqlite::params![value_code, system_id, json_candidates],
+        |r| r.get(0),
+    )
+    .map_err(|e| HtsError::StorageError(e.to_string()))?
+    .collect::<rusqlite::Result<HashSet<String>>>()
+    .map_err(|e| HtsError::StorageError(e.to_string()))
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(all(test, feature = "sqlite"))]
