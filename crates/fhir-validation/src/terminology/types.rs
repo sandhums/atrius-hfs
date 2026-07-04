@@ -1,4 +1,4 @@
-use helios_fhir::TerminologyValidationError;
+use fhir_terminology::TerminologyValidationError;
 
 /// Outcome of a narrow [`crate::terminology::service::TerminologyService::member_of`] check.
 #[derive(Debug, Clone)]

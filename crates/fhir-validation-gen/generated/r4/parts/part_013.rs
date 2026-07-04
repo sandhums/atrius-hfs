@@ -2802,7 +2802,7 @@ impl fhir_validation::r4::R4Validatable for PlanDefinition {
             match choice {
                 PlanDefinitionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 PlanDefinitionSubject::Reference(value) => {
@@ -3090,7 +3090,7 @@ impl fhir_validation::r4::R4ValidatableAsync for PlanDefinition {
             match choice {
                 PlanDefinitionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 PlanDefinitionSubject::Reference(value) => {
@@ -3575,7 +3575,7 @@ impl fhir_validation::r4::R4Validatable for PlanDefinitionAction {
             match choice {
                 PlanDefinitionActionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.action.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 PlanDefinitionActionSubject::Reference(value) => {
@@ -3885,7 +3885,7 @@ impl fhir_validation::r4::R4ValidatableAsync for PlanDefinitionAction {
             match choice {
                 PlanDefinitionActionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.action.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 PlanDefinitionActionSubject::Reference(value) => {
@@ -7395,17 +7395,17 @@ impl fhir_validation::r4::R4Validatable for QuestionnaireItemEnableWhen {
                 }
                 QuestionnaireItemEnableWhenAnswer::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Reference(value) => {
@@ -7515,17 +7515,17 @@ impl fhir_validation::r4::R4ValidatableAsync for QuestionnaireItemEnableWhen {
                 }
                 QuestionnaireItemEnableWhenAnswer::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.enableWhen.answer[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemEnableWhenAnswer::Reference(value) => {
@@ -7582,12 +7582,12 @@ impl fhir_validation::r4::R4Validatable for QuestionnaireItemAnswerOption {
                 }
                 QuestionnaireItemAnswerOptionValue::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.answerOption.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemAnswerOptionValue::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.answerOption.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemAnswerOptionValue::Reference(value) => {
@@ -7681,12 +7681,12 @@ impl fhir_validation::r4::R4ValidatableAsync for QuestionnaireItemAnswerOption {
                 }
                 QuestionnaireItemAnswerOptionValue::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.answerOption.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemAnswerOptionValue::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.answerOption.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemAnswerOptionValue::Reference(value) => {
@@ -7749,12 +7749,12 @@ impl fhir_validation::r4::R4Validatable for QuestionnaireItemInitial {
                 }
                 QuestionnaireItemInitialValue::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Uri(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Attachment(value) => {
@@ -7763,12 +7763,12 @@ impl fhir_validation::r4::R4Validatable for QuestionnaireItemInitial {
                 }
                 QuestionnaireItemInitialValue::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
+                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value));
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Reference(value) => {
@@ -7884,12 +7884,12 @@ impl fhir_validation::r4::R4ValidatableAsync for QuestionnaireItemInitial {
                 }
                 QuestionnaireItemInitialValue::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Uri(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r4::terminology::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r4::validate_code("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Attachment(value) => {
@@ -7898,12 +7898,12 @@ impl fhir_validation::r4::R4ValidatableAsync for QuestionnaireItemInitial {
                 }
                 QuestionnaireItemInitialValue::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_coding("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Questionnaire.item.initial.value[x]", "http://hl7.org/fhir/ValueSet/questionnaire-answers", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
+                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/questionnaire-answers", value)).await;
                     issues.extend(child_issues);
                 }
                 QuestionnaireItemInitialValue::Reference(value) => {

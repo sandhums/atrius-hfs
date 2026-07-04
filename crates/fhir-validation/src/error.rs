@@ -21,7 +21,7 @@
 
 use crate::profile::structure_definition_extract::StructureDefinitionExtractMessage;
 use crate::terminology::types::TerminologyRemoteError;
-use helios_fhir::TerminologyValidationError;
+use fhir_terminology::TerminologyValidationError;
 use std::fmt;
 
 /// Local validation of a terminology request before any HTTP call (e.g. [`crate::terminology::requests::ValidateVsRequest::validate`]).

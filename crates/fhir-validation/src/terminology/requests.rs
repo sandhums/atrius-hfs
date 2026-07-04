@@ -184,11 +184,9 @@ impl ValidateVsRequest {
     pub fn to_parameters_json(&self) -> serde_json::Value {
         let mut params = Vec::new();
 
-        let (valueset_url, version_from_canonical) = Self::split_valueset_canonical(&self.valueset_url);
-        let value_set_version = self
-            .value_set_version
-            .clone()
-            .or(version_from_canonical);
+        let (valueset_url, version_from_canonical) =
+            Self::split_valueset_canonical(&self.valueset_url);
+        let value_set_version = self.value_set_version.clone().or(version_from_canonical);
 
         params.push(serde_json::json!({
             "name": "url",

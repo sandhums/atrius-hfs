@@ -20,11 +20,11 @@ use crate::service::{TerminologyService, TerminologyServiceSync};
 use crate::types::TerminologyMembershipOutcome;
 use crate::validation_issue_detail::{ValidationIssueDetailCode, ValidationSourceKind};
 use crate::{ValidationError, ValidationIssue, Validator};
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation_types::{
     BindingDef, BindingStrength, BindingTargetKind, Severity,
     binding_target_kind_for_element_type_code,
 };
-use helios_fhir::TerminologyValidationError;
 use serde_json::Value;
 
 /// Whether `kind` is among declared choice type codes (`None` / empty slice = unrestricted).

@@ -37,6 +37,8 @@ impl fhir_validation::r6::R6Validatable for CommunicationPayload {
                 }
                 CommunicationPayloadContent::CodeableConcept(_value) => {
                 }
+                CommunicationPayloadContent::String(_value) => {
+                }
             }
         }
         issues
@@ -90,6 +92,8 @@ impl fhir_validation::r6::R6Validatable for CommunicationPayload {
                     let child_issues = value.validate_invariants(validator, evaluator);
                     issues.extend(validator.rebase_instance_paths(child_issues, "payload.content[x]"));
                 }
+                CommunicationPayloadContent::String(_value) => {
+                }
             }
         }
         issues
@@ -121,6 +125,8 @@ impl fhir_validation::r6::R6ValidatableAsync for CommunicationPayload {
                     issues.extend(validator.rebase_instance_paths(child_issues, "payload.content[x]"));
                 }
                 CommunicationPayloadContent::CodeableConcept(_value) => {
+                }
+                CommunicationPayloadContent::String(_value) => {
                 }
             }
         }
@@ -658,6 +664,8 @@ impl fhir_validation::r6::R6Validatable for CommunicationRequestPayload {
                 }
                 CommunicationRequestPayloadContent::CodeableConcept(_value) => {
                 }
+                CommunicationRequestPayloadContent::String(_value) => {
+                }
             }
         }
         issues
@@ -711,6 +719,8 @@ impl fhir_validation::r6::R6Validatable for CommunicationRequestPayload {
                     let child_issues = value.validate_invariants(validator, evaluator);
                     issues.extend(validator.rebase_instance_paths(child_issues, "payload.content[x]"));
                 }
+                CommunicationRequestPayloadContent::String(_value) => {
+                }
             }
         }
         issues
@@ -742,6 +752,8 @@ impl fhir_validation::r6::R6ValidatableAsync for CommunicationRequestPayload {
                     issues.extend(validator.rebase_instance_paths(child_issues, "payload.content[x]"));
                 }
                 CommunicationRequestPayloadContent::CodeableConcept(_value) => {
+                }
+                CommunicationRequestPayloadContent::String(_value) => {
                 }
             }
         }
@@ -872,12 +884,12 @@ impl fhir_validation::r6::R6Validatable for CompartmentDefinition {
             match choice {
                 CompartmentDefinitionVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CompartmentDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 CompartmentDefinitionVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CompartmentDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1029,12 +1041,12 @@ impl fhir_validation::r6::R6ValidatableAsync for CompartmentDefinition {
             match choice {
                 CompartmentDefinitionVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CompartmentDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 CompartmentDefinitionVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CompartmentDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -1267,6 +1279,12 @@ impl fhir_validation::r6::R6Validatable for Composition {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.participant[{idx}]")));
             }
         }
+        if let Some(values) = &self.classification {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.classification[{idx}]")));
+            }
+        }
         if let Some(values) = &self.attester {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
@@ -1375,6 +1393,11 @@ impl fhir_validation::r6::R6Validatable for Composition {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.note", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Composition.note"));
             }
         }
+        if let Some(values) = &self.classification {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.classification", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Composition.classification"));
+            }
+        }
         if let Some(values) = &self.attester {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.attester", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Composition.attester"));
@@ -1474,6 +1497,12 @@ impl fhir_validation::r6::R6Validatable for Composition {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.note[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.classification {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.classification[{idx}]")));
             }
         }
         if let Some(values) = &self.attester {
@@ -1580,6 +1609,12 @@ impl fhir_validation::r6::R6ValidatableAsync for Composition {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.participant[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.classification {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Composition.classification[{idx}]")));
             }
         }
         if let Some(values) = &self.attester {
@@ -1747,6 +1782,111 @@ impl fhir_validation::r6::R6ValidatableAsync for CompositionParticipant {
     }
     }
 
+static COMPOSITION_CLASSIFICATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Composition.classification".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static COMPOSITION_CLASSIFICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Composition.classification.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/evidence-classifier-type-example".to_string(),
+        binding_name: Some("EvidenceClassifierTypeExample".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Composition.classification.classifier".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/condition-code".to_string(),
+        binding_name: Some("ConditionProblemDiagnosisCodes".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CompositionClassification {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, COMPOSITION_CLASSIFICATION_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COMPOSITION_CLASSIFICATION_INVARIANTS.as_slice(), evaluator, "Composition.classification"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.classification.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("classification.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.classification.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("classification.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.classifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Composition.classification.classifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("classification.classifier"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("classification.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("classification.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "classification.type"));
+        }
+        if let Some(values) = &self.classifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("classification.classifier[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CompositionClassification {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, COMPOSITION_CLASSIFICATION_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
 static COMPOSITION_ATTESTER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
@@ -1761,7 +1901,7 @@ static COMPOSITION_ATTESTER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_ty
     fhir_validation_types::BindingDef {
         path: "Composition.attester.mode".to_string(),
         strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/composition-attestation-mode".to_string(),
+        value_set: "http://terminology.hl7.org/ValueSet/composition-attestation-mode".to_string(),
         binding_name: Some("CompositionAttestationMode".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -2459,12 +2599,12 @@ impl fhir_validation::r6::R6Validatable for ConceptMap {
             match choice {
                 ConceptMapVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ConceptMap.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 ConceptMapVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ConceptMap.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -2780,12 +2920,12 @@ impl fhir_validation::r6::R6ValidatableAsync for ConceptMap {
             match choice {
                 ConceptMapVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ConceptMap.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 ConceptMapVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ConceptMap.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -4358,6 +4498,13 @@ impl fhir_validation::r6::R6ValidatableAsync for ConditionStage {
 
 static CONSENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
+        key: "consent-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Consent".to_string(),
+        expression: "provision.exists() implies decision.exists()".to_string(),
+        human: "If provision exists, decision must also be provided".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
         key: "dom-2".to_string(),
         severity: fhir_validation_types::Severity::Error,
         path: "Consent".to_string(),
@@ -5068,7 +5215,7 @@ static CONSENT_PROVISION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types
     fhir_validation_types::BindingDef {
         path: "Consent.provision.documentType".to_string(),
         strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/consent-content-class".to_string(),
+        value_set: "http://hl7.org/fhir/ValueSet/doc-typecodes".to_string(),
         binding_name: Some("ConsentContentClass".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Coding,
         choice_type_codes: None,
@@ -5112,10 +5259,6 @@ impl fhir_validation::r6::R6Validatable for ConsentProvision {
                 let child_issues = value.validate_bindings(validator, terminology);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("provision.data[{idx}]")));
             }
-        }
-        if let Some(value) = &self.expression {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "provision.expression"));
         }
         issues
     }
@@ -5252,10 +5395,6 @@ impl fhir_validation::r6::R6Validatable for ConsentProvision {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("provision.data[{idx}]")));
             }
         }
-        if let Some(value) = &self.expression {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "provision.expression"));
-        }
         issues
     }
 }
@@ -5282,10 +5421,6 @@ impl fhir_validation::r6::R6ValidatableAsync for ConsentProvision {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("provision.data[{idx}]")));
             }
-        }
-        if let Some(value) = &self.expression {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "provision.expression"));
         }
         issues
     }
@@ -5481,47 +5616,47 @@ impl fhir_validation::r6::R6ValidatableAsync for ConsentProvisionData {
     }
     }
 
-static CONTRACT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+static COVERAGE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "dom-2".to_string(),
         severity: fhir_validation_types::Severity::Error,
-        path: "Contract".to_string(),
+        path: "Coverage".to_string(),
         expression: "contained.contained.empty()".to_string(),
         human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "dom-3".to_string(),
         severity: fhir_validation_types::Severity::Error,
-        path: "Contract".to_string(),
+        path: "Coverage".to_string(),
         expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
         human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "dom-4".to_string(),
         severity: fhir_validation_types::Severity::Error,
-        path: "Contract".to_string(),
+        path: "Coverage".to_string(),
         expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
         human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "dom-5".to_string(),
         severity: fhir_validation_types::Severity::Error,
-        path: "Contract".to_string(),
+        path: "Coverage".to_string(),
         expression: "contained.meta.security.empty()".to_string(),
         human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
     },
     fhir_validation_types::InvariantDef {
         key: "dom-6".to_string(),
         severity: fhir_validation_types::Severity::Warning,
-        path: "Contract".to_string(),
+        path: "Coverage".to_string(),
         expression: "text.`div`.exists()".to_string(),
         human: "A resource should have narrative for robust management".to_string(),
     },
 ]);
 
-static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+static COVERAGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
-        path: "Contract.language".to_string(),
+        path: "Coverage.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
         value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
         binding_name: Some("Language".to_string()),
@@ -5529,145 +5664,97 @@ static CONTRACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Binding
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
-        path: "Contract.status".to_string(),
+        path: "Coverage.status".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("ContractStatus".to_string()),
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("CoverageStatus".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
-        path: "Contract.legalState".to_string(),
+        path: "Coverage.kind".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-kind|6.0.0-ballot4".to_string(),
+        binding_name: Some("CoverageKind".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-type".to_string(),
+        binding_name: Some("CoverageType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.relationship".to_string(),
         strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-legalstate".to_string(),
-        binding_name: Some("ContractLegalState".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.contentDerivative".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-content-derivative".to_string(),
-        binding_name: Some("ContractContentDerivative".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.expirationType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-expiration-type".to_string(),
-        binding_name: Some("ContractExpiration".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.scope".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-scope".to_string(),
-        binding_name: Some("ContractScope".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-type".to_string(),
-        binding_name: Some("ContractType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.subType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-subtype".to_string(),
-        binding_name: Some("ContractSubtype".to_string()),
+        value_set: "http://hl7.org/fhir/ValueSet/subscriber-relationship".to_string(),
+        binding_name: Some("Relationship".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
     },
 ]);
 
 #[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for Contract {
+impl fhir_validation::r6::R6Validatable for Coverage {
     fn validate_bindings(
         &self,
         validator: &fhir_validation::Validator,
         terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_BINDINGS.as_slice(), terminology));
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_BINDINGS.as_slice(), terminology));
 
         if let Some(value) = &self.meta {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.meta"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.meta"));
         }
         if let Some(value) = &self.text {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.text"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.text"));
         }
         if let Some(values) = &self.identifier {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.identifier[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.identifier[{idx}]")));
             }
         }
-        if let Some(value) = &self.instantiates_canonical {
+        if let Some(value) = &self.policy_holder {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.instantiatesCanonical"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.policyHolder"));
         }
-        if let Some(values) = &self.subject {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.subject[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.authority {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.authority[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.domain {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.domain[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.site {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.site[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.author {
+        if let Some(value) = &self.subscriber {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.author"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.subscriber"));
         }
-        if let Some(value) = &self.content_definition {
+        if let Some(values) = &self.subscriber_id {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.subscriberId[{idx}]")));
+            }
+        }
+        let child_issues = self.beneficiary.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.beneficiary"));
+        if let Some(value) = &self.insurer {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.contentDefinition"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.insurer"));
         }
-        if let Some(values) = &self.term {
+        if let Some(values) = &self.class {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.term[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.class[{idx}]")));
             }
         }
-        if let Some(values) = &self.supporting_info {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.supportingInfo[{idx}]")));
-            }
+        if let Some(value) = &self.network {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.network"));
         }
-        if let Some(values) = &self.relevant_history {
+        if let Some(values) = &self.cost_to_beneficiary {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.relevantHistory[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.signer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.signer[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.costToBeneficiary[{idx}]")));
             }
         }
 
@@ -5676,29 +5763,7 @@ impl fhir_validation::r6::R6Validatable for Contract {
         if let Some(values) = &self.contained {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.topic {
-            match choice {
-                ContractTopic::CodeableConcept(_value) => {
-                }
-                ContractTopic::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.topic[x]"));
-                }
-            }
-        }
-        if let Some(choice) = &self.legally_binding {
-            match choice {
-                ContractLegallyBinding::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
-                }
-                ContractLegallyBinding::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
-                }
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.contained[{idx}]")));
             }
         }
         issues
@@ -5710,226 +5775,131 @@ impl fhir_validation::r6::R6Validatable for Contract {
         evaluator: &dyn fhir_validation::FhirPathEvaluator,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_INVARIANTS.as_slice(), evaluator, "Contract"));
+        issues.extend(validator.apply_invariants(self, COVERAGE_INVARIANTS.as_slice(), evaluator, "Coverage"));
 
         if let Some(values) = &self.contained {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.contained"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.contained"));
             }
         }
         if let Some(values) = &self.extension {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.extension"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.extension"));
             }
         }
         if let Some(values) = &self.modifier_extension {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.modifierExtension"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.modifierExtension"));
             }
         }
         if let Some(values) = &self.identifier {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.identifier"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.identifier"));
             }
         }
-        if let Some(values) = &self.subject {
+        if let Some(values) = &self.payment_by {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.subject", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.subject"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.paymentBy", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.paymentBy"));
             }
         }
-        if let Some(values) = &self.authority {
+        if let Some(values) = &self.subscriber_id {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.authority", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.authority"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.subscriberId", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.subscriberId"));
             }
         }
-        if let Some(values) = &self.domain {
+        if let Some(values) = &self.class {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.domain", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.domain"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.class", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.class"));
             }
         }
-        if let Some(values) = &self.site {
+        if let Some(values) = &self.cost_to_beneficiary {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.site", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.site"));
-            }
-        }
-        if let Some(values) = &self.alias {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.alias", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.alias"));
-            }
-        }
-        if let Some(values) = &self.sub_type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.subType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.subType"));
-            }
-        }
-        if let Some(values) = &self.term {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.term"));
-            }
-        }
-        if let Some(values) = &self.supporting_info {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.supportingInfo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.supportingInfo"));
-            }
-        }
-        if let Some(values) = &self.relevant_history {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.relevantHistory", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.relevantHistory"));
-            }
-        }
-        if let Some(values) = &self.signer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.signer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.signer"));
-            }
-        }
-        if let Some(values) = &self.friendly {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.friendly", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.friendly"));
-            }
-        }
-        if let Some(values) = &self.legal {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.legal", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.legal"));
-            }
-        }
-        if let Some(values) = &self.rule {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.rule", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Contract.rule"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Coverage.costToBeneficiary"));
             }
         }
 
         if let Some(value) = &self.meta {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.meta"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.meta"));
         }
         if let Some(value) = &self.text {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.text"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.text"));
         }
         if let Some(values) = &self.extension {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.extension[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.extension[{idx}]")));
             }
         }
         if let Some(values) = &self.modifier_extension {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.modifierExtension[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.modifierExtension[{idx}]")));
             }
         }
         if let Some(values) = &self.identifier {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.identifier[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.identifier[{idx}]")));
             }
         }
-        if let Some(value) = &self.legal_state {
+        if let Some(value) = &self.status_reason {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legalState"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.statusReason"));
         }
-        if let Some(value) = &self.instantiates_canonical {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.instantiatesCanonical"));
-        }
-        if let Some(value) = &self.content_derivative {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.contentDerivative"));
-        }
-        if let Some(value) = &self.applies {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.applies"));
-        }
-        if let Some(value) = &self.expiration_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.expirationType"));
-        }
-        if let Some(values) = &self.subject {
+        if let Some(values) = &self.payment_by {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.subject[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.paymentBy[{idx}]")));
             }
-        }
-        if let Some(values) = &self.authority {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.authority[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.domain {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.domain[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.site {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.site[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.author {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.author"));
-        }
-        if let Some(value) = &self.scope {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.scope"));
         }
         if let Some(value) = &self.r#type {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.type"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.type"));
         }
-        if let Some(values) = &self.sub_type {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.subType[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.content_definition {
+        if let Some(value) = &self.policy_holder {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.contentDefinition"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.policyHolder"));
         }
-        if let Some(values) = &self.term {
+        if let Some(value) = &self.subscriber {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.subscriber"));
+        }
+        if let Some(values) = &self.subscriber_id {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.term[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.subscriberId[{idx}]")));
             }
         }
-        if let Some(values) = &self.supporting_info {
+        let child_issues = self.beneficiary.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.beneficiary"));
+        if let Some(value) = &self.relationship {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.relationship"));
+        }
+        if let Some(value) = &self.period {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.period"));
+        }
+        if let Some(value) = &self.insurer {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.insurer"));
+        }
+        if let Some(values) = &self.class {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.supportingInfo[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.class[{idx}]")));
             }
         }
-        if let Some(values) = &self.relevant_history {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.relevantHistory[{idx}]")));
-            }
+        if let Some(value) = &self.network {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.network"));
         }
-        if let Some(values) = &self.signer {
+        if let Some(values) = &self.cost_to_beneficiary {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.signer[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.friendly {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.friendly[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.legal {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.legal[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.rule {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.rule[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.costToBeneficiary[{idx}]")));
             }
         }
 
@@ -5938,31 +5908,7 @@ impl fhir_validation::r6::R6Validatable for Contract {
         if let Some(values) = &self.contained {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.topic {
-            match choice {
-                ContractTopic::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.topic[x]"));
-                }
-                ContractTopic::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.topic[x]"));
-                }
-            }
-        }
-        if let Some(choice) = &self.legally_binding {
-            match choice {
-                ContractLegallyBinding::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
-                }
-                ContractLegallyBinding::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
-                }
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.contained[{idx}]")));
             }
         }
         issues
@@ -5971,87 +5917,63 @@ impl fhir_validation::r6::R6Validatable for Contract {
 
 #[cfg(feature = "R6")]
 #[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for Contract {
+impl fhir_validation::r6::R6ValidatableAsync for Coverage {
     async fn validate_bindings_async(
         &self,
         validator: &fhir_validation::Validator,
         terminology: Option<&dyn fhir_validation::TerminologyService>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_BINDINGS.as_slice(), terminology).await);
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_BINDINGS.as_slice(), terminology).await);
 
         if let Some(value) = &self.meta {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.meta"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.meta"));
         }
         if let Some(value) = &self.text {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.text"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.text"));
         }
         if let Some(values) = &self.identifier {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.identifier[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.identifier[{idx}]")));
             }
         }
-        if let Some(value) = &self.instantiates_canonical {
+        if let Some(value) = &self.policy_holder {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.instantiatesCanonical"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.policyHolder"));
         }
-        if let Some(values) = &self.subject {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.subject[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.authority {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.authority[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.domain {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.domain[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.site {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.site[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.author {
+        if let Some(value) = &self.subscriber {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.author"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.subscriber"));
         }
-        if let Some(value) = &self.content_definition {
+        if let Some(values) = &self.subscriber_id {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.subscriberId[{idx}]")));
+            }
+        }
+        let child_issues = self.beneficiary.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.beneficiary"));
+        if let Some(value) = &self.insurer {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Contract.contentDefinition"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.insurer"));
         }
-        if let Some(values) = &self.term {
+        if let Some(values) = &self.class {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.term[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.class[{idx}]")));
             }
         }
-        if let Some(values) = &self.supporting_info {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.supportingInfo[{idx}]")));
-            }
+        if let Some(value) = &self.network {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Coverage.network"));
         }
-        if let Some(values) = &self.relevant_history {
+        if let Some(values) = &self.cost_to_beneficiary {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.relevantHistory[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.signer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.signer[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.costToBeneficiary[{idx}]")));
             }
         }
 
@@ -6060,28 +5982,398 @@ impl fhir_validation::r6::R6ValidatableAsync for Contract {
         if let Some(values) = &self.contained {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Contract.contained[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Coverage.contained[{idx}]")));
             }
         }
-        if let Some(choice) = &self.topic {
+        issues
+    }
+    }
+
+static COVERAGE_PAYMENT_BY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Coverage.paymentBy".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CoveragePaymentBy {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        let child_issues = self.party.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "paymentBy.party"));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COVERAGE_PAYMENT_BY_INVARIANTS.as_slice(), evaluator, "Coverage.paymentBy"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.paymentBy.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("paymentBy.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.paymentBy.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("paymentBy.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("paymentBy.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("paymentBy.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.party.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "paymentBy.party"));
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CoveragePaymentBy {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        let child_issues = self.party.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "paymentBy.party"));
+        issues
+    }
+    }
+
+static COVERAGE_CLASS_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "cov-classtype".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Coverage.class".to_string(),
+        expression: "value.exists() xor code.exists()".to_string(),
+        human: "Only one of .value and .code may be specified.".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Coverage.class".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static COVERAGE_CLASS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Coverage.class.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-class".to_string(),
+        binding_name: Some("CoverageClass".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CoverageClass {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_CLASS_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.value {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "class.value"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COVERAGE_CLASS_INVARIANTS.as_slice(), evaluator, "Coverage.class"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.class.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("class.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.class.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("class.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("class.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("class.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.r#type.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "class.type"));
+        if let Some(value) = &self.value {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "class.value"));
+        }
+        if let Some(value) = &self.code {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "class.code"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CoverageClass {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_CLASS_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.value {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "class.value"));
+        }
+        issues
+    }
+    }
+
+static COVERAGE_COST_TO_BENEFICIARY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Coverage.costToBeneficiary".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static COVERAGE_COST_TO_BENEFICIARY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Coverage.costToBeneficiary.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-copay-type".to_string(),
+        binding_name: Some("CopayTypes".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.costToBeneficiary.category".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/ex-benefitcategory".to_string(),
+        binding_name: Some("BenefitCategory".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.costToBeneficiary.network".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/benefit-network".to_string(),
+        binding_name: Some("BenefitNetwork".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.costToBeneficiary.unit".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/benefit-unit".to_string(),
+        binding_name: Some("BenefitUnit".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Coverage.costToBeneficiary.term".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/benefit-term".to_string(),
+        binding_name: Some("BenefitTerm".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CoverageCostToBeneficiary {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_COST_TO_BENEFICIARY_BINDINGS.as_slice(), terminology));
+
+        if let Some(values) = &self.exception {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("costToBeneficiary.exception[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
             match choice {
-                ContractTopic::CodeableConcept(_value) => {
+                CoverageCostToBeneficiaryValue::Quantity(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
                 }
-                ContractTopic::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.topic[x]"));
+                CoverageCostToBeneficiaryValue::Money(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
                 }
             }
         }
-        if let Some(choice) = &self.legally_binding {
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COVERAGE_COST_TO_BENEFICIARY_INVARIANTS.as_slice(), evaluator, "Coverage.costToBeneficiary"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("costToBeneficiary.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("costToBeneficiary.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.exception {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary.exception", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("costToBeneficiary.exception"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("costToBeneficiary.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("costToBeneficiary.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.type"));
+        }
+        if let Some(value) = &self.category {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.category"));
+        }
+        if let Some(value) = &self.network {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.network"));
+        }
+        if let Some(value) = &self.unit {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.unit"));
+        }
+        if let Some(value) = &self.term {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.term"));
+        }
+        if let Some(values) = &self.exception {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("costToBeneficiary.exception[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
             match choice {
-                ContractLegallyBinding::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
+                CoverageCostToBeneficiaryValue::Quantity(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
                 }
-                ContractLegallyBinding::Reference(value) => {
+                CoverageCostToBeneficiaryValue::Money(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CoverageCostToBeneficiary {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_COST_TO_BENEFICIARY_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(values) = &self.exception {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("costToBeneficiary.exception[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                CoverageCostToBeneficiaryValue::Quantity(value) => {
                     let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Contract.legallyBinding[x]"));
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
+                }
+                CoverageCostToBeneficiaryValue::Money(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "costToBeneficiary.value[x]"));
                 }
             }
         }
@@ -6089,56 +6381,235 @@ impl fhir_validation::r6::R6ValidatableAsync for Contract {
     }
     }
 
-static CONTRACT_CONTENT_DEFINITION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+static COVERAGE_COST_TO_BENEFICIARY_EXCEPTION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
         severity: fhir_validation_types::Severity::Error,
-        path: "Contract.contentDefinition".to_string(),
+        path: "Coverage.costToBeneficiary.exception".to_string(),
         expression: "hasValue() or (children().count() > id.count())".to_string(),
         human: "All FHIR elements must have a @value or children or both".to_string(),
     },
 ]);
 
-static CONTRACT_CONTENT_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+static COVERAGE_COST_TO_BENEFICIARY_EXCEPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
-        path: "Contract.contentDefinition.type".to_string(),
+        path: "Coverage.costToBeneficiary.exception.type".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-definition-type".to_string(),
-        binding_name: Some("ContractDefinitionType".to_string()),
+        value_set: "http://hl7.org/fhir/ValueSet/coverage-financial-exception".to_string(),
+        binding_name: Some("CoverageFinancialException".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
     },
-    fhir_validation_types::BindingDef {
-        path: "Contract.contentDefinition.subType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-definition-subtype".to_string(),
-        binding_name: Some("ContractDefinitionSubtype".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CoverageCostToBeneficiaryException {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_COST_TO_BENEFICIARY_EXCEPTION_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COVERAGE_COST_TO_BENEFICIARY_EXCEPTION_INVARIANTS.as_slice(), evaluator, "Coverage.costToBeneficiary.exception"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary.exception.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("exception.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Coverage.costToBeneficiary.exception.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("exception.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("exception.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("exception.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.r#type.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "exception.type"));
+        if let Some(value) = &self.period {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "exception.period"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CoverageCostToBeneficiaryException {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_COST_TO_BENEFICIARY_EXCEPTION_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
+static COVERAGE_ELIGIBILITY_REQUEST_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "CoverageEligibilityRequest".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
     },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "CoverageEligibilityRequest".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "CoverageEligibilityRequest".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "CoverageEligibilityRequest".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "CoverageEligibilityRequest".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static COVERAGE_ELIGIBILITY_REQUEST_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
-        path: "Contract.contentDefinition.publicationStatus".to_string(),
+        path: "CoverageEligibilityRequest.language".to_string(),
         strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-publicationstatus|6.0.0-ballot4".to_string(),
-        binding_name: Some("ContractPublicationStatus".to_string()),
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "CoverageEligibilityRequest.status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("EligibilityRequestStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "CoverageEligibilityRequest.priority".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/process-priority".to_string(),
+        binding_name: Some("ProcessPriority".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "CoverageEligibilityRequest.purpose".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/eligibilityrequest-purpose|6.0.0-ballot4".to_string(),
+        binding_name: Some("EligibilityRequestPurpose".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
     },
 ]);
 
 #[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractContentDefinition {
+impl fhir_validation::r6::R6Validatable for CoverageEligibilityRequest {
     fn validate_bindings(
         &self,
         validator: &fhir_validation::Validator,
         terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_CONTENT_DEFINITION_BINDINGS.as_slice(), terminology));
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_ELIGIBILITY_REQUEST_BINDINGS.as_slice(), terminology));
 
-        if let Some(value) = &self.publisher {
+        if let Some(value) = &self.meta {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "contentDefinition.publisher"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.identifier[{idx}]")));
+            }
+        }
+        let child_issues = self.patient.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.patient"));
+        if let Some(values) = &self.event {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.event[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.enterer"));
+        }
+        if let Some(value) = &self.provider {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.provider"));
+        }
+        let child_issues = self.insurer.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.insurer"));
+        if let Some(value) = &self.facility {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.facility"));
+        }
+        if let Some(values) = &self.item {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.item[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.serviced {
+            match choice {
+                CoverageEligibilityRequestServiced::Date(_value) => {
+                }
+                CoverageEligibilityRequestServiced::Period(_value) => {
+                }
+            }
         }
         issues
     }
@@ -6149,242 +6620,309 @@ impl fhir_validation::r6::R6Validatable for ContractContentDefinition {
         evaluator: &dyn fhir_validation::FhirPathEvaluator,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_CONTENT_DEFINITION_INVARIANTS.as_slice(), evaluator, "Contract.contentDefinition"));
+        issues.extend(validator.apply_invariants(self, COVERAGE_ELIGIBILITY_REQUEST_INVARIANTS.as_slice(), evaluator, "CoverageEligibilityRequest"));
 
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.contained"));
+            }
+        }
         if let Some(values) = &self.extension {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.contentDefinition.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contentDefinition.extension"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.extension"));
             }
         }
         if let Some(values) = &self.modifier_extension {
             if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.contentDefinition.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contentDefinition.modifierExtension"));
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.identifier"));
+            }
+        }
+        if let Some(values) = &self.purpose {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.purpose", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.purpose"));
+            }
+        }
+        if let Some(values) = &self.event {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.event", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.event"));
+            }
+        }
+        if let Some(values) = &self.supporting_info {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.supportingInfo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.supportingInfo"));
+            }
+        }
+        if let Some(values) = &self.insurance {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.insurance", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.insurance"));
+            }
+        }
+        if let Some(values) = &self.item {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.item", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("CoverageEligibilityRequest.item"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.priority {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.priority"));
+        }
+        let child_issues = self.patient.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.patient"));
+        if let Some(values) = &self.event {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.event[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.enterer"));
+        }
+        if let Some(value) = &self.provider {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.provider"));
+        }
+        let child_issues = self.insurer.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.insurer"));
+        if let Some(value) = &self.facility {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.facility"));
+        }
+        if let Some(values) = &self.supporting_info {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.supportingInfo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.insurance {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.insurance[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.item {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.item[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.serviced {
+            match choice {
+                CoverageEligibilityRequestServiced::Date(_value) => {
+                }
+                CoverageEligibilityRequestServiced::Period(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.serviced[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for CoverageEligibilityRequest {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_ELIGIBILITY_REQUEST_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.identifier[{idx}]")));
+            }
+        }
+        let child_issues = self.patient.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.patient"));
+        if let Some(values) = &self.event {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.event[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.enterer"));
+        }
+        if let Some(value) = &self.provider {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.provider"));
+        }
+        let child_issues = self.insurer.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.insurer"));
+        if let Some(value) = &self.facility {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "CoverageEligibilityRequest.facility"));
+        }
+        if let Some(values) = &self.item {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.item[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("CoverageEligibilityRequest.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.serviced {
+            match choice {
+                CoverageEligibilityRequestServiced::Date(_value) => {
+                }
+                CoverageEligibilityRequestServiced::Period(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static COVERAGE_ELIGIBILITY_REQUEST_EVENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "CoverageEligibilityRequest.event".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static COVERAGE_ELIGIBILITY_REQUEST_EVENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "CoverageEligibilityRequest.event.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/datestype".to_string(),
+        binding_name: Some("DatesType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for CoverageEligibilityRequestEvent {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, COVERAGE_ELIGIBILITY_REQUEST_EVENT_BINDINGS.as_slice(), terminology));
+
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.when {
+            match choice {
+                CoverageEligibilityRequestEventWhen::DateTime(_value) => {
+                }
+                CoverageEligibilityRequestEventWhen::Period(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, COVERAGE_ELIGIBILITY_REQUEST_EVENT_INVARIANTS.as_slice(), evaluator, "CoverageEligibilityRequest.event"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.event.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("event.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "CoverageEligibilityRequest.event.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("event.modifierExtension"));
             }
         }
 
         if let Some(values) = &self.extension {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contentDefinition.extension[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("event.extension[{idx}]")));
             }
         }
         if let Some(values) = &self.modifier_extension {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contentDefinition.modifierExtension[{idx}]")));
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("event.modifierExtension[{idx}]")));
             }
         }
         let child_issues = self.r#type.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "contentDefinition.type"));
-        if let Some(value) = &self.sub_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "contentDefinition.subType"));
-        }
-        if let Some(value) = &self.publisher {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "contentDefinition.publisher"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractContentDefinition {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_CONTENT_DEFINITION_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.publisher {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "contentDefinition.publisher"));
-        }
-        issues
-    }
-    }
-
-static CONTRACT_TERM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static CONTRACT_TERM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-term-type".to_string(),
-        binding_name: Some("ContractTermType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.subType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-term-subtype".to_string(),
-        binding_name: Some("ContractTermSubType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTerm {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_TERM_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.identifier"));
-        }
-        if let Some(values) = &self.security_label {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.securityLabel[{idx}]")));
-            }
-        }
-        let child_issues = self.offer.validate_bindings(validator, terminology);
-        issues.extend(validator.rebase_instance_paths(child_issues, "term.offer"));
-        if let Some(values) = &self.asset {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.asset[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.action {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.action[{idx}]")));
-            }
-        }
+        issues.extend(validator.rebase_instance_paths(child_issues, "event.type"));
 
         // Deferred recursive validation candidates.
         // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.topic {
+        if let Some(choice) = &self.when {
             match choice {
-                ContractTermTopic::CodeableConcept(_value) => {
+                CoverageEligibilityRequestEventWhen::DateTime(_value) => {
                 }
-                ContractTermTopic::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "term.topic[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_INVARIANTS.as_slice(), evaluator, "Contract.term"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.security_label {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.securityLabel"));
-            }
-        }
-        if let Some(values) = &self.asset {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.asset"));
-            }
-        }
-        if let Some(values) = &self.action {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.action", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.action"));
-            }
-        }
-        if let Some(values) = &self.group {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.group", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("term.group"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.identifier"));
-        }
-        if let Some(value) = &self.applies {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.applies"));
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.type"));
-        }
-        if let Some(value) = &self.sub_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.subType"));
-        }
-        if let Some(values) = &self.security_label {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.securityLabel[{idx}]")));
-            }
-        }
-        let child_issues = self.offer.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "term.offer"));
-        if let Some(values) = &self.asset {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.asset[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.action {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.action[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.topic {
-            match choice {
-                ContractTermTopic::CodeableConcept(value) => {
+                CoverageEligibilityRequestEventWhen::Period(value) => {
                     let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "term.topic[x]"));
-                }
-                ContractTermTopic::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "term.topic[x]"));
+                    issues.extend(validator.rebase_instance_paths(child_issues, "event.when[x]"));
                 }
             }
         }
@@ -6394,921 +6932,24 @@ impl fhir_validation::r6::R6Validatable for ContractTerm {
 
 #[cfg(feature = "R6")]
 #[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTerm {
+impl fhir_validation::r6::R6ValidatableAsync for CoverageEligibilityRequestEvent {
     async fn validate_bindings_async(
         &self,
         validator: &fhir_validation::Validator,
         terminology: Option<&dyn fhir_validation::TerminologyService>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_TERM_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.identifier {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "term.identifier"));
-        }
-        if let Some(values) = &self.security_label {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.securityLabel[{idx}]")));
-            }
-        }
-        let child_issues = self.offer.validate_bindings_async(validator, terminology).await;
-        issues.extend(validator.rebase_instance_paths(child_issues, "term.offer"));
-        if let Some(values) = &self.asset {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.asset[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.action {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("term.action[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.topic {
-            match choice {
-                ContractTermTopic::CodeableConcept(_value) => {
-                }
-                ContractTermTopic::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "term.topic[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static CONTRACT_TERM_SECURITY_LABEL_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term.securityLabel".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static CONTRACT_TERM_SECURITY_LABEL_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.securityLabel.classification".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-security-classification".to_string(),
-        binding_name: Some("ContractSecurityClassification".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.securityLabel.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-security-category".to_string(),
-        binding_name: Some("ContractSecurityCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.securityLabel.control".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-security-control".to_string(),
-        binding_name: Some("ContractSecurityControl".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTermSecurityLabel {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_TERM_SECURITY_LABEL_BINDINGS.as_slice(), terminology));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_SECURITY_LABEL_INVARIANTS.as_slice(), evaluator, "Contract.term.securityLabel"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("securityLabel.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("securityLabel.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.number {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel.number", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("securityLabel.number"));
-            }
-        }
-        if let Some(values) = &self.category {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel.category", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("securityLabel.category"));
-            }
-        }
-        if let Some(values) = &self.control {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.securityLabel.control", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("securityLabel.control"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("securityLabel.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("securityLabel.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.classification.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "securityLabel.classification"));
-        if let Some(values) = &self.category {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("securityLabel.category[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.control {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("securityLabel.control[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTermSecurityLabel {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_TERM_SECURITY_LABEL_BINDINGS.as_slice(), terminology).await);
-        issues
-    }
-    }
-
-static CONTRACT_TERM_OFFER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term.offer".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static CONTRACT_TERM_OFFER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.offer.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-term-type".to_string(),
-        binding_name: Some("ContractTermType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.offer.decision".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://terminology.hl7.org/ValueSet/v3-ActConsentDirective".to_string(),
-        binding_name: Some("ContractDecisionType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.offer.decisionMode".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-decision-mode".to_string(),
-        binding_name: Some("ContractDecisionMode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTermOffer {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_TERM_OFFER_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.party {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.party[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.topic {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "offer.topic"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_OFFER_INVARIANTS.as_slice(), evaluator, "Contract.term.offer"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.identifier"));
-            }
-        }
-        if let Some(values) = &self.party {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.party", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.party"));
-            }
-        }
-        if let Some(values) = &self.decision_mode {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.decisionMode", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.decisionMode"));
-            }
-        }
-        if let Some(values) = &self.answer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.answer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.answer"));
-            }
-        }
-        if let Some(values) = &self.link_id {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.linkId", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.linkId"));
-            }
-        }
-        if let Some(values) = &self.security_label_number {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.securityLabelNumber", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("offer.securityLabelNumber"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.party {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.party[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.topic {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "offer.topic"));
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "offer.type"));
-        }
-        if let Some(value) = &self.decision {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "offer.decision"));
-        }
-        if let Some(values) = &self.decision_mode {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.decisionMode[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.answer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.answer[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTermOffer {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_TERM_OFFER_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.party {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("offer.party[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.topic {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "offer.topic"));
-        }
-        issues
-    }
-    }
-
-static CONTRACT_TERM_OFFER_PARTY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term.offer.party".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static CONTRACT_TERM_OFFER_PARTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.offer.party.role".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-party-role".to_string(),
-        binding_name: Some("ContractPartyRole".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTermOfferParty {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_TERM_OFFER_PARTY_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("party.reference[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_OFFER_PARTY_INVARIANTS.as_slice(), evaluator, "Contract.term.offer.party"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.party.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("party.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.party.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("party.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.reference {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.party.reference", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("party.reference"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("party.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("party.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("party.reference[{idx}]")));
-            }
-        }
-        let child_issues = self.role.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "party.role"));
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTermOfferParty {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_TERM_OFFER_PARTY_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("party.reference[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static CONTRACT_TERM_OFFER_ANSWER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term.offer.answer".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTermOfferAnswer {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
+        issues.extend(validator.apply_r6_bindings_async(self, COVERAGE_ELIGIBILITY_REQUEST_EVENT_BINDINGS.as_slice(), terminology).await);
 
 
         // Deferred recursive validation candidates.
         // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
+        if let Some(choice) = &self.when {
             match choice {
-                ContractTermOfferAnswerValue::Boolean(_value) => {
+                CoverageEligibilityRequestEventWhen::DateTime(_value) => {
                 }
-                ContractTermOfferAnswerValue::Decimal(_value) => {
+                CoverageEligibilityRequestEventWhen::Period(_value) => {
                 }
-                ContractTermOfferAnswerValue::Integer(_value) => {
-                }
-                ContractTermOfferAnswerValue::Date(_value) => {
-                }
-                ContractTermOfferAnswerValue::DateTime(_value) => {
-                }
-                ContractTermOfferAnswerValue::Time(_value) => {
-                }
-                ContractTermOfferAnswerValue::String(_value) => {
-                }
-                ContractTermOfferAnswerValue::Uri(_value) => {
-                }
-                ContractTermOfferAnswerValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Coding(_value) => {
-                }
-                ContractTermOfferAnswerValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_OFFER_ANSWER_INVARIANTS.as_slice(), evaluator, "Contract.term.offer.answer"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.answer.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("answer.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.offer.answer.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("answer.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("answer.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("answer.modifierExtension[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                ContractTermOfferAnswerValue::Boolean(_value) => {
-                }
-                ContractTermOfferAnswerValue::Decimal(_value) => {
-                }
-                ContractTermOfferAnswerValue::Integer(_value) => {
-                }
-                ContractTermOfferAnswerValue::Date(_value) => {
-                }
-                ContractTermOfferAnswerValue::DateTime(_value) => {
-                }
-                ContractTermOfferAnswerValue::Time(_value) => {
-                }
-                ContractTermOfferAnswerValue::String(_value) => {
-                }
-                ContractTermOfferAnswerValue::Uri(_value) => {
-                }
-                ContractTermOfferAnswerValue::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Coding(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTermOfferAnswer {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                ContractTermOfferAnswerValue::Boolean(_value) => {
-                }
-                ContractTermOfferAnswerValue::Decimal(_value) => {
-                }
-                ContractTermOfferAnswerValue::Integer(_value) => {
-                }
-                ContractTermOfferAnswerValue::Date(_value) => {
-                }
-                ContractTermOfferAnswerValue::DateTime(_value) => {
-                }
-                ContractTermOfferAnswerValue::Time(_value) => {
-                }
-                ContractTermOfferAnswerValue::String(_value) => {
-                }
-                ContractTermOfferAnswerValue::Uri(_value) => {
-                }
-                ContractTermOfferAnswerValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Coding(_value) => {
-                }
-                ContractTermOfferAnswerValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-                ContractTermOfferAnswerValue::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "answer.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static CONTRACT_TERM_ASSET_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Contract.term.asset".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static CONTRACT_TERM_ASSET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.asset.scope".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-assetscope".to_string(),
-        binding_name: Some("ContractAssetScope".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.asset.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-assettype".to_string(),
-        binding_name: Some("ContractAssetType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.asset.subtype".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/contract-assetsubtype".to_string(),
-        binding_name: Some("ContractAssetSubtype".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.asset.relationship".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/consent-content-class".to_string(),
-        binding_name: Some("ConsentContentClass".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Contract.term.asset.periodType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/asset-availability".to_string(),
-        binding_name: Some("AssetAvailabilityType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ContractTermAsset {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, CONTRACT_TERM_ASSET_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.type_reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.typeReference[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.context[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, CONTRACT_TERM_ASSET_INVARIANTS.as_slice(), evaluator, "Contract.term.asset"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.r#type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.type", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.type"));
-            }
-        }
-        if let Some(values) = &self.type_reference {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.typeReference", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.typeReference"));
-            }
-        }
-        if let Some(values) = &self.subtype {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.subtype", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.subtype"));
-            }
-        }
-        if let Some(values) = &self.context {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.context", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.context"));
-            }
-        }
-        if let Some(values) = &self.period_type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.periodType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.periodType"));
-            }
-        }
-        if let Some(values) = &self.period {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.period", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.period"));
-            }
-        }
-        if let Some(values) = &self.use_period {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.usePeriod", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.usePeriod"));
-            }
-        }
-        if let Some(values) = &self.link_id {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.linkId", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.linkId"));
-            }
-        }
-        if let Some(values) = &self.answer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.answer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.answer"));
-            }
-        }
-        if let Some(values) = &self.security_label_number {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.securityLabelNumber", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.securityLabelNumber"));
-            }
-        }
-        if let Some(values) = &self.valued_item {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Contract.term.asset.valuedItem", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("asset.valuedItem"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.scope {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "asset.scope"));
-        }
-        if let Some(values) = &self.r#type {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.type[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.type_reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.typeReference[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.subtype {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.subtype[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.relationship {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "asset.relationship"));
-        }
-        if let Some(values) = &self.context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.context[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.period_type {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.periodType[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.period {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.period[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_period {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.usePeriod[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.valued_item {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.valuedItem[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ContractTermAsset {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, CONTRACT_TERM_ASSET_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.type_reference {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.typeReference[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("asset.context[{idx}]")));
             }
         }
         issues

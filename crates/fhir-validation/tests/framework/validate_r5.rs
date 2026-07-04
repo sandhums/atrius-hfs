@@ -2816,10 +2816,9 @@ mod tests {
             "birthPlace-only patient should not fail other extension slice profiles, got {issues:?}"
         );
         assert!(
-            !issues.iter().any(|i| {
-                i.diagnostics.contains("Extension.value[x]")
-                    && i.code == "required"
-            }),
+            !issues
+                .iter()
+                .any(|i| { i.diagnostics.contains("Extension.value[x]") && i.code == "required" }),
             "valueAddress should satisfy nested Extension.value[x], got {issues:?}"
         );
     }

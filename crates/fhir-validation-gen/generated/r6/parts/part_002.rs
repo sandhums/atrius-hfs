@@ -220,12 +220,12 @@ impl fhir_validation::r6::R6Validatable for ActorDefinition {
             match choice {
                 ActorDefinitionVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ActorDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 ActorDefinitionVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ActorDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -409,12 +409,12 @@ impl fhir_validation::r6::R6ValidatableAsync for ActorDefinition {
             match choice {
                 ActorDefinitionVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ActorDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 ActorDefinitionVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ActorDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -2247,10 +2247,10 @@ static ALLERGY_INTOLERANCE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_typ
     },
     fhir_validation_types::BindingDef {
         path: "AllergyIntolerance.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/allergy-intolerance-category|6.0.0-ballot4".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/allergy-intolerance-category".to_string(),
         binding_name: Some("AllergyIntoleranceCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
@@ -2424,6 +2424,12 @@ impl fhir_validation::r6::R6Validatable for AllergyIntolerance {
         if let Some(value) = &self.r#type {
             let child_issues = value.validate_invariants(validator, evaluator);
             issues.extend(validator.rebase_instance_paths(child_issues, "AllergyIntolerance.type"));
+        }
+        if let Some(values) = &self.category {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("AllergyIntolerance.category[{idx}]")));
+            }
         }
         if let Some(value) = &self.code {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -2806,7 +2812,7 @@ static APPOINTMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::Bind
     fhir_validation_types::BindingDef {
         path: "Appointment.class".to_string(),
         strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://terminology.hl7.org/ValueSet/EncounterClass".to_string(),
+        value_set: "http://terminology.hl7.org/ValueSet/encounter-class".to_string(),
         binding_name: Some("EncounterClass".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
@@ -3488,6 +3494,10 @@ impl fhir_validation::r6::R6Validatable for AppointmentRecurrenceTemplate {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings(self, APPOINTMENT_RECURRENCE_TEMPLATE_BINDINGS.as_slice(), terminology));
 
+        if let Some(value) = &self.weekly_template {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "recurrenceTemplate.weeklyTemplate"));
+        }
         if let Some(value) = &self.monthly_template {
             let child_issues = value.validate_bindings(validator, terminology);
             issues.extend(validator.rebase_instance_paths(child_issues, "recurrenceTemplate.monthlyTemplate"));
@@ -3574,6 +3584,10 @@ impl fhir_validation::r6::R6ValidatableAsync for AppointmentRecurrenceTemplate {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings_async(self, APPOINTMENT_RECURRENCE_TEMPLATE_BINDINGS.as_slice(), terminology).await);
 
+        if let Some(value) = &self.weekly_template {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "recurrenceTemplate.weeklyTemplate"));
+        }
         if let Some(value) = &self.monthly_template {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
             issues.extend(validator.rebase_instance_paths(child_issues, "recurrenceTemplate.monthlyTemplate"));
@@ -3592,6 +3606,17 @@ static APPOINTMENT_RECURRENCE_TEMPLATE_WEEKLY_TEMPLATE_INVARIANTS: std::sync::La
     },
 ]);
 
+static APPOINTMENT_RECURRENCE_TEMPLATE_WEEKLY_TEMPLATE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Appointment.recurrenceTemplate.weeklyTemplate.daysOfWeek".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4".to_string(),
+        binding_name: Some("DaysOfWeek".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
 #[cfg(feature = "R6")]
 impl fhir_validation::r6::R6Validatable for AppointmentRecurrenceTemplateWeeklyTemplate {
     fn validate_bindings(
@@ -3600,7 +3625,7 @@ impl fhir_validation::r6::R6Validatable for AppointmentRecurrenceTemplateWeeklyT
         terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        let _ = (validator, terminology);
+        issues.extend(validator.apply_r6_bindings(self, APPOINTMENT_RECURRENCE_TEMPLATE_WEEKLY_TEMPLATE_BINDINGS.as_slice(), terminology));
         issues
     }
 
@@ -3620,6 +3645,11 @@ impl fhir_validation::r6::R6Validatable for AppointmentRecurrenceTemplateWeeklyT
         if let Some(values) = &self.modifier_extension {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "Appointment.recurrenceTemplate.weeklyTemplate.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("weeklyTemplate.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.days_of_week {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Appointment.recurrenceTemplate.weeklyTemplate.daysOfWeek", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("weeklyTemplate.daysOfWeek"));
             }
         }
 
@@ -3648,7 +3678,7 @@ impl fhir_validation::r6::R6ValidatableAsync for AppointmentRecurrenceTemplateWe
         terminology: Option<&dyn fhir_validation::TerminologyService>,
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
-        let _ = (validator, terminology);
+        issues.extend(validator.apply_r6_bindings_async(self, APPOINTMENT_RECURRENCE_TEMPLATE_WEEKLY_TEMPLATE_BINDINGS.as_slice(), terminology).await);
         issues
     }
     }
@@ -3669,7 +3699,7 @@ static APPOINTMENT_RECURRENCE_TEMPLATE_MONTHLY_TEMPLATE_BINDINGS: std::sync::Laz
         strength: fhir_validation_types::BindingStrength::Required,
         value_set: "http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-ballot4".to_string(),
         binding_name: Some("WeekOfMonth".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
@@ -3677,7 +3707,7 @@ static APPOINTMENT_RECURRENCE_TEMPLATE_MONTHLY_TEMPLATE_BINDINGS: std::sync::Laz
         strength: fhir_validation_types::BindingStrength::Required,
         value_set: "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4".to_string(),
         binding_name: Some("DaysOfWeek".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
         choice_type_codes: None,
     },
 ]);
@@ -3724,14 +3754,6 @@ impl fhir_validation::r6::R6Validatable for AppointmentRecurrenceTemplateMonthly
                 let child_issues = value.validate_invariants(validator, evaluator);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("monthlyTemplate.modifierExtension[{idx}]")));
             }
-        }
-        if let Some(value) = &self.nth_week_of_month {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "monthlyTemplate.nthWeekOfMonth"));
-        }
-        if let Some(value) = &self.day_of_week {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "monthlyTemplate.dayOfWeek"));
         }
         issues
     }
@@ -7085,6 +7107,14 @@ static BODY_STRUCTURE_INCLUDED_STRUCTURE_BINDINGS: std::sync::LazyLock<Vec<fhir_
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
     },
+    fhir_validation_types::BindingDef {
+        path: "BodyStructure.includedStructure.origin".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/bodystructure-origin".to_string(),
+        binding_name: Some("BodyStructureOrigin".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
 ]);
 
 #[cfg(feature = "R6")]
@@ -7156,6 +7186,16 @@ impl fhir_validation::r6::R6Validatable for BodyStructureIncludedStructure {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "BodyStructure.includedStructure.qualifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("includedStructure.qualifier"));
             }
         }
+        if let Some(values) = &self.morphology {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "BodyStructure.includedStructure.morphology", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("includedStructure.morphology"));
+            }
+        }
+        if let Some(values) = &self.origin {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "BodyStructure.includedStructure.origin", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("includedStructure.origin"));
+            }
+        }
 
         if let Some(values) = &self.extension {
             for (idx, value) in values.iter().enumerate() {
@@ -7199,9 +7239,17 @@ impl fhir_validation::r6::R6Validatable for BodyStructureIncludedStructure {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("includedStructure.qualifier[{idx}]")));
             }
         }
-        if let Some(value) = &self.morphology {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "includedStructure.morphology"));
+        if let Some(values) = &self.morphology {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("includedStructure.morphology[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.origin {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("includedStructure.origin[{idx}]")));
+            }
         }
         issues
     }

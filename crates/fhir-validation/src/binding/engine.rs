@@ -1,4 +1,4 @@
-use helios_fhir::TerminologyValidationError;
+use fhir_terminology::TerminologyValidationError;
 
 pub trait BindingVersionAdapter {
     type Coding;

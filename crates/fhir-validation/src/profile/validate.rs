@@ -296,11 +296,7 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
             }
         }
 
-        issues.extend(validate_min_cardinality(
-            resource,
-            resource_type,
-            profile,
-        ));
+        issues.extend(validate_min_cardinality(resource, resource_type, profile));
 
         issues.extend(validate_must_support(
             resource,
@@ -309,19 +305,11 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
             &ctx.validator.config,
         ));
 
-        issues.extend(validate_max_cardinality(
-            resource,
-            resource_type,
-            profile,
-        ));
+        issues.extend(validate_max_cardinality(resource, resource_type, profile));
 
         issues.extend(validate_slicing(resource, resource_type, profile));
 
-        issues.extend(validate_value_constraints(
-            resource,
-            resource_type,
-            profile,
-        ));
+        issues.extend(validate_value_constraints(resource, resource_type, profile));
 
         issues.extend(validate_element_bounds(
             resource,
@@ -329,11 +317,7 @@ pub(crate) fn validate_profile_with_depth_async<'a, T: Serialize + 'a>(
             profile.element_rules.as_slice(),
         ));
 
-        issues.extend(validate_type_constraints(
-            resource,
-            resource_type,
-            profile,
-        ));
+        issues.extend(validate_type_constraints(resource, resource_type, profile));
 
         issues.extend(validate_target_profile_constraints(
             resource,
@@ -459,11 +443,7 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
         }
     }
 
-    issues.extend(validate_min_cardinality(
-        resource,
-        resource_type,
-        profile,
-    ));
+    issues.extend(validate_min_cardinality(resource, resource_type, profile));
 
     issues.extend(validate_must_support(
         resource,
@@ -472,19 +452,11 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
         &ctx.validator.config,
     ));
 
-    issues.extend(validate_max_cardinality(
-        resource,
-        resource_type,
-        profile,
-    ));
+    issues.extend(validate_max_cardinality(resource, resource_type, profile));
 
     issues.extend(validate_slicing(resource, resource_type, profile));
 
-    issues.extend(validate_value_constraints(
-        resource,
-        resource_type,
-        profile,
-    ));
+    issues.extend(validate_value_constraints(resource, resource_type, profile));
 
     issues.extend(validate_element_bounds(
         resource,
@@ -492,11 +464,7 @@ pub(crate) fn validate_profile_with_depth<T: Serialize>(
         profile.element_rules.as_slice(),
     ));
 
-    issues.extend(validate_type_constraints(
-        resource,
-        resource_type,
-        profile,
-    ));
+    issues.extend(validate_type_constraints(resource, resource_type, profile));
 
     issues.extend(validate_target_profile_constraints(
         resource,
@@ -2447,9 +2415,11 @@ fn type_profile_instance_matches_slice(
         return true;
     }
     let declared_profiles = declared_profiles_for_type_profile_instance(actual);
-    required_profiles
-        .iter()
-        .any(|required| declared_profiles.iter().any(|declared| declared == *required))
+    required_profiles.iter().any(|required| {
+        declared_profiles
+            .iter()
+            .any(|declared| declared == *required)
+    })
 }
 
 /// Declared profiles from `meta.profile`, or — when absent — the Extension `url`,
@@ -3069,9 +3039,7 @@ mod target_profile_slice_scoping_tests {
                     id: "Composition.section:ChiefComplaints.code.coding.code".to_string(),
                     path: "Composition.section.code.coding.code".to_string(),
                     slice_name: Some("ChiefComplaints".to_string()),
-                    value_constraint: Some(ExtractedValueConstraint::Fixed(
-                        json!("422843007"),
-                    )),
+                    value_constraint: Some(ExtractedValueConstraint::Fixed(json!("422843007"))),
                     ..Default::default()
                 },
                 ExtractedElementRule {
@@ -3097,9 +3065,7 @@ mod target_profile_slice_scoping_tests {
                     id: "Composition.section:PhysicalExamination.code.coding.code".to_string(),
                     path: "Composition.section.code.coding.code".to_string(),
                     slice_name: Some("PhysicalExamination".to_string()),
-                    value_constraint: Some(ExtractedValueConstraint::Fixed(
-                        json!("425044008"),
-                    )),
+                    value_constraint: Some(ExtractedValueConstraint::Fixed(json!("425044008"))),
                     ..Default::default()
                 },
                 ExtractedElementRule {
@@ -3180,6 +3146,9 @@ mod target_profile_slice_scoping_tests {
         );
 
         assert_eq!(issues.len(), 1);
-        assert_eq!(issues[0].fhir_path, "Composition.section.entry:ChiefComplaints");
+        assert_eq!(
+            issues[0].fhir_path,
+            "Composition.section.entry:ChiefComplaints"
+        );
     }
 }

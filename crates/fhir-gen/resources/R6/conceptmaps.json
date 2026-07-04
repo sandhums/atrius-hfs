@@ -2,10 +2,384 @@
   "resourceType" : "Bundle",
   "id" : "conceptmaps",
   "meta" : {
-    "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+    "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
   },
   "type" : "collection",
   "entry" : [{
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v2",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-contact-point-use-v2",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-use-v2</b></p><a name=\"cm-contact-point-use-v2\"> </a><a name=\"hccm-contact-point-use-v2\"> </a><p>Mapping from <a href=\"valueset-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0201.html\">hl7VS-telecommunicationUseCode</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0201.html\">telecommunicationUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-contact-point-use.html\" title=\"http://hl7.org/fhir/contact-point-use\">ContactPointUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0201.html\" title=\"http://terminology.hl7.org/CodeSystem/v2-0201\">telecommunicationUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">home</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">PRN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none; border-bottom-style: none\"/>\r\n<td style=\"border-left-width: 0px; border-top-style: none; border-bottom-style: none\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">ORN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">VHN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WPN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">mobile</td>\r\n<td style=\"border-left-width: 0px\">Mobile</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">PRS</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v2",
+      "version" : "6.0.0-ballot4",
+      "name" : "v2.ContactPointUse",
+      "title" : "v2 map for ContactPointUse",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://hl7.org/fhir"
+        },
+        {
+          "system" : "email",
+          "value" : "fhir@lists.hl7.org"
+        }]
+      },
+      {
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/fiwg"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-use",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0201",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/contact-point-use",
+        "target" : "http://terminology.hl7.org/CodeSystem/v2-0201",
+        "element" : [{
+          "code" : "home",
+          "target" : [{
+            "code" : "PRN",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "FHIR doesn't distinguish types of homes for contacts"
+          },
+          {
+            "code" : "ORN",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "FHIR doesn't distinguish types of homes for contacts"
+          },
+          {
+            "code" : "VHN",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "FHIR doesn't distinguish types of homes for contacts"
+          }]
+        },
+        {
+          "code" : "work",
+          "target" : [{
+            "code" : "WPN",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "mobile",
+          "target" : [{
+            "code" : "PRS",
+            "relationship" : "equivalent"
+          }]
+        }]
+      }]
+    }
+  },
+  {
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v3",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-address-use-v3",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-use-v3</b></p><a name=\"cm-address-use-v3\"> </a><a name=\"hccm-address-use-v3\"> </a><p>Mapping from <a href=\"valueset-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-address-use.html\" title=\"http://hl7.org/fhir/address-use\">AddressUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\" title=\"http://terminology.hl7.org/CodeSystem/v3-AddressUse\">AddressUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">home</td>\r\n<td style=\"border-left-width: 0px\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">H</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">temp</td>\r\n<td style=\"border-left-width: 0px\">Temporary</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">TMP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">old</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Old / Incorrect</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">OLD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Bad or Old</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">BAD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Bad or Old</td></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v3",
+      "version" : "6.0.0-ballot4",
+      "name" : "v3.AddressUse",
+      "title" : "v3 map for AddressUse",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://hl7.org/fhir"
+        },
+        {
+          "system" : "email",
+          "value" : "fhir@lists.hl7.org"
+        }]
+      },
+      {
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/fiwg"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-use",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/address-use",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
+        "element" : [{
+          "code" : "home",
+          "target" : [{
+            "code" : "H",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "work",
+          "target" : [{
+            "code" : "WP",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "temp",
+          "target" : [{
+            "code" : "TMP",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "old",
+          "target" : [{
+            "code" : "OLD",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "Bad or Old"
+          },
+          {
+            "code" : "BAD",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "Bad or Old"
+          }]
+        }]
+      }]
+    }
+  },
+  {
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v2",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-address-use-v2",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-use-v2</b></p><a name=\"cm-address-use-v2\"> </a><a name=\"hccm-address-use-v2\"> </a><p>Mapping from <a href=\"valueset-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0190.html\">hl7VS-addressType</a></p><br/><p>Mapping from <a href=\"codesystem-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0190.html\">addressType</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td><td><b>Comment</b></td></tr>\r\n<tr><td>home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>H (Home)</td>\r\n<td/></tr>\r\n<tr><td>work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>O (Office/Business)</td>\r\n<td/></tr>\r\n<tr><td>temp (Temporary)</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>C (Current Or Temporary)</td>\r\n<td/></tr>\r\n<tr><td>old (Old / Incorrect)</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td>BA (Bad address)</td>\r\n<td>unclear about old addresses</td></tr>\r\n<tr><td>billing</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>BI (Billing Address)</td>\r\n<td/></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v2",
+      "version" : "6.0.0-ballot4",
+      "name" : "v2.AddressUse",
+      "title" : "v2 map for AddressUse",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://hl7.org/fhir"
+        },
+        {
+          "system" : "email",
+          "value" : "fhir@lists.hl7.org"
+        }]
+      },
+      {
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/fiwg"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-use",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0190",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/address-use",
+        "target" : "http://terminology.hl7.org/CodeSystem/v2-0190",
+        "element" : [{
+          "code" : "home",
+          "target" : [{
+            "code" : "H",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "work",
+          "target" : [{
+            "code" : "O",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "temp",
+          "target" : [{
+            "code" : "C",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "old",
+          "target" : [{
+            "code" : "BA",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "unclear about old addresses"
+          }]
+        },
+        {
+          "code" : "billing",
+          "target" : [{
+            "code" : "BI",
+            "relationship" : "equivalent"
+          }]
+        }]
+      }]
+    }
+  },
+  {
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v3",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-administrative-gender-v3",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-administrative-gender-v3</b></p><a name=\"cm-administrative-gender-v3\"> </a><a name=\"hccm-administrative-gender-v3\"> </a><p>Mapping from <a href=\"valueset-administrative-gender.html\">AdministrativeGender</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AdministrativeGender.html\">AdministrativeGender</a></p><br/><p>Mapping from <a href=\"codesystem-administrative-gender.html\">AdministrativeGender</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AdministrativeGender.html\">AdministrativeGender</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>male</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>M (Male)</td></tr>\r\n<tr><td>female</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>F (Female)</td></tr>\r\n<tr><td>other</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>UN (Undifferentiated)</td></tr>\r\n<tr><td>unknown</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>UNK</td></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v3",
+      "version" : "6.0.0-ballot4",
+      "name" : "v3.AdministrativeGender",
+      "title" : "v3 map for AdministrativeGender",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/pafm"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/administrative-gender",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AdministrativeGender",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/administrative-gender",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-AdministrativeGender",
+        "element" : [{
+          "code" : "male",
+          "target" : [{
+            "code" : "M",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "female",
+          "target" : [{
+            "code" : "F",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "other",
+          "target" : [{
+            "code" : "UN",
+            "relationship" : "source-is-narrower-than-target"
+          }]
+        },
+        {
+          "code" : "unknown",
+          "target" : [{
+            "code" : "UNK",
+            "relationship" : "equivalent"
+          }]
+        }]
+      }]
+    }
+  },
+  {
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-type-v3",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-address-type-v3",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-type-v3</b></p><a name=\"cm-address-type-v3\"> </a><a name=\"hccm-address-type-v3\"> </a><p>Mapping from <a href=\"valueset-address-type.html\">AddressType</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-address-type.html\">AddressType</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>postal</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PST (postal address)</td></tr>\r\n<tr><td>physical</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PHYS (physical visit address)</td></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-type-v3",
+      "version" : "6.0.0-ballot4",
+      "name" : "v3.AddressType",
+      "title" : "v3 map for AddressType",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://hl7.org/fhir"
+        },
+        {
+          "system" : "email",
+          "value" : "fhir@lists.hl7.org"
+        }]
+      },
+      {
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/fiwg"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-type",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/address-type",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
+        "element" : [{
+          "code" : "postal",
+          "target" : [{
+            "code" : "PST",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "physical",
+          "target" : [{
+            "code" : "PHYS",
+            "relationship" : "equivalent"
+          }]
+        }]
+      }]
+    }
+  },
+  {
     "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-name-use-v3",
     "resource" : {
       "resourceType" : "ConceptMap",
@@ -20,7 +394,7 @@
       "title" : "v3 map for NameUse",
       "status" : "draft",
       "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
+      "date" : "2026-07-02T05:45:32+00:00",
       "publisher" : "HL7 (FHIR Project)",
       "contact" : [{
         "telecom" : [{
@@ -103,21 +477,21 @@
     }
   },
   {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v3",
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-system-v2",
     "resource" : {
       "resourceType" : "ConceptMap",
-      "id" : "cm-contact-point-use-v3",
+      "id" : "cm-contact-point-system-v2",
       "text" : {
         "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-use-v3</b></p><a name=\"cm-contact-point-use-v3\"> </a><a name=\"hccm-contact-point-use-v3\"> </a><p>Mapping from <a href=\"valueset-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-contact-point-use.html\" title=\"http://hl7.org/fhir/contact-point-use\">ContactPointUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\" title=\"http://terminology.hl7.org/CodeSystem/v3-AddressUse\">AddressUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">home</td>\r\n<td style=\"border-left-width: 0px\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">H</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">temp</td>\r\n<td style=\"border-left-width: 0px\">Temp</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">TMP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">old</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Old</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">OLD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Old and Bad</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">BAD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Old and Bad</td></tr>\r\n<tr><td style=\"border-right-width: 0px\">mobile</td>\r\n<td style=\"border-left-width: 0px\">Mobile</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">MC</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr></table></div>"
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-system-v2</b></p><a name=\"cm-contact-point-system-v2\"> </a><a name=\"hccm-contact-point-system-v2\"> </a><p>Mapping from <a href=\"valueset-contact-point-system.html\">ContactPointSystem</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0202.html\">hl7VS-telecommunicationEquipmentType</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-system.html\">ContactPointSystem</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0202.html\">telecommunicationEquipmentType</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td><td><b>Comment</b></td></tr>\r\n<tr><td>phone</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PH (Telephone)</td>\r\n<td/></tr>\r\n<tr><td>fax</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>FX (Fax)</td>\r\n<td/></tr>\r\n<tr><td>email</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>Internet (Internet Address)</td>\r\n<td>for email addresses</td></tr>\r\n<tr><td>pager</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>BP (Beeper)</td>\r\n<td/></tr>\r\n<tr><td>url</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>Internet (Internet Address)</td>\r\n<td>for non-email kinds of addresses</td></tr></table></div>"
       },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v3",
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-system-v2",
       "version" : "6.0.0-ballot4",
-      "name" : "v3.ContactPointUse",
-      "title" : "v3 map for ContactPointUse",
+      "name" : "v2.ContactPointSystem",
+      "title" : "v2 map for ContactPointSystem",
       "status" : "draft",
       "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
+      "date" : "2026-07-02T05:45:32+00:00",
       "publisher" : "HL7 (FHIR Project)",
       "contact" : [{
         "telecom" : [{
@@ -142,50 +516,46 @@
           "display" : "World"
         }]
       }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-use",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-system",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0202",
       "group" : [{
-        "source" : "http://hl7.org/fhir/contact-point-use",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
+        "source" : "http://hl7.org/fhir/contact-point-system",
+        "target" : "http://terminology.hl7.org/CodeSystem/v2-0202",
         "element" : [{
-          "code" : "home",
+          "code" : "phone",
           "target" : [{
-            "code" : "H",
+            "code" : "PH",
             "relationship" : "equivalent"
           }]
         },
         {
-          "code" : "work",
+          "code" : "fax",
           "target" : [{
-            "code" : "WP",
+            "code" : "FX",
             "relationship" : "equivalent"
           }]
         },
         {
-          "code" : "temp",
+          "code" : "email",
           "target" : [{
-            "code" : "TMP",
+            "code" : "Internet",
+            "relationship" : "source-is-narrower-than-target",
+            "comment" : "for email addresses"
+          }]
+        },
+        {
+          "code" : "pager",
+          "target" : [{
+            "code" : "BP",
             "relationship" : "equivalent"
           }]
         },
         {
-          "code" : "old",
+          "code" : "url",
           "target" : [{
-            "code" : "OLD",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "Old and Bad"
-          },
-          {
-            "code" : "BAD",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "Old and Bad"
-          }]
-        },
-        {
-          "code" : "mobile",
-          "target" : [{
-            "code" : "MC",
-            "relationship" : "equivalent"
+            "code" : "Internet",
+            "relationship" : "source-is-narrower-than-target",
+            "comment" : "for non-email kinds of addresses"
           }]
         }]
       }]
@@ -206,7 +576,7 @@
       "title" : "v2 map for AdministrativeGender",
       "status" : "draft",
       "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
+      "date" : "2026-07-02T05:45:32+00:00",
       "publisher" : "HL7 (FHIR Project)",
       "contact" : [{
         "telecom" : [{
@@ -264,27 +634,28 @@
     }
   },
   {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-detectedissue-severity-v3",
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-document-reference-status-v3",
     "resource" : {
       "resourceType" : "ConceptMap",
-      "id" : "cm-detectedissue-severity-v3",
+      "id" : "cm-document-reference-status-v3",
       "text" : {
         "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-detectedissue-severity-v3</b></p><a name=\"cm-detectedissue-severity-v3\"> </a><a name=\"hccm-detectedissue-severity-v3\"> </a><p>This mapping does not specify any particular context of use.</p><br/><p>Mapping from <a href=\"codesystem-detectedissue-severity.html\">Detected Issue Severity</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-ObservationValue.html\">ObservationValue</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>high</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>H (High)</td></tr>\r\n<tr><td>moderate</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>M (Moderate)</td></tr>\r\n<tr><td>low</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>L (Low)</td></tr></table></div>"
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-document-reference-status-v3</b></p><a name=\"cm-document-reference-status-v3\"> </a><a name=\"hccm-document-reference-status-v3\"> </a><p>Mapping from <a href=\"valueset-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-ActStatus.html\">ActStatus</a></p><br/><p><b>Group 1 </b>Mapping from <a href=\"codesystem-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-ActStatus.html\">ActStatus</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>current</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>active</td></tr>\r\n<tr><td>superseded</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>obsolete</td></tr>\r\n<tr><td>entered-in-error</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>nullified</td></tr></table><hr/><p><b>Group 2 </b>Mapping from <a href=\"codesystem-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-NullFlavor.html\">NullFlavor</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>unknown</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>unknown</td></tr></table></div>"
       },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-detectedissue-severity-v3",
-      "identifier" : [{
-        "system" : "urn:ietf:rfc:3986",
-        "value" : "urn:oid:2.16.840.1.113883.4.642.14.10"
-      }],
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-document-reference-status-v3",
       "version" : "6.0.0-ballot4",
-      "name" : "V3DetectedIssueSeverity",
-      "title" : "v3 map for DetectedIssueSeverity",
+      "name" : "v3.DocumentReferenceStatus",
+      "title" : "v3 map for DocumentReferenceStatus",
       "status" : "draft",
       "experimental" : false,
-      "date" : "2020-12-24T21:13:15+00:00",
+      "date" : "2026-07-02T05:45:32+00:00",
       "publisher" : "HL7 (FHIR Project)",
-      "description" : "v3 map for DetectedIssueSeverity",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/orders"
+        }]
+      }],
       "jurisdiction" : [{
         "coding" : [{
           "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
@@ -292,27 +663,40 @@
           "display" : "World"
         }]
       }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/document-reference-status",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-ActStatus",
       "group" : [{
-        "source" : "http://hl7.org/fhir/detectedissue-severity",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-ObservationValue",
+        "source" : "http://hl7.org/fhir/document-reference-status",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-ActStatus",
         "element" : [{
-          "code" : "high",
+          "code" : "current",
           "target" : [{
-            "code" : "H",
+            "code" : "active",
             "relationship" : "equivalent"
           }]
         },
         {
-          "code" : "moderate",
+          "code" : "superseded",
           "target" : [{
-            "code" : "M",
+            "code" : "obsolete",
             "relationship" : "equivalent"
           }]
         },
         {
-          "code" : "low",
+          "code" : "entered-in-error",
           "target" : [{
-            "code" : "L",
+            "code" : "nullified",
+            "relationship" : "equivalent"
+          }]
+        }]
+      },
+      {
+        "source" : "http://hl7.org/fhir/document-reference-status",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-NullFlavor",
+        "element" : [{
+          "code" : "unknown",
+          "target" : [{
+            "code" : "unknown",
             "relationship" : "equivalent"
           }]
         }]
@@ -334,7 +718,7 @@
       "title" : "v2 map for NameUse",
       "status" : "draft",
       "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
+      "date" : "2026-07-02T05:45:32+00:00",
       "publisher" : "HL7 (FHIR Project)",
       "contact" : [{
         "telecom" : [{
@@ -423,535 +807,6 @@
     }
   },
   {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v2",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-contact-point-use-v2",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-use-v2</b></p><a name=\"cm-contact-point-use-v2\"> </a><a name=\"hccm-contact-point-use-v2\"> </a><p>Mapping from <a href=\"valueset-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0201.html\">hl7VS-telecommunicationUseCode</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0201.html\">telecommunicationUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-contact-point-use.html\" title=\"http://hl7.org/fhir/contact-point-use\">ContactPointUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0201.html\" title=\"http://terminology.hl7.org/CodeSystem/v2-0201\">telecommunicationUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">home</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">PRN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none; border-bottom-style: none\"/>\r\n<td style=\"border-left-width: 0px; border-top-style: none; border-bottom-style: none\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">ORN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">VHN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>FHIR doesn't distinguish types of homes for contacts</td></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WPN</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">mobile</td>\r\n<td style=\"border-left-width: 0px\">Mobile</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">PRS</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v2",
-      "version" : "6.0.0-ballot4",
-      "name" : "v2.ContactPointUse",
-      "title" : "v2 map for ContactPointUse",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://hl7.org/fhir"
-        },
-        {
-          "system" : "email",
-          "value" : "fhir@lists.hl7.org"
-        }]
-      },
-      {
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/fiwg"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-use",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0201",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/contact-point-use",
-        "target" : "http://terminology.hl7.org/CodeSystem/v2-0201",
-        "element" : [{
-          "code" : "home",
-          "target" : [{
-            "code" : "PRN",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "FHIR doesn't distinguish types of homes for contacts"
-          },
-          {
-            "code" : "ORN",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "FHIR doesn't distinguish types of homes for contacts"
-          },
-          {
-            "code" : "VHN",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "FHIR doesn't distinguish types of homes for contacts"
-          }]
-        },
-        {
-          "code" : "work",
-          "target" : [{
-            "code" : "WPN",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "mobile",
-          "target" : [{
-            "code" : "PRS",
-            "relationship" : "equivalent"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v3",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-administrative-gender-v3",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-administrative-gender-v3</b></p><a name=\"cm-administrative-gender-v3\"> </a><a name=\"hccm-administrative-gender-v3\"> </a><p>Mapping from <a href=\"valueset-administrative-gender.html\">AdministrativeGender</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AdministrativeGender.html\">AdministrativeGender</a></p><br/><p>Mapping from <a href=\"codesystem-administrative-gender.html\">AdministrativeGender</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AdministrativeGender.html\">AdministrativeGender</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>male</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>M (Male)</td></tr>\r\n<tr><td>female</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>F (Female)</td></tr>\r\n<tr><td>other</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>UN (Undifferentiated)</td></tr>\r\n<tr><td>unknown</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>UNK</td></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v3",
-      "version" : "6.0.0-ballot4",
-      "name" : "v3.AdministrativeGender",
-      "title" : "v3 map for AdministrativeGender",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/pafm"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/administrative-gender",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AdministrativeGender",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/administrative-gender",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-AdministrativeGender",
-        "element" : [{
-          "code" : "male",
-          "target" : [{
-            "code" : "M",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "female",
-          "target" : [{
-            "code" : "F",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "other",
-          "target" : [{
-            "code" : "UN",
-            "relationship" : "source-is-narrower-than-target"
-          }]
-        },
-        {
-          "code" : "unknown",
-          "target" : [{
-            "code" : "UNK",
-            "relationship" : "equivalent"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v3",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-address-use-v3",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-use-v3</b></p><a name=\"cm-address-use-v3\"> </a><a name=\"hccm-address-use-v3\"> </a><p>Mapping from <a href=\"valueset-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-address-use.html\" title=\"http://hl7.org/fhir/address-use\">AddressUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\" title=\"http://terminology.hl7.org/CodeSystem/v3-AddressUse\">AddressUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">home</td>\r\n<td style=\"border-left-width: 0px\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">H</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">temp</td>\r\n<td style=\"border-left-width: 0px\">Temporary</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">TMP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">old</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Old / Incorrect</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">OLD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Bad or Old</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">BAD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Bad or Old</td></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v3",
-      "version" : "6.0.0-ballot4",
-      "name" : "v3.AddressUse",
-      "title" : "v3 map for AddressUse",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://hl7.org/fhir"
-        },
-        {
-          "system" : "email",
-          "value" : "fhir@lists.hl7.org"
-        }]
-      },
-      {
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/fiwg"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-use",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/address-use",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
-        "element" : [{
-          "code" : "home",
-          "target" : [{
-            "code" : "H",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "work",
-          "target" : [{
-            "code" : "WP",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "temp",
-          "target" : [{
-            "code" : "TMP",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "old",
-          "target" : [{
-            "code" : "OLD",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "Bad or Old"
-          },
-          {
-            "code" : "BAD",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "Bad or Old"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-document-reference-status-v3",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-document-reference-status-v3",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-document-reference-status-v3</b></p><a name=\"cm-document-reference-status-v3\"> </a><a name=\"hccm-document-reference-status-v3\"> </a><p>Mapping from <a href=\"valueset-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-ActStatus.html\">ActStatus</a></p><br/><p><b>Group 1 </b>Mapping from <a href=\"codesystem-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-ActStatus.html\">ActStatus</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>current</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>active</td></tr>\r\n<tr><td>superseded</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>obsolete</td></tr>\r\n<tr><td>entered-in-error</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>nullified</td></tr></table><hr/><p><b>Group 2 </b>Mapping from <a href=\"codesystem-document-reference-status.html\">DocumentReferenceStatus</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-NullFlavor.html\">NullFlavor</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>unknown</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>unknown</td></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-document-reference-status-v3",
-      "version" : "6.0.0-ballot4",
-      "name" : "v3.DocumentReferenceStatus",
-      "title" : "v3 map for DocumentReferenceStatus",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/orders"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/document-reference-status",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-ActStatus",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/document-reference-status",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-ActStatus",
-        "element" : [{
-          "code" : "current",
-          "target" : [{
-            "code" : "active",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "superseded",
-          "target" : [{
-            "code" : "obsolete",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "entered-in-error",
-          "target" : [{
-            "code" : "nullified",
-            "relationship" : "equivalent"
-          }]
-        }]
-      },
-      {
-        "source" : "http://hl7.org/fhir/document-reference-status",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-NullFlavor",
-        "element" : [{
-          "code" : "unknown",
-          "target" : [{
-            "code" : "unknown",
-            "relationship" : "equivalent"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v2",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-address-use-v2",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-use-v2</b></p><a name=\"cm-address-use-v2\"> </a><a name=\"hccm-address-use-v2\"> </a><p>Mapping from <a href=\"valueset-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0190.html\">hl7VS-addressType</a></p><br/><p>Mapping from <a href=\"codesystem-address-use.html\">AddressUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0190.html\">addressType</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td><td><b>Comment</b></td></tr>\r\n<tr><td>home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>H (Home)</td>\r\n<td/></tr>\r\n<tr><td>work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>O (Office/Business)</td>\r\n<td/></tr>\r\n<tr><td>temp (Temporary)</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>C (Current Or Temporary)</td>\r\n<td/></tr>\r\n<tr><td>old (Old / Incorrect)</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td>BA (Bad address)</td>\r\n<td>unclear about old addresses</td></tr>\r\n<tr><td>billing</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>BI (Billing Address)</td>\r\n<td/></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-use-v2",
-      "version" : "6.0.0-ballot4",
-      "name" : "v2.AddressUse",
-      "title" : "v2 map for AddressUse",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://hl7.org/fhir"
-        },
-        {
-          "system" : "email",
-          "value" : "fhir@lists.hl7.org"
-        }]
-      },
-      {
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/fiwg"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-use",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0190",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/address-use",
-        "target" : "http://terminology.hl7.org/CodeSystem/v2-0190",
-        "element" : [{
-          "code" : "home",
-          "target" : [{
-            "code" : "H",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "work",
-          "target" : [{
-            "code" : "O",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "temp",
-          "target" : [{
-            "code" : "C",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "old",
-          "target" : [{
-            "code" : "BA",
-            "relationship" : "source-is-broader-than-target",
-            "comment" : "unclear about old addresses"
-          }]
-        },
-        {
-          "code" : "billing",
-          "target" : [{
-            "code" : "BI",
-            "relationship" : "equivalent"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-address-type-v3",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-address-type-v3",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-address-type-v3</b></p><a name=\"cm-address-type-v3\"> </a><a name=\"hccm-address-type-v3\"> </a><p>Mapping from <a href=\"valueset-address-type.html\">AddressType</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-address-type.html\">AddressType</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td></tr>\r\n<tr><td>postal</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PST (postal address)</td></tr>\r\n<tr><td>physical</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PHYS (physical visit address)</td></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-address-type-v3",
-      "version" : "6.0.0-ballot4",
-      "name" : "v3.AddressType",
-      "title" : "v3 map for AddressType",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://hl7.org/fhir"
-        },
-        {
-          "system" : "email",
-          "value" : "fhir@lists.hl7.org"
-        }]
-      },
-      {
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/fiwg"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/address-type",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/address-type",
-        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
-        "element" : [{
-          "code" : "postal",
-          "target" : [{
-            "code" : "PST",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "physical",
-          "target" : [{
-            "code" : "PHYS",
-            "relationship" : "equivalent"
-          }]
-        }]
-      }]
-    }
-  },
-  {
-    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-system-v2",
-    "resource" : {
-      "resourceType" : "ConceptMap",
-      "id" : "cm-contact-point-system-v2",
-      "text" : {
-        "status" : "generated",
-        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-system-v2</b></p><a name=\"cm-contact-point-system-v2\"> </a><a name=\"hccm-contact-point-system-v2\"> </a><p>Mapping from <a href=\"valueset-contact-point-system.html\">ContactPointSystem</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v2-0202.html\">hl7VS-telecommunicationEquipmentType</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-system.html\">ContactPointSystem</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v2-0202.html\">telecommunicationEquipmentType</a></p>\r\n<table class=\"grid\"><tr><td><b>Source Code</b></td><td><b>Relationship</b></td><td><b>Target Code</b></td><td><b>Comment</b></td></tr>\r\n<tr><td>phone</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>PH (Telephone)</td>\r\n<td/></tr>\r\n<tr><td>fax</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>FX (Fax)</td>\r\n<td/></tr>\r\n<tr><td>email</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>Internet (Internet Address)</td>\r\n<td>for email addresses</td></tr>\r\n<tr><td>pager</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td>BP (Beeper)</td>\r\n<td/></tr>\r\n<tr><td>url</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-narrower-than-target\" title=\"source-is-narrower-than-target\">is narrower than</a></td>\r\n<td>Internet (Internet Address)</td>\r\n<td>for non-email kinds of addresses</td></tr></table></div>"
-      },
-      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-system-v2",
-      "version" : "6.0.0-ballot4",
-      "name" : "v2.ContactPointSystem",
-      "title" : "v2 map for ContactPointSystem",
-      "status" : "draft",
-      "experimental" : false,
-      "date" : "2026-06-20T14:17:49+00:00",
-      "publisher" : "HL7 (FHIR Project)",
-      "contact" : [{
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://hl7.org/fhir"
-        },
-        {
-          "system" : "email",
-          "value" : "fhir@lists.hl7.org"
-        }]
-      },
-      {
-        "telecom" : [{
-          "system" : "url",
-          "value" : "http://www.hl7.org/Special/committees/fiwg"
-        }]
-      }],
-      "jurisdiction" : [{
-        "coding" : [{
-          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
-          "code" : "001",
-          "display" : "World"
-        }]
-      }],
-      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-system",
-      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v2-0202",
-      "group" : [{
-        "source" : "http://hl7.org/fhir/contact-point-system",
-        "target" : "http://terminology.hl7.org/CodeSystem/v2-0202",
-        "element" : [{
-          "code" : "phone",
-          "target" : [{
-            "code" : "PH",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "fax",
-          "target" : [{
-            "code" : "FX",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "email",
-          "target" : [{
-            "code" : "Internet",
-            "relationship" : "source-is-narrower-than-target",
-            "comment" : "for email addresses"
-          }]
-        },
-        {
-          "code" : "pager",
-          "target" : [{
-            "code" : "BP",
-            "relationship" : "equivalent"
-          }]
-        },
-        {
-          "code" : "url",
-          "target" : [{
-            "code" : "Internet",
-            "relationship" : "source-is-narrower-than-target",
-            "comment" : "for non-email kinds of addresses"
-          }]
-        }]
-      }]
-    }
-  },
-  {
     "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-composition-status-v3",
     "resource" : {
       "resourceType" : "ConceptMap",
@@ -1015,12 +870,101 @@
     }
   },
   {
+    "fullUrl" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v3",
+    "resource" : {
+      "resourceType" : "ConceptMap",
+      "id" : "cm-contact-point-use-v3",
+      "text" : {
+        "status" : "generated",
+        "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: ConceptMap cm-contact-point-use-v3</b></p><a name=\"cm-contact-point-use-v3\"> </a><a name=\"hccm-contact-point-use-v3\"> </a><p>Mapping from <a href=\"valueset-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/ValueSet-v3-AddressUse.html\">AddressUse</a></p><br/><p>Mapping from <a href=\"codesystem-contact-point-use.html\">ContactPointUse</a> to <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\">AddressUse</a></p>\r\n<table class=\"grid\"><tr><td colspan=\"2\"><b>Source Concept Details</b></td><td><b>Relationship</b></td><td colspan=\"2\"><b>Target Concept Details</b></td><td><b>Comment</b></td></tr>\r\n<tr><td colspan=\"2\"><b>Codes</b> from <a href=\"codesystem-contact-point-use.html\" title=\"http://hl7.org/fhir/contact-point-use\">ContactPointUse</a></td>\r\n<td/>\r\n<td colspan=\"2\"><b>Codes</b> from <a href=\"http://terminology.hl7.org/7.2.0/CodeSystem-v3-AddressUse.html\" title=\"http://terminology.hl7.org/CodeSystem/v3-AddressUse\">AddressUse</a></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">home</td>\r\n<td style=\"border-left-width: 0px\">Home</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">H</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">work</td>\r\n<td style=\"border-left-width: 0px\">Work</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">WP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px\">temp</td>\r\n<td style=\"border-left-width: 0px\">Temp</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">TMP</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr>\r\n<tr><td style=\"border-right-width: 0px; border-bottom-style: none\">old</td>\r\n<td style=\"border-left-width: 0px; border-bottom-style: none\">Old</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">OLD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Old and Bad</td></tr>\r\n<tr><td style=\"border-right-width: 0px; border-top-style: none\"/>\r\n<td style=\"border-top-style: none; border-left-width: 0px\"/>\r\n<td><a href=\"codesystem-concept-map-relationship.html#source-is-broader-than-target\" title=\"source-is-broader-than-target\">is broader than</a></td>\r\n<td style=\"border-right-width: 0px\">BAD</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td>Old and Bad</td></tr>\r\n<tr><td style=\"border-right-width: 0px\">mobile</td>\r\n<td style=\"border-left-width: 0px\">Mobile</td>\r\n<td><a href=\"codesystem-concept-map-relationship.html#equivalent\" title=\"equivalent\">is equivalent to</a></td>\r\n<td style=\"border-right-width: 0px\">MC</td>\r\n<td style=\"border-left-width: 0px\"></td>\r\n<td/></tr></table></div>"
+      },
+      "url" : "http://hl7.org/fhir/ConceptMap/cm-contact-point-use-v3",
+      "version" : "6.0.0-ballot4",
+      "name" : "v3.ContactPointUse",
+      "title" : "v3 map for ContactPointUse",
+      "status" : "draft",
+      "experimental" : false,
+      "date" : "2026-07-02T05:45:32+00:00",
+      "publisher" : "HL7 (FHIR Project)",
+      "contact" : [{
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://hl7.org/fhir"
+        },
+        {
+          "system" : "email",
+          "value" : "fhir@lists.hl7.org"
+        }]
+      },
+      {
+        "telecom" : [{
+          "system" : "url",
+          "value" : "http://www.hl7.org/Special/committees/fiwg"
+        }]
+      }],
+      "jurisdiction" : [{
+        "coding" : [{
+          "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code" : "001",
+          "display" : "World"
+        }]
+      }],
+      "sourceScopeCanonical" : "http://hl7.org/fhir/ValueSet/contact-point-use",
+      "targetScopeCanonical" : "http://terminology.hl7.org/ValueSet/v3-AddressUse",
+      "group" : [{
+        "source" : "http://hl7.org/fhir/contact-point-use",
+        "target" : "http://terminology.hl7.org/CodeSystem/v3-AddressUse",
+        "element" : [{
+          "code" : "home",
+          "target" : [{
+            "code" : "H",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "work",
+          "target" : [{
+            "code" : "WP",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "temp",
+          "target" : [{
+            "code" : "TMP",
+            "relationship" : "equivalent"
+          }]
+        },
+        {
+          "code" : "old",
+          "target" : [{
+            "code" : "OLD",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "Old and Bad"
+          },
+          {
+            "code" : "BAD",
+            "relationship" : "source-is-broader-than-target",
+            "comment" : "Old and Bad"
+          }]
+        },
+        {
+          "code" : "mobile",
+          "target" : [{
+            "code" : "MC",
+            "relationship" : "equivalent"
+          }]
+        }]
+      }]
+    }
+  },
+  {
     "fullUrl" : "http://hl7.org/fhir/ConceptMap/101",
     "resource" : {
       "resourceType" : "ConceptMap",
       "id" : "101",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -1127,7 +1071,7 @@
       "resourceType" : "ConceptMap",
       "id" : "103",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -1198,7 +1142,7 @@
       "resourceType" : "ConceptMap",
       "id" : "102",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -3495,7 +3439,7 @@
       "resourceType" : "ConceptMap",
       "id" : "example2",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -3565,7 +3509,7 @@
       "resourceType" : "ConceptMap",
       "id" : "example-metadata",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -3696,7 +3640,7 @@
       "resourceType" : "ConceptMap",
       "id" : "example-metadata-2",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -3831,7 +3775,7 @@
       "resourceType" : "ConceptMap",
       "id" : "example-priority",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",
@@ -3917,7 +3861,7 @@
       "resourceType" : "ConceptMap",
       "id" : "message-adt-a04-to-bundle",
       "meta" : {
-        "lastUpdated" : "2026-06-20T14:17:49.711+00:00"
+        "lastUpdated" : "2026-07-02T05:45:32.528+00:00"
       },
       "text" : {
         "status" : "generated",

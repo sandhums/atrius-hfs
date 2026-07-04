@@ -16,8 +16,8 @@ use crate::binding::engine::{
 };
 use crate::issue_code;
 use crate::validation_issue_detail::ValidationIssueDetailCode;
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation_types::{BindingStrength, Severity};
-use helios_fhir::TerminologyValidationError;
 
 fn evaluate_local_primitive_str_binding<F>(
     valueset_url: &str,

@@ -7,7 +7,7 @@
 //!   /path/to/Slot-atrius-in-slot-opd-example-0930.json
 //! ```
 
-use fhir_validation::{load_profile_registry_from_manifest_file, Severity, Validator};
+use fhir_validation::{Severity, Validator, load_profile_registry_from_manifest_file};
 use helios_fhir::FhirResource;
 use std::path::Path;
 
@@ -22,8 +22,8 @@ fn main() {
         std::process::exit(2);
     }
 
-    let registry = load_profile_registry_from_manifest_file(Path::new(&manifest))
-        .unwrap_or_else(|e| {
+    let registry =
+        load_profile_registry_from_manifest_file(Path::new(&manifest)).unwrap_or_else(|e| {
             eprintln!("failed to load manifest: {e}");
             std::process::exit(1);
         });
@@ -75,7 +75,11 @@ fn main() {
             eprintln!("OK {resource_type} {}", path.display());
         } else {
             failed = true;
-            eprintln!("FAIL {resource_type} {} ({} errors)", path.display(), errors.len());
+            eprintln!(
+                "FAIL {resource_type} {} ({} errors)",
+                path.display(),
+                errors.len()
+            );
             for issue in errors {
                 eprintln!("  - {}: {}", issue.fhir_path, issue.diagnostics);
             }

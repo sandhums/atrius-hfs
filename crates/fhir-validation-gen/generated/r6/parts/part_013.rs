@@ -2,5562 +2,6 @@
 // FHIR version: FHIR R6
 // shard parts/part_013.rs
 
-static NUTRITION_INTAKE_NUTRITION_ITEM_NOT_CONSUMED_ITEM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionIntake.nutritionItem.notConsumedItem".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_INTAKE_NUTRITION_ITEM_NOT_CONSUMED_ITEM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionIntake.nutritionItem.notConsumedItem.reason".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/not-consumed-reason".to_string(),
-        binding_name: Some("NotConsumedReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionIntakeNutritionItemNotConsumedItem {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_INTAKE_NUTRITION_ITEM_NOT_CONSUMED_ITEM_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.schedule"));
-        }
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.amount"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_INTAKE_NUTRITION_ITEM_NOT_CONSUMED_ITEM_INVARIANTS.as_slice(), evaluator, "NutritionIntake.nutritionItem.notConsumedItem"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionIntake.nutritionItem.notConsumedItem.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("notConsumedItem.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionIntake.nutritionItem.notConsumedItem.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("notConsumedItem.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("notConsumedItem.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("notConsumedItem.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.reason {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.reason"));
-        }
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.schedule"));
-        }
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.amount"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionIntakeNutritionItemNotConsumedItem {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_INTAKE_NUTRITION_ITEM_NOT_CONSUMED_ITEM_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.schedule"));
-        }
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "notConsumedItem.amount"));
-        }
-        issues
-    }
-    }
-
-static NUTRITION_INTAKE_PERFORMER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionIntake.performer".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_INTAKE_PERFORMER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionIntake.performer.function".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/performer-role".to_string(),
-        binding_name: Some("NutritionPerformerType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionIntakePerformer {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_INTAKE_PERFORMER_BINDINGS.as_slice(), terminology));
-
-        let child_issues = self.actor.validate_bindings(validator, terminology);
-        issues.extend(validator.rebase_instance_paths(child_issues, "performer.actor"));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_INTAKE_PERFORMER_INVARIANTS.as_slice(), evaluator, "NutritionIntake.performer"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionIntake.performer.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("performer.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionIntake.performer.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("performer.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("performer.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("performer.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.function {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "performer.function"));
-        }
-        let child_issues = self.actor.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "performer.actor"));
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionIntakePerformer {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_INTAKE_PERFORMER_BINDINGS.as_slice(), terminology).await);
-
-        let child_issues = self.actor.validate_bindings_async(validator, terminology).await;
-        issues.extend(validator.rebase_instance_paths(child_issues, "performer.actor"));
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "dom-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder".to_string(),
-        expression: "contained.contained.empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder".to_string(),
-        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder".to_string(),
-        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder".to_string(),
-        expression: "contained.meta.security.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-6".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "NutritionOrder".to_string(),
-        expression: "text.`div`.exists()".to_string(),
-        human: "A resource should have narrative for robust management".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "nor-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder".to_string(),
-        expression: "oralDiet.exists() or supplement.exists() or enteralFormula.exists()".to_string(),
-        human: "Nutrition Order SHALL contain either Oral Diet , Supplement, or Enteral Formula class".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.language".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
-        binding_name: Some("Language".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.status".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("NutritionOrderStatus".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.intent".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4".to_string(),
-        binding_name: Some("NutritiionOrderIntent".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.priority".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0".to_string(),
-        binding_name: Some("NutritionOrderPriority".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.foodPreferenceModifier".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/edible-substance-type".to_string(),
-        binding_name: Some("Types of Edible Substances".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.excludeFoodModifier".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/edible-substance-type".to_string(),
-        binding_name: Some("Types of Edible Substances".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrder {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.basedOn[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.group_identifier {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.groupIdentifier"));
-        }
-        let child_issues = self.subject.validate_bindings(validator, terminology);
-        issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.subject"));
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.encounter"));
-        }
-        if let Some(values) = &self.supporting_information {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supportingInformation[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.requester {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.requester"));
-        }
-        if let Some(values) = &self.allergy_intolerance {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.allergyIntolerance[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.oral_diet {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.oralDiet"));
-        }
-        if let Some(values) = &self.supplement {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supplement[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.enteral_formula {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.enteralFormula"));
-        }
-        if let Some(values) = &self.additive {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.additive[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_INVARIANTS.as_slice(), evaluator, "NutritionOrder"));
-
-        if let Some(values) = &self.contained {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.contained"));
-            }
-        }
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.identifier"));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.basedOn", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.basedOn"));
-            }
-        }
-        if let Some(values) = &self.supporting_information {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supportingInformation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.supportingInformation"));
-            }
-        }
-        if let Some(values) = &self.performer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.performer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.performer"));
-            }
-        }
-        if let Some(values) = &self.allergy_intolerance {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.allergyIntolerance", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.allergyIntolerance"));
-            }
-        }
-        if let Some(values) = &self.food_preference_modifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.foodPreferenceModifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.foodPreferenceModifier"));
-            }
-        }
-        if let Some(values) = &self.exclude_food_modifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.excludeFoodModifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.excludeFoodModifier"));
-            }
-        }
-        if let Some(values) = &self.supplement {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.supplement"));
-            }
-        }
-        if let Some(values) = &self.additive {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.additive", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.additive"));
-            }
-        }
-        if let Some(values) = &self.note {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.note", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionOrder.note"));
-            }
-        }
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.text"));
-        }
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.basedOn[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.group_identifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.groupIdentifier"));
-        }
-        let child_issues = self.subject.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.subject"));
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.encounter"));
-        }
-        if let Some(values) = &self.supporting_information {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supportingInformation[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.requester {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.requester"));
-        }
-        if let Some(values) = &self.performer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.performer[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.allergy_intolerance {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.allergyIntolerance[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.food_preference_modifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.foodPreferenceModifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.exclude_food_modifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.excludeFoodModifier[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.oral_diet {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.oralDiet"));
-        }
-        if let Some(values) = &self.supplement {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supplement[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.enteral_formula {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.enteralFormula"));
-        }
-        if let Some(values) = &self.additive {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.additive[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.note {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.note[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrder {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.basedOn[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.group_identifier {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.groupIdentifier"));
-        }
-        let child_issues = self.subject.validate_bindings_async(validator, terminology).await;
-        issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.subject"));
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.encounter"));
-        }
-        if let Some(values) = &self.supporting_information {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supportingInformation[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.requester {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.requester"));
-        }
-        if let Some(values) = &self.allergy_intolerance {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.allergyIntolerance[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.oral_diet {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.oralDiet"));
-        }
-        if let Some(values) = &self.supplement {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.supplement[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.enteral_formula {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionOrder.enteralFormula"));
-        }
-        if let Some(values) = &self.additive {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.additive[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionOrder.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ORAL_DIET_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.oralDiet".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ORAL_DIET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.oralDiet.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/diet-type".to_string(),
-        binding_name: Some("OralDiet".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderOralDiet {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ORAL_DIET_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.schedule"));
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.texture {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.texture[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.caloricDensity"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ORAL_DIET_INVARIANTS.as_slice(), evaluator, "NutritionOrder.oralDiet"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("oralDiet.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("oralDiet.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.r#type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.type", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("oralDiet.type"));
-            }
-        }
-        if let Some(values) = &self.nutrient {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.nutrient", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("oralDiet.nutrient"));
-            }
-        }
-        if let Some(values) = &self.texture {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.texture", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("oralDiet.texture"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.r#type {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.type[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.schedule"));
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.texture {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.texture[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.caloricDensity"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderOralDiet {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ORAL_DIET_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.schedule"));
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.texture {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("oralDiet.texture[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "oralDiet.caloricDensity"));
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ORAL_DIET_SCHEDULE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.oralDiet.schedule".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ORAL_DIET_SCHEDULE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.oralDiet.schedule.asNeededFor".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/medication-as-needed-reason".to_string(),
-        binding_name: Some("OralDietAsNeededReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderOralDietSchedule {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ORAL_DIET_SCHEDULE_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ORAL_DIET_SCHEDULE_INVARIANTS.as_slice(), evaluator, "NutritionOrder.oralDiet.schedule"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.schedule.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.schedule.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.timing {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.schedule.timing", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.timing"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.as_needed_for {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "schedule.asNeededFor"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderOralDietSchedule {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ORAL_DIET_SCHEDULE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ORAL_DIET_NUTRIENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.oralDiet.nutrient".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ORAL_DIET_NUTRIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.oralDiet.nutrient.modifier".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/nutrient-code".to_string(),
-        binding_name: Some("NutrientModifier".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderOralDietNutrient {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ORAL_DIET_NUTRIENT_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ORAL_DIET_NUTRIENT_INVARIANTS.as_slice(), evaluator, "NutritionOrder.oralDiet.nutrient"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.nutrient.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("nutrient.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.nutrient.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("nutrient.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("nutrient.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("nutrient.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.modifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.modifier"));
-        }
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderOralDietNutrient {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ORAL_DIET_NUTRIENT_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.amount {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount"));
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ORAL_DIET_TEXTURE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.oralDiet.texture".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ORAL_DIET_TEXTURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.oralDiet.texture.modifier".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/texture-code".to_string(),
-        binding_name: Some("TextureModifierCodes".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.oralDiet.texture.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/modified-foodtype".to_string(),
-        binding_name: Some("Modified Food Types".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderOralDietTexture {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ORAL_DIET_TEXTURE_BINDINGS.as_slice(), terminology));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ORAL_DIET_TEXTURE_INVARIANTS.as_slice(), evaluator, "NutritionOrder.oralDiet.texture"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.texture.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("texture.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.oralDiet.texture.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("texture.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("texture.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("texture.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.modifier {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "texture.modifier"));
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "texture.type"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderOralDietTexture {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ORAL_DIET_TEXTURE_BINDINGS.as_slice(), terminology).await);
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_SUPPLEMENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.supplement".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_SUPPLEMENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.supplement.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/supplement-type".to_string(),
-        binding_name: Some("SupplementType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderSupplement {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_SUPPLEMENT_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.quantity"));
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.caloricDensity"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_SUPPLEMENT_INVARIANTS.as_slice(), evaluator, "NutritionOrder.supplement"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("supplement.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("supplement.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("supplement.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("supplement.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.type"));
-        }
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.quantity"));
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.caloricDensity"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderSupplement {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_SUPPLEMENT_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.quantity"));
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "supplement.caloricDensity"));
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_SUPPLEMENT_SCHEDULE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.supplement.schedule".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_SUPPLEMENT_SCHEDULE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.supplement.schedule.asNeededFor".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/medication-as-needed-reason".to_string(),
-        binding_name: Some("SupplementAsNeededReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderSupplementSchedule {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_SUPPLEMENT_SCHEDULE_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_SUPPLEMENT_SCHEDULE_INVARIANTS.as_slice(), evaluator, "NutritionOrder.supplement.schedule"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement.schedule.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement.schedule.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.timing {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.supplement.schedule.timing", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.timing"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.as_needed_for {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "schedule.asNeededFor"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderSupplementSchedule {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_SUPPLEMENT_SCHEDULE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ENTERAL_FORMULA_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.enteralFormula".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ENTERAL_FORMULA_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.enteralFormula.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/entformula-type".to_string(),
-        binding_name: Some("EnteralFormulaType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.enteralFormula.deliveryDevice[x]".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/deliverydevice-code".to_string(),
-        binding_name: Some("DeliveryDeviceCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Choice,
-        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.enteralFormula.routeOfAdministration".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/enteral-route".to_string(),
-        binding_name: Some("EnteralRouteOfAdministration".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderEnteralFormula {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ENTERAL_FORMULA_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.caloricDensity"));
-        }
-        if let Some(value) = &self.max_volume_to_administer {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.maxVolumeToAdminister"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.delivery_device {
-            match choice {
-                NutritionOrderEnteralFormulaDeliveryDevice::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "NutritionOrder.enteralFormula.deliveryDevice[x]", "http://hl7.org/fhir/ValueSet/deliverydevice-code", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/deliverydevice-code", value));
-                    issues.extend(child_issues);
-                }
-                NutritionOrderEnteralFormulaDeliveryDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ENTERAL_FORMULA_INVARIANTS.as_slice(), evaluator, "NutritionOrder.enteralFormula"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("enteralFormula.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("enteralFormula.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.route_of_administration {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.routeOfAdministration", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("enteralFormula.routeOfAdministration"));
-            }
-        }
-        if let Some(values) = &self.administration {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("enteralFormula.administration"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("enteralFormula.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("enteralFormula.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.type"));
-        }
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.caloricDensity"));
-        }
-        if let Some(values) = &self.route_of_administration {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("enteralFormula.routeOfAdministration[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.administration {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("enteralFormula.administration[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.max_volume_to_administer {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.maxVolumeToAdminister"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.delivery_device {
-            match choice {
-                NutritionOrderEnteralFormulaDeliveryDevice::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.deliveryDevice[x]"));
-                }
-                NutritionOrderEnteralFormulaDeliveryDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderEnteralFormula {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ENTERAL_FORMULA_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.caloric_density {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.caloricDensity"));
-        }
-        if let Some(value) = &self.max_volume_to_administer {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "enteralFormula.maxVolumeToAdminister"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.delivery_device {
-            match choice {
-                NutritionOrderEnteralFormulaDeliveryDevice::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "NutritionOrder.enteralFormula.deliveryDevice[x]", "http://hl7.org/fhir/ValueSet/deliverydevice-code", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/deliverydevice-code", value)).await;
-                    issues.extend(child_issues);
-                }
-                NutritionOrderEnteralFormulaDeliveryDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.enteralFormula.administration".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderEnteralFormulaAdministration {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.quantity"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.rate {
-            match choice {
-                NutritionOrderEnteralFormulaAdministrationRate::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "administration.rate[x]"));
-                }
-                NutritionOrderEnteralFormulaAdministrationRate::Ratio(_value) => {
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_INVARIANTS.as_slice(), evaluator, "NutritionOrder.enteralFormula.administration"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("administration.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("administration.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("administration.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("administration.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.quantity"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.rate {
-            match choice {
-                NutritionOrderEnteralFormulaAdministrationRate::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "administration.rate[x]"));
-                }
-                NutritionOrderEnteralFormulaAdministrationRate::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "administration.rate[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderEnteralFormulaAdministration {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-
-        if let Some(value) = &self.schedule {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.schedule"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "administration.quantity"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.rate {
-            match choice {
-                NutritionOrderEnteralFormulaAdministrationRate::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "administration.rate[x]"));
-                }
-                NutritionOrderEnteralFormulaAdministrationRate::Ratio(_value) => {
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_SCHEDULE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.enteralFormula.administration.schedule".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_SCHEDULE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.enteralFormula.administration.schedule.asNeededFor".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/medication-as-needed-reason".to_string(),
-        binding_name: Some("EnteralFormulaAsNeededReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderEnteralFormulaAdministrationSchedule {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_SCHEDULE_BINDINGS.as_slice(), terminology));
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_SCHEDULE_INVARIANTS.as_slice(), evaluator, "NutritionOrder.enteralFormula.administration.schedule"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration.schedule.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration.schedule.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.timing {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.enteralFormula.administration.schedule.timing", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("schedule.timing"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.as_needed_for {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "schedule.asNeededFor"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderEnteralFormulaAdministrationSchedule {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ENTERAL_FORMULA_ADMINISTRATION_SCHEDULE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(values) = &self.timing {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("schedule.timing[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_ORDER_ADDITIVE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionOrder.additive".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_ORDER_ADDITIVE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.additive.modularType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/entformula-additive".to_string(),
-        binding_name: Some("EnteralFormulaAdditiveType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionOrder.additive.routeOfAdministration".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/enteral-route".to_string(),
-        binding_name: Some("AdditiveRouteOfAdministration".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionOrderAdditive {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_ORDER_ADDITIVE_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "additive.quantity"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_ORDER_ADDITIVE_INVARIANTS.as_slice(), evaluator, "NutritionOrder.additive"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.additive.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("additive.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.additive.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("additive.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.route_of_administration {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionOrder.additive.routeOfAdministration", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("additive.routeOfAdministration"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("additive.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("additive.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.modular_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "additive.modularType"));
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "additive.quantity"));
-        }
-        if let Some(values) = &self.route_of_administration {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("additive.routeOfAdministration[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionOrderAdditive {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_ORDER_ADDITIVE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "additive.quantity"));
-        }
-        issues
-    }
-    }
-
-static NUTRITION_PRODUCT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "dom-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct".to_string(),
-        expression: "contained.contained.empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct".to_string(),
-        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct".to_string(),
-        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct".to_string(),
-        expression: "contained.meta.security.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-6".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "NutritionProduct".to_string(),
-        expression: "text.`div`.exists()".to_string(),
-        human: "A resource should have narrative for robust management".to_string(),
-    },
-]);
-
-static NUTRITION_PRODUCT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.language".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
-        binding_name: Some("Language".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.status".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/nutritionproduct-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("NutritionProductStatus".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.code".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/edible-substance-type".to_string(),
-        binding_name: Some("NutritionProductCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/nutrition-product-category".to_string(),
-        binding_name: Some("NutritionProductCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionProduct {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_PRODUCT_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.text"));
-        }
-        if let Some(values) = &self.manufacturer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.manufacturer[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.ingredient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.ingredient[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.energy {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.energy"));
-        }
-        if let Some(values) = &self.characteristic {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.characteristic[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_PRODUCT_INVARIANTS.as_slice(), evaluator, "NutritionProduct"));
-
-        if let Some(values) = &self.contained {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.contained"));
-            }
-        }
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.category {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.category", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.category"));
-            }
-        }
-        if let Some(values) = &self.manufacturer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.manufacturer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.manufacturer"));
-            }
-        }
-        if let Some(values) = &self.nutrient {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.nutrient", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.nutrient"));
-            }
-        }
-        if let Some(values) = &self.ingredient {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.ingredient", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.ingredient"));
-            }
-        }
-        if let Some(values) = &self.characteristic {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.characteristic", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.characteristic"));
-            }
-        }
-        if let Some(values) = &self.instance {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.instance", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.instance"));
-            }
-        }
-        if let Some(values) = &self.note {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.note", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("NutritionProduct.note"));
-            }
-        }
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.text"));
-        }
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.code {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.code"));
-        }
-        if let Some(values) = &self.category {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.category[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.manufacturer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.manufacturer[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.ingredient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.ingredient[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.energy {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.energy"));
-        }
-        if let Some(values) = &self.characteristic {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.characteristic[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.instance {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.instance[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.note {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.note[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionProduct {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_PRODUCT_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.text"));
-        }
-        if let Some(values) = &self.manufacturer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.manufacturer[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.nutrient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.nutrient[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.ingredient {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.ingredient[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.energy {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "NutritionProduct.energy"));
-        }
-        if let Some(values) = &self.characteristic {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.characteristic[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("NutritionProduct.contained[{idx}]")));
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_PRODUCT_NUTRIENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct.nutrient".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_PRODUCT_NUTRIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.nutrient.item".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/nutrient-code".to_string(),
-        binding_name: Some("NutrientCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionProductNutrient {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_PRODUCT_NUTRIENT_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductNutrientAmount::Ratio(_value) => {
-                }
-                NutritionProductNutrientAmount::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_PRODUCT_NUTRIENT_INVARIANTS.as_slice(), evaluator, "NutritionProduct.nutrient"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.nutrient.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("nutrient.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.nutrient.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("nutrient.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("nutrient.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("nutrient.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.item.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.item"));
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductNutrientAmount::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount[x]"));
-                }
-                NutritionProductNutrientAmount::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionProductNutrient {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_PRODUCT_NUTRIENT_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductNutrientAmount::Ratio(_value) => {
-                }
-                NutritionProductNutrientAmount::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "nutrient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_PRODUCT_INGREDIENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct.ingredient".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_PRODUCT_INGREDIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.ingredient.item".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/edible-substance-type".to_string(),
-        binding_name: Some("IngredientType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionProductIngredient {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_PRODUCT_INGREDIENT_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductIngredientAmount::Ratio(_value) => {
-                }
-                NutritionProductIngredientAmount::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ingredient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_PRODUCT_INGREDIENT_INVARIANTS.as_slice(), evaluator, "NutritionProduct.ingredient"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.ingredient.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ingredient.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.ingredient.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ingredient.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ingredient.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ingredient.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.item.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "ingredient.item"));
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductIngredientAmount::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ingredient.amount[x]"));
-                }
-                NutritionProductIngredientAmount::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ingredient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionProductIngredient {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_PRODUCT_INGREDIENT_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.amount {
-            match choice {
-                NutritionProductIngredientAmount::Ratio(_value) => {
-                }
-                NutritionProductIngredientAmount::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ingredient.amount[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_PRODUCT_CHARACTERISTIC_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct.characteristic".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static NUTRITION_PRODUCT_CHARACTERISTIC_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "NutritionProduct.characteristic.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/measurement-property".to_string(),
-        binding_name: Some("PropertyCharacteristic".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionProductCharacteristic {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, NUTRITION_PRODUCT_CHARACTERISTIC_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                NutritionProductCharacteristicValue::CodeableConcept(_value) => {
-                }
-                NutritionProductCharacteristicValue::String(_value) => {
-                }
-                NutritionProductCharacteristicValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Base64Binary(_value) => {
-                }
-                NutritionProductCharacteristicValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Boolean(_value) => {
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_PRODUCT_CHARACTERISTIC_INVARIANTS.as_slice(), evaluator, "NutritionProduct.characteristic"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.characteristic.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("characteristic.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.characteristic.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("characteristic.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("characteristic.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("characteristic.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.r#type.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.type"));
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                NutritionProductCharacteristicValue::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::String(_value) => {
-                }
-                NutritionProductCharacteristicValue::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Base64Binary(_value) => {
-                }
-                NutritionProductCharacteristicValue::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Boolean(_value) => {
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionProductCharacteristic {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, NUTRITION_PRODUCT_CHARACTERISTIC_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                NutritionProductCharacteristicValue::CodeableConcept(_value) => {
-                }
-                NutritionProductCharacteristicValue::String(_value) => {
-                }
-                NutritionProductCharacteristicValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Base64Binary(_value) => {
-                }
-                NutritionProductCharacteristicValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "characteristic.value[x]"));
-                }
-                NutritionProductCharacteristicValue::Boolean(_value) => {
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static NUTRITION_PRODUCT_INSTANCE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "NutritionProduct.instance".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for NutritionProductInstance {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.quantity"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("instance.identifier[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.biological_source_event {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.biologicalSourceEvent"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, NUTRITION_PRODUCT_INSTANCE_INVARIANTS.as_slice(), evaluator, "NutritionProduct.instance"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.instance.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("instance.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.instance.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("instance.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "NutritionProduct.instance.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("instance.identifier"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("instance.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("instance.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.quantity"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("instance.identifier[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.biological_source_event {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.biologicalSourceEvent"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for NutritionProductInstance {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        let _ = (validator, terminology);
-
-        if let Some(value) = &self.quantity {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.quantity"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("instance.identifier[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.biological_source_event {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "instance.biologicalSourceEvent"));
-        }
-        issues
-    }
-    }
-
-static OBSERVATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "dom-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "contained.contained.empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "contained.meta.security.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-6".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "Observation".to_string(),
-        expression: "text.`div`.exists()".to_string(),
-        human: "A resource should have narrative for robust management".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-6".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "dataAbsentReason.empty() or value.empty()".to_string(),
-        human: "Observation.dataAbsentReason SHALL only be present if Observation.value[x] is not present".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-7".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "value.empty() or component.code.where(coding.intersect(%resource.code.coding).exists()).empty()".to_string(),
-        human: "If Observation.component.code is the same as Observation.code, then Observation.value SHALL NOT be present (the Observation.component.value[x] holds the value).".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-10".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "component.empty() or component.where(dataAbsentReason.exists()).all(value.empty())".to_string(),
-        human: "Observation.component.dataAbsentReason SHALL only be present if Observation.component.value[x] is not present".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-11".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation".to_string(),
-        expression: "(organizer.exists() and organizer.allTrue()) implies (value.empty() and dataAbsentReason.empty() and component.empty())".to_string(),
-        human: "if organizer exists and organizer = true, then value[x], dataAbsentReason and component SHALL NOT be present".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-12".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "Observation".to_string(),
-        expression: "performer.exists()".to_string(),
-        human: "All observations SHOULD have a performer".to_string(),
-    },
-]);
-
-static OBSERVATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Observation.language".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
-        binding_name: Some("Language".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.status".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("ObservationStatus".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-category".to_string(),
-        binding_name: Some("ObservationCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.code".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-codes-observationorboth".to_string(),
-        binding_name: Some("ObservationComponentCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.dataAbsentReason".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/data-absent-reason".to_string(),
-        binding_name: Some("ObservationValueAbsentReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.interpretation".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-interpretation".to_string(),
-        binding_name: Some("ObservationInterpretation".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.interpretationContext".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-interpretation-context".to_string(),
-        binding_name: Some("ObservationInterpretationContext".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.bodyStructure".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/body-site".to_string(),
-        binding_name: Some("BodyStructure".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.method".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-methods".to_string(),
-        binding_name: Some("ObservationMethod".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for Observation {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.basedOn[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.triggered_by {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.triggeredBy[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.part_of {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.partOf[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.subject {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.subject"));
-        }
-        if let Some(values) = &self.focus {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.focus[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.encounter"));
-        }
-        if let Some(values) = &self.performer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.performer[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.specimen {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.specimen"));
-        }
-        if let Some(value) = &self.device {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.device"));
-        }
-        if let Some(values) = &self.reference_range {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.referenceRange[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.derived_from {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.derivedFrom[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.effective {
-            match choice {
-                ObservationEffective::DateTime(_value) => {
-                }
-                ObservationEffective::Period(_value) => {
-                }
-                ObservationEffective::Timing(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.effective[x]"));
-                }
-                ObservationEffective::Instant(_value) => {
-                }
-            }
-        }
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::CodeableConcept(_value) => {
-                }
-                ObservationValue::String(_value) => {
-                }
-                ObservationValue::Boolean(_value) => {
-                }
-                ObservationValue::Integer(_value) => {
-                }
-                ObservationValue::Range(_value) => {
-                }
-                ObservationValue::Ratio(_value) => {
-                }
-                ObservationValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::Time(_value) => {
-                }
-                ObservationValue::DateTime(_value) => {
-                }
-                ObservationValue::Period(_value) => {
-                }
-                ObservationValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_INVARIANTS.as_slice(), evaluator, "Observation"));
-
-        if let Some(values) = &self.contained {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.contained"));
-            }
-        }
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.identifier"));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.basedOn", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.basedOn"));
-            }
-        }
-        if let Some(values) = &self.triggered_by {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.triggeredBy", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.triggeredBy"));
-            }
-        }
-        if let Some(values) = &self.part_of {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.partOf", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.partOf"));
-            }
-        }
-        if let Some(values) = &self.category {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.category", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.category"));
-            }
-        }
-        if let Some(values) = &self.focus {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.focus", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.focus"));
-            }
-        }
-        if let Some(values) = &self.performer {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.performer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.performer"));
-            }
-        }
-        if let Some(values) = &self.interpretation {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.interpretation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.interpretation"));
-            }
-        }
-        if let Some(values) = &self.interpretation_context {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.interpretationContext", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.interpretationContext"));
-            }
-        }
-        if let Some(values) = &self.note {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.note", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.note"));
-            }
-        }
-        if let Some(values) = &self.reference_range {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.referenceRange", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.referenceRange"));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.hasMember", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.hasMember"));
-            }
-        }
-        if let Some(values) = &self.derived_from {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.derivedFrom", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.derivedFrom"));
-            }
-        }
-        if let Some(values) = &self.component {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.component", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Observation.component"));
-            }
-        }
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.text"));
-        }
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.basedOn[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.triggered_by {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.triggeredBy[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.part_of {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.partOf[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.category {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.category[{idx}]")));
-            }
-        }
-        let child_issues = self.code.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "Observation.code"));
-        if let Some(value) = &self.subject {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.subject"));
-        }
-        if let Some(values) = &self.focus {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.focus[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.encounter"));
-        }
-        if let Some(values) = &self.performer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.performer[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.data_absent_reason {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.dataAbsentReason"));
-        }
-        if let Some(values) = &self.interpretation {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.interpretation[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.interpretation_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.interpretationContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.note {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.note[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.body_site {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.bodySite"));
-        }
-        if let Some(value) = &self.body_structure {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.bodyStructure"));
-        }
-        if let Some(value) = &self.method {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.method"));
-        }
-        if let Some(value) = &self.specimen {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.specimen"));
-        }
-        if let Some(value) = &self.device {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.device"));
-        }
-        if let Some(values) = &self.reference_range {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.referenceRange[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.derived_from {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.derivedFrom[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.effective {
-            match choice {
-                ObservationEffective::DateTime(_value) => {
-                }
-                ObservationEffective::Period(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.effective[x]"));
-                }
-                ObservationEffective::Timing(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.effective[x]"));
-                }
-                ObservationEffective::Instant(_value) => {
-                }
-            }
-        }
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationValue::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::String(_value) => {
-                }
-                ObservationValue::Boolean(_value) => {
-                }
-                ObservationValue::Integer(_value) => {
-                }
-                ObservationValue::Range(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::SampledData(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::Time(_value) => {
-                }
-                ObservationValue::DateTime(_value) => {
-                }
-                ObservationValue::Period(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for Observation {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.based_on {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.basedOn[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.triggered_by {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.triggeredBy[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.part_of {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.partOf[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.subject {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.subject"));
-        }
-        if let Some(values) = &self.focus {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.focus[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.encounter {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.encounter"));
-        }
-        if let Some(values) = &self.performer {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.performer[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.specimen {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.specimen"));
-        }
-        if let Some(value) = &self.device {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Observation.device"));
-        }
-        if let Some(values) = &self.reference_range {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.referenceRange[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.derived_from {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.derivedFrom[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Observation.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.effective {
-            match choice {
-                ObservationEffective::DateTime(_value) => {
-                }
-                ObservationEffective::Period(_value) => {
-                }
-                ObservationEffective::Timing(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.effective[x]"));
-                }
-                ObservationEffective::Instant(_value) => {
-                }
-            }
-        }
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::CodeableConcept(_value) => {
-                }
-                ObservationValue::String(_value) => {
-                }
-                ObservationValue::Boolean(_value) => {
-                }
-                ObservationValue::Integer(_value) => {
-                }
-                ObservationValue::Range(_value) => {
-                }
-                ObservationValue::Ratio(_value) => {
-                }
-                ObservationValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-                ObservationValue::Time(_value) => {
-                }
-                ObservationValue::DateTime(_value) => {
-                }
-                ObservationValue::Period(_value) => {
-                }
-                ObservationValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "Observation.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static OBSERVATION_TRIGGERED_BY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation.triggeredBy".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static OBSERVATION_TRIGGERED_BY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Observation.triggeredBy.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-triggeredbytype|6.0.0-ballot4".to_string(),
-        binding_name: Some("TriggeredByType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationTriggeredBy {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_TRIGGERED_BY_BINDINGS.as_slice(), terminology));
-
-        let child_issues = self.observation.validate_bindings(validator, terminology);
-        issues.extend(validator.rebase_instance_paths(child_issues, "triggeredBy.observation"));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_TRIGGERED_BY_INVARIANTS.as_slice(), evaluator, "Observation.triggeredBy"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.triggeredBy.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("triggeredBy.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.triggeredBy.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("triggeredBy.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("triggeredBy.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("triggeredBy.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.observation.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "triggeredBy.observation"));
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationTriggeredBy {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_TRIGGERED_BY_BINDINGS.as_slice(), terminology).await);
-
-        let child_issues = self.observation.validate_bindings_async(validator, terminology).await;
-        issues.extend(validator.rebase_instance_paths(child_issues, "triggeredBy.observation"));
-        issues
-    }
-    }
-
-static OBSERVATION_REFERENCE_RANGE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation.referenceRange".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obs-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation.referenceRange".to_string(),
-        expression: "low.exists() or high.exists() or text.exists()".to_string(),
-        human: "Must have at least a low or a high or text".to_string(),
-    },
-]);
-
-static OBSERVATION_REFERENCE_RANGE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Observation.referenceRange.normalValue".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-referencerange-normalvalue".to_string(),
-        binding_name: Some("ObservationReferenceRangeNormalValue".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.referenceRange.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/referencerange-meaning".to_string(),
-        binding_name: Some("ObservationRangeMeaning".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.referenceRange.appliesTo".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/referencerange-appliesto".to_string(),
-        binding_name: Some("ObservationRangeType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationReferenceRange {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_REFERENCE_RANGE_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.low {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.low"));
-        }
-        if let Some(value) = &self.high {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.high"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_REFERENCE_RANGE_INVARIANTS.as_slice(), evaluator, "Observation.referenceRange"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.referenceRange.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("referenceRange.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.referenceRange.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("referenceRange.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.applies_to {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.referenceRange.appliesTo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("referenceRange.appliesTo"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("referenceRange.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("referenceRange.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.low {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.low"));
-        }
-        if let Some(value) = &self.high {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.high"));
-        }
-        if let Some(value) = &self.normal_value {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.normalValue"));
-        }
-        if let Some(value) = &self.r#type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.type"));
-        }
-        if let Some(values) = &self.applies_to {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("referenceRange.appliesTo[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.age {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.age"));
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationReferenceRange {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_REFERENCE_RANGE_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.low {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.low"));
-        }
-        if let Some(value) = &self.high {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "referenceRange.high"));
-        }
-        issues
-    }
-    }
-
-static OBSERVATION_COMPONENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "Observation.component".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static OBSERVATION_COMPONENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "Observation.component.code".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-codes-observationorboth".to_string(),
-        binding_name: Some("ObservationCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.component.dataAbsentReason".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/data-absent-reason".to_string(),
-        binding_name: Some("ObservationValueAbsentReason".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "Observation.component.interpretation".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-interpretation".to_string(),
-        binding_name: Some("ObservationInterpretation".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationComponent {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_COMPONENT_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationComponentValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::CodeableConcept(_value) => {
-                }
-                ObservationComponentValue::String(_value) => {
-                }
-                ObservationComponentValue::Boolean(_value) => {
-                }
-                ObservationComponentValue::Integer(_value) => {
-                }
-                ObservationComponentValue::Range(_value) => {
-                }
-                ObservationComponentValue::Ratio(_value) => {
-                }
-                ObservationComponentValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::Time(_value) => {
-                }
-                ObservationComponentValue::DateTime(_value) => {
-                }
-                ObservationComponentValue::Period(_value) => {
-                }
-                ObservationComponentValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_COMPONENT_INVARIANTS.as_slice(), evaluator, "Observation.component"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.component.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.component.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.interpretation {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.component.interpretation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.interpretation"));
-            }
-        }
-        if let Some(values) = &self.reference_range {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "Observation.component.referenceRange", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.referenceRange"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.code.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "component.code"));
-        if let Some(value) = &self.data_absent_reason {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "component.dataAbsentReason"));
-        }
-        if let Some(values) = &self.interpretation {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.interpretation[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationComponentValue::Quantity(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::String(_value) => {
-                }
-                ObservationComponentValue::Boolean(_value) => {
-                }
-                ObservationComponentValue::Integer(_value) => {
-                }
-                ObservationComponentValue::Range(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::Ratio(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::SampledData(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::Time(_value) => {
-                }
-                ObservationComponentValue::DateTime(_value) => {
-                }
-                ObservationComponentValue::Period(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::Attachment(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationComponent {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_COMPONENT_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.value {
-            match choice {
-                ObservationComponentValue::Quantity(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::CodeableConcept(_value) => {
-                }
-                ObservationComponentValue::String(_value) => {
-                }
-                ObservationComponentValue::Boolean(_value) => {
-                }
-                ObservationComponentValue::Integer(_value) => {
-                }
-                ObservationComponentValue::Range(_value) => {
-                }
-                ObservationComponentValue::Ratio(_value) => {
-                }
-                ObservationComponentValue::SampledData(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-                ObservationComponentValue::Time(_value) => {
-                }
-                ObservationComponentValue::DateTime(_value) => {
-                }
-                ObservationComponentValue::Period(_value) => {
-                }
-                ObservationComponentValue::Attachment(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "component.value[x]"));
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static OBSERVATION_DEFINITION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "cnl-0".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "ObservationDefinition".to_string(),
-        expression: "name.exists() implies name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')".to_string(),
-        human: "Name should be usable as an identifier for the module by machine processing applications such as code generation".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obd-0".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition".to_string(),
-        expression: "permittedUnit.exists() implies permittedDataType.exists(value = 'Quantity')".to_string(),
-        human: "If permittedUnit exists, then permittedDataType=Quantity must exist.".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition".to_string(),
-        expression: "contained.contained.empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition".to_string(),
-        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition".to_string(),
-        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition".to_string(),
-        expression: "contained.meta.security.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-6".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "ObservationDefinition".to_string(),
-        expression: "text.`div`.exists()".to_string(),
-        human: "A resource should have narrative for robust management".to_string(),
-    },
-]);
-
-static OBSERVATION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.language".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
-        binding_name: Some("Language".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.versionAlgorithm[x]".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
-        binding_name: None,
-        target_kind: fhir_validation_types::BindingTargetKind::Choice,
-        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.status".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("PublicationStatus".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.jurisdiction".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
-        binding_name: Some("Jurisdiction".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.subject".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-subject-type".to_string(),
-        binding_name: Some("ObservationSubjectType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.performerType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/participant-role".to_string(),
-        binding_name: Some("ObservationDefinitionParticipantRole".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-category".to_string(),
-        binding_name: Some("ObservationCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.code".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-codes-observationorboth".to_string(),
-        binding_name: Some("ObservationCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.permittedDataType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/permitted-data-type|6.0.0-ballot4".to_string(),
-        binding_name: Some("ObservationDataType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.bodyStructure".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/body-site".to_string(),
-        binding_name: Some("BodyStructure".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.method".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-methods".to_string(),
-        binding_name: Some("ObservationMethod".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.permittedUnit".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/ucum-units".to_string(),
-        binding_name: Some("ObservationUnit".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationDefinition {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_DEFINITION_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.specimen {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.specimen[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.qualified_value {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.qualifiedValue[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                ObservationDefinitionVersionAlgorithm::String(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ObservationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
-                    issues.extend(child_issues);
-                }
-                ObservationDefinitionVersionAlgorithm::Coding(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ObservationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
-                    issues.extend(child_issues);
-                }
-            }
-        }
-        if let Some(choice) = &self.device {
-            match choice {
-                ObservationDefinitionDevice::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.device[x]"));
-                }
-                ObservationDefinitionDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_DEFINITION_INVARIANTS.as_slice(), evaluator, "ObservationDefinition"));
-
-        if let Some(values) = &self.contained {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.contained"));
-            }
-        }
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.identifier"));
-            }
-        }
-        if let Some(values) = &self.contact {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.contact", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.contact"));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.useContext", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.useContext"));
-            }
-        }
-        if let Some(values) = &self.jurisdiction {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.jurisdiction", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.jurisdiction"));
-            }
-        }
-        if let Some(values) = &self.derived_from_canonical {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.derivedFromCanonical", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.derivedFromCanonical"));
-            }
-        }
-        if let Some(values) = &self.derived_from_uri {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.derivedFromUri", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.derivedFromUri"));
-            }
-        }
-        if let Some(values) = &self.subject {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.subject", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.subject"));
-            }
-        }
-        if let Some(values) = &self.category {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.category", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.category"));
-            }
-        }
-        if let Some(values) = &self.permitted_data_type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.permittedDataType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.permittedDataType"));
-            }
-        }
-        if let Some(values) = &self.specimen {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.specimen", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.specimen"));
-            }
-        }
-        if let Some(values) = &self.permitted_unit {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.permittedUnit", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.permittedUnit"));
-            }
-        }
-        if let Some(values) = &self.qualified_value {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.qualifiedValue", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.qualifiedValue"));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.hasMember", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.hasMember"));
-            }
-        }
-        if let Some(values) = &self.component {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("ObservationDefinition.component"));
-            }
-        }
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.text"));
-        }
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.contact {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.contact[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.jurisdiction {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.jurisdiction[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.effective_period {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.effectivePeriod"));
-        }
-        if let Some(values) = &self.subject {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.subject[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.performer_type {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.performerType"));
-        }
-        if let Some(values) = &self.category {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.category[{idx}]")));
-            }
-        }
-        let child_issues = self.code.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.code"));
-        if let Some(value) = &self.body_structure {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.bodyStructure"));
-        }
-        if let Some(value) = &self.method {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.method"));
-        }
-        if let Some(values) = &self.specimen {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.specimen[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.permitted_unit {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.permittedUnit[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.qualified_value {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.qualifiedValue[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                ObservationDefinitionVersionAlgorithm::String(_value) => {
-                }
-                ObservationDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.versionAlgorithm[x]"));
-                }
-            }
-        }
-        if let Some(choice) = &self.device {
-            match choice {
-                ObservationDefinitionDevice::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.device[x]"));
-                }
-                ObservationDefinitionDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationDefinition {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_DEFINITION_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.specimen {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.specimen[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.qualified_value {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.qualifiedValue[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.has_member {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.hasMember[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.component {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.component[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("ObservationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                ObservationDefinitionVersionAlgorithm::String(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ObservationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
-                    issues.extend(child_issues);
-                }
-                ObservationDefinitionVersionAlgorithm::Coding(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ObservationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
-                    issues.extend(child_issues);
-                }
-            }
-        }
-        if let Some(choice) = &self.device {
-            match choice {
-                ObservationDefinitionDevice::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "ObservationDefinition.device[x]"));
-                }
-                ObservationDefinitionDevice::Canonical(_value) => {
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static OBSERVATION_DEFINITION_QUALIFIED_VALUE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition.qualifiedValue".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static OBSERVATION_DEFINITION_QUALIFIED_VALUE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.qualifiedValue.context".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/referencerange-meaning".to_string(),
-        binding_name: Some("ObservationRangeMeaning".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.qualifiedValue.appliesTo".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/referencerange-appliesto".to_string(),
-        binding_name: Some("ObservationRangeAppliesTo".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.qualifiedValue.sexParameterForClinicalUse".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4".to_string(),
-        binding_name: Some("AdministrativeGender".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.qualifiedValue.rangeCategory".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-range-category|6.0.0-ballot4".to_string(),
-        binding_name: Some("ObservationRangeCategory".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.qualifiedValue.interpretation".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-interpretation".to_string(),
-        binding_name: Some("ObservationInterpretation".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationDefinitionQualifiedValue {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_DEFINITION_QUALIFIED_VALUE_BINDINGS.as_slice(), terminology));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_DEFINITION_QUALIFIED_VALUE_INVARIANTS.as_slice(), evaluator, "ObservationDefinition.qualifiedValue"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.qualifiedValue.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("qualifiedValue.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.qualifiedValue.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("qualifiedValue.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.applies_to {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.qualifiedValue.appliesTo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("qualifiedValue.appliesTo"));
-            }
-        }
-        if let Some(values) = &self.interpretation {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.qualifiedValue.interpretation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("qualifiedValue.interpretation"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("qualifiedValue.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("qualifiedValue.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.context {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "qualifiedValue.context"));
-        }
-        if let Some(values) = &self.applies_to {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("qualifiedValue.appliesTo[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.age {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "qualifiedValue.age"));
-        }
-        if let Some(value) = &self.gestational_age {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "qualifiedValue.gestationalAge"));
-        }
-        if let Some(value) = &self.range {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "qualifiedValue.range"));
-        }
-        if let Some(values) = &self.interpretation {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("qualifiedValue.interpretation[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationDefinitionQualifiedValue {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_DEFINITION_QUALIFIED_VALUE_BINDINGS.as_slice(), terminology).await);
-        issues
-    }
-    }
-
-static OBSERVATION_DEFINITION_COMPONENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition.component".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "obd-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "ObservationDefinition.component".to_string(),
-        expression: "permittedUnit.exists() implies permittedDataType.exists(value = 'Quantity')".to_string(),
-        human: "If permittedUnit exists, then permittedDataType=Quantity must exist.".to_string(),
-    },
-]);
-
-static OBSERVATION_DEFINITION_COMPONENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.component.code".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
-        value_set: "http://hl7.org/fhir/ValueSet/observation-codes-observationorboth".to_string(),
-        binding_name: Some("ObservationComponentCode".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.component.permittedDataType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/permitted-data-type|6.0.0-ballot4".to_string(),
-        binding_name: Some("ObservationDataType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "ObservationDefinition.component.permittedUnit".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
-        value_set: "http://hl7.org/fhir/ValueSet/ucum-units".to_string(),
-        binding_name: Some("ObservationUnit".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Coding,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for ObservationDefinitionComponent {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OBSERVATION_DEFINITION_COMPONENT_BINDINGS.as_slice(), terminology));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OBSERVATION_DEFINITION_COMPONENT_INVARIANTS.as_slice(), evaluator, "ObservationDefinition.component"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.permitted_data_type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component.permittedDataType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.permittedDataType"));
-            }
-        }
-        if let Some(values) = &self.permitted_unit {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component.permittedUnit", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.permittedUnit"));
-            }
-        }
-        if let Some(values) = &self.qualified_value {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "ObservationDefinition.component.qualifiedValue", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("component.qualifiedValue"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.modifierExtension[{idx}]")));
-            }
-        }
-        let child_issues = self.code.validate_invariants(validator, evaluator);
-        issues.extend(validator.rebase_instance_paths(child_issues, "component.code"));
-        if let Some(values) = &self.permitted_unit {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("component.permittedUnit[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for ObservationDefinitionComponent {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OBSERVATION_DEFINITION_COMPONENT_BINDINGS.as_slice(), terminology).await);
-        issues
-    }
-    }
-
-static OPERATION_DEFINITION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "cnl-0".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "OperationDefinition".to_string(),
-        expression: "name.exists() implies name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')".to_string(),
-        human: "Name should be usable as an identifier for the module by machine processing applications such as code generation".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "(kind = 'query') implies (instance = false)".to_string(),
-        human: "A query operation cannot be defined at the instance level".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-6".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "(kind = 'query') implies (parameter.all((use = 'in' and searchType.exists()) or (use != 'in')))".to_string(),
-        human: "A query operation requires input parameters to have a search type".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-7".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "(kind = 'query') implies ((parameter.where(use = 'out').count() = 1) and (parameter.where(use = 'out').all(name = 'result' and type = 'Bundle')))".to_string(),
-        human: "Named queries always have a single output parameter named 'result' of type Bundle".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "contained.contained.empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
-        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-5".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition".to_string(),
-        expression: "contained.meta.security.empty()".to_string(),
-        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "dom-6".to_string(),
-        severity: fhir_validation_types::Severity::Warning,
-        path: "OperationDefinition".to_string(),
-        expression: "text.`div`.exists()".to_string(),
-        human: "A resource should have narrative for robust management".to_string(),
-    },
-]);
-
-static OPERATION_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.language".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
-        binding_name: Some("Language".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.versionAlgorithm[x]".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
-        binding_name: None,
-        target_kind: fhir_validation_types::BindingTargetKind::Choice,
-        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.status".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
-        binding_name: Some("PublicationStatus".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.kind".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/operation-kind|6.0.0-ballot4".to_string(),
-        binding_name: Some("OperationKind".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.jurisdiction".to_string(),
-        strength: fhir_validation_types::BindingStrength::Extensible,
-        value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
-        binding_name: Some("Jurisdiction".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.synchronicity".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/synchronicity-control|6.0.0-ballot4".to_string(),
-        binding_name: None,
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.resource".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/version-independent-all-resource-types|6.0.0-ballot4".to_string(),
-        binding_name: Some("FHIRTypes".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for OperationDefinition {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OPERATION_DEFINITION_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.parameter {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.parameter[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                OperationDefinitionVersionAlgorithm::String(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "OperationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
-                    issues.extend(child_issues);
-                }
-                OperationDefinitionVersionAlgorithm::Coding(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "OperationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
-                    issues.extend(child_issues);
-                }
-            }
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OPERATION_DEFINITION_INVARIANTS.as_slice(), evaluator, "OperationDefinition"));
-
-        if let Some(values) = &self.contained {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.contained"));
-            }
-        }
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.identifier"));
-            }
-        }
-        if let Some(values) = &self.contact {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.contact", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.contact"));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.useContext", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.useContext"));
-            }
-        }
-        if let Some(values) = &self.jurisdiction {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.jurisdiction", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.jurisdiction"));
-            }
-        }
-        if let Some(values) = &self.resource {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.resource", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.resource"));
-            }
-        }
-        if let Some(values) = &self.parameter {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.parameter"));
-            }
-        }
-        if let Some(values) = &self.overload {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.overload", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OperationDefinition.overload"));
-            }
-        }
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.text"));
-        }
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.contact {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.contact[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.jurisdiction {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.jurisdiction[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.parameter {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.parameter[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.overload {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.overload[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                OperationDefinitionVersionAlgorithm::String(_value) => {
-                }
-                OperationDefinitionVersionAlgorithm::Coding(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.versionAlgorithm[x]"));
-                }
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for OperationDefinition {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OPERATION_DEFINITION_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.meta {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.meta"));
-        }
-        if let Some(value) = &self.text {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "OperationDefinition.text"));
-        }
-        if let Some(values) = &self.identifier {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.identifier[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.use_context {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.useContext[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.parameter {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.parameter[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(values) = &self.contained {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OperationDefinition.contained[{idx}]")));
-            }
-        }
-        if let Some(choice) = &self.version_algorithm {
-            match choice {
-                OperationDefinitionVersionAlgorithm::String(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "OperationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
-                    issues.extend(child_issues);
-                }
-                OperationDefinitionVersionAlgorithm::Coding(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "OperationDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
-                    issues.extend(child_issues);
-                }
-            }
-        }
-        issues
-    }
-    }
-
-static OPERATION_DEFINITION_PARAMETER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "type.exists() or part.exists()".to_string(),
-        human: "Either a type must be provided, or parts".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-2".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "searchType.exists() implies type = 'string'".to_string(),
-        human: "A search type can only be specified for parameters of type string".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-3".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "targetProfile.exists() implies (type = 'Reference' or type = 'canonical' or type.memberOf('http://hl7.org/fhir/ValueSet/all-resource-types'))".to_string(),
-        human: "A targetProfile can only be specified for parameters of type Reference, Canonical, or a Resource".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-4".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "(use = 'out') implies searchType.empty()".to_string(),
-        human: "SearchParamType can only be specified on in parameters".to_string(),
-    },
-    fhir_validation_types::InvariantDef {
-        key: "opd-8".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter".to_string(),
-        expression: "(max = '*') or iif(max != '*', min <= max.toInteger())".to_string(),
-        human: "Min <= Max".to_string(),
-    },
-]);
-
-static OPERATION_DEFINITION_PARAMETER_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.use".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/operation-parameter-use|6.0.0-ballot4".to_string(),
-        binding_name: Some("OperationParameterUse".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.scope".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/operation-parameter-scope|6.0.0-ballot4".to_string(),
-        binding_name: Some("OperationParameterScope".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fhir-types|6.0.0-ballot4".to_string(),
-        binding_name: Some("FHIRAllTypes".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.allowedType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/fhir-types|6.0.0-ballot4".to_string(),
-        binding_name: Some("FHIRAllTypes".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.searchType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/search-param-type|6.0.0-ballot4".to_string(),
-        binding_name: Some("SearchParamType".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for OperationDefinitionParameter {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OPERATION_DEFINITION_PARAMETER_BINDINGS.as_slice(), terminology));
-
-        if let Some(value) = &self.binding {
-            let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.binding"));
-        }
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OPERATION_DEFINITION_PARAMETER_INVARIANTS.as_slice(), evaluator, "OperationDefinition.parameter"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.modifierExtension"));
-            }
-        }
-        if let Some(values) = &self.scope {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.scope", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.scope"));
-            }
-        }
-        if let Some(values) = &self.allowed_type {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.allowedType", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.allowedType"));
-            }
-        }
-        if let Some(values) = &self.target_profile {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.targetProfile", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.targetProfile"));
-            }
-        }
-        if let Some(values) = &self.referenced_from {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.referencedFrom", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.referencedFrom"));
-            }
-        }
-        if let Some(values) = &self.part {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.part", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.part"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("parameter.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("parameter.modifierExtension[{idx}]")));
-            }
-        }
-        if let Some(value) = &self.binding {
-            let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.binding"));
-        }
-        if let Some(values) = &self.referenced_from {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("parameter.referencedFrom[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for OperationDefinitionParameter {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OPERATION_DEFINITION_PARAMETER_BINDINGS.as_slice(), terminology).await);
-
-        if let Some(value) = &self.binding {
-            let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.binding"));
-        }
-        issues
-    }
-    }
-
-static OPERATION_DEFINITION_PARAMETER_BINDING_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::InvariantDef {
-        key: "ele-1".to_string(),
-        severity: fhir_validation_types::Severity::Error,
-        path: "OperationDefinition.parameter.binding".to_string(),
-        expression: "hasValue() or (children().count() > id.count())".to_string(),
-        human: "All FHIR elements must have a @value or children or both".to_string(),
-    },
-]);
-
-static OPERATION_DEFINITION_PARAMETER_BINDING_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
-    fhir_validation_types::BindingDef {
-        path: "OperationDefinition.parameter.binding.strength".to_string(),
-        strength: fhir_validation_types::BindingStrength::Required,
-        value_set: "http://hl7.org/fhir/ValueSet/binding-strength|6.0.0-ballot4".to_string(),
-        binding_name: Some("BindingStrength".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Code,
-        choice_type_codes: None,
-    },
-]);
-
-#[cfg(feature = "R6")]
-impl fhir_validation::r6::R6Validatable for OperationDefinitionParameterBinding {
-    fn validate_bindings(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings(self, OPERATION_DEFINITION_PARAMETER_BINDING_BINDINGS.as_slice(), terminology));
-        issues
-    }
-
-    fn validate_invariants(
-        &self,
-        validator: &fhir_validation::Validator,
-        evaluator: &dyn fhir_validation::FhirPathEvaluator,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_invariants(self, OPERATION_DEFINITION_PARAMETER_BINDING_INVARIANTS.as_slice(), evaluator, "OperationDefinition.parameter.binding"));
-
-        if let Some(values) = &self.extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.binding.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("binding.extension"));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OperationDefinition.parameter.binding.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("binding.modifierExtension"));
-            }
-        }
-
-        if let Some(values) = &self.extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("binding.extension[{idx}]")));
-            }
-        }
-        if let Some(values) = &self.modifier_extension {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("binding.modifierExtension[{idx}]")));
-            }
-        }
-        issues
-    }
-}
-
-#[cfg(feature = "R6")]
-#[async_trait::async_trait]
-impl fhir_validation::r6::R6ValidatableAsync for OperationDefinitionParameterBinding {
-    async fn validate_bindings_async(
-        &self,
-        validator: &fhir_validation::Validator,
-        terminology: Option<&dyn fhir_validation::TerminologyService>,
-    ) -> Vec<fhir_validation::ValidationIssue> {
-        let mut issues = Vec::new();
-        issues.extend(validator.apply_r6_bindings_async(self, OPERATION_DEFINITION_PARAMETER_BINDING_BINDINGS.as_slice(), terminology).await);
-        issues
-    }
-    }
-
 static OPERATION_DEFINITION_PARAMETER_REFERENCED_FROM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
         key: "ele-1".to_string(),
@@ -6537,12 +981,6 @@ impl fhir_validation::r6::R6Validatable for OrganizationAffiliation {
             let child_issues = value.validate_bindings(validator, terminology);
             issues.extend(validator.rebase_instance_paths(child_issues, "OrganizationAffiliation.participatingOrganization"));
         }
-        if let Some(values) = &self.network {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings(validator, terminology);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OrganizationAffiliation.network[{idx}]")));
-            }
-        }
         if let Some(values) = &self.location {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
@@ -6605,11 +1043,6 @@ impl fhir_validation::r6::R6Validatable for OrganizationAffiliation {
         if let Some(values) = &self.identifier {
             if values.is_empty() {
                 issues.push(fhir_validation::ValidationIssue::error("structure", "OrganizationAffiliation.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OrganizationAffiliation.identifier"));
-            }
-        }
-        if let Some(values) = &self.network {
-            if values.is_empty() {
-                issues.push(fhir_validation::ValidationIssue::error("structure", "OrganizationAffiliation.network", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("OrganizationAffiliation.network"));
             }
         }
         if let Some(values) = &self.code {
@@ -6680,12 +1113,6 @@ impl fhir_validation::r6::R6Validatable for OrganizationAffiliation {
         if let Some(value) = &self.participating_organization {
             let child_issues = value.validate_invariants(validator, evaluator);
             issues.extend(validator.rebase_instance_paths(child_issues, "OrganizationAffiliation.participatingOrganization"));
-        }
-        if let Some(values) = &self.network {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_invariants(validator, evaluator);
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OrganizationAffiliation.network[{idx}]")));
-            }
         }
         if let Some(values) = &self.code {
             for (idx, value) in values.iter().enumerate() {
@@ -6768,12 +1195,6 @@ impl fhir_validation::r6::R6ValidatableAsync for OrganizationAffiliation {
         if let Some(value) = &self.participating_organization {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
             issues.extend(validator.rebase_instance_paths(child_issues, "OrganizationAffiliation.participatingOrganization"));
-        }
-        if let Some(values) = &self.network {
-            for (idx, value) in values.iter().enumerate() {
-                let child_issues = value.validate_bindings_async(validator, terminology).await;
-                issues.extend(validator.rebase_instance_paths(child_issues, &format!("OrganizationAffiliation.network[{idx}]")));
-            }
         }
         if let Some(values) = &self.location {
             for (idx, value) in values.iter().enumerate() {
@@ -7165,6 +1586,5944 @@ impl fhir_validation::r6::R6ValidatableAsync for PackagedProductDefinition {
                 let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("PackagedProductDefinition.contained[{idx}]")));
             }
+        }
+        issues
+    }
+    }
+
+static PACKAGED_PRODUCT_DEFINITION_LEGAL_STATUS_OF_SUPPLY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PackagedProductDefinition.legalStatusOfSupply".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PACKAGED_PRODUCT_DEFINITION_LEGAL_STATUS_OF_SUPPLY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.legalStatusOfSupply.code".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/legal-status-of-supply".to_string(),
+        binding_name: Some("LegalStatusOfSupply".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.legalStatusOfSupply.jurisdiction".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
+        binding_name: Some("Jurisdiction".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PackagedProductDefinitionLegalStatusOfSupply {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PACKAGED_PRODUCT_DEFINITION_LEGAL_STATUS_OF_SUPPLY_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PACKAGED_PRODUCT_DEFINITION_LEGAL_STATUS_OF_SUPPLY_INVARIANTS.as_slice(), evaluator, "PackagedProductDefinition.legalStatusOfSupply"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.legalStatusOfSupply.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("legalStatusOfSupply.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.legalStatusOfSupply.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("legalStatusOfSupply.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("legalStatusOfSupply.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("legalStatusOfSupply.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.code {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "legalStatusOfSupply.code"));
+        }
+        if let Some(value) = &self.jurisdiction {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "legalStatusOfSupply.jurisdiction"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PackagedProductDefinitionLegalStatusOfSupply {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PACKAGED_PRODUCT_DEFINITION_LEGAL_STATUS_OF_SUPPLY_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
+static PACKAGED_PRODUCT_DEFINITION_PACKAGING_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PackagedProductDefinition.packaging".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PACKAGED_PRODUCT_DEFINITION_PACKAGING_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.packaging.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/packaging-type".to_string(),
+        binding_name: Some("PackagingType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.packaging.material".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/package-material".to_string(),
+        binding_name: Some("PackageMaterial".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.packaging.alternateMaterial".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/package-material".to_string(),
+        binding_name: Some("PackageMaterial".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PackagedProductDefinitionPackaging {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_BINDINGS.as_slice(), terminology));
+
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.manufacturer {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.manufacturer[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.property {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.property[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_INVARIANTS.as_slice(), evaluator, "PackagedProductDefinition.packaging"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.identifier"));
+            }
+        }
+        if let Some(values) = &self.material {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.material", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.material"));
+            }
+        }
+        if let Some(values) = &self.alternate_material {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.alternateMaterial", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.alternateMaterial"));
+            }
+        }
+        if let Some(values) = &self.shelf_life_storage {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.shelfLifeStorage", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.shelfLifeStorage"));
+            }
+        }
+        if let Some(values) = &self.manufacturer {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.manufacturer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.manufacturer"));
+            }
+        }
+        if let Some(values) = &self.property {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.property", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.property"));
+            }
+        }
+        if let Some(values) = &self.contained_item {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.containedItem", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.containedItem"));
+            }
+        }
+        if let Some(values) = &self.packaging {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.packaging", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("packaging.packaging"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "packaging.type"));
+        }
+        if let Some(values) = &self.material {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.material[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.alternate_material {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.alternateMaterial[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.shelf_life_storage {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.shelfLifeStorage[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.manufacturer {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.manufacturer[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.property {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.property[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.contained_item {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.containedItem[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PackagedProductDefinitionPackaging {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.manufacturer {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.manufacturer[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.property {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("packaging.property[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
+static PACKAGED_PRODUCT_DEFINITION_PACKAGING_PROPERTY_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PackagedProductDefinition.packaging.property".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PACKAGED_PRODUCT_DEFINITION_PACKAGING_PROPERTY_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PackagedProductDefinition.packaging.property.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/product-characteristic-codes".to_string(),
+        binding_name: Some("ProductCharacteristic".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PackagedProductDefinitionPackagingProperty {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_PROPERTY_BINDINGS.as_slice(), terminology));
+
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                PackagedProductDefinitionPackagingPropertyValue::CodeableConcept(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Quantity(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Date(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Boolean(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Attachment(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_PROPERTY_INVARIANTS.as_slice(), evaluator, "PackagedProductDefinition.packaging.property"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.property.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("property.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.property.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("property.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("property.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("property.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.r#type.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "property.type"));
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                PackagedProductDefinitionPackagingPropertyValue::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Quantity(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Date(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Boolean(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Attachment(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PackagedProductDefinitionPackagingProperty {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_PROPERTY_BINDINGS.as_slice(), terminology).await);
+
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                PackagedProductDefinitionPackagingPropertyValue::CodeableConcept(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Quantity(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Date(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Boolean(_value) => {
+                }
+                PackagedProductDefinitionPackagingPropertyValue::Attachment(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "property.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PACKAGED_PRODUCT_DEFINITION_PACKAGING_CONTAINED_ITEM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PackagedProductDefinition.packaging.containedItem".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PackagedProductDefinitionPackagingContainedItem {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "containedItem.amount"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PACKAGED_PRODUCT_DEFINITION_PACKAGING_CONTAINED_ITEM_INVARIANTS.as_slice(), evaluator, "PackagedProductDefinition.packaging.containedItem"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.containedItem.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("containedItem.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PackagedProductDefinition.packaging.containedItem.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("containedItem.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("containedItem.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("containedItem.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.item.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "containedItem.item"));
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "containedItem.amount"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PackagedProductDefinitionPackagingContainedItem {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "containedItem.amount"));
+        }
+        issues
+    }
+    }
+
+static PARAMETERS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Parameters.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for Parameters {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PARAMETERS_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Parameters.meta"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, evaluator);
+
+        if let Some(values) = &self.parameter {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Parameters.parameter", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Parameters.parameter"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Parameters.meta"));
+        }
+        if let Some(values) = &self.parameter {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Parameters.parameter[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for Parameters {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PARAMETERS_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Parameters.meta"));
+        }
+        issues
+    }
+    }
+
+static PARAMETERS_PARAMETER_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Parameters.parameter".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "inv-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Parameters.parameter".to_string(),
+        expression: "(part.exists() and value.empty() and resource.empty()) or (part.empty() and (value.exists() xor resource.exists()))".to_string(),
+        human: "A parameter must have one and only one of (value, resource, part)".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for ParametersParameter {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.resource {
+            let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.resource"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                ParametersParameterValue::Base64Binary(_value) => {
+                }
+                ParametersParameterValue::Boolean(_value) => {
+                }
+                ParametersParameterValue::Canonical(_value) => {
+                }
+                ParametersParameterValue::Code(_value) => {
+                }
+                ParametersParameterValue::Date(_value) => {
+                }
+                ParametersParameterValue::DateTime(_value) => {
+                }
+                ParametersParameterValue::Decimal(_value) => {
+                }
+                ParametersParameterValue::Id(_value) => {
+                }
+                ParametersParameterValue::Instant(_value) => {
+                }
+                ParametersParameterValue::Integer(_value) => {
+                }
+                ParametersParameterValue::Integer64(_value) => {
+                }
+                ParametersParameterValue::Markdown(_value) => {
+                }
+                ParametersParameterValue::Oid(_value) => {
+                }
+                ParametersParameterValue::PositiveInt(_value) => {
+                }
+                ParametersParameterValue::String(_value) => {
+                }
+                ParametersParameterValue::Time(_value) => {
+                }
+                ParametersParameterValue::UnsignedInt(_value) => {
+                }
+                ParametersParameterValue::Uri(_value) => {
+                }
+                ParametersParameterValue::Url(_value) => {
+                }
+                ParametersParameterValue::Uuid(_value) => {
+                }
+                ParametersParameterValue::Address(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Age(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Annotation(_value) => {
+                }
+                ParametersParameterValue::Attachment(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::CodeableConcept(_value) => {
+                }
+                ParametersParameterValue::CodeableReference(_value) => {
+                }
+                ParametersParameterValue::Coding(_value) => {
+                }
+                ParametersParameterValue::ContactPoint(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Count(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Distance(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Duration(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::HumanName(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Identifier(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Money(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Period(_value) => {
+                }
+                ParametersParameterValue::Quantity(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Range(_value) => {
+                }
+                ParametersParameterValue::Ratio(_value) => {
+                }
+                ParametersParameterValue::RatioRange(_value) => {
+                }
+                ParametersParameterValue::Reference(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::SampledData(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Signature(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Timing(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ContactDetail(_value) => {
+                }
+                ParametersParameterValue::DataRequirement(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Expression(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ParameterDefinition(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::RelatedArtifact(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::TriggerDefinition(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::UsageContext(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Availability(_value) => {
+                }
+                ParametersParameterValue::ExtendedContactDetail(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::VirtualServiceDetail(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Dosage(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Meta(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PARAMETERS_PARAMETER_INVARIANTS.as_slice(), evaluator, "Parameters.parameter"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Parameters.parameter.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Parameters.parameter.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.part {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Parameters.parameter.part", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("parameter.part"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("parameter.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("parameter.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.resource {
+            let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.resource"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                ParametersParameterValue::Base64Binary(_value) => {
+                }
+                ParametersParameterValue::Boolean(_value) => {
+                }
+                ParametersParameterValue::Canonical(_value) => {
+                }
+                ParametersParameterValue::Code(_value) => {
+                }
+                ParametersParameterValue::Date(_value) => {
+                }
+                ParametersParameterValue::DateTime(_value) => {
+                }
+                ParametersParameterValue::Decimal(_value) => {
+                }
+                ParametersParameterValue::Id(_value) => {
+                }
+                ParametersParameterValue::Instant(_value) => {
+                }
+                ParametersParameterValue::Integer(_value) => {
+                }
+                ParametersParameterValue::Integer64(_value) => {
+                }
+                ParametersParameterValue::Markdown(_value) => {
+                }
+                ParametersParameterValue::Oid(_value) => {
+                }
+                ParametersParameterValue::PositiveInt(_value) => {
+                }
+                ParametersParameterValue::String(_value) => {
+                }
+                ParametersParameterValue::Time(_value) => {
+                }
+                ParametersParameterValue::UnsignedInt(_value) => {
+                }
+                ParametersParameterValue::Uri(_value) => {
+                }
+                ParametersParameterValue::Url(_value) => {
+                }
+                ParametersParameterValue::Uuid(_value) => {
+                }
+                ParametersParameterValue::Address(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Age(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Annotation(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Attachment(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::CodeableReference(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Coding(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ContactPoint(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Count(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Distance(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Duration(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::HumanName(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Identifier(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Money(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Period(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Quantity(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Range(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Ratio(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::RatioRange(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Reference(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::SampledData(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Signature(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Timing(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ContactDetail(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::DataRequirement(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Expression(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ParameterDefinition(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::RelatedArtifact(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::TriggerDefinition(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::UsageContext(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Availability(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ExtendedContactDetail(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::VirtualServiceDetail(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Dosage(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Meta(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for ParametersParameter {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.resource {
+            let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "parameter.resource"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.value {
+            match choice {
+                ParametersParameterValue::Base64Binary(_value) => {
+                }
+                ParametersParameterValue::Boolean(_value) => {
+                }
+                ParametersParameterValue::Canonical(_value) => {
+                }
+                ParametersParameterValue::Code(_value) => {
+                }
+                ParametersParameterValue::Date(_value) => {
+                }
+                ParametersParameterValue::DateTime(_value) => {
+                }
+                ParametersParameterValue::Decimal(_value) => {
+                }
+                ParametersParameterValue::Id(_value) => {
+                }
+                ParametersParameterValue::Instant(_value) => {
+                }
+                ParametersParameterValue::Integer(_value) => {
+                }
+                ParametersParameterValue::Integer64(_value) => {
+                }
+                ParametersParameterValue::Markdown(_value) => {
+                }
+                ParametersParameterValue::Oid(_value) => {
+                }
+                ParametersParameterValue::PositiveInt(_value) => {
+                }
+                ParametersParameterValue::String(_value) => {
+                }
+                ParametersParameterValue::Time(_value) => {
+                }
+                ParametersParameterValue::UnsignedInt(_value) => {
+                }
+                ParametersParameterValue::Uri(_value) => {
+                }
+                ParametersParameterValue::Url(_value) => {
+                }
+                ParametersParameterValue::Uuid(_value) => {
+                }
+                ParametersParameterValue::Address(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Age(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Annotation(_value) => {
+                }
+                ParametersParameterValue::Attachment(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::CodeableConcept(_value) => {
+                }
+                ParametersParameterValue::CodeableReference(_value) => {
+                }
+                ParametersParameterValue::Coding(_value) => {
+                }
+                ParametersParameterValue::ContactPoint(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Count(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Distance(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Duration(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::HumanName(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Identifier(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Money(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Period(_value) => {
+                }
+                ParametersParameterValue::Quantity(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Range(_value) => {
+                }
+                ParametersParameterValue::Ratio(_value) => {
+                }
+                ParametersParameterValue::RatioRange(_value) => {
+                }
+                ParametersParameterValue::Reference(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::SampledData(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Signature(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Timing(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ContactDetail(_value) => {
+                }
+                ParametersParameterValue::DataRequirement(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Expression(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::ParameterDefinition(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::RelatedArtifact(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::TriggerDefinition(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::UsageContext(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Availability(_value) => {
+                }
+                ParametersParameterValue::ExtendedContactDetail(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::VirtualServiceDetail(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Dosage(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+                ParametersParameterValue::Meta(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "parameter.value[x]"));
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PATIENT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "Patient".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PATIENT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Patient.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Patient.gender".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4".to_string(),
+        binding_name: Some("AdministrativeGender".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Patient.maritalStatus".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/marital-status".to_string(),
+        binding_name: Some("MaritalStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for Patient {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PATIENT_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.address[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.contact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.communication[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.general_practitioner {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.generalPractitioner[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PatientDeceased::Boolean(_value) => {
+                }
+                PatientDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.multiple_birth {
+            match choice {
+                PatientMultipleBirth::Boolean(_value) => {
+                }
+                PatientMultipleBirth::Integer(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PATIENT_INVARIANTS.as_slice(), evaluator, "Patient"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.identifier"));
+            }
+        }
+        if let Some(values) = &self.name {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.name", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.name"));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.telecom", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.telecom"));
+            }
+        }
+        if let Some(values) = &self.address {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.address", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.address"));
+            }
+        }
+        if let Some(values) = &self.photo {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.photo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.photo"));
+            }
+        }
+        if let Some(values) = &self.contact {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.contact"));
+            }
+        }
+        if let Some(values) = &self.communication {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.communication", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.communication"));
+            }
+        }
+        if let Some(values) = &self.general_practitioner {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.generalPractitioner", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.generalPractitioner"));
+            }
+        }
+        if let Some(values) = &self.link {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.link", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Patient.link"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.address[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.marital_status {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.maritalStatus"));
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.contact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.communication[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.general_practitioner {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.generalPractitioner[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PatientDeceased::Boolean(_value) => {
+                }
+                PatientDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.multiple_birth {
+            match choice {
+                PatientMultipleBirth::Boolean(_value) => {
+                }
+                PatientMultipleBirth::Integer(_value) => {
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for Patient {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PATIENT_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.address[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.contact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.communication[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.general_practitioner {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.generalPractitioner[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Patient.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Patient.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PatientDeceased::Boolean(_value) => {
+                }
+                PatientDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.multiple_birth {
+            match choice {
+                PatientMultipleBirth::Boolean(_value) => {
+                }
+                PatientMultipleBirth::Integer(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PATIENT_CONTACT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient.contact".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "pat-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient.contact".to_string(),
+        expression: "name.exists() or telecom.exists() or address.exists() or organization.exists()".to_string(),
+        human: "SHALL at least contain a contact's details or a reference to an organization".to_string(),
+    },
+]);
+
+static PATIENT_CONTACT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Patient.contact.relationship".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://terminology.hl7.org/ValueSet/v3-PersonalRelationshipRoleType".to_string(),
+        binding_name: Some("ContactRelationship".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Patient.contact.role".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/relatedperson-relationshiptype".to_string(),
+        binding_name: Some("ContactRelationship".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Patient.contact.gender".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4".to_string(),
+        binding_name: Some("AdministrativeGender".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PatientContact {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PATIENT_CONTACT_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.name {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.name"));
+        }
+        if let Some(values) = &self.additional_name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalName[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.telecom[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.address {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.address"));
+        }
+        if let Some(values) = &self.additional_address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalAddress[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.organization {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.organization"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PATIENT_CONTACT_INVARIANTS.as_slice(), evaluator, "Patient.contact"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.relationship {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.relationship", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.relationship"));
+            }
+        }
+        if let Some(values) = &self.role {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.role", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.role"));
+            }
+        }
+        if let Some(values) = &self.additional_name {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.additionalName", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.additionalName"));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.telecom", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.telecom"));
+            }
+        }
+        if let Some(values) = &self.additional_address {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.contact.additionalAddress", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("contact.additionalAddress"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.relationship {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.relationship[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.role {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.role[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.name {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.name"));
+        }
+        if let Some(values) = &self.additional_name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalName[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.telecom[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.address {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.address"));
+        }
+        if let Some(values) = &self.additional_address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalAddress[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.organization {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.organization"));
+        }
+        if let Some(value) = &self.period {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.period"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PatientContact {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PATIENT_CONTACT_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.name {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.name"));
+        }
+        if let Some(values) = &self.additional_name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalName[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.telecom[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.address {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.address"));
+        }
+        if let Some(values) = &self.additional_address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("contact.additionalAddress[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.organization {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "contact.organization"));
+        }
+        issues
+    }
+    }
+
+static PATIENT_COMMUNICATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient.communication".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PATIENT_COMMUNICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Patient.communication.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PatientCommunication {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PATIENT_COMMUNICATION_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PATIENT_COMMUNICATION_INVARIANTS.as_slice(), evaluator, "Patient.communication"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.communication.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("communication.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.communication.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("communication.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("communication.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("communication.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.language.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "communication.language"));
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PatientCommunication {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PATIENT_COMMUNICATION_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
+static PATIENT_LINK_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Patient.link".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PATIENT_LINK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Patient.link.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/link-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("LinkType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PatientLink {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PATIENT_LINK_BINDINGS.as_slice(), terminology));
+
+        let child_issues = self.other.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.other"));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PATIENT_LINK_INVARIANTS.as_slice(), evaluator, "Patient.link"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.link.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("link.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Patient.link.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("link.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("link.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("link.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.other.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.other"));
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PatientLink {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PATIENT_LINK_BINDINGS.as_slice(), terminology).await);
+
+        let child_issues = self.other.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.other"));
+        issues
+    }
+    }
+
+static PAYMENT_NOTICE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentNotice".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentNotice".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentNotice".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentNotice".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PaymentNotice".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PAYMENT_NOTICE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PaymentNotice.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentNotice.status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("PaymentNoticeStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentNotice.paymentStatus".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-status".to_string(),
+        binding_name: Some("PaymentStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PaymentNotice {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PAYMENT_NOTICE_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.request"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.response"));
+        }
+        if let Some(value) = &self.reporter {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.reporter"));
+        }
+        if let Some(value) = &self.payment {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payment"));
+        }
+        if let Some(values) = &self.claim_identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.claimIdentifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payee"));
+        }
+        let child_issues = self.recipient.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.recipient"));
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.patient"));
+        }
+        let child_issues = self.amount.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.amount"));
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PAYMENT_NOTICE_INVARIANTS.as_slice(), evaluator, "PaymentNotice"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentNotice.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentNotice.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentNotice.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentNotice.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentNotice.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentNotice.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentNotice.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentNotice.identifier"));
+            }
+        }
+        if let Some(values) = &self.claim_identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentNotice.claimIdentifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentNotice.claimIdentifier"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.request"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.response"));
+        }
+        if let Some(value) = &self.reporter {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.reporter"));
+        }
+        if let Some(value) = &self.payment {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payment"));
+        }
+        if let Some(values) = &self.claim_identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.claimIdentifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payee"));
+        }
+        let child_issues = self.recipient.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.recipient"));
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.patient"));
+        }
+        let child_issues = self.amount.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.amount"));
+        if let Some(value) = &self.payment_status {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.paymentStatus"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PaymentNotice {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PAYMENT_NOTICE_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.request"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.response"));
+        }
+        if let Some(value) = &self.reporter {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.reporter"));
+        }
+        if let Some(value) = &self.payment {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payment"));
+        }
+        if let Some(values) = &self.claim_identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.claimIdentifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.payee"));
+        }
+        let child_issues = self.recipient.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.recipient"));
+        if let Some(value) = &self.patient {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.patient"));
+        }
+        let child_issues = self.amount.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentNotice.amount"));
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentNotice.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
+static PAYMENT_RECONCILIATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PaymentReconciliation".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PAYMENT_RECONCILIATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-type".to_string(),
+        binding_name: Some("PaymentType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("PaymentReconciliationStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.kind".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-kind".to_string(),
+        binding_name: Some("PaymentKind".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.issuerType".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-issuertype".to_string(),
+        binding_name: Some("PaymentIssuerType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.outcome".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-outcome|6.0.0-ballot4".to_string(),
+        binding_name: Some("PaymentOutcome".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.method".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://terminology.hl7.org/ValueSet/v2-0570".to_string(),
+        binding_name: Some("PaymentMethod".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.formCode".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/forms".to_string(),
+        binding_name: Some("Forms".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PaymentReconciliation {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PAYMENT_RECONCILIATION_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.enterer"));
+        }
+        if let Some(value) = &self.payment_issuer {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIssuer"));
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.request"));
+        }
+        if let Some(value) = &self.requestor {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.requestor"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.location"));
+        }
+        if let Some(value) = &self.tendered_amount {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.tenderedAmount"));
+        }
+        if let Some(value) = &self.returned_amount {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.returnedAmount"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.amount"));
+        }
+        if let Some(value) = &self.payment_identifier {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIdentifier"));
+        }
+        if let Some(values) = &self.allocation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.allocation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.process_note {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.processNote[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PAYMENT_RECONCILIATION_INVARIANTS.as_slice(), evaluator, "PaymentReconciliation"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.identifier"));
+            }
+        }
+        if let Some(values) = &self.allocation {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.allocation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.allocation"));
+            }
+        }
+        if let Some(values) = &self.process_note {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.processNote", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PaymentReconciliation.processNote"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.identifier[{idx}]")));
+            }
+        }
+        let child_issues = self.r#type.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.type"));
+        if let Some(value) = &self.kind {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.kind"));
+        }
+        if let Some(value) = &self.period {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.period"));
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.enterer"));
+        }
+        if let Some(value) = &self.issuer_type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.issuerType"));
+        }
+        if let Some(value) = &self.payment_issuer {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIssuer"));
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.request"));
+        }
+        if let Some(value) = &self.requestor {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.requestor"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.location"));
+        }
+        if let Some(value) = &self.method {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.method"));
+        }
+        if let Some(value) = &self.tendered_amount {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.tenderedAmount"));
+        }
+        if let Some(value) = &self.returned_amount {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.returnedAmount"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.amount"));
+        }
+        if let Some(value) = &self.payment_identifier {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIdentifier"));
+        }
+        if let Some(values) = &self.allocation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.allocation[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.form_code {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.formCode"));
+        }
+        if let Some(values) = &self.process_note {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.processNote[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PaymentReconciliation {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PAYMENT_RECONCILIATION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.enterer {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.enterer"));
+        }
+        if let Some(value) = &self.payment_issuer {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIssuer"));
+        }
+        if let Some(value) = &self.request {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.request"));
+        }
+        if let Some(value) = &self.requestor {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.requestor"));
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.location"));
+        }
+        if let Some(value) = &self.tendered_amount {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.tenderedAmount"));
+        }
+        if let Some(value) = &self.returned_amount {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.returnedAmount"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.amount"));
+        }
+        if let Some(value) = &self.payment_identifier {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PaymentReconciliation.paymentIdentifier"));
+        }
+        if let Some(values) = &self.allocation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.allocation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.process_note {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.processNote[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PaymentReconciliation.contained[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
+static PAYMENT_RECONCILIATION_ALLOCATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation.allocation".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PAYMENT_RECONCILIATION_ALLOCATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.allocation.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/payment-type".to_string(),
+        binding_name: Some("PaymentType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PaymentReconciliationAllocation {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PAYMENT_RECONCILIATION_ALLOCATION_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.identifier {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.identifier"));
+        }
+        if let Some(value) = &self.predecessor {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.predecessor"));
+        }
+        if let Some(value) = &self.target {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.target"));
+        }
+        if let Some(value) = &self.characteristics {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.characteristics"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.encounter"));
+        }
+        if let Some(value) = &self.account {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.account"));
+        }
+        if let Some(value) = &self.submitter {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.submitter"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.response"));
+        }
+        if let Some(value) = &self.responsible {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.responsible"));
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.payee"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.amount"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.target_item {
+            match choice {
+                PaymentReconciliationAllocationTargetItem::String(_value) => {
+                }
+                PaymentReconciliationAllocationTargetItem::Identifier(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "allocation.targetItem[x]"));
+                }
+                PaymentReconciliationAllocationTargetItem::PositiveInt(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PAYMENT_RECONCILIATION_ALLOCATION_INVARIANTS.as_slice(), evaluator, "PaymentReconciliation.allocation"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.allocation.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("allocation.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.allocation.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("allocation.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.note_number {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.allocation.noteNumber", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("allocation.noteNumber"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("allocation.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("allocation.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.identifier {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.identifier"));
+        }
+        if let Some(value) = &self.predecessor {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.predecessor"));
+        }
+        if let Some(value) = &self.target {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.target"));
+        }
+        if let Some(value) = &self.characteristics {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.characteristics"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.encounter"));
+        }
+        if let Some(value) = &self.account {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.account"));
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.type"));
+        }
+        if let Some(value) = &self.submitter {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.submitter"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.response"));
+        }
+        if let Some(value) = &self.responsible {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.responsible"));
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.payee"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.amount"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.target_item {
+            match choice {
+                PaymentReconciliationAllocationTargetItem::String(_value) => {
+                }
+                PaymentReconciliationAllocationTargetItem::Identifier(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "allocation.targetItem[x]"));
+                }
+                PaymentReconciliationAllocationTargetItem::PositiveInt(_value) => {
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PaymentReconciliationAllocation {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PAYMENT_RECONCILIATION_ALLOCATION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.identifier {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.identifier"));
+        }
+        if let Some(value) = &self.predecessor {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.predecessor"));
+        }
+        if let Some(value) = &self.target {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.target"));
+        }
+        if let Some(value) = &self.characteristics {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.characteristics"));
+        }
+        if let Some(value) = &self.encounter {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.encounter"));
+        }
+        if let Some(value) = &self.account {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.account"));
+        }
+        if let Some(value) = &self.submitter {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.submitter"));
+        }
+        if let Some(value) = &self.response {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.response"));
+        }
+        if let Some(value) = &self.responsible {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.responsible"));
+        }
+        if let Some(value) = &self.payee {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.payee"));
+        }
+        if let Some(value) = &self.amount {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "allocation.amount"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.target_item {
+            match choice {
+                PaymentReconciliationAllocationTargetItem::String(_value) => {
+                }
+                PaymentReconciliationAllocationTargetItem::Identifier(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "allocation.targetItem[x]"));
+                }
+                PaymentReconciliationAllocationTargetItem::PositiveInt(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PAYMENT_RECONCILIATION_PROCESS_NOTE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PaymentReconciliation.processNote".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PAYMENT_RECONCILIATION_PROCESS_NOTE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PaymentReconciliation.processNote.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/note-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("NoteType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PaymentReconciliationProcessNote {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PAYMENT_RECONCILIATION_PROCESS_NOTE_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PAYMENT_RECONCILIATION_PROCESS_NOTE_INVARIANTS.as_slice(), evaluator, "PaymentReconciliation.processNote"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.processNote.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("processNote.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PaymentReconciliation.processNote.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("processNote.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("processNote.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("processNote.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.class {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "processNote.class"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PaymentReconciliationProcessNote {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PAYMENT_RECONCILIATION_PROCESS_NOTE_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
+static PERSON_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "Person".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PERSON_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Person.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Person.gender".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4".to_string(),
+        binding_name: Some("AdministrativeGender".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "Person.maritalStatus".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/marital-status".to_string(),
+        binding_name: Some("MaritalStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for Person {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PERSON_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.address[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.communication[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PersonDeceased::Boolean(_value) => {
+                }
+                PersonDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PERSON_INVARIANTS.as_slice(), evaluator, "Person"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.identifier"));
+            }
+        }
+        if let Some(values) = &self.name {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.name", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.name"));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.telecom", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.telecom"));
+            }
+        }
+        if let Some(values) = &self.address {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.address", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.address"));
+            }
+        }
+        if let Some(values) = &self.photo {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.photo", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.photo"));
+            }
+        }
+        if let Some(values) = &self.communication {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.communication", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.communication"));
+            }
+        }
+        if let Some(values) = &self.link {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.link", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("Person.link"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.address[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.marital_status {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.maritalStatus"));
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.communication[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PersonDeceased::Boolean(_value) => {
+                }
+                PersonDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for Person {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PERSON_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.name {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.name[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.telecom {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.telecom[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.address {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.address[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.photo {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.photo[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.communication {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.communication[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.managing_organization {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "Person.managingOrganization"));
+        }
+        if let Some(values) = &self.link {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.link[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("Person.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.deceased {
+            match choice {
+                PersonDeceased::Boolean(_value) => {
+                }
+                PersonDeceased::DateTime(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PERSON_COMMUNICATION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person.communication".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PERSON_COMMUNICATION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Person.communication.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PersonCommunication {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PERSON_COMMUNICATION_BINDINGS.as_slice(), terminology));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PERSON_COMMUNICATION_INVARIANTS.as_slice(), evaluator, "Person.communication"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.communication.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("communication.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.communication.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("communication.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("communication.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("communication.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.language.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "communication.language"));
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PersonCommunication {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PERSON_COMMUNICATION_BINDINGS.as_slice(), terminology).await);
+        issues
+    }
+    }
+
+static PERSON_LINK_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Person.link".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PERSON_LINK_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "Person.link.assurance".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/identity-assuranceLevel|6.0.0-ballot4".to_string(),
+        binding_name: Some("IdentityAssuranceLevel".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PersonLink {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PERSON_LINK_BINDINGS.as_slice(), terminology));
+
+        let child_issues = self.target.validate_bindings(validator, terminology);
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.target"));
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PERSON_LINK_INVARIANTS.as_slice(), evaluator, "Person.link"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.link.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("link.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "Person.link.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("link.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("link.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("link.modifierExtension[{idx}]")));
+            }
+        }
+        let child_issues = self.target.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.target"));
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PersonLink {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PERSON_LINK_BINDINGS.as_slice(), terminology).await);
+
+        let child_issues = self.target.validate_bindings_async(validator, terminology).await;
+        issues.extend(validator.rebase_instance_paths(child_issues, "link.target"));
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "cnl-0".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PlanDefinition".to_string(),
+        expression: "name.exists() implies name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')".to_string(),
+        human: "Name should be usable as an identifier for the module by machine processing applications such as code generation".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "pld-3".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PlanDefinition".to_string(),
+        expression: "%context.repeat(action).where((goalId in %context.goal.id).not()).exists().not()".to_string(),
+        human: "goalid should reference the id of a goal definition".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "pld-4".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PlanDefinition".to_string(),
+        expression: "%context.repeat(action).relatedAction.where((targetId in %context.repeat(action).id).not()).exists().not()".to_string(),
+        human: "targetId should reference the id of an action".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-2".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition".to_string(),
+        expression: "contained.contained.empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL NOT contain nested Resources".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition".to_string(),
+        expression: "contained.where((('#'+id.trace('id') in %resource.descendants().select(reference | as(uri))) or descendants().where(reference='#' | as(uri)='#').exists()).not()).trace('unmatched', id).empty()".to_string(),
+        human: "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-4".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition".to_string(),
+        expression: "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-5".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition".to_string(),
+        expression: "contained.meta.security.empty()".to_string(),
+        human: "If a resource is contained in another resource, it SHALL NOT have a security label".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "dom-6".to_string(),
+        severity: fhir_validation_types::Severity::Warning,
+        path: "PlanDefinition".to_string(),
+        expression: "text.`div`.exists()".to_string(),
+        human: "A resource should have narrative for robust management".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.language".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4".to_string(),
+        binding_name: Some("Language".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.versionAlgorithm[x]".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/version-algorithm".to_string(),
+        binding_name: None,
+        target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["string".to_string(), "Coding".to_string()]),
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://terminology.hl7.org/ValueSet/plan-definition-type".to_string(),
+        binding_name: Some("PlanDefinitionType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.status".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4".to_string(),
+        binding_name: Some("PublicationStatus".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.subject[x]".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/participant-resource-types".to_string(),
+        binding_name: Some("SubjectType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.jurisdiction".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://terminology.hl7.org/ValueSet/jurisdiction".to_string(),
+        binding_name: Some("Jurisdiction".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.topic".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/definition-topic".to_string(),
+        binding_name: Some("DefinitionTopic".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.asNeeded[x]".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/medication-as-needed-reason".to_string(),
+        binding_name: Some("ProcedureAsNeededReason".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinition {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.use_context {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.useContext[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_artifact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.relatedArtifact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.goal {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.goal[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.action[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings(value, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.version_algorithm {
+            match choice {
+                PlanDefinitionVersionAlgorithm::String(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionVersionAlgorithm::Coding(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionSubject::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value));
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionSubject::Reference(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.subject[x]"));
+                }
+                PlanDefinitionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.as_needed {
+            match choice {
+                PlanDefinitionAsNeeded::Boolean(_value) => {
+                }
+                PlanDefinitionAsNeeded::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value));
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_INVARIANTS.as_slice(), evaluator, "PlanDefinition"));
+
+        if let Some(values) = &self.contained {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.contained", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.contained"));
+            }
+        }
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.identifier", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.identifier"));
+            }
+        }
+        if let Some(values) = &self.contact {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.contact", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.contact"));
+            }
+        }
+        if let Some(values) = &self.use_context {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.useContext", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.useContext"));
+            }
+        }
+        if let Some(values) = &self.jurisdiction {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.jurisdiction", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.jurisdiction"));
+            }
+        }
+        if let Some(values) = &self.topic {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.topic", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.topic"));
+            }
+        }
+        if let Some(values) = &self.author {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.author", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.author"));
+            }
+        }
+        if let Some(values) = &self.editor {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.editor", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.editor"));
+            }
+        }
+        if let Some(values) = &self.reviewer {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.reviewer", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.reviewer"));
+            }
+        }
+        if let Some(values) = &self.endorser {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.endorser", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.endorser"));
+            }
+        }
+        if let Some(values) = &self.related_artifact {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.relatedArtifact", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.relatedArtifact"));
+            }
+        }
+        if let Some(values) = &self.library {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.library", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.library"));
+            }
+        }
+        if let Some(values) = &self.goal {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.goal"));
+            }
+        }
+        if let Some(values) = &self.actor {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.actor"));
+            }
+        }
+        if let Some(values) = &self.action {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("PlanDefinition.action"));
+            }
+        }
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.text"));
+        }
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.identifier[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.type"));
+        }
+        if let Some(values) = &self.contact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.contact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.use_context {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.useContext[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.jurisdiction {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.jurisdiction[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.effective_period {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.effectivePeriod"));
+        }
+        if let Some(values) = &self.topic {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.topic[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.author {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.author[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.editor {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.editor[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.reviewer {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.reviewer[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.endorser {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.endorser[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_artifact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.relatedArtifact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.goal {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.goal[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.actor {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.actor[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.action[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_invariants(value, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.version_algorithm {
+            match choice {
+                PlanDefinitionVersionAlgorithm::String(_value) => {
+                }
+                PlanDefinitionVersionAlgorithm::Coding(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.versionAlgorithm[x]"));
+                }
+            }
+        }
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionSubject::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.subject[x]"));
+                }
+                PlanDefinitionSubject::Reference(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.subject[x]"));
+                }
+                PlanDefinitionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.as_needed {
+            match choice {
+                PlanDefinitionAsNeeded::Boolean(_value) => {
+                }
+                PlanDefinitionAsNeeded::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.asNeeded[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinition {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.meta {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.meta"));
+        }
+        if let Some(value) = &self.text {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.text"));
+        }
+        if let Some(values) = &self.identifier {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.identifier[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.use_context {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.useContext[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_artifact {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.relatedArtifact[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.goal {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.goal[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.action[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(values) = &self.contained {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = validator.validate_r6_resource_bindings_async(value, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("PlanDefinition.contained[{idx}]")));
+            }
+        }
+        if let Some(choice) = &self.version_algorithm {
+            match choice {
+                PlanDefinitionVersionAlgorithm::String(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionVersionAlgorithm::Coding(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionSubject::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value)).await;
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionSubject::Reference(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "PlanDefinition.subject[x]"));
+                }
+                PlanDefinitionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.as_needed {
+            match choice {
+                PlanDefinitionAsNeeded::Boolean(_value) => {
+                }
+                PlanDefinitionAsNeeded::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.asNeeded[x]", "http://hl7.org/fhir/ValueSet/medication-as-needed-reason", fhir_validation_types::BindingStrength::Example, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-as-needed-reason", value)).await;
+                    issues.extend(child_issues);
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_GOAL_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.goal".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_GOAL_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.category".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/goal-category".to_string(),
+        binding_name: Some("GoalCategory".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.description".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/clinical-findings".to_string(),
+        binding_name: Some("GoalDescription".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.priority".to_string(),
+        strength: fhir_validation_types::BindingStrength::Preferred,
+        value_set: "http://terminology.hl7.org/ValueSet/goal-priority".to_string(),
+        binding_name: Some("GoalPriority".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.start".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/goal-start-event".to_string(),
+        binding_name: Some("GoalStartEvent".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.addresses".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/condition-code".to_string(),
+        binding_name: Some("GoalAddresses".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionGoal {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_GOAL_BINDINGS.as_slice(), terminology));
+
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.target[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_GOAL_INVARIANTS.as_slice(), evaluator, "PlanDefinition.goal"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("goal.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("goal.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.addresses {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.addresses", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("goal.addresses"));
+            }
+        }
+        if let Some(values) = &self.documentation {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.documentation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("goal.documentation"));
+            }
+        }
+        if let Some(values) = &self.target {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.target", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("goal.target"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.category {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "goal.category"));
+        }
+        let child_issues = self.description.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "goal.description"));
+        if let Some(value) = &self.priority {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "goal.priority"));
+        }
+        if let Some(value) = &self.start {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "goal.start"));
+        }
+        if let Some(values) = &self.addresses {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.addresses[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.target[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionGoal {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_GOAL_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.target {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("goal.target[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_GOAL_TARGET_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.goal.target".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_GOAL_TARGET_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.goal.target.measure".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/observation-codes".to_string(),
+        binding_name: Some("GoalTargetMeasure".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionGoalTarget {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_GOAL_TARGET_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.due {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "target.due"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.detail {
+            match choice {
+                PlanDefinitionGoalTargetDetail::Quantity(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+                PlanDefinitionGoalTargetDetail::Range(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::CodeableConcept(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::String(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Boolean(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Integer(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Ratio(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_GOAL_TARGET_INVARIANTS.as_slice(), evaluator, "PlanDefinition.goal.target"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.target.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("target.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.goal.target.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("target.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("target.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("target.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.measure {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "target.measure"));
+        }
+        if let Some(value) = &self.due {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "target.due"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.detail {
+            match choice {
+                PlanDefinitionGoalTargetDetail::Quantity(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+                PlanDefinitionGoalTargetDetail::Range(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+                PlanDefinitionGoalTargetDetail::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+                PlanDefinitionGoalTargetDetail::String(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Boolean(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Integer(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Ratio(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionGoalTarget {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_GOAL_TARGET_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.due {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "target.due"));
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.detail {
+            match choice {
+                PlanDefinitionGoalTargetDetail::Quantity(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "target.detail[x]"));
+                }
+                PlanDefinitionGoalTargetDetail::Range(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::CodeableConcept(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::String(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Boolean(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Integer(_value) => {
+                }
+                PlanDefinitionGoalTargetDetail::Ratio(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTOR_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.actor".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActor {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(values) = &self.option {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("actor.option[{idx}]")));
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTOR_INVARIANTS.as_slice(), evaluator, "PlanDefinition.actor"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("actor.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("actor.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.option {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor.option", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("actor.option"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("actor.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("actor.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.option {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("actor.option[{idx}]")));
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActor {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(values) = &self.option {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("actor.option[{idx}]")));
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTOR_OPTION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.actor.option".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_ACTOR_OPTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.actor.option.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActivityParticipantType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.actor.option.role".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://terminology.hl7.org/ValueSet/action-participant-role".to_string(),
+        binding_name: Some("ActionParticipantRole".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActorOption {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_ACTOR_OPTION_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "option.typeReference"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTOR_OPTION_INVARIANTS.as_slice(), evaluator, "PlanDefinition.actor.option"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor.option.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("option.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.actor.option.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("option.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("option.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("option.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "option.typeReference"));
+        }
+        if let Some(value) = &self.role {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "option.role"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActorOption {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_ACTOR_OPTION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "option.typeReference"));
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.priority".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4".to_string(),
+        binding_name: Some("RequestPriority".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.code".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/action-code-example".to_string(),
+        binding_name: Some("ActionCode".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.reason".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/action-reason-code-example".to_string(),
+        binding_name: Some("ActionReasonCode".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.subject[x]".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://hl7.org/fhir/ValueSet/participant-resource-types".to_string(),
+        binding_name: Some("SubjectType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Choice,
+        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Extensible,
+        value_set: "http://terminology.hl7.org/ValueSet/action-type".to_string(),
+        binding_name: Some("ActionType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.applicabilityBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionApplicabilityBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.groupingBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionGroupingBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.selectionBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionSelectionBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.requiredBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionRequiredBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.precheckBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionPrecheckBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.cardinalityBehavior".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionCardinalityBehavior".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionAction {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_ACTION_BINDINGS.as_slice(), terminology));
+
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.trigger {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.trigger[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.condition {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.condition[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.relatedAction[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.participant {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings(validator, terminology);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.participant[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionActionSubject::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "PlanDefinition.action.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value));
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionActionSubject::Reference(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.subject[x]"));
+                }
+                PlanDefinitionActionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.timing {
+            match choice {
+                PlanDefinitionActionTiming::Age(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Duration(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Range(_value) => {
+                }
+                PlanDefinitionActionTiming::Timing(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::RelativeTime(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+            }
+        }
+        if let Some(choice) = &self.definition {
+            match choice {
+                PlanDefinitionActionDefinition::Canonical(_value) => {
+                }
+                PlanDefinitionActionDefinition::Uri(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.modifierExtension"));
+            }
+        }
+        if let Some(values) = &self.reason {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.reason", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.reason"));
+            }
+        }
+        if let Some(values) = &self.documentation {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.documentation", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.documentation"));
+            }
+        }
+        if let Some(values) = &self.goal_id {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.goalId", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.goalId"));
+            }
+        }
+        if let Some(values) = &self.trigger {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.trigger", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.trigger"));
+            }
+        }
+        if let Some(values) = &self.condition {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.condition", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.condition"));
+            }
+        }
+        if let Some(values) = &self.input {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.input", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.input"));
+            }
+        }
+        if let Some(values) = &self.output {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.output", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.output"));
+            }
+        }
+        if let Some(values) = &self.related_action {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.relatedAction", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.relatedAction"));
+            }
+        }
+        if let Some(values) = &self.participant {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.participant", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.participant"));
+            }
+        }
+        if let Some(values) = &self.dynamic_value {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.dynamicValue", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.dynamicValue"));
+            }
+        }
+        if let Some(values) = &self.action {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.action", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("action.action"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.code {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "action.code"));
+        }
+        if let Some(values) = &self.reason {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.reason[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.trigger {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.trigger[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.condition {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.condition[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.input {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.input[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.output {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.output[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.relatedAction[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.location {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "action.location"));
+        }
+        if let Some(values) = &self.participant {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.participant[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.r#type {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "action.type"));
+        }
+        if let Some(values) = &self.dynamic_value {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.dynamicValue[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionActionSubject::CodeableConcept(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.subject[x]"));
+                }
+                PlanDefinitionActionSubject::Reference(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.subject[x]"));
+                }
+                PlanDefinitionActionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.timing {
+            match choice {
+                PlanDefinitionActionTiming::Age(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Duration(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Range(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Timing(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::RelativeTime(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+            }
+        }
+        if let Some(choice) = &self.definition {
+            match choice {
+                PlanDefinitionActionDefinition::Canonical(_value) => {
+                }
+                PlanDefinitionActionDefinition::Uri(_value) => {
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionAction {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_ACTION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(values) = &self.documentation {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.documentation[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.trigger {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.trigger[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.condition {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.condition[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.related_action {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.relatedAction[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.participant {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_bindings_async(validator, terminology).await;
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("action.participant[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.subject {
+            match choice {
+                PlanDefinitionActionSubject::CodeableConcept(value) => {
+                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "PlanDefinition.action.subject[x]", "http://hl7.org/fhir/ValueSet/participant-resource-types", fhir_validation_types::BindingStrength::Extensible, terminology);
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/participant-resource-types", value)).await;
+                    issues.extend(child_issues);
+                }
+                PlanDefinitionActionSubject::Reference(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.subject[x]"));
+                }
+                PlanDefinitionActionSubject::Canonical(_value) => {
+                }
+            }
+        }
+        if let Some(choice) = &self.timing {
+            match choice {
+                PlanDefinitionActionTiming::Age(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Duration(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::Range(_value) => {
+                }
+                PlanDefinitionActionTiming::Timing(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+                PlanDefinitionActionTiming::RelativeTime(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "action.timing[x]"));
+                }
+            }
+        }
+        if let Some(choice) = &self.definition {
+            match choice {
+                PlanDefinitionActionDefinition::Canonical(_value) => {
+                }
+                PlanDefinitionActionDefinition::Uri(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_CONDITION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.condition".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_ACTION_CONDITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.condition.kind".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionConditionKind".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActionCondition {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_ACTION_CONDITION_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.expression {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "condition.expression"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_CONDITION_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action.condition"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.condition.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("condition.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.condition.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("condition.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("condition.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("condition.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.expression {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "condition.expression"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActionCondition {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_ACTION_CONDITION_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.expression {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "condition.expression"));
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_INPUT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.input".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "pld-0".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.input".to_string(),
+        expression: "requirement.exists() xor relatedData.exists()".to_string(),
+        human: "Input data elements must have a requirement or a relatedData, but not both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActionInput {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "input.requirement"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_INPUT_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action.input"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.input.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("input.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.input.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("input.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("input.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("input.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "input.requirement"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActionInput {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "input.requirement"));
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_OUTPUT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.output".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
+        key: "pld-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.output".to_string(),
+        expression: "requirement.exists() xor relatedData.exists()".to_string(),
+        human: "Output data element must have a requirement or a relatedData, but not both".to_string(),
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActionOutput {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "output.requirement"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_OUTPUT_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action.output"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.output.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("output.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.output.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("output.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("output.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("output.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "output.requirement"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActionOutput {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        let _ = (validator, terminology);
+
+        if let Some(value) = &self.requirement {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "output.requirement"));
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_RELATED_ACTION_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.relatedAction".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_ACTION_RELATED_ACTION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.relatedAction.relationship".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionRelationshipType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.relatedAction.endRelationship".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActionRelationshipType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActionRelatedAction {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_ACTION_RELATED_ACTION_BINDINGS.as_slice(), terminology));
+
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.offset {
+            match choice {
+                PlanDefinitionActionRelatedActionOffset::Duration(value) => {
+                    let child_issues = value.validate_bindings(validator, terminology);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "relatedAction.offset[x]"));
+                }
+                PlanDefinitionActionRelatedActionOffset::Range(_value) => {
+                }
+            }
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_RELATED_ACTION_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action.relatedAction"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.relatedAction.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("relatedAction.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.relatedAction.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("relatedAction.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("relatedAction.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("relatedAction.modifierExtension[{idx}]")));
+            }
+        }
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.offset {
+            match choice {
+                PlanDefinitionActionRelatedActionOffset::Duration(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "relatedAction.offset[x]"));
+                }
+                PlanDefinitionActionRelatedActionOffset::Range(value) => {
+                    let child_issues = value.validate_invariants(validator, evaluator);
+                    issues.extend(validator.rebase_instance_paths(child_issues, "relatedAction.offset[x]"));
+                }
+            }
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActionRelatedAction {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_ACTION_RELATED_ACTION_BINDINGS.as_slice(), terminology).await);
+
+
+        // Deferred recursive validation candidates.
+        // These need specialized handling (for example choice enums or contained resources).
+        if let Some(choice) = &self.offset {
+            match choice {
+                PlanDefinitionActionRelatedActionOffset::Duration(value) => {
+                    let child_issues = value.validate_bindings_async(validator, terminology).await;
+                    issues.extend(validator.rebase_instance_paths(child_issues, "relatedAction.offset[x]"));
+                }
+                PlanDefinitionActionRelatedActionOffset::Range(_value) => {
+                }
+            }
+        }
+        issues
+    }
+    }
+
+static PLAN_DEFINITION_ACTION_PARTICIPANT_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::InvariantDef {
+        key: "ele-1".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "PlanDefinition.action.participant".to_string(),
+        expression: "hasValue() or (children().count() > id.count())".to_string(),
+        human: "All FHIR elements must have a @value or children or both".to_string(),
+    },
+]);
+
+static PLAN_DEFINITION_ACTION_PARTICIPANT_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.participant.type".to_string(),
+        strength: fhir_validation_types::BindingStrength::Required,
+        value_set: "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot4".to_string(),
+        binding_name: Some("ActivityParticipantType".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::Code,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.participant.role".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://terminology.hl7.org/ValueSet/action-participant-role".to_string(),
+        binding_name: Some("ActionParticipantRole".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+    fhir_validation_types::BindingDef {
+        path: "PlanDefinition.action.participant.function".to_string(),
+        strength: fhir_validation_types::BindingStrength::Example,
+        value_set: "http://hl7.org/fhir/ValueSet/action-participant-function-example".to_string(),
+        binding_name: Some("ActionParticipantFunction".to_string()),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
+        choice_type_codes: None,
+    },
+]);
+
+#[cfg(feature = "R6")]
+impl fhir_validation::r6::R6Validatable for PlanDefinitionActionParticipant {
+    fn validate_bindings(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyServiceSync>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings(self, PLAN_DEFINITION_ACTION_PARTICIPANT_BINDINGS.as_slice(), terminology));
+
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_bindings(validator, terminology);
+            issues.extend(validator.rebase_instance_paths(child_issues, "participant.typeReference"));
+        }
+        issues
+    }
+
+    fn validate_invariants(
+        &self,
+        validator: &fhir_validation::Validator,
+        evaluator: &dyn fhir_validation::FhirPathEvaluator,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_invariants(self, PLAN_DEFINITION_ACTION_PARTICIPANT_INVARIANTS.as_slice(), evaluator, "PlanDefinition.action.participant"));
+
+        if let Some(values) = &self.extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.participant.extension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("participant.extension"));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            if values.is_empty() {
+                issues.push(fhir_validation::ValidationIssue::error("structure", "PlanDefinition.action.participant.modifierExtension", "Array cannot be empty - the property should not be present if it has no values").with_instance_path("participant.modifierExtension"));
+            }
+        }
+
+        if let Some(values) = &self.extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("participant.extension[{idx}]")));
+            }
+        }
+        if let Some(values) = &self.modifier_extension {
+            for (idx, value) in values.iter().enumerate() {
+                let child_issues = value.validate_invariants(validator, evaluator);
+                issues.extend(validator.rebase_instance_paths(child_issues, &format!("participant.modifierExtension[{idx}]")));
+            }
+        }
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "participant.typeReference"));
+        }
+        if let Some(value) = &self.role {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "participant.role"));
+        }
+        if let Some(value) = &self.function {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "participant.function"));
+        }
+        issues
+    }
+}
+
+#[cfg(feature = "R6")]
+#[async_trait::async_trait]
+impl fhir_validation::r6::R6ValidatableAsync for PlanDefinitionActionParticipant {
+    async fn validate_bindings_async(
+        &self,
+        validator: &fhir_validation::Validator,
+        terminology: Option<&dyn fhir_validation::TerminologyService>,
+    ) -> Vec<fhir_validation::ValidationIssue> {
+        let mut issues = Vec::new();
+        issues.extend(validator.apply_r6_bindings_async(self, PLAN_DEFINITION_ACTION_PARTICIPANT_BINDINGS.as_slice(), terminology).await);
+
+        if let Some(value) = &self.type_reference {
+            let child_issues = value.validate_bindings_async(validator, terminology).await;
+            issues.extend(validator.rebase_instance_paths(child_issues, "participant.typeReference"));
         }
         issues
     }

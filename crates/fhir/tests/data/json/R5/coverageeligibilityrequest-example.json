@@ -15,7 +15,9 @@
   "priority": {
     "coding": [
       {
-        "code": "normal"
+        "system": "http://hl7.org/fhir/ValueSet/process-priority",
+        "code": "normal",
+        "display": "Normal"
       }
     ]
   },
@@ -43,7 +45,7 @@
   "meta": {
     "tag": [
       {
-        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "system": "http://hl7.org/fhir/ValueSet/common-tags",
         "code": "HTEST",
         "display": "test health data"
       }

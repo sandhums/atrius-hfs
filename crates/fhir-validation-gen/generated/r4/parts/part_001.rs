@@ -1849,12 +1849,12 @@ impl fhir_validation::r4::R4Validatable for UsageContext {
             match choice {
                 UsageContextValue::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "UsageContext.value[x]", "http://hl7.org/fhir/ValueSet/use-context", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/use-context", value));
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/use-context", value));
                     issues.extend(child_issues);
                 }
                 UsageContextValue::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "UsageContext.value[x]", "http://hl7.org/fhir/ValueSet/use-context", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/use-context", value));
+                    let child_issues = fhir_validation::r4::validate_quantity_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/use-context", value));
                     issues.extend(child_issues);
                 }
                 UsageContextValue::Range(_value) => {
@@ -1935,12 +1935,12 @@ impl fhir_validation::r4::R4ValidatableAsync for UsageContext {
             match choice {
                 UsageContextValue::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "UsageContext.value[x]", "http://hl7.org/fhir/ValueSet/use-context", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/use-context", value)).await;
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/use-context", value)).await;
                     issues.extend(child_issues);
                 }
                 UsageContextValue::Quantity(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "UsageContext.value[x]", "http://hl7.org/fhir/ValueSet/use-context", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_quantity("http://hl7.org/fhir/ValueSet/use-context", value)).await;
+                    let child_issues = fhir_validation::r4::validate_quantity_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_quantity("http://hl7.org/fhir/ValueSet/use-context", value)).await;
                     issues.extend(child_issues);
                 }
                 UsageContextValue::Range(_value) => {
@@ -2624,7 +2624,7 @@ impl fhir_validation::r4::R4Validatable for ActivityDefinition {
             match choice {
                 ActivityDefinitionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ActivityDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 ActivityDefinitionSubject::Reference(value) => {
@@ -2663,7 +2663,7 @@ impl fhir_validation::r4::R4Validatable for ActivityDefinition {
                 }
                 ActivityDefinitionProduct::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ActivityDefinition.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value));
                     issues.extend(child_issues);
                 }
             }
@@ -3074,7 +3074,7 @@ impl fhir_validation::r4::R4ValidatableAsync for ActivityDefinition {
             match choice {
                 ActivityDefinitionSubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ActivityDefinition.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 ActivityDefinitionSubject::Reference(value) => {
@@ -3113,7 +3113,7 @@ impl fhir_validation::r4::R4ValidatableAsync for ActivityDefinition {
                 }
                 ActivityDefinitionProduct::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ActivityDefinition.product[x]", "http://hl7.org/fhir/ValueSet/medication-codes", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
+                    let child_issues = fhir_validation::r4::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4::validate_codeable_concept("http://hl7.org/fhir/ValueSet/medication-codes", value)).await;
                     issues.extend(child_issues);
                 }
             }

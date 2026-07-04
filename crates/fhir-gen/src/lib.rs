@@ -12,7 +12,9 @@
 //! 2. Parses StructureDefinitions using minimal bootstrap types
 //! 3. Analyzes type hierarchies and detects circular dependencies
 //! 4. Generates strongly-typed Rust structs and enums
-//! 5. Outputs version-specific modules (e.g., `r4.rs`, `r5.rs`)
+//! 5. Outputs version-specific module directories (e.g., `r4/`, `r5/`) with
+//!    one file per FHIR type under `primitives/`, `complex_types/`, and
+//!    `resources/`
 //!
 //! ## Example Usage
 //!
@@ -31,13 +33,16 @@
 //! # Ok::<(), std::io::Error>(())
 //! ```
 
+pub mod directory_output_helpers;
 pub mod initial_fhir_model;
 
+use crate::directory_output_helpers::{module_file_stem, write_mod_index};
 use crate::initial_fhir_model::{Bundle, CompartmentDefinition, Resource};
 use helios_fhir::FhirVersion;
 use initial_fhir_model::ElementDefinition;
 use initial_fhir_model::StructureDefinition;
 use serde_json::Result;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::{self, Write};
@@ -252,9 +257,14 @@ fn generate_version_header(version: &FhirVersion) -> String {
 #![allow(rustdoc::broken_intra_doc_links)]
 #![allow(rustdoc::invalid_html_tags)]
 
+// Type definitions live in the per-type submodules; only some of these
+// imports are exercised by the global constructs kept in this module root.
+#[allow(unused_imports)]
 use helios_fhir_macro::{{FhirPath, FhirSerde}};
+#[allow(unused_imports)]
 use serde::{{Deserialize, Serialize}};
 
+#[allow(unused_imports)]
 use crate::{{DecimalElement, Element}};
 
 ",
@@ -295,11 +305,16 @@ use crate::{{DecimalElement, Element}};
 ///
 /// # Generated Output
 ///
-/// Creates a single `.rs` file named after the version (e.g., `r4.rs`) containing:
-/// - Type definitions for all FHIR resources and data types
-/// - Choice type enums for polymorphic elements
-/// - A unified Resource enum for all resource types
-/// - Proper serialization/deserialization attributes
+/// Creates a module directory named after the version (e.g., `r4/`) containing:
+/// - `mod.rs` — version header, submodule declarations and re-exports, the
+///   unified Resource enum and other global constructs, and the field-type
+///   lookup table
+/// - `primitives/`, `complex_types/`, `resources/` — one file per FHIR type,
+///   each with a `mod.rs` index re-exporting every module
+///
+/// A leftover single-file `<version>.rs` module is removed so the file and
+/// directory forms never coexist. Terminology tables are generated into the
+/// separate `fhir-terminology` crate by `fhir-valueset-gen`.
 ///
 /// # Example
 ///
@@ -318,12 +333,59 @@ fn process_single_version(version: &FhirVersion, output_path: impl AsRef<Path>) 
     // Create output directory if it doesn't exist
     std::fs::create_dir_all(output_path.as_ref())?;
 
-    let version_path = output_path
-        .as_ref()
-        .join(format!("{}.rs", version.as_str().to_lowercase()));
+    // Split output layout:
+    //   <output>/<version>/
+    //     mod.rs            header, submodule declarations, global constructs
+    //     primitives/       one file per primitive type
+    //     complex_types/    one file per complex datatype
+    //     resources/        one file per resource type
+    // Generated terminology tables live in the separate `fhir-terminology`
+    // crate (produced by `fhir-valueset-gen`).
+    let version_mod_name = version.as_str().to_lowercase();
+    let version_out_dir = output_path.as_ref().join(&version_mod_name);
+    let primitives_dir = version_out_dir.join("primitives");
+    let complex_dir = version_out_dir.join("complex_types");
+    let resources_out_dir = version_out_dir.join("resources");
 
-    // Create the version-specific output file with comprehensive header
+    // Clean regeneration: remove previously generated category directories so
+    // types dropped from the spec don't linger; never touch `terminology/`.
+    for dir in [&primitives_dir, &complex_dir, &resources_out_dir] {
+        if dir.exists() {
+            std::fs::remove_dir_all(dir)?;
+        }
+        std::fs::create_dir_all(dir)?;
+    }
+
+    // A leftover single-file module (`<version>.rs`) alongside the module
+    // directory is a compile error (E0761); remove it when present.
+    let legacy_single_file = output_path.as_ref().join(format!("{version_mod_name}.rs"));
+    if legacy_single_file.exists() {
+        eprintln!(
+            "Removing legacy single-file module {}",
+            legacy_single_file.display()
+        );
+        std::fs::remove_file(&legacy_single_file)?;
+    }
+
+    // Root module file: carries the version header, submodule declarations,
+    // and (appended at the end) the global constructs that the old
+    // single-file layout kept after the type definitions.
+    let version_path = version_out_dir.join("mod.rs");
     std::fs::write(&version_path, generate_version_header(version))?;
+
+    {
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&version_path)?;
+        writeln!(file, "pub mod complex_types;")?;
+        writeln!(file, "pub mod primitives;")?;
+        writeln!(file, "pub mod resources;")?;
+        writeln!(file)?;
+        writeln!(file, "pub use complex_types::*;")?;
+        writeln!(file, "pub use primitives::*;")?;
+        writeln!(file, "pub use resources::*;")?;
+        writeln!(file)?;
+    }
 
     // Collect all type hierarchy information across all bundles
     let mut global_type_hierarchy = std::collections::HashMap::new();
@@ -382,16 +444,6 @@ fn process_single_version(version: &FhirVersion, output_path: impl AsRef<Path>) 
     // Detect cycles across all elements
     let cycles = detect_struct_cycles(&all_elements);
 
-    // Generate code for each StructureDefinition in sorted order
-    for def in all_struct_defs.iter().copied() {
-        let content = structure_definition_to_rust(def, &cycles);
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&version_path)?;
-        write!(file, "{}", content)?;
-    }
-
     // Sort for deterministic output
     all_resources.sort();
     all_resources.dedup();
@@ -399,6 +451,70 @@ fn process_single_version(version: &FhirVersion, output_path: impl AsRef<Path>) 
     all_complex_types.dedup();
     all_primitive_types.sort();
     all_primitive_types.dedup();
+
+    let resources_set: HashSet<&str> = all_resources.iter().map(|s| s.as_str()).collect();
+    let complex_set: HashSet<&str> = all_complex_types.iter().map(|s| s.as_str()).collect();
+
+    // Track generated modules per directory for the mod.rs indexes.
+    let mut primitive_modules: Vec<String> = Vec::new();
+    let mut complex_modules: Vec<String> = Vec::new();
+    let mut resource_modules: Vec<String> = Vec::new();
+
+    // Generate each StructureDefinition into its own file, classified as
+    // resource / complex type / primitive (the fallback covers primitives and
+    // special cases like `xhtml`).
+    for def in all_struct_defs.iter().copied() {
+        let type_name = def.name.as_str();
+        let (target_dir, module_list) = if resources_set.contains(type_name) {
+            (&resources_out_dir, &mut resource_modules)
+        } else if complex_set.contains(type_name) {
+            (&complex_dir, &mut complex_modules)
+        } else {
+            (&primitives_dir, &mut primitive_modules)
+        };
+
+        let mod_stem = module_file_stem(type_name);
+        let out_file_path = target_dir.join(format!("{mod_stem}.rs"));
+        let content = structure_definition_to_rust(def, &cycles);
+
+        // If two type names map to the same file stem, append rather than
+        // silently overwriting the earlier type.
+        let already_generated = module_list.iter().any(|m| m == &mod_stem);
+        let mut file = if already_generated {
+            std::fs::OpenOptions::new()
+                .append(true)
+                .open(&out_file_path)?
+        } else {
+            let mut file = std::fs::File::create(&out_file_path)?;
+            // Same prelude the single-file layout provided at the top of the
+            // version module; sibling types resolve through the glob
+            // re-exports in `<version>/mod.rs`. Not every file uses every
+            // import, hence the allow.
+            writeln!(
+                file,
+                "// @generated by helios-fhir-gen ({} {type_name}) — do not edit",
+                version.as_str()
+            )?;
+            writeln!(file, "#![allow(unused_imports)]")?;
+            writeln!(file, "use helios_fhir_macro::{{FhirPath, FhirSerde}};")?;
+            writeln!(file, "use serde::{{Deserialize, Serialize}};")?;
+            writeln!(file)?;
+            writeln!(file, "use crate::{version_mod_name}::*;")?;
+            writeln!(file, "use crate::{{DecimalElement, Element}};")?;
+            writeln!(file)?;
+            file
+        };
+        write!(file, "{}", content)?;
+
+        if !already_generated {
+            module_list.push(mod_stem);
+        }
+    }
+
+    // Directory indexes (sorted, deduplicated).
+    write_mod_index(&primitives_dir.join("mod.rs"), &primitive_modules)?;
+    write_mod_index(&complex_dir.join("mod.rs"), &complex_modules)?;
+    write_mod_index(&resources_out_dir.join("mod.rs"), &resource_modules)?;
 
     // Load compartment definitions for this version
     let compartment_definitions = load_compartment_definitions(&version_dir);
@@ -496,8 +612,8 @@ pub fn process_fhir_version(
 
 /// Regenerates only the compartment-expression tables under
 /// `<output_path>/compartment_expressions/{ver}.rs`, skipping the
-/// (expensive, large-diff) regeneration of the per-version `r4.rs` /
-/// `r4b.rs` / `r5.rs` / `r6.rs` source files.
+/// (expensive, large-diff) regeneration of the per-version `r4/` /
+/// `r4b/` / `r5/` / `r6/` module directories.
 ///
 /// Useful when only the upstream `CompartmentDefinition` or
 /// `search-parameters.json` data has changed. Same FHIR-version
@@ -3345,8 +3461,12 @@ mod tests {
         // Test processing R4 version
         assert!(process_fhir_version(Some(FhirVersion::R4), &temp_dir).is_ok());
 
-        // Verify files were created
-        assert!(temp_dir.join("r4.rs").exists());
+        // Verify the split module layout was created
+        assert!(temp_dir.join("r4/mod.rs").exists());
+        assert!(temp_dir.join("r4/primitives/mod.rs").exists());
+        assert!(temp_dir.join("r4/complex_types/mod.rs").exists());
+        assert!(temp_dir.join("r4/resources/mod.rs").exists());
+        assert!(temp_dir.join("r4/resources/patient.rs").exists());
 
         // Clean up
         std::fs::remove_dir_all(&temp_dir).expect("Failed to clean up temp directory");

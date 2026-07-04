@@ -6,9 +6,7 @@
 
 use crate::profile::cardinality::relative_profile_path;
 use crate::profile::helpers::get_values_at_relative_path;
-use crate::profile::types::{
-    ExtractedElementRule, ExtractedProfile, ExtractedValueConstraint,
-};
+use crate::profile::types::{ExtractedElementRule, ExtractedProfile, ExtractedValueConstraint};
 use serde_json::Value;
 
 /// FHIR element path for user-facing messages — includes slice discriminator when present.
@@ -88,12 +86,7 @@ pub fn matches_slice_instance_at_index(
             .is_some_and(|actual_url| actual_url == fixed_url);
     }
 
-    crate::profile::slicing::instance_matches_named_slice(
-        profile,
-        slice_root,
-        instance,
-        item_index,
-    )
+    crate::profile::slicing::instance_matches_named_slice(profile, slice_root, instance, item_index)
 }
 
 /// Count repeated items at the slice base path that belong to `rule`'s slice.

@@ -34,9 +34,12 @@ use std::path::Path;
 /// - one file per generated CodeSystem
 /// - one file per generated ValueSet
 /// - `code_systems/mod.rs` and `value_sets/mod.rs`
-/// - `terminology/mod.rs` with the shared error type
-/// - `terminology/index.rs` with canonical lookup and validation dispatch
-pub fn emit_all(index: &indexer::TerminologyIndex, out_dir: &Path) -> Result<()> {
+/// - `<ver>/mod.rs` declaring the generated submodules
+/// - `<ver>/index.rs` with canonical lookup and validation dispatch
+///
+/// `ver_mod` is the version module name (`r4`, `r4b`, `r5`, `r6`) used to emit
+/// absolute imports of FHIR datatypes from `helios_fhir::<ver_mod>`.
+pub fn emit_all(index: &indexer::TerminologyIndex, ver_mod: &str, out_dir: &Path) -> Result<()> {
     let cs_dir = out_dir.join("code_systems");
     let vs_dir = out_dir.join("value_sets");
 
@@ -47,14 +50,14 @@ pub fn emit_all(index: &indexer::TerminologyIndex, out_dir: &Path) -> Result<()>
 
     // 1) CodeSystem files
     for (module, cs_idx) in &index.code_systems_by_module {
-        let src = render_codesystem_file(cs_idx, index);
+        let src = render_codesystem_file(cs_idx, index, ver_mod);
         fs::write(cs_dir.join(format!("{module}.rs")), src)
             .with_context(|| format!("failed writing code_systems/{module}.rs"))?;
     }
 
     // 2) ValueSet files
     for (module, vs_idx) in &index.value_sets_by_module {
-        let src = render_valueset_file(vs_idx, index);
+        let src = render_valueset_file(vs_idx, index, ver_mod);
         fs::write(vs_dir.join(format!("{module}.rs")), src)
             .with_context(|| format!("failed writing value_sets/{module}.rs"))?;
     }
@@ -79,11 +82,11 @@ pub fn emit_all(index: &indexer::TerminologyIndex, out_dir: &Path) -> Result<()>
         ),
     )?;
 
-    // 4) terminology/mod.rs
+    // 4) <ver>/mod.rs
     fs::write(out_dir.join("mod.rs"), render_terminology_mod_rs())?;
 
-    // 5) terminology/index.rs (URL lookup table)
-    fs::write(out_dir.join("index.rs"), render_index_rs(index))?;
+    // 5) <ver>/index.rs (URL lookup table)
+    fs::write(out_dir.join("index.rs"), render_index_rs(index, ver_mod))?;
 
     Ok(())
 }
@@ -174,6 +177,7 @@ fn render_mod_rs<'a>(items: impl Iterator<Item = (&'a str, &'a str)>) -> String 
 fn render_codesystem_file(
     cs_idx: &indexer::CodeSystemIndexed,
     index: &indexer::TerminologyIndex,
+    ver_mod: &str,
 ) -> String {
     let cs = &cs_idx.cs;
     let info = &cs_idx.info;
@@ -249,27 +253,36 @@ fn render_codesystem_file(
         return s;
     }
 
-    s.push_str("use super::super::super::{CodeableConcept, Coding};\n\n");
+    s.push_str(&format!(
+        "use helios_fhir::{ver_mod}::{{CodeableConcept, Coding}};\n\n"
+    ));
 
     // Finite: generate enum + lookup helpers.
-    // Sanity check: finite CodeSystems must not contain duplicate codes.
-    // Duplicate codes would make `try_from_code` ambiguous.
-    {
+    // Some spec bundles contain duplicate concept codes (e.g. R4B
+    // `therapy-relationship-type` lists `indicated-only-before` twice with
+    // different displays). Duplicate codes would make `try_from_code`
+    // ambiguous, so keep the first occurrence and warn about the rest.
+    let concepts: Vec<&indexer::FlatConcept> = {
         let mut seen_codes: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        let mut kept = Vec::with_capacity(concepts.len());
         for c in concepts {
-            if !seen_codes.insert(c.code.as_str()) {
-                panic!(
-                    "Duplicate concept code '{}' in CodeSystem {} ({})",
+            if seen_codes.insert(c.code.as_str()) {
+                kept.push(c);
+            } else {
+                eprintln!(
+                    "⚠ Duplicate concept code '{}' in CodeSystem {} ({}); keeping first occurrence",
                     c.code, info.type_name, info.url
                 );
             }
         }
-    }
+        kept
+    };
+    let concepts = concepts.as_slice();
 
     // Build stable, collision-free variant names.
     let mut used: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     let mut variants: Vec<(String, &indexer::FlatConcept)> = Vec::new();
-    for c in concepts {
+    for &c in concepts {
         let mut v = code_to_variant(&c.code);
         let n = used.entry(v.clone()).or_insert(0);
         if *n > 0 {
@@ -479,6 +492,7 @@ fn render_codesystem_file(
 fn render_valueset_file(
     vs_idx: &indexer::ValueSetIndexed,
     index: &indexer::TerminologyIndex,
+    ver_mod: &str,
 ) -> String {
     let vs = &vs_idx.vs;
 
@@ -538,7 +552,9 @@ fn render_valueset_file(
             s.push_str(&format!("//! {line}\n"));
         }
     }
-    s.push_str("use super::super::super::{CodeableConcept, Coding};\n");
+    s.push_str(&format!(
+        "use helios_fhir::{ver_mod}::{{CodeableConcept, Coding}};\n"
+    ));
     s.push_str("use crate::TerminologyValidationError;\n\n");
 
     s.push_str(&format!("pub struct {};\n\n", vs_idx.type_name));
@@ -983,13 +999,15 @@ fn render_valueset_file(
 /// Public validation helpers first attempt an exact canonical match. If that
 /// fails with `RemoteValidationRequired` and the canonical is versioned
 /// (`url|version`), they retry using the base unversioned canonical URL.
-fn render_index_rs(index: &indexer::TerminologyIndex) -> String {
+fn render_index_rs(index: &indexer::TerminologyIndex, ver_mod: &str) -> String {
     let mut s = String::new();
     s.push_str("// @generated by fhir-valueset-gen\n");
     s.push_str("// DO NOT EDIT MANUALLY\n\n");
 
     s.push_str("use crate::TerminologyValidationError;\n");
-    s.push_str("use super::super::{CodeableConcept, Coding, Quantity};\n\n");
+    s.push_str(&format!(
+        "use helios_fhir::{ver_mod}::{{CodeableConcept, Coding, Quantity}};\n\n"
+    ));
 
     s.push_str("/// Lookup helpers for generated terminology artifacts.\n");
     s.push_str("///\n");

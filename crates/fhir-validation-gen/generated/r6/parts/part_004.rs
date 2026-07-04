@@ -156,7 +156,7 @@ impl fhir_validation::r6::R6Validatable for ClaimItem {
             match choice {
                 ClaimItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.item.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
                     issues.extend(child_issues);
                 }
                 ClaimItemLocation::Address(value) => {
@@ -470,7 +470,7 @@ impl fhir_validation::r6::R6ValidatableAsync for ClaimItem {
             match choice {
                 ClaimItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.item.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
                     issues.extend(child_issues);
                 }
                 ClaimItemLocation::Address(value) => {
@@ -1255,7 +1255,7 @@ static CLAIM_RESPONSE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::B
     },
     fhir_validation_types::BindingDef {
         path: "ClaimResponse.payeeType".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
+        strength: fhir_validation_types::BindingStrength::Preferred,
         value_set: "http://hl7.org/fhir/ValueSet/payeetype".to_string(),
         binding_name: Some("PayeeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
@@ -2142,6 +2142,10 @@ impl fhir_validation::r6::R6Validatable for ClaimResponseSupportingInfo {
         }
         let child_issues = self.category.validate_invariants(validator, evaluator);
         issues.extend(validator.rebase_instance_paths(child_issues, "supportingInfo.category"));
+        if let Some(value) = &self.sub_category {
+            let child_issues = value.validate_invariants(validator, evaluator);
+            issues.extend(validator.rebase_instance_paths(child_issues, "supportingInfo.subCategory"));
+        }
         if let Some(value) = &self.code {
             let child_issues = value.validate_invariants(validator, evaluator);
             issues.extend(validator.rebase_instance_paths(child_issues, "supportingInfo.code"));
@@ -3299,7 +3303,7 @@ impl fhir_validation::r6::R6Validatable for ClaimResponseAddItem {
             match choice {
                 ClaimResponseAddItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ClaimResponse.addItem.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
                     issues.extend(child_issues);
                 }
                 ClaimResponseAddItemLocation::Address(value) => {
@@ -3598,7 +3602,7 @@ impl fhir_validation::r6::R6ValidatableAsync for ClaimResponseAddItem {
             match choice {
                 ClaimResponseAddItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ClaimResponse.addItem.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
                     issues.extend(child_issues);
                 }
                 ClaimResponseAddItemLocation::Address(value) => {
@@ -4775,7 +4779,7 @@ static CLINICAL_USE_DEFINITION_BINDINGS: std::sync::LazyLock<Vec<fhir_validation
     },
     fhir_validation_types::BindingDef {
         path: "ClinicalUseDefinition.category".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
+        strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://hl7.org/fhir/ValueSet/clinical-use-definition-category".to_string(),
         binding_name: Some("ClinicalUseDefinitionCategory".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
@@ -5086,7 +5090,7 @@ static CLINICAL_USE_DEFINITION_UNDESIRABLE_EFFECT_BINDINGS: std::sync::LazyLock<
         path: "ClinicalUseDefinition.undesirableEffect.frequencyOfOccurrence".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://hl7.org/fhir/ValueSet/undesirable-effect-frequency".to_string(),
-        binding_name: Some("UndesirablEffectFrequency".to_string()),
+        binding_name: Some("UndesirableEffectFrequency".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
         choice_type_codes: None,
     },
@@ -5867,7 +5871,7 @@ impl fhir_validation::r6::R6Validatable for ClinicalUseDefinitionInteractionInte
                 }
                 ClinicalUseDefinitionInteractionInteractantItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "ClinicalUseDefinition.interaction.interactant.item[x]", "http://hl7.org/fhir/ValueSet/interactant", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/interactant", value));
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/interactant", value));
                     issues.extend(child_issues);
                 }
             }
@@ -5951,7 +5955,7 @@ impl fhir_validation::r6::R6ValidatableAsync for ClinicalUseDefinitionInteractio
                 }
                 ClinicalUseDefinitionInteractionInteractantItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "ClinicalUseDefinition.interaction.interactant.item[x]", "http://hl7.org/fhir/ValueSet/interactant", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/interactant", value)).await;
+                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_codeable_concept("http://hl7.org/fhir/ValueSet/interactant", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -6246,12 +6250,12 @@ impl fhir_validation::r6::R6Validatable for CodeSystem {
             match choice {
                 CodeSystemVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CodeSystem.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 CodeSystemVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CodeSystem.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -6535,12 +6539,12 @@ impl fhir_validation::r6::R6ValidatableAsync for CodeSystem {
             match choice {
                 CodeSystemVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CodeSystem.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 CodeSystemVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CodeSystem.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }

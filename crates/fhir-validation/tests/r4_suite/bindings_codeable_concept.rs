@@ -1,4 +1,5 @@
 mod tests {
+    use fhir_terminology::TerminologyValidationError;
     use fhir_validation::LocalTerminologyService;
     use fhir_validation::binding::common::BindingCheckContextSync;
     use fhir_validation::r4::binding::validate_codeable_concept_binding;
@@ -6,7 +7,6 @@ mod tests {
     use fhir_validation_types::{BindingStrength, Severity};
     use helios_fhir::Element;
     use helios_fhir::FhirVersion;
-    use helios_fhir::TerminologyValidationError;
     use helios_fhir::r4::{Code, CodeableConcept, Coding, Uri};
 
     fn validator() -> Validator {

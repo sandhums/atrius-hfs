@@ -1,5 +1,6 @@
 //! Direct tests of R5 binding helper functions (`validate_*_binding`), mirroring the R4 unit tests.
 
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation::LocalTerminologyService;
 use fhir_validation::binding::common::BindingCheckContextSync;
 use fhir_validation::r5::binding::{
@@ -10,7 +11,6 @@ use fhir_validation::{ValidationConfig, Validator};
 use fhir_validation_types::{BindingStrength, Severity};
 use helios_fhir::Element;
 use helios_fhir::FhirVersion;
-use helios_fhir::TerminologyValidationError;
 use helios_fhir::r5::{Code, CodeableConcept, CodeableReference, Coding, Uri};
 
 fn validator() -> Validator {

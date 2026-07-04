@@ -3994,7 +3994,7 @@ impl fhir_validation::r5::R5Validatable for SupplyDeliverySuppliedItem {
             match choice {
                 SupplyDeliverySuppliedItemItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "SupplyDelivery.suppliedItem.item[x]", "http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", value));
                     issues.extend(child_issues);
                 }
                 SupplyDeliverySuppliedItemItem::Reference(value) => {
@@ -4082,7 +4082,7 @@ impl fhir_validation::r5::R5ValidatableAsync for SupplyDeliverySuppliedItem {
             match choice {
                 SupplyDeliverySuppliedItemItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "SupplyDelivery.suppliedItem.item[x]", "http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/supplydelivery-supplyitemtype", value)).await;
                     issues.extend(child_issues);
                 }
                 SupplyDeliverySuppliedItemItem::Reference(value) => {

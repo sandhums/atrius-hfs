@@ -60,16 +60,15 @@ fn main() -> Result<()> {
         index.value_sets_by_module.len()
     );
 
-    // Output: crates/fhir/src/<ver_mod>/terminology
+    // Output: crates/fhir-terminology/src/<ver_mod>
     let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .context("expected fhir-valueset-gen to have a parent directory")?
-        .join("fhir")
+        .join("fhir-terminology")
         .join("src")
-        .join(ver_mod)
-        .join("terminology");
+        .join(ver_mod);
 
-    emit_all(&index, &out_dir)?;
+    emit_all(&index, ver_mod, &out_dir)?;
     println!("✅ Generated terminology into {}", out_dir.display());
 
     Ok(())

@@ -1,5 +1,6 @@
 //! Tests for terminology helper error mapping and `$validate-code` parsing.
 
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation::terminology::helpers::{
     build_remote_terminology_error, parse_validate_vs_result,
     terminology_remote_from_fhir_path_error,
@@ -8,7 +9,6 @@ use fhir_validation::{
     MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyRequestInvalid,
     ValidationError,
 };
-use helios_fhir::TerminologyValidationError;
 use helios_fhirpath::error::FhirPathError;
 use helios_fhirpath_support::EvaluationError;
 use serde_json::json;

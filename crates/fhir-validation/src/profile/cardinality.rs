@@ -223,7 +223,14 @@ fn validate_min_cardinality_from_json(
             continue;
         }
 
-        if cardinality_meets_min(root, resource_type, profile, rule, relative_path, min as usize) {
+        if cardinality_meets_min(
+            root,
+            resource_type,
+            profile,
+            rule,
+            relative_path,
+            min as usize,
+        ) {
             continue;
         }
 
@@ -372,7 +379,14 @@ fn cardinality_exceeds_max(
     max: usize,
 ) -> bool {
     if rule.slice_name.is_some() {
-        return slice_cardinality_exceeds_max(root, resource_type, profile, rule, relative_path, max);
+        return slice_cardinality_exceeds_max(
+            root,
+            resource_type,
+            profile,
+            rule,
+            relative_path,
+            max,
+        );
     }
 
     per_parent_cardinality_exceeds_max(root, relative_path, max)
@@ -405,9 +419,9 @@ fn per_parent_cardinality_meets_min(root: &Value, relative_path: &str, min: usiz
         return min == 0;
     }
 
-    parents.iter().all(|parent| {
-        get_values_at_relative_path(parent, child_rel).len() >= min
-    })
+    parents
+        .iter()
+        .all(|parent| get_values_at_relative_path(parent, child_rel).len() >= min)
 }
 
 fn per_parent_cardinality_exceeds_max(root: &Value, relative_path: &str, max: usize) -> bool {
@@ -420,9 +434,9 @@ fn per_parent_cardinality_exceeds_max(root: &Value, relative_path: &str, max: us
         return false;
     }
 
-    parents.iter().any(|parent| {
-        get_values_at_relative_path(parent, child_rel).len() > max
-    })
+    parents
+        .iter()
+        .any(|parent| get_values_at_relative_path(parent, child_rel).len() > max)
 }
 
 fn slice_cardinality_meets_min(
@@ -621,7 +635,8 @@ mod tests {
                 true,
             )],
         );
-        let issues = validate_must_support(&patient, "Patient", &profile, &ValidationConfig::default());
+        let issues =
+            validate_must_support(&patient, "Patient", &profile, &ValidationConfig::default());
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].fhir_path, "Patient.extension:birthPlace");
         assert_eq!(
@@ -740,7 +755,10 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let profile = test_profile("Patient", vec![rule("Patient.maritalStatus", Some(0), None)]);
+        let profile = test_profile(
+            "Patient",
+            vec![rule("Patient.maritalStatus", Some(0), None)],
+        );
         let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());

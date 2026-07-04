@@ -581,10 +581,10 @@ fn resource_enum_path(version: FhirVersion) -> &'static str {
 }
 fn terminology_module_path(version: FhirVersion) -> &'static str {
     match version {
-        FhirVersion::R4 => "helios_fhir::r4::terminology",
-        FhirVersion::R4B => "helios_fhir::r4b::terminology",
-        FhirVersion::R5 => "helios_fhir::r5::terminology",
-        FhirVersion::R6 => "helios_fhir::r6::terminology",
+        FhirVersion::R4 => "fhir_terminology::r4",
+        FhirVersion::R4B => "fhir_terminology::r4b",
+        FhirVersion::R5 => "fhir_terminology::r5",
+        FhirVersion::R6 => "fhir_terminology::r6",
     }
 }
 

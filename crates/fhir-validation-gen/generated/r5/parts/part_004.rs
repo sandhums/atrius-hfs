@@ -3299,7 +3299,7 @@ impl fhir_validation::r5::R5Validatable for ClaimDiagnosis {
             match choice {
                 ClaimDiagnosisDiagnosis::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value));
                     issues.extend(child_issues);
                 }
                 ClaimDiagnosisDiagnosis::Reference(value) => {
@@ -3394,7 +3394,7 @@ impl fhir_validation::r5::R5ValidatableAsync for ClaimDiagnosis {
             match choice {
                 ClaimDiagnosisDiagnosis::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value)).await;
                     issues.extend(child_issues);
                 }
                 ClaimDiagnosisDiagnosis::Reference(value) => {
@@ -3459,7 +3459,7 @@ impl fhir_validation::r5::R5Validatable for ClaimProcedure {
             match choice {
                 ClaimProcedureProcedure::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.procedure.procedure[x]", "http://hl7.org/fhir/ValueSet/icd-10-procedures", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value));
                     issues.extend(child_issues);
                 }
                 ClaimProcedureProcedure::Reference(value) => {
@@ -3567,7 +3567,7 @@ impl fhir_validation::r5::R5ValidatableAsync for ClaimProcedure {
             match choice {
                 ClaimProcedureProcedure::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.procedure.procedure[x]", "http://hl7.org/fhir/ValueSet/icd-10-procedures", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value)).await;
                     issues.extend(child_issues);
                 }
                 ClaimProcedureProcedure::Reference(value) => {
@@ -3971,7 +3971,7 @@ impl fhir_validation::r5::R5Validatable for ClaimItem {
             match choice {
                 ClaimItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.item.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value));
                     issues.extend(child_issues);
                 }
                 ClaimItemLocation::Address(value) => {
@@ -4277,7 +4277,7 @@ impl fhir_validation::r5::R5ValidatableAsync for ClaimItem {
             match choice {
                 ClaimItemLocation::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.item.location[x]", "http://hl7.org/fhir/ValueSet/service-place", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/service-place", value)).await;
                     issues.extend(child_issues);
                 }
                 ClaimItemLocation::Address(value) => {

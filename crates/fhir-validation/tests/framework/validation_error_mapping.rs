@@ -1,12 +1,12 @@
 //! Tests for [`fhir_validation::validation_error_to_issues`].
 
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation::issue_code;
 use fhir_validation::{
     MalformedValidateCodeParameters, RemoteTerminologyError, TerminologyIssueContext,
     TerminologyRequestInvalid, ValidationError, Validator, validation_error_to_issues,
 };
 use fhir_validation_types::BindingStrength;
-use helios_fhir::TerminologyValidationError;
 
 const FHIR_PATH: &str = "Patient.gender";
 const VS: &str = "http://hl7.org/fhir/ValueSet/administrative-gender";

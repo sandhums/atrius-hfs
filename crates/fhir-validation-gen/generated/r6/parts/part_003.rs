@@ -1234,12 +1234,12 @@ impl fhir_validation::r6::R6Validatable for CapabilityStatement {
             match choice {
                 CapabilityStatementVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CapabilityStatement.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
                 CapabilityStatementVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "CapabilityStatement.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
+                    let child_issues = fhir_validation::r6::validate_coding_binding(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1490,12 +1490,12 @@ impl fhir_validation::r6::R6ValidatableAsync for CapabilityStatement {
             match choice {
                 CapabilityStatementVersionAlgorithm::String(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CapabilityStatement.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| helios_fhir::r6::terminology::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_primitive_value_binding_async(&binding_ctx, value.value.as_deref(), |value| fhir_terminology::r6::validate_code("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
                 CapabilityStatementVersionAlgorithm::Coding(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "CapabilityStatement.versionAlgorithm[x]", "http://hl7.org/fhir/ValueSet/version-algorithm", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
+                    let child_issues = fhir_validation::r6::validate_coding_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r6::validate_coding("http://hl7.org/fhir/ValueSet/version-algorithm", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -3911,6 +3911,13 @@ impl fhir_validation::r6::R6ValidatableAsync for CareTeamParticipant {
 
 static CLAIM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::InvariantDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::InvariantDef {
+        key: "clm-3".to_string(),
+        severity: fhir_validation_types::Severity::Error,
+        path: "Claim".to_string(),
+        expression: "insurance.exists() implies insurance.where(focal=true).count()=1".to_string(),
+        human: "One and only one .insurance entry may have focal=true.".to_string(),
+    },
+    fhir_validation_types::InvariantDef {
         key: "dom-2".to_string(),
         severity: fhir_validation_types::Severity::Error,
         path: "Claim".to_string(),
@@ -4064,9 +4071,9 @@ impl fhir_validation::r6::R6Validatable for Claim {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Claim.related[{idx}]")));
             }
         }
-        if let Some(value) = &self.prescription {
+        if let Some(value) = &self.request {
             let child_issues = value.validate_bindings(validator, terminology);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.prescription"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.request"));
         }
         if let Some(value) = &self.original_prescription {
             let child_issues = value.validate_bindings(validator, terminology);
@@ -4299,9 +4306,9 @@ impl fhir_validation::r6::R6Validatable for Claim {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Claim.related[{idx}]")));
             }
         }
-        if let Some(value) = &self.prescription {
+        if let Some(value) = &self.request {
             let child_issues = value.validate_invariants(validator, evaluator);
-            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.prescription"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.request"));
         }
         if let Some(value) = &self.original_prescription {
             let child_issues = value.validate_invariants(validator, evaluator);
@@ -4447,9 +4454,9 @@ impl fhir_validation::r6::R6ValidatableAsync for Claim {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("Claim.related[{idx}]")));
             }
         }
-        if let Some(value) = &self.prescription {
+        if let Some(value) = &self.request {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
-            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.prescription"));
+            issues.extend(validator.rebase_instance_paths(child_issues, "Claim.request"));
         }
         if let Some(value) = &self.original_prescription {
             let child_issues = value.validate_bindings_async(validator, terminology).await;
@@ -4659,7 +4666,7 @@ static CLAIM_PAYEE_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types::In
 static CLAIM_PAYEE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "Claim.payee.type".to_string(),
-        strength: fhir_validation_types::BindingStrength::Example,
+        strength: fhir_validation_types::BindingStrength::Preferred,
         value_set: "http://hl7.org/fhir/ValueSet/payeetype".to_string(),
         binding_name: Some("PayeeType".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
@@ -4878,7 +4885,7 @@ static CLAIM_CARE_TEAM_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types
 static CLAIM_CARE_TEAM_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
         path: "Claim.careTeam.role".to_string(),
-        strength: fhir_validation_types::BindingStrength::Preferred,
+        strength: fhir_validation_types::BindingStrength::Extensible,
         value_set: "http://hl7.org/fhir/ValueSet/claim-careteamrole".to_string(),
         binding_name: Some("CareTeamRole".to_string()),
         target_kind: fhir_validation_types::BindingTargetKind::CodeableConcept,
@@ -5656,12 +5663,12 @@ static CLAIM_DIAGNOSIS_INVARIANTS: std::sync::LazyLock<Vec<fhir_validation_types
 
 static CLAIM_DIAGNOSIS_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::BindingDef>> = std::sync::LazyLock::new(|| vec![
     fhir_validation_types::BindingDef {
-        path: "Claim.diagnosis.diagnosis[x]".to_string(),
+        path: "Claim.diagnosis.diagnosis".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://hl7.org/fhir/ValueSet/icd-10".to_string(),
         binding_name: Some("ICD10".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Choice,
-        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
+        choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
         path: "Claim.diagnosis.type".to_string(),
@@ -5690,23 +5697,6 @@ impl fhir_validation::r6::R6Validatable for ClaimDiagnosis {
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings(self, CLAIM_DIAGNOSIS_BINDINGS.as_slice(), terminology));
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.diagnosis {
-            match choice {
-                ClaimDiagnosisDiagnosis::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value));
-                    issues.extend(child_issues);
-                }
-                ClaimDiagnosisDiagnosis::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.diagnosis[x]"));
-                }
-            }
-        }
         issues
     }
 
@@ -5746,6 +5736,8 @@ impl fhir_validation::r6::R6Validatable for ClaimDiagnosis {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("diagnosis.modifierExtension[{idx}]")));
             }
         }
+        let child_issues = self.diagnosis.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.diagnosis"));
         if let Some(values) = &self.r#type {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
@@ -5755,21 +5747,6 @@ impl fhir_validation::r6::R6Validatable for ClaimDiagnosis {
         if let Some(value) = &self.on_admission {
             let child_issues = value.validate_invariants(validator, evaluator);
             issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.onAdmission"));
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.diagnosis {
-            match choice {
-                ClaimDiagnosisDiagnosis::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.diagnosis[x]"));
-                }
-                ClaimDiagnosisDiagnosis::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.diagnosis[x]"));
-                }
-            }
         }
         issues
     }
@@ -5785,23 +5762,6 @@ impl fhir_validation::r6::R6ValidatableAsync for ClaimDiagnosis {
     ) -> Vec<fhir_validation::ValidationIssue> {
         let mut issues = Vec::new();
         issues.extend(validator.apply_r6_bindings_async(self, CLAIM_DIAGNOSIS_BINDINGS.as_slice(), terminology).await);
-
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.diagnosis {
-            match choice {
-                ClaimDiagnosisDiagnosis::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.diagnosis.diagnosis[x]", "http://hl7.org/fhir/ValueSet/icd-10", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10", value)).await;
-                    issues.extend(child_issues);
-                }
-                ClaimDiagnosisDiagnosis::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "diagnosis.diagnosis[x]"));
-                }
-            }
-        }
         issues
     }
     }
@@ -5826,12 +5786,12 @@ static CLAIM_PROCEDURE_BINDINGS: std::sync::LazyLock<Vec<fhir_validation_types::
         choice_type_codes: None,
     },
     fhir_validation_types::BindingDef {
-        path: "Claim.procedure.procedure[x]".to_string(),
+        path: "Claim.procedure.procedure".to_string(),
         strength: fhir_validation_types::BindingStrength::Example,
         value_set: "http://hl7.org/fhir/ValueSet/icd-10-procedures".to_string(),
         binding_name: Some("ICD10_Procedures".to_string()),
-        target_kind: fhir_validation_types::BindingTargetKind::Choice,
-        choice_type_codes: Some(vec!["CodeableConcept".to_string()]),
+        target_kind: fhir_validation_types::BindingTargetKind::CodeableReference,
+        choice_type_codes: None,
     },
 ]);
 
@@ -5849,22 +5809,6 @@ impl fhir_validation::r6::R6Validatable for ClaimProcedure {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings(validator, terminology);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("procedure.udi[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.procedure {
-            match choice {
-                ClaimProcedureProcedure::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Claim.procedure.procedure[x]", "http://hl7.org/fhir/ValueSet/icd-10-procedures", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value));
-                    issues.extend(child_issues);
-                }
-                ClaimProcedureProcedure::Reference(value) => {
-                    let child_issues = value.validate_bindings(validator, terminology);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "procedure.procedure[x]"));
-                }
             }
         }
         issues
@@ -5917,25 +5861,12 @@ impl fhir_validation::r6::R6Validatable for ClaimProcedure {
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("procedure.type[{idx}]")));
             }
         }
+        let child_issues = self.procedure.validate_invariants(validator, evaluator);
+        issues.extend(validator.rebase_instance_paths(child_issues, "procedure.procedure"));
         if let Some(values) = &self.udi {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_invariants(validator, evaluator);
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("procedure.udi[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.procedure {
-            match choice {
-                ClaimProcedureProcedure::CodeableConcept(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "procedure.procedure[x]"));
-                }
-                ClaimProcedureProcedure::Reference(value) => {
-                    let child_issues = value.validate_invariants(validator, evaluator);
-                    issues.extend(validator.rebase_instance_paths(child_issues, "procedure.procedure[x]"));
-                }
             }
         }
         issues
@@ -5957,22 +5888,6 @@ impl fhir_validation::r6::R6ValidatableAsync for ClaimProcedure {
             for (idx, value) in values.iter().enumerate() {
                 let child_issues = value.validate_bindings_async(validator, terminology).await;
                 issues.extend(validator.rebase_instance_paths(child_issues, &format!("procedure.udi[{idx}]")));
-            }
-        }
-
-        // Deferred recursive validation candidates.
-        // These need specialized handling (for example choice enums or contained resources).
-        if let Some(choice) = &self.procedure {
-            match choice {
-                ClaimProcedureProcedure::CodeableConcept(value) => {
-                    let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Claim.procedure.procedure[x]", "http://hl7.org/fhir/ValueSet/icd-10-procedures", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r6::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r6::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/icd-10-procedures", value)).await;
-                    issues.extend(child_issues);
-                }
-                ClaimProcedureProcedure::Reference(value) => {
-                    let child_issues = value.validate_bindings_async(validator, terminology).await;
-                    issues.extend(validator.rebase_instance_paths(child_issues, "procedure.procedure[x]"));
-                }
             }
         }
         issues

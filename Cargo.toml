@@ -15,6 +15,7 @@ default-members = [
 	"crates/fhir-validation-types",
 	"crates/fhir-validation-gen",
 	"crates/fhir-validation",
+	"crates/fhir-terminology",
 	"crates/serde",
 	"crates/serde-support",
 	"crates/hfs",

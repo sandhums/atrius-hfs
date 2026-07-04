@@ -1422,9 +1422,6 @@ impl IntoEvaluationResult for PrecisionInstant {
 
 // Removed DecimalElementObjectVisitor
 
-mod error;
-pub use error::TerminologyValidationError;
-
 #[cfg(feature = "R4")]
 pub mod r4;
 #[cfg(feature = "R4B")]

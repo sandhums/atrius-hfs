@@ -30,8 +30,8 @@ use crate::binding::dispatch::{BindingChoiceProbe, apply_bindings_sync, infer_ch
 use crate::binding::engine::BindingVersionAdapter;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
 use crate::{ValidationIssue, Validator};
+use fhir_terminology::r4::index as terminology_index;
 use fhir_validation_types::{BindingDef, BindingTargetKind};
-use helios_fhir::r4::terminology::index as terminology_index;
 use helios_fhir::r4::{CodeableConcept, Coding, Quantity};
 use serde::Serialize;
 use serde_json::Value;
@@ -131,28 +131,28 @@ impl BindingTerminologyHooks for R4BindingAdapter {
     fn validate_code(
         value_set: &str,
         code: &str,
-    ) -> Result<(), helios_fhir::TerminologyValidationError> {
+    ) -> Result<(), fhir_terminology::TerminologyValidationError> {
         terminology_index::validate_code(value_set, code)
     }
 
     fn validate_coding(
         value_set: &str,
         coding: &Coding,
-    ) -> Result<(), helios_fhir::TerminologyValidationError> {
+    ) -> Result<(), fhir_terminology::TerminologyValidationError> {
         terminology_index::validate_coding(value_set, coding)
     }
 
     fn validate_codeable_concept(
         value_set: &str,
         cc: &CodeableConcept,
-    ) -> Result<(), helios_fhir::TerminologyValidationError> {
+    ) -> Result<(), fhir_terminology::TerminologyValidationError> {
         terminology_index::validate_codeable_concept(value_set, cc)
     }
 
     fn validate_quantity(
         value_set: &str,
         quantity: &Quantity,
-    ) -> Result<(), helios_fhir::TerminologyValidationError> {
+    ) -> Result<(), fhir_terminology::TerminologyValidationError> {
         terminology_index::validate_quantity(value_set, quantity)
     }
 
@@ -168,7 +168,7 @@ pub fn validate_primitive_code_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&str) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&str) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_primitive_code_binding::<R4BindingAdapter, F>(
         ctx,
@@ -184,7 +184,7 @@ pub fn validate_primitive_value_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&str) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&str) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_primitive_value_binding::<R4BindingAdapter, F>(
         ctx,
@@ -200,7 +200,7 @@ pub async fn validate_primitive_code_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&str) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&str) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_primitive_code_binding_async::<R4BindingAdapter, F>(
         ctx,
@@ -217,7 +217,7 @@ pub async fn validate_primitive_value_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&str) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&str) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_primitive_value_binding_async::<R4BindingAdapter, F>(
         ctx,
@@ -233,7 +233,7 @@ pub fn validate_quantity_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&Quantity) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&Quantity) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_quantity_binding::<R4BindingAdapter, F>(
         ctx,
@@ -248,7 +248,7 @@ pub async fn validate_quantity_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&Quantity) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&Quantity) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_quantity_binding_async::<R4BindingAdapter, F>(
         ctx,
@@ -264,7 +264,7 @@ pub fn validate_coding_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&Coding) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&Coding) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_coding_binding::<R4BindingAdapter, F>(
         ctx,
@@ -279,7 +279,7 @@ pub async fn validate_coding_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&Coding) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&Coding) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_coding_binding_async::<R4BindingAdapter, F>(
         ctx,
@@ -295,7 +295,7 @@ pub fn validate_codeable_concept_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&CodeableConcept) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&CodeableConcept) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_codeable_concept_binding::<R4BindingAdapter, F>(
         ctx,
@@ -310,7 +310,7 @@ pub async fn validate_codeable_concept_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&CodeableConcept) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&CodeableConcept) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_codeable_concept_binding_async::<R4BindingAdapter, F>(
         ctx,
@@ -326,7 +326,7 @@ pub fn validate_codeable_reference_binding<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&CodeableConcept) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&CodeableConcept) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_codeable_reference_binding::<R4BindingAdapter, F>(
         ctx,
@@ -341,7 +341,7 @@ pub async fn validate_codeable_reference_binding_async<F>(
     local_check: F,
 ) -> Vec<ValidationIssue>
 where
-    F: Fn(&CodeableConcept) -> Result<(), helios_fhir::TerminologyValidationError>,
+    F: Fn(&CodeableConcept) -> Result<(), fhir_terminology::TerminologyValidationError>,
 {
     crate::binding::validators::validate_codeable_reference_binding_async::<R4BindingAdapter, F>(
         ctx,

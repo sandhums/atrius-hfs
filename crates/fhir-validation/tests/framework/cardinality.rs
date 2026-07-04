@@ -82,7 +82,10 @@ mod tests {
             "resourceType": "Patient"
         });
 
-        let profile = test_profile("Patient", vec![rule("Patient.maritalStatus", Some(0), None)]);
+        let profile = test_profile(
+            "Patient",
+            vec![rule("Patient.maritalStatus", Some(0), None)],
+        );
         let issues = validate_min_cardinality(&patient, "Patient", &profile);
 
         assert!(issues.is_empty());

@@ -302,10 +302,7 @@ fn extract_element_rule(
         .as_object()
         .ok_or_else(|| ValidationError::from(SdMsg::ElementMustBeObject))?;
 
-    let slice_name = infer_slice_name(
-        &id,
-        obj.get("sliceName").and_then(|v| v.as_str()),
-    );
+    let slice_name = infer_slice_name(&id, obj.get("sliceName").and_then(|v| v.as_str()));
 
     Ok(ExtractedElementRule {
         id,

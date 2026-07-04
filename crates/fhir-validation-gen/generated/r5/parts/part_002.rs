@@ -1277,7 +1277,7 @@ impl fhir_validation::r5::R5Validatable for AdverseEventContributingFactor {
                 }
                 AdverseEventContributingFactorItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "AdverseEvent.contributingFactor.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1357,7 +1357,7 @@ impl fhir_validation::r5::R5ValidatableAsync for AdverseEventContributingFactor 
                 }
                 AdverseEventContributingFactorItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "AdverseEvent.contributingFactor.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-contributing-factor", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -1408,7 +1408,7 @@ impl fhir_validation::r5::R5Validatable for AdverseEventPreventiveAction {
                 }
                 AdverseEventPreventiveActionItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "AdverseEvent.preventiveAction.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1488,7 +1488,7 @@ impl fhir_validation::r5::R5ValidatableAsync for AdverseEventPreventiveAction {
                 }
                 AdverseEventPreventiveActionItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "AdverseEvent.preventiveAction.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-preventive-action", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -1539,7 +1539,7 @@ impl fhir_validation::r5::R5Validatable for AdverseEventMitigatingAction {
                 }
                 AdverseEventMitigatingActionItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "AdverseEvent.mitigatingAction.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1619,7 +1619,7 @@ impl fhir_validation::r5::R5ValidatableAsync for AdverseEventMitigatingAction {
                 }
                 AdverseEventMitigatingActionItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "AdverseEvent.mitigatingAction.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-mitigating-action", value)).await;
                     issues.extend(child_issues);
                 }
             }
@@ -1670,7 +1670,7 @@ impl fhir_validation::r5::R5Validatable for AdverseEventSupportingInfo {
                 }
                 AdverseEventSupportingInfoItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "AdverseEvent.supportingInfo.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", value));
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", value));
                     issues.extend(child_issues);
                 }
             }
@@ -1750,7 +1750,7 @@ impl fhir_validation::r5::R5ValidatableAsync for AdverseEventSupportingInfo {
                 }
                 AdverseEventSupportingInfoItem::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "AdverseEvent.supportingInfo.item[x]", "http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", fhir_validation_types::BindingStrength::Example, terminology);
-                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r5::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", value)).await;
+                    let child_issues = fhir_validation::r5::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r5::validate_codeable_concept("http://hl7.org/fhir/ValueSet/adverse-event-supporting-info", value)).await;
                     issues.extend(child_issues);
                 }
             }

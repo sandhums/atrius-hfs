@@ -11,8 +11,8 @@ use crate::binding::common::{
 use crate::binding::engine::BindingVersionAdapter;
 use crate::binding::validators;
 use crate::terminology::service::{TerminologyService, TerminologyServiceSync};
+use fhir_terminology::TerminologyValidationError;
 use fhir_validation_types::{BindingDef, BindingTargetKind};
-use helios_fhir::TerminologyValidationError;
 use serde_json::Value;
 
 /// Version-specific generated terminology helpers for ValueSet binding checks.

@@ -3,7 +3,7 @@
 // Source StructureDefinition bundles:
 //   - crates/fhir-gen/resources/R6/profiles-types.json
 //   - crates/fhir-gen/resources/R6/profiles-resources.json
-// StructureDefinitions processed: 206
+// StructureDefinitions processed: 200
 //
 // Sharded: `parts/part_*.rs` + `parts/dispatch.rs` are included below.
 // Paths use `CARGO_MANIFEST_DIR` of the `fhir-validation` crate (include! site).

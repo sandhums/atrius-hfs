@@ -714,8 +714,10 @@ pub(crate) fn instance_matches_named_slice(
         })
         .collect();
 
-    slicing.discriminators.iter().all(|discriminator| {
-        match discriminator.discriminator_type {
+    slicing
+        .discriminators
+        .iter()
+        .all(|discriminator| match discriminator.discriminator_type {
             ExtractedDiscriminatorType::Value | ExtractedDiscriminatorType::Pattern => {
                 matches_value_discriminator(instance, slice, discriminator, profile)
             }
@@ -729,8 +731,7 @@ pub(crate) fn instance_matches_named_slice(
                 matches_position_discriminator(item_index, slice, &slice_order)
             }
             ExtractedDiscriminatorType::Profile => false,
-        }
-    })
+        })
 }
 
 fn matches_value_discriminator(

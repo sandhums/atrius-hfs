@@ -50,7 +50,7 @@ async fn patient_genomic_remote_no_errors_meta_tag_not_in_valueset() {
         &issues,
         "Patient.meta.tag[0]",
         "http://hl7.org/fhir/ValueSet/common-tags",
-        "Code 'HTEST' is not in value set 'http://hl7.org/fhir/ValueSet/common-tags'",
+        "The provided code 'http://hl7.org/fhir/ValueSet/common-tags#HTEST ('test health data')' was not found in the value set 'http://hl7.org/fhir/ValueSet/common-tags|4.0.1'",
     );
 }
 

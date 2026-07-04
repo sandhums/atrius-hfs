@@ -9,15 +9,15 @@ use crate::ValidationError;
 use crate::error::validation_error_kind_label;
 use crate::terminology::service::TerminologyServiceSync;
 use crate::terminology::types::TerminologyMembershipOutcome;
+use fhir_terminology::TerminologyValidationError;
 use helios_fhir::FhirVersion;
-use helios_fhir::TerminologyValidationError;
 use tracing::warn;
 
 /// Terminology service that delegates to embedded `helios_fhir` ValueSet validation (`validate_code` /
 /// `validate_coding`).
 ///
 /// This mirrors the validator’s local-first binding checks: it answers membership using the same
-/// generated tables as [`helios_fhir::r4::terminology`] / [`helios_fhir::r5::terminology`] when those
+/// generated tables as [`fhir_terminology::r4`] / [`fhir_terminology::r5`] when those
 /// modules are enabled for the build.
 #[derive(Debug, Clone, Copy)]
 pub struct LocalTerminologyService {
@@ -165,7 +165,7 @@ fn member_of_r4(
     code: &str,
     display: Option<&str>,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-    use helios_fhir::r4::terminology;
+    use fhir_terminology::r4 as terminology;
 
     let res = if system.is_some() {
         let coding = r4_coding(system, code, display);
@@ -187,7 +187,7 @@ fn member_of_r5(
     code: &str,
     display: Option<&str>,
 ) -> Result<TerminologyMembershipOutcome, ValidationError> {
-    use helios_fhir::r5::terminology;
+    use fhir_terminology::r5 as terminology;
 
     let res = if system.is_some() {
         let coding = r5_coding(system, code, display);

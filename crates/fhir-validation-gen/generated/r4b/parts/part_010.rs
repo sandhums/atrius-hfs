@@ -4415,7 +4415,7 @@ impl fhir_validation::r4b::R4BValidatable for Library {
             match choice {
                 LibrarySubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextSync::new(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding(&binding_ctx, Some(value), |value| fhir_terminology::r4b::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value));
                     issues.extend(child_issues);
                 }
                 LibrarySubject::Reference(value) => {
@@ -4713,7 +4713,7 @@ impl fhir_validation::r4b::R4BValidatableAsync for Library {
             match choice {
                 LibrarySubject::CodeableConcept(value) => {
                     let binding_ctx = fhir_validation::binding::common::BindingCheckContextAsync::new(validator, "Library.subject[x]", "http://hl7.org/fhir/ValueSet/subject-type", fhir_validation_types::BindingStrength::Extensible, terminology);
-                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| helios_fhir::r4b::terminology::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
+                    let child_issues = fhir_validation::r4b::validate_codeable_concept_binding_async(&binding_ctx, Some(value), |value| fhir_terminology::r4b::validate_codeable_concept("http://hl7.org/fhir/ValueSet/subject-type", value)).await;
                     issues.extend(child_issues);
                 }
                 LibrarySubject::Reference(value) => {

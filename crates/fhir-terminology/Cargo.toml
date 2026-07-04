@@ -1,0 +1,19 @@
+[package]
+name = "fhir-terminology"
+description = "Generated local FHIR terminology tables (CodeSystems, ValueSets, canonical index) for binding validation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["R4"]
+R4 = ["helios-fhir/R4"]
+R4B = ["helios-fhir/R4B"]
+R5 = ["helios-fhir/R5"]
+R6 = ["helios-fhir/R6"]
+
+[dependencies]
+helios-fhir = { path = "../fhir", version = "0.2.0", default-features = false }
