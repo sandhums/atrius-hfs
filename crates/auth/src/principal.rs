@@ -78,9 +78,7 @@ pub fn is_fhir_relative_reference(value: &str) -> bool {
         .chars()
         .next()
         .is_some_and(|c| c.is_ascii_uppercase())
-        && resource_type
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric())
+        && resource_type.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
 #[cfg(test)]

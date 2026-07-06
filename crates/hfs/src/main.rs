@@ -645,12 +645,7 @@ async fn init_auth_with_audit(
     }
 
     // Create auth provider
-    let provider = JwksBearerAuthProvider::new(
-        jwks_cache,
-        jti_cache,
-        jti_revocation,
-        &auth_config,
-    );
+    let provider = JwksBearerAuthProvider::new(jwks_cache, jti_cache, jti_revocation, &auth_config);
 
     info!(
         jwks_url = %jwks_url,

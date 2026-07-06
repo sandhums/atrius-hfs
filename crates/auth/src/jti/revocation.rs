@@ -40,9 +40,8 @@ mod redis_impl {
 
     impl RedisJtiRevocation {
         pub fn new(redis_url: &str) -> Result<Self, AuthError> {
-            let client = redis::Client::open(redis_url).map_err(|e| {
-                AuthError::InternalError(format!("Redis connection error: {}", e))
-            })?;
+            let client = redis::Client::open(redis_url)
+                .map_err(|e| AuthError::InternalError(format!("Redis connection error: {}", e)))?;
             Ok(Self { client })
         }
 
@@ -54,12 +53,15 @@ mod redis_impl {
     #[async_trait]
     impl JtiRevocation for RedisJtiRevocation {
         async fn is_revoked(&self, jti: &str) -> Result<bool, AuthError> {
-            let mut conn = self.client.get_multiplexed_async_connection().await.map_err(
-                |e| AuthError::InternalError(format!("Redis connection error: {}", e)),
-            )?;
-            let exists: bool = conn.exists(Self::key(jti)).await.map_err(|e| {
-                AuthError::InternalError(format!("Redis EXISTS error: {}", e))
-            })?;
+            let mut conn = self
+                .client
+                .get_multiplexed_async_connection()
+                .await
+                .map_err(|e| AuthError::InternalError(format!("Redis connection error: {}", e)))?;
+            let exists: bool = conn
+                .exists(Self::key(jti))
+                .await
+                .map_err(|e| AuthError::InternalError(format!("Redis EXISTS error: {}", e)))?;
             Ok(exists)
         }
     }

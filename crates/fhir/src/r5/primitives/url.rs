@@ -7,9 +7,8 @@ use crate::r5::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for Uniform Resource Locators
-/// 
+///
 /// url type: A URI that is a literal reference
-/// 
+///
 /// See: [url](http://hl7.org/fhir/StructureDefinition/url)
 pub type Url = Element<std::string::String, Extension>;
-

@@ -28,55 +28,58 @@ pub enum AllergyIntoleranceOnset {
 }
 
 /// FHIR AllergyIntolerance type
-/// 
+///
 /// Risk of harmful or undesirable, physiological response which is unique to an
 /// individual and associated with exposure to a substance.
-/// 
+///
 /// ## Purpose
 /// To record a clinical assessment of a propensity, or potential risk to an individual, of an adverse reaction upon future exposure to the specified substance, or class of substance.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [AllergyIntolerance](http://hl7.org/fhir/StructureDefinition/AllergyIntolerance)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "onset", summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,clinical_status,verification_status,r#type,category,criticality,code,patient,asserter")]
+#[fhir_resource(
+    choice_elements = "onset",
+    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,clinical_status,verification_status,r#type,category,criticality,code,patient,asserter"
+)]
 pub struct AllergyIntolerance {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -84,7 +87,7 @@ pub struct AllergyIntolerance {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -94,22 +97,22 @@ pub struct AllergyIntolerance {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -120,27 +123,27 @@ pub struct AllergyIntolerance {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -148,27 +151,27 @@ pub struct AllergyIntolerance {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -176,41 +179,41 @@ pub struct AllergyIntolerance {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -220,11 +223,11 @@ pub struct AllergyIntolerance {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -232,38 +235,38 @@ pub struct AllergyIntolerance {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// External ids for this item
-    /// 
+    ///
     /// Business identifiers assigned to this AllergyIntolerance by the performer or
     /// other systems which remain constant as the resource is updated and propagates
     /// from server to server.
-    /// 
+    ///
     /// ## Requirements
     /// Allows identification of the AllergyIntolerance as it is known by various
     /// participating systems and in a way that remains consistent across servers.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is a business identifier, not a resource identifier (see
     /// [discussion](resource.html#identifiers)). It is best practice for the
@@ -272,20 +275,20 @@ pub struct AllergyIntolerance {
     /// same identifier can exist - possibly even with different resource types. For
     /// example, multiple Patient and a Person resource instance might share the same
     /// social insurance number.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// active | inactive | resolved
-    /// 
+    ///
     /// The clinical status of the allergy or intolerance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// AllergyIntolerance.clinicalStatus should be present if verificationStatus is
     /// not entered-in-error and the AllergyIntolerance.code isn't negated (No Known
@@ -296,17 +299,17 @@ pub struct AllergyIntolerance {
     /// judgment involved, such that there might need to be more specificity than the
     /// required FHIR value set allows. For example, a SNOMED coding might allow for
     /// additional specificity.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the status contains the codes inactive and resolved that mark the AllergyIntolerance as no longer active.
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The clinical status of the allergy or intolerance.
@@ -314,28 +317,28 @@ pub struct AllergyIntolerance {
     #[fhir_serde(rename = "clinicalStatus")]
     pub clinical_status: Option<CodeableConcept>,
     /// unconfirmed | presumed | confirmed | refuted | entered-in-error
-    /// 
+    ///
     /// Assertion about certainty associated with the propensity, or potential risk,
     /// of a reaction to the identified substance (including pharmaceutical product).
     /// The verification status pertains to the allergy or intolerance, itself, not
     /// to any specific AllergyIntolerance attribute.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The data type is CodeableConcept because verificationStatus has some clinical
     /// judgment involved, such that there might need to be more specificity than the
     /// required FHIR value set allows. For example, a SNOMED coding might allow for
     /// additional specificity.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the status contains the codes refuted and entered-in-error that mark the AllergyIntolerance as not currently valid.
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Assertion about certainty associated with a propensity, or potential risk, of a reaction to the identified substance.
@@ -343,10 +346,10 @@ pub struct AllergyIntolerance {
     #[fhir_serde(rename = "verificationStatus")]
     pub verification_status: Option<CodeableConcept>,
     /// allergy | intolerance - Underlying mechanism (if known)
-    /// 
+    ///
     /// Identification of the underlying physiological mechanism for the reaction
     /// risk.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Allergic (typically immune-mediated) reactions have been traditionally
     /// regarded as an indicator for potential escalation to significant future risk.
@@ -363,29 +366,29 @@ pub struct AllergyIntolerance {
     /// specific for sensitivity to a particular substance. If, as is commonly the
     /// case, it is unclear whether the reaction is due to an allergy or an
     /// intolerance, then the type element should be omitted from the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Identification of the underlying physiological mechanism for a Reaction Risk.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/allergy-intolerance-type
-    /// 
+    ///
     /// ## Aliases
     /// Category, Class
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// food | medication | environment | biologic
-    /// 
+    ///
     /// Category of the identified substance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This data element has been included because it is currently being captured in
     /// some clinical systems. This data can be derived from the substance where
@@ -397,29 +400,29 @@ pub struct AllergyIntolerance {
     /// search category with a :missing modifier to get allergies that don't have a
     /// category. Additionally, category should be used with caution because category
     /// can be subjective based on the sender.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Category of an identified substance associated with allergies or intolerances.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/allergy-intolerance-category
-    /// 
+    ///
     /// ## Aliases
     /// Category, Type, Reaction Type, Class
     pub category: Option<Vec<CodeableConcept>>,
     /// low | high | unable-to-assess
-    /// 
+    ///
     /// Estimate of the potential clinical harm, or seriousness, of the reaction to
     /// the identified substance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The default criticality value for any propensity to an adverse reaction
     /// should be 'Low Risk', indicating at the very least a relative
@@ -435,26 +438,26 @@ pub struct AllergyIntolerance {
     /// reaction severity may use the term "severity" to represent both. Criticality
     /// is the worst it could be in the future (i.e. situation-agnostic) whereas
     /// severity is situation-dependent.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Estimate of the potential clinical harm, or seriousness, of a reaction to an identified substance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality|6.0.0-ballot4
-    /// 
+    ///
     /// ## Aliases
     /// Severity, Seriousness, Contra-indication, Risk
     pub criticality: Option<Code>,
     /// Code that identifies the allergy or intolerance
-    /// 
+    ///
     /// Code for an allergy or intolerance statement (either a positive or a
     /// negated/excluded statement). This may be a code for a substance or
     /// pharmaceutical product that is considered to be responsible for the adverse
@@ -471,21 +474,21 @@ pub struct AllergyIntolerance {
     /// AllergyIntolerance.reaction.substance falls within the semantic scope of
     /// AllergyIntolerance.code, then the receiving system should ignore
     /// AllergyIntolerance.reaction.substance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It is strongly recommended that this element be populated using a
     /// terminology, where possible. For example, some terminologies used include
     /// RxNorm, SNOMED CT, DM+D, NDFRT, ICD-9, IDC-10, UNII, and ATC. Plain text
     /// should only be used if there is no appropriate terminology available.
     /// Additional details can be specified in the text.
-    /// 
+    ///
     /// When a substance or product code is specified for the 'code' element, the
     /// "default" semantic context is that this is a positive statement of an allergy
     /// or intolerance (depending on the value of the 'type' element, if present)
     /// condition to the specified substance/product. In the corresponding SNOMED CT
     /// allergy model, the specified substance/product is the target (destination) of
     /// the "Causative agent" relationship.
-    /// 
+    ///
     /// The 'substanceExposureRisk' extension is available as a structured and more
     /// flexible alternative to the 'code' element for making positive or negative
     /// allergy or intolerance statements. This extension provides the capability to
@@ -494,73 +497,73 @@ pub struct AllergyIntolerance {
     /// "no allergy to x" concept for that substance/product does not exist). If the
     /// 'substanceExposureRisk' extension is present, the AllergyIntolerance.code
     /// element SHALL be omitted.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Type of the substance/product, allergy or intolerance condition, or negation/exclusion codes for reporting no known allergies.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/allergyintolerance-code
-    /// 
+    ///
     /// ## Aliases
     /// Code
     pub code: Option<CodeableConcept>,
     /// Who the allergy or intolerance is for
-    /// 
+    ///
     /// The patient who has the allergy or intolerance.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Patient
     pub patient: Reference,
     /// Encounter when the allergy or intolerance was asserted
-    /// 
+    ///
     /// The encounter when the allergy or intolerance was asserted.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// When allergy or intolerance was identified
-    /// 
+    ///
     /// Estimated or actual date, date-time, or age when allergy or intolerance was
     /// identified.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Age is generally used when the patient reports an age at which the
     /// AllergyIntolerance was noted. Period is generally used to convey an imprecise
     /// onset that occurred within the time period. Range is generally used to convey
     /// an imprecise age range (e.g. 4 to 6 years old).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub onset: Option<AllergyIntoleranceOnset>,
     /// Date allergy or intolerance was first recorded
-    /// 
+    ///
     /// The recordedDate represents when this particular AllergyIntolerance record
     /// was created in the system, which is often a system-generated date.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When onset date is unknown, recordedDate can be used to establish if the
     /// allergy or intolerance was present on or before a given date. If the
@@ -568,76 +571,76 @@ pub struct AllergyIntolerance {
     /// the receiving system preserve that recordedDate value. If the recordedDate is
     /// not provided by the sending system, the receipt timestamp is sometimes used
     /// as the recordedDate.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "recordedDate")]
     pub recorded_date: Option<DateTime>,
     /// Who recorded the sensitivity
-    /// 
+    ///
     /// Individual who recorded the record and takes responsibility for accurately
     /// recording its content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Because the recorder takes responsibility for accurately recording
     /// information in the record, the recorder is the most recent author. The
     /// recorder might or might not be the asserter. By contrast, the recordedDate is
     /// when the allergy or intolerance was first recorded.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Author
     pub recorder: Option<Reference>,
     /// Source of the information about the allergy
-    /// 
+    ///
     /// The source of the information about the allergy that is recorded.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The recorder takes responsibility for the content, but can reference the
     /// source from where they got it.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Source, Informant
     pub asserter: Option<Reference>,
     /// Date(/time) of last known occurrence of a reaction
-    /// 
+    ///
     /// Represents the date and/or time of the last known occurrence of a reaction
     /// event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This date may be replicated by one of the Onset of Reaction dates. Where a
     /// textual representation of the date of last occurrence is required e.g. 'In
     /// Childhood, '10 years ago' the AllergyIntolerance.note element should be used.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "lastOccurrence")]
     pub last_occurrence: Option<DateTime>,
     /// Additional text not captured in other fields
-    /// 
+    ///
     /// Additional narrative about the propensity for the Adverse Reaction, not
     /// captured in other fields.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example: including reason for flagging a seriousness of 'High Risk'; and
     /// instructions related to future exposure or administration of the substance,
@@ -646,20 +649,20 @@ pub struct AllergyIntolerance {
     /// condition in general and not related to any particular episode of it. For
     /// episode notes and descriptions, use AllergyIntolerance.event.description and
     /// AllergyIntolerance.event.notes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Adverse Reaction Events linked to exposure to substance
-    /// 
+    ///
     /// Details about each adverse reaction event linked to exposure to the
     /// identified substance.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -667,53 +670,53 @@ pub struct AllergyIntolerance {
 }
 
 /// Adverse Reaction Events linked to exposure to substance
-/// 
+///
 /// Details about each adverse reaction event linked to exposure to the
 /// identified substance.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct AllergyIntoleranceReaction {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -723,11 +726,11 @@ pub struct AllergyIntoleranceReaction {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -735,30 +738,30 @@ pub struct AllergyIntoleranceReaction {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Specific substance or pharmaceutical product considered to be responsible for event
-    /// 
+    ///
     /// Identification of the specific substance (or pharmaceutical product)
     /// considered to be responsible for the Adverse Reaction event. Note: the
     /// substance for a specific reaction may be different from the substance
@@ -770,7 +773,7 @@ pub struct AllergyIntoleranceReaction {
     /// AllergyIntolerance.reaction.substance falls within the semantic scope of
     /// AllergyIntolerance.code, then the receiving system should ignore
     /// AllergyIntolerance.reaction.substance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Coding of the specific substance (or pharmaceutical product) with a
     /// terminology capable of triggering decision support should be used wherever
@@ -782,23 +785,23 @@ pub struct AllergyIntoleranceReaction {
     /// example, "amoxycillin"). Duplication of the value in the 'code' and
     /// 'reaction.substance' elements is acceptable when a specific substance has
     /// been recorded in 'code'.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes defining the type of the substance (including pharmaceutical products).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/substance-code
     pub substance: Option<CodeableConcept>,
     /// Clinical symptoms/signs associated with the Event
-    /// 
+    ///
     /// Clinical symptoms and/or signs that are observed or associated with the
     /// adverse reaction event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Manifestation can be expressed as a single word, phrase or brief description.
     /// For example: nausea, rash or no reaction. It is preferable that manifestation
@@ -806,26 +809,26 @@ pub struct AllergyIntoleranceReaction {
     /// may be used to display on an application screen as part of a list of adverse
     /// reactions, as recommended in the UK NHS CUI guidelines. Terminologies
     /// commonly used include, but are not limited to, SNOMED CT or ICD10.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Clinical symptoms and/or signs that are observed or associated with an Adverse Reaction Event.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/clinical-findings
-    /// 
+    ///
     /// ## Aliases
     /// Symptoms, Signs
     pub manifestation: Option<Vec<CodeableReference>>,
     /// Description of the event as a whole
-    /// 
+    ///
     /// Text description about the reaction as a whole, including details of the
     /// manifestation if required.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Use the description to provide any details of a particular event of the
     /// occurred reaction such as circumstances, reaction specifics, what happened
@@ -833,62 +836,62 @@ pub struct AllergyIntoleranceReaction {
     /// particular care should be captured in the note field. For example: at the age
     /// of four, the patient was given penicillin for strep throat and subsequently
     /// developed severe hives.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Narrative, Text
     pub description: Option<String>,
     /// Date(/time) when manifestations showed
-    /// 
+    ///
     /// Record of the date and/or time of the onset of the Reaction.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub onset: Option<DateTime>,
     /// mild | moderate | severe (of event as a whole)
-    /// 
+    ///
     /// Clinical assessment of the severity of the reaction event as a whole,
     /// potentially considering multiple different manifestations.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It is acknowledged that this assessment is very subjective. There may be some
     /// specific practice domains where objective scales have been applied. Objective
     /// scales can be included in this model as extensions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Clinical assessment of the severity of a reaction event as a whole, potentially considering multiple different manifestations.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/reaction-event-severity|6.0.0-ballot4
     pub severity: Option<Code>,
     /// How the subject was exposed to the substance
-    /// 
+    ///
     /// Identification of the route by which the subject was exposed to the
     /// substance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Coding of the route of exposure with a terminology should be used wherever
     /// possible.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept describing the route or physiological path of exposure to a substance.
@@ -896,21 +899,20 @@ pub struct AllergyIntoleranceReaction {
     #[fhir_serde(rename = "exposureRoute")]
     pub exposure_route: Option<CodeableConcept>,
     /// Text about event not captured in other fields
-    /// 
+    ///
     /// Additional text about the adverse reaction event not captured in other
     /// fields.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Use this field to record information indirectly related to a particular event
     /// and not captured in the description. For example: Clinical records are no
     /// longer available, recorded based on information provided to the patient by
     /// her mother and her mother is deceased.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
 }
-

@@ -74,7 +74,8 @@ impl AuthConfig {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),
-            jti_backend: env::var("HFS_AUTH_JTI_BACKEND").unwrap_or_else(|_| "disabled".to_string()),
+            jti_backend: env::var("HFS_AUTH_JTI_BACKEND")
+                .unwrap_or_else(|_| "disabled".to_string()),
             jti_revocation_enabled: env::var("HFS_AUTH_JTI_REVOCATION")
                 .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
                 .unwrap_or(false),

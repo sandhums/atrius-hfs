@@ -116,11 +116,7 @@ pub async fn auth_middleware(
                 let event = AuditEventBuilder::new(&auth_state.audit_source_observer)
                     .action(AuditAction::Execute)
                     .outcome("0")
-                    .agent(
-                        principal.audit_agent_identity().unwrap_or(""),
-                        None,
-                        true,
-                    )
+                    .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
                     .agent_issuer(principal.issuer())
                     .build();
                 auth_state.audit_sink.record(event).await;
@@ -187,11 +183,7 @@ pub async fn authz_middleware(
                     .action(AuditAction::Execute)
                     .outcome("0")
                     .outcome_desc(format!("Granted: {operation} on {resource_type}"))
-                    .agent(
-                        principal.audit_agent_identity().unwrap_or(""),
-                        None,
-                        true,
-                    )
+                    .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
                     .agent_issuer(principal.issuer())
                     .resource(&resource_type, "")
                     .build();
@@ -208,11 +200,7 @@ pub async fn authz_middleware(
                     .action(AuditAction::Execute)
                     .outcome("8")
                     .outcome_desc(format!("Forbidden: {operation} on {resource_type}"))
-                    .agent(
-                        principal.audit_agent_identity().unwrap_or(""),
-                        None,
-                        true,
-                    )
+                    .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
                     .agent_issuer(principal.issuer())
                     .resource(&resource_type, "")
                     .build();

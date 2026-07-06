@@ -54,13 +54,21 @@ const INVENTORY: &[(&str, &str, &str)] = &[
     ),
     ("atrius-in-flag", "qicore-flag", "Flag"),
     ("atrius-in-goal", "qicore-goal", "Goal"),
-    ("atrius-in-practitioner", "qicore-practitioner", "Practitioner"),
+    (
+        "atrius-in-practitioner",
+        "qicore-practitioner",
+        "Practitioner",
+    ),
     (
         "atrius-in-practitionerrole",
         "qicore-practitionerrole",
         "PractitionerRole",
     ),
-    ("atrius-in-organization", "qicore-organization", "Organization"),
+    (
+        "atrius-in-organization",
+        "qicore-organization",
+        "Organization",
+    ),
     (
         "atrius-in-relatedperson",
         "qicore-relatedperson",
@@ -82,7 +90,11 @@ const INVENTORY: &[(&str, &str, &str)] = &[
         "qicore-allergyintolerance",
         "AllergyIntolerance",
     ),
-    ("atrius-in-adverse-event", "qicore-adverseevent", "AdverseEvent"),
+    (
+        "atrius-in-adverse-event",
+        "qicore-adverseevent",
+        "AdverseEvent",
+    ),
     (
         "atrius-in-bodystructure",
         "qicore-bodystructure",
@@ -119,8 +131,16 @@ const INVENTORY: &[(&str, &str, &str)] = &[
         "qicore-diagnosticreport-note",
         "DiagnosticReport",
     ),
-    ("atrius-in-imagingstudy", "qicore-imagingstudy", "ImagingStudy"),
-    ("atrius-in-immunization", "qicore-immunization", "Immunization"),
+    (
+        "atrius-in-imagingstudy",
+        "qicore-imagingstudy",
+        "ImagingStudy",
+    ),
+    (
+        "atrius-in-immunization",
+        "qicore-immunization",
+        "Immunization",
+    ),
     (
         "atrius-in-immunization-done",
         "qicore-immunization-done",
@@ -178,7 +198,11 @@ const INVENTORY: &[(&str, &str, &str)] = &[
         "Observation",
     ),
     ("atrius-in-careplan", "qicore-careplan", "CarePlan"),
-    ("atrius-in-careplan-assess-plan", "qicore-careplan", "CarePlan"),
+    (
+        "atrius-in-careplan-assess-plan",
+        "qicore-careplan",
+        "CarePlan",
+    ),
     ("atrius-in-careteam", "qicore-careteam", "CareTeam"),
     (
         "atrius-in-communication",

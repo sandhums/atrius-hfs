@@ -482,6 +482,15 @@ impl CodeSystemOperations for PostgresTerminologyBackend {
                     });
                 }
 
+                if crate::ucum_validate::is_ucum_url(&system)
+                    && crate::ucum_validate::is_valid_ucum_code(&req.code)
+                {
+                    return Ok(crate::ucum_validate::composed_code_success(
+                        &req.code,
+                        cs_version_str,
+                    ));
+                }
+
                 let text = match cs_version_str.as_deref() {
                     Some(v) => format!(
                         "Unknown code '{}' in the CodeSystem '{}' version '{}'",
@@ -1328,7 +1337,18 @@ async fn resolve_code_system(
              FROM code_systems
              WHERE url = $1
                AND ($2::text IS NULL OR (resource_json->>'date') <= $2)
-             ORDER BY COALESCE(version, '') DESC",
+             ORDER BY (CASE COALESCE(content, 'complete')
+                            WHEN 'complete'   THEN 0
+                            WHEN 'supplement' THEN 0
+                            WHEN 'fragment'   THEN 1
+                            WHEN 'example'    THEN 1
+                            WHEN 'not-present' THEN 2
+                            ELSE 1 END),
+                      (CASE WHEN EXISTS (
+                          SELECT 1 FROM concepts c WHERE c.system_id = code_systems.id
+                      ) THEN 0 ELSE 1 END),
+                      COALESCE(version, '') DESC,
+                      id",
             &[&url, &date],
         )
         .await
@@ -1347,6 +1367,9 @@ async fn resolve_code_system(
             select_best_version_match(&candidates, ver).ok_or_else(|| {
                 HtsError::NotFound(format!("CodeSystem not found: {url} (version {ver})"))
             })
+        }
+        Some(ver) if crate::backends::code_system_version_is_current(ver) => {
+            Ok(candidates.into_iter().next().expect("non-empty checked"))
         }
         Some(ver) => candidates
             .into_iter()

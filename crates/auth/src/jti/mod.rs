@@ -2,11 +2,10 @@ pub mod memory;
 pub mod revocation;
 
 pub use revocation::{
-    NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX, build_jti_revocation, JtiRevocation,
+    JtiRevocation, NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX, build_jti_revocation,
 };
 #[cfg(feature = "redis")]
 pub mod redis;
-
 
 #[cfg(feature = "redis")]
 pub use revocation::RedisJtiRevocation;

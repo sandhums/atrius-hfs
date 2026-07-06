@@ -1336,6 +1336,10 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                 .get()
                 .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
 
+            if let Some(resp) = crate::bcp13::validate_mimetypes_code(&url, &req) {
+                return Ok(resp);
+            }
+
             // Resolve the expansion — try explicit ValueSet first, then the two
             // implicit-ValueSet fallbacks used by $expand.
             // Tuple: (expansion codes, compose_json saved for version-mismatch check).
@@ -2612,9 +2616,9 @@ fn expand_inline_filtered(
             None
         };
 
-        let has_ecl_constraint = compose_filters.iter().any(|f| {
-            f["property"].as_str() == Some("constraint") && f["op"].as_str() == Some("=")
-        });
+        let has_ecl_constraint = compose_filters
+            .iter()
+            .any(|f| f["property"].as_str() == Some("constraint") && f["op"].as_str() == Some("="));
 
         // Atrius fork: ECL + text filter → FTS-first + filter_candidates + rank.
         // docs/fork-ecl-fts-typeahead-expand.md
@@ -4989,7 +4993,9 @@ fn fts_candidates_ranked_for_system(
     limit_hint: Option<usize>,
 ) -> Result<Vec<ExpansionContains>, HtsError> {
     let match_expr = fts5_quote(filter_lower);
-    let limit = limit_hint.map(|h| (h * 10).clamp(100, 5000)).unwrap_or(5000) as i64;
+    let limit = limit_hint
+        .map(|h| (h * 10).clamp(100, 5000))
+        .unwrap_or(5000) as i64;
 
     let search_populated: bool = conn
         .query_row(
@@ -5027,10 +5033,7 @@ fn fts_candidates_ranked_for_system(
             )
             .map_err(|e| HtsError::StorageError(e.to_string()))?;
         stmt.query_map(rusqlite::params![match_expr, system_id, limit], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, f64>(2)?,
-            ))
+            Ok((row.get::<_, String>(0)?, row.get::<_, f64>(2)?))
         })
         .map_err(|e| HtsError::StorageError(e.to_string()))?
         .collect::<rusqlite::Result<Vec<_>>>()

@@ -7,55 +7,57 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR Coverage type
-/// 
+///
 /// Financial instrument which may be used to reimburse or pay for health care
 /// products and services. Includes both insurance and self-payment.
-/// 
+///
 /// ## Purpose
 /// Coverage provides a link between covered parties (patients) and the payers of their healthcare costs (both insurance and self-pay).
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [Coverage](http://hl7.org/fhir/StructureDefinition/Coverage)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,status_reason,kind,r#type,policy_holder,subscriber,subscriber_id,beneficiary,dependent,period,insurer,order,network")]
+#[fhir_resource(
+    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,status_reason,kind,r#type,policy_holder,subscriber,subscriber_id,beneficiary,dependent,period,insurer,order,network"
+)]
 pub struct Coverage {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -63,7 +65,7 @@ pub struct Coverage {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -73,22 +75,22 @@ pub struct Coverage {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -99,27 +101,27 @@ pub struct Coverage {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -127,27 +129,27 @@ pub struct Coverage {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -155,41 +157,41 @@ pub struct Coverage {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -199,11 +201,11 @@ pub struct Coverage {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -211,118 +213,118 @@ pub struct Coverage {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Business identifier(s) for this coverage
-    /// 
+    ///
     /// The identifier of the coverage as issued by the insurer.
-    /// 
+    ///
     /// ## Requirements
     /// Allows coverages to be distinguished and referenced.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The main (and possibly only) identifier for the coverage - often referred to
     /// as a Member Id, Certificate number, Personal Health Number or Case ID. May be
     /// constructed as the concatenation of the Coverage.SubscriberID and the
     /// Coverage.dependent. Note that not all insurers issue unique member IDs
     /// therefore searches may result in multiple responses.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// active | cancelled | draft | entered-in-error
-    /// 
+    ///
     /// The status of the resource instance. The status element does not indicate
     /// whether the policy reflected in the instance is in-force at any particular
     /// point in time, that would be conveyed via the 'period' element.
-    /// 
+    ///
     /// ## Requirements
     /// Need to track the status of the resource as 'draft' resources may undergo
     /// further edits while 'active' resources are immutable and may only have their
     /// status changed to 'cancelled'.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element is labeled as a modifier because the status contains the code
     /// entered-in-error that marks the coverage as not currently valid.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A code specifying the state of the resource instance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4
     pub status: Code,
     /// Reason for status change
-    /// 
+    ///
     /// Used to indicate why the status has changed.
-    /// 
+    ///
     /// ## Requirements
     /// This is used to implement conformance on other elements.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Implementation guides may consider adding invariants such that if status =
     /// cancelled, statusReason SHALL be supplied.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A reason code for the current status of the instance.
     #[fhir_serde(rename = "statusReason")]
     pub status_reason: Option<CodeableConcept>,
     /// insurance | self-pay | other
-    /// 
+    ///
     /// The nature of the coverage be it insurance, or cash payment such as self-pay.
-    /// 
+    ///
     /// ## Requirements
     /// This is used to implement conformance on other elements.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **cov-insured-1**: When patient is insured, insurer must exist. (error)
     ///   Expression: `%resource.kind = 'insurance' implies (%resource.insurer.exists() and %resource.paymentBy.empty())`
@@ -330,44 +332,44 @@ pub struct Coverage {
     ///   Expression: `%resource.kind = 'self-pay' implies (%resource.insurer.empty() and %resource.paymentBy.exists())`
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/coverage-kind|6.0.0-ballot4
     pub kind: Code,
     /// Self-pay parties and responsibility
-    /// 
+    ///
     /// Link to the paying party and optionally what specifically they will be
     /// responsible to pay.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cov-insured-1, cov-self-pay-1
     #[fhir_serde(rename = "paymentBy")]
     pub payment_by: Option<Vec<CoveragePaymentBy>>,
     /// Coverage category such as medical or accident
-    /// 
+    ///
     /// The type of coverage: social program, medical plan, accident coverage
     /// (workers compensation, auto), group health or payment by an individual or
     /// organization.
-    /// 
+    ///
     /// ## Requirements
     /// The order of application of coverages is dependent on the types of coverage.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The type of insurance: public health, worker compensation; private accident, auto, private health, etc.) or a direct payment by an individual or organization.
@@ -375,188 +377,188 @@ pub struct Coverage {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Owner of the policy
-    /// 
+    ///
     /// The party who 'owns' the insurance policy.
-    /// 
+    ///
     /// ## Requirements
     /// This provides employer information in the case of Worker's Compensation and
     /// other policies.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example: may be an individual, corporation or the subscriber's employer.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "policyHolder")]
     pub policy_holder: Option<Reference>,
     /// Subscriber to the policy
-    /// 
+    ///
     /// The party who has signed-up for or 'owns' the contractual relationship to the
     /// policy or to whom the benefit of the policy for services rendered to them or
     /// their family is due.
-    /// 
+    ///
     /// ## Requirements
     /// This is the party who is entitled to the benfits under the policy.
-    /// 
+    ///
     /// ## Implementation Notes
     /// May be self or a parent in the case of dependents. A subscriber is only
     /// required on certain types of policies not all policies and that it is
     /// appropriate to have just a policyholder and a beneficiary when no other party
     /// can join that policy instance.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subscriber: Option<Reference>,
     /// ID assigned to the subscriber
-    /// 
+    ///
     /// The insurer assigned ID for the Subscriber.
-    /// 
+    ///
     /// ## Requirements
     /// The insurer requires this identifier on correspondance and claims (digital
     /// and otherwise).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "subscriberId")]
     pub subscriber_id: Option<Vec<Identifier>>,
     /// Party receiving treatment
-    /// 
+    ///
     /// The party who receives products or services which may be paid for in whole or
     /// in part by insurance or through self payment.
-    /// 
+    ///
     /// ## Requirements
     /// This is the party who receives treatment.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub beneficiary: Reference,
     /// Dependent number
-    /// 
+    ///
     /// A designator for a dependent under the coverage.
-    /// 
+    ///
     /// ## Requirements
     /// For some coverages a single identifier is issued to the Subscriber and then
     /// an additional dependent number is issued to each beneficiary.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Sometimes the member number is constructed from the subscriberId and the
     /// dependent number.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub dependent: Option<String>,
     /// Beneficiary relationship to the subscriber
-    /// 
+    ///
     /// The relationship of beneficiary (patient) to the subscriber.
-    /// 
+    ///
     /// ## Requirements
     /// The relationship between the patient and the subscriber to determine
     /// coordination of benefits.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, an individual uses policies which are theirs (relationship='self')
     /// before policies owned by others.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The relationship between the Subscriber and the Beneficiary (insured/covered party/patient).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/subscriber-relationship
     pub relationship: Option<CodeableConcept>,
     /// Coverage start and end dates
-    /// 
+    ///
     /// Time period during which the coverage is in force. A missing start date
     /// indicates the start date isn't known, a missing end date means the coverage
     /// is continuing to be in force. When non-contiguous periods of coverage need to
     /// be documented it is recommended that this is accomplished through the use of
     /// an extension,rather than complicating coverage period calculations for many
     /// users of the Coverage resource.
-    /// 
+    ///
     /// ## Requirements
     /// Some insurers require the submission of the coverage term.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub period: Option<Period>,
     /// Issuer of the policy
-    /// 
+    ///
     /// The program or plan underwriter, payer, insurance company.
-    /// 
+    ///
     /// ## Requirements
     /// Need to identify the issuer to target for claim processing and for
     /// coordination of benefit processing.
-    /// 
+    ///
     /// ## Implementation Notes
     /// May provide multiple identifiers such as insurance company identifier or
     /// business identifier (BIN number).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cov-insured-1, cov-self-pay-1
     pub insurer: Option<Reference>,
     /// Additional coverage classifications
-    /// 
+    ///
     /// A suite of underwriter specific classifiers.
-    /// 
+    ///
     /// ## Requirements
     /// The codes provided on the health card which identify or confirm the specific
     /// policy for the insurer.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example, class may be used to identify a class of coverage or employer
     /// group, policy, or plan.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **cov-classtype**: Only one of .value and .code may be specified. (error)
     ///   Expression: `value.exists() xor code.exists()`
@@ -564,7 +566,7 @@ pub struct Coverage {
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub class: Option<Vec<CoverageClass>>,
     /// Relative order of the coverage
-    /// 
+    ///
     /// The order of applicability of this coverage relative to other coverages which
     /// are currently in force. Note, there may be gaps in the numbering and this
     /// does not imply primary, secondary etc. as the specific positioning of
@@ -575,75 +577,75 @@ pub struct Coverage {
     /// apply in the order specified in parenthesis. Coverage.order conveys the
     /// Coordination of Benefit (COB) ordering of coverage independent of use-case,
     /// for a use-case dependent set of Coverages see Account.coverage.priority.
-    /// 
+    ///
     /// ## Requirements
     /// Used in managing the coordination of benefits.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub order: Option<PositiveInt>,
     /// Insurer network
-    /// 
+    ///
     /// The insurer-specific identifier for the insurer-defined network of providers
     /// to which the beneficiary may seek treatment which will be covered at the
     /// 'in-network' rate, otherwise 'out of network' terms and conditions apply.
-    /// 
+    ///
     /// ## Requirements
     /// Used in referral for treatment and in claims processing.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub network: Option<Reference>,
     /// Patient payments for services/products
-    /// 
+    ///
     /// A suite of codes indicating the cost category and associated amount which
     /// have been detailed in the policy and may have been included on the health
     /// card.
-    /// 
+    ///
     /// ## Requirements
     /// Required by providers to manage financial transaction with the patient.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example by knowing the patient visit co-pay, the provider can collect the
     /// amount prior to undertaking treatment.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// CoPay, Deductible, Exceptions
     #[fhir_serde(rename = "costToBeneficiary")]
     pub cost_to_beneficiary: Option<Vec<CoverageCostToBeneficiary>>,
     /// Reimbursement to insurer
-    /// 
+    ///
     /// When 'subrogation=true' this insurance instance has been included not for
     /// adjudication but to provide insurers with the details to recover costs.
-    /// 
+    ///
     /// ## Requirements
     /// See definition for when to be used.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, automotive and worker's compensation policies would be flagged
     /// with 'subrogation=true' to enable healthcare payers to collect against
     /// accident claims.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -651,19 +653,19 @@ pub struct Coverage {
 }
 
 /// Additional coverage classifications
-/// 
+///
 /// A suite of underwriter specific classifiers.
-/// 
+///
 /// ## Requirements
 /// The codes provided on the health card which identify or confirm the specific
 /// policy for the insurer.
-/// 
+///
 /// ## Implementation Notes
 /// For example, class may be used to identify a class of coverage or employer
 /// group, policy, or plan.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **cov-classtype**: Only one of .value and .code may be specified. (error)
 ///   Expression: `value.exists() xor code.exists()`
@@ -672,41 +674,41 @@ pub struct Coverage {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CoverageClass {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -716,11 +718,11 @@ pub struct CoverageClass {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -728,46 +730,46 @@ pub struct CoverageClass {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of class such as 'group' or 'plan'
-    /// 
+    ///
     /// The type of classification for which an insurer-specific class label or
     /// number and optional name is provided. For example, type may be used to
     /// identify a class of coverage or employer group, policy, or plan.
-    /// 
+    ///
     /// ## Requirements
     /// The insurer issued label for a specific health card value.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The policy classifications, e.g. Group, Plan, Class, etc.
@@ -775,61 +777,61 @@ pub struct CoverageClass {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Value associated with the type
-    /// 
+    ///
     /// The alphanumeric identifier associated with the insurer issued label.
-    /// 
+    ///
     /// ## Requirements
     /// The insurer issued label and identifier are necessary to identify the
     /// specific policy, group, etc..
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example, the Group or Plan number.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub value: Option<Identifier>,
     /// Code associated with the type
-    /// 
+    ///
     /// The coded term associated with the insurer issued label.
-    /// 
+    ///
     /// ## Requirements
     /// The insurer issued label and identifier or code are necessary to identify the
     /// specific policy, group, etc..
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example, Bronze, Silver, Gold.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type classifications, e.g. Bronze, Silver, Gold., etc.
     pub code: Option<Coding>,
     /// Human readable description of the value
-    /// 
+    ///
     /// A short description for the class.
-    /// 
+    ///
     /// ## Requirements
     /// Used to provide a meaningful description in correspondence to the patient.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -849,65 +851,65 @@ pub enum CoverageCostToBeneficiaryValue {
 }
 
 /// Patient payments for services/products
-/// 
+///
 /// A suite of codes indicating the cost category and associated amount which
 /// have been detailed in the policy and may have been included on the health
 /// card.
-/// 
+///
 /// ## Requirements
 /// Required by providers to manage financial transaction with the patient.
-/// 
+///
 /// ## Implementation Notes
 /// For example by knowing the patient visit co-pay, the provider can collect the
 /// amount prior to undertaking treatment.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-/// 
+///
 /// ## Aliases
 /// CoPay, Deductible, Exceptions
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "value")]
 pub struct CoverageCostToBeneficiary {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -917,11 +919,11 @@ pub struct CoverageCostToBeneficiary {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -929,47 +931,47 @@ pub struct CoverageCostToBeneficiary {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Cost category
-    /// 
+    ///
     /// The category of patient centric costs associated with treatment.
-    /// 
+    ///
     /// ## Requirements
     /// Needed to identify the category associated with the amount for the patient.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example visit, specialist visits, emergency, inpatient care, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The types of services to which patient copayments are specified.
@@ -977,112 +979,112 @@ pub struct CoverageCostToBeneficiary {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Benefit classification
-    /// 
+    ///
     /// Code to identify the general type of benefits under which products and
     /// services are provided.
-    /// 
+    ///
     /// ## Requirements
     /// Needed to convey the category of service or product for which eligibility is
     /// sought.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Examples include Medical Care, Periodontics, Renal Dialysis, Vision Coverage.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-benefitcategory
     pub category: Option<CodeableConcept>,
     /// In or out of network
-    /// 
+    ///
     /// Is a flag to indicate whether the benefits refer to in-network providers or
     /// out-of-network providers.
-    /// 
+    ///
     /// ## Requirements
     /// Needed as in or out of network providers are treated differently under the
     /// coverage.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/benefit-network
     pub network: Option<CodeableConcept>,
     /// Individual or family
-    /// 
+    ///
     /// Indicates if the benefits apply to an individual or to the family.
-    /// 
+    ///
     /// ## Requirements
     /// Needed for the understanding of the benefits.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/benefit-unit
     pub unit: Option<CodeableConcept>,
     /// Annual or lifetime
-    /// 
+    ///
     /// The term or period of the values such as 'maximum lifetime benefit' or
     /// 'maximum annual visits'.
-    /// 
+    ///
     /// ## Requirements
     /// Needed for the understanding of the benefits.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/benefit-term
     pub term: Option<CodeableConcept>,
     /// The amount or percentage due from the beneficiary
-    /// 
+    ///
     /// The amount due from the patient for the cost category.
-    /// 
+    ///
     /// ## Requirements
     /// Needed to identify the amount for the patient associated with the category.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Amount may be expressed as a percentage of the service/product cost or a
     /// fixed amount of currency.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub value: Option<CoverageCostToBeneficiaryValue>,
     /// Exceptions for patient payments
-    /// 
+    ///
     /// A suite of codes indicating exceptions or reductions to patient costs and
     /// their effective periods.
-    /// 
+    ///
     /// ## Requirements
     /// Required by providers to manage financial transaction with the patient.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1090,56 +1092,56 @@ pub struct CoverageCostToBeneficiary {
 }
 
 /// Exceptions for patient payments
-/// 
+///
 /// A suite of codes indicating exceptions or reductions to patient costs and
 /// their effective periods.
-/// 
+///
 /// ## Requirements
 /// Required by providers to manage financial transaction with the patient.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CoverageCostToBeneficiaryException {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1149,11 +1151,11 @@ pub struct CoverageCostToBeneficiaryException {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1161,44 +1163,44 @@ pub struct CoverageCostToBeneficiaryException {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Exception category
-    /// 
+    ///
     /// The code for the specific exception.
-    /// 
+    ///
     /// ## Requirements
     /// Needed to identify the exception associated with the amount for the patient.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The types of exceptions from the part or full value of financial obligations such as copays.
@@ -1206,18 +1208,18 @@ pub struct CoverageCostToBeneficiaryException {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// The effective period of the exception
-    /// 
+    ///
     /// The timeframe the exception is in force.
-    /// 
+    ///
     /// ## Requirements
     /// Needed to identify the applicable timeframe for the exception for the correct
     /// calculation of patient costs.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1225,56 +1227,56 @@ pub struct CoverageCostToBeneficiaryException {
 }
 
 /// Self-pay parties and responsibility
-/// 
+///
 /// Link to the paying party and optionally what specifically they will be
 /// responsible to pay.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-/// 
+///
 /// ## Conditions
 /// Used when: cov-insured-1, cov-self-pay-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CoveragePaymentBy {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1284,11 +1286,11 @@ pub struct CoveragePaymentBy {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1296,53 +1298,52 @@ pub struct CoveragePaymentBy {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Parties performing self-payment
-    /// 
+    ///
     /// The list of parties providing non-insurance payment for the treatment costs.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub party: Reference,
     /// Party's responsibility
-    /// 
+    ///
     ///  Description of the financial responsibility.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub responsibility: Option<String>,
 }
-

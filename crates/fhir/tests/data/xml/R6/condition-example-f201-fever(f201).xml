@@ -35,7 +35,7 @@
     </coding>
   </category>
   <severity>
-    <!-- The fever is mild  -->
+    <!-- The fever is mild -->
     <coding>
       <system value="http://snomed.info/sct"/>
       <code value="255604002"/>

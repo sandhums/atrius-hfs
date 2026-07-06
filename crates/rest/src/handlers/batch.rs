@@ -391,12 +391,7 @@ where
             // Use default FHIR version for batch operations
             match state
                 .storage()
-                .create(
-                    tenant.context(),
-                    &resource_type,
-                    resource,
-                    fhir_version,
-                )
+                .create(tenant.context(), &resource_type, resource, fhir_version)
                 .await
             {
                 Ok(stored) => BundleEntryResult::created(stored),
@@ -621,7 +616,9 @@ fn emit_entry_audit<S>(
     }
     if let Some(principal) = principal {
         if let Some(id) = principal.audit_agent_identity() {
-            builder = builder.agent(id, None, true).agent_issuer(principal.issuer());
+            builder = builder
+                .agent(id, None, true)
+                .agent_issuer(principal.issuer());
         }
     }
 

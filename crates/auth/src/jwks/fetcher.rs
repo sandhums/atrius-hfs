@@ -61,9 +61,7 @@ impl JwksFetcher {
         if insecure_tls {
             builder = builder.danger_accept_invalid_certs(true);
         }
-        let client = builder
-            .build()
-            .expect("Failed to build HTTP client");
+        let client = builder.build().expect("Failed to build HTTP client");
         Self { client }
     }
 

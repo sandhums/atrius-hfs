@@ -2,7 +2,7 @@
   "resourceType": "ValueSet",
   "id": "iso3166-1-2",
   "meta": {
-    "lastUpdated": "2026-06-13T17:13:29.148+00:00"
+    "lastUpdated": "2026-07-04T18:53:58.933+00:00"
   },
   "text": {
     "status": "generated",
@@ -12,14 +12,6 @@
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
       "valueCode": "fhir"
-    },
-    {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
-      "valueCode": "informative"
-    },
-    {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 1
     }
   ],
   "url": "http://hl7.org/fhir/ValueSet/iso3166-1-2",
