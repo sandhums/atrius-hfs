@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
-"""Seed CMS165 demo terminology + clinical chart for ``cms165-demo``.
+"""Seed CMS165 demo clinical chart for ``cms165-demo`` (Atrius India path).
 
-CMS165 / AdultOutpatientEncounters retrieve outpatient Encounters with
-``type:in`` ValueSets whose compose lists **CPT** codes. HTS does not ship CPT
-(AMA license), so ``$expand`` returns zero codes and **Qualifying Encounters**
-is empty unless minimal CPT concepts are seeded for dev.
+Atrius CMS165 / AdultOutpatientEncounters now use Atrius ValueSets
+(``atrius-vs-*``) with SNOMED / ICD-10-CM — not VSAC CPT. The demo Encounter
+uses SNOMED ``185349003`` (in ``atrius-vs-office-visit``; must exist in HTS SNOMED).
 
-This script:
-1. Seeds CPT codes referenced by AdultOutpatientEncounters ValueSets (from VSAC
-   compose already in ``hts.db``).
-2. Replaces ``cms165-demo`` chart data (Patient, one qualifying Encounter,
-   hypertension Condition, BP Observation) aligned with the sidecar default
-   measurement period (current calendar year).
+Optional ``--seed-cpt`` remains for legacy VSAC/eCQM evaluation only (HTS does
+not ship CPT; AMA license).
+
+**Tenant:** default ``--tenant`` follows ``HFS_DEFAULT_TENANT`` (``atrius-hospitals``
+in ``deploy/env/hfs-clinical.env``). Chart data must live in that tenant because
+the sidecar/bridge do not send ``X-Tenant-ID``.
 
 Usage:
-  ./scripts/import-cms165-demo.py
+  # Clinical HFS with auth disabled, or with a bearer token:
+  export CLINICAL_HFS_BEARER_TOKEN='...'   # if HFS_AUTH_ENABLED=true
+  ./scripts/import-cms165-demo.py --verify
+
   ./scripts/import-cms165-demo.py --clinical-only
-  ./scripts/import-cms165-demo.py --hts-url http://127.0.0.1:9091 --verify
+  ./scripts/import-cms165-demo.py --seed-cpt   # legacy VSAC path only
 
 See ``docs/clinical-reasoning/data-import.md``.
 """
@@ -25,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
 import urllib.error
@@ -36,7 +39,14 @@ BUNDLE_PATH = REPO_ROOT / "data/clinical-reasoning/cms165-demo.bundle.json"
 HTS_DB_DEFAULT = REPO_ROOT / "data/hts.db"
 CPT_SYSTEM = "http://www.ama-assn.org/go/cpt"
 
-# AdultOutpatientEncounters encounter-type ValueSets (from sidecar retrieve traces).
+ATRIUS_OFFICE_VISIT_VS = (
+    "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-office-visit"
+)
+
+# Must match clinical HFS `HFS_DEFAULT_TENANT` when callers omit `X-Tenant-ID` (bridge, sidecar).
+DEFAULT_CLINICAL_TENANT = os.environ.get("HFS_DEFAULT_TENANT", "atrius-hospitals")
+
+# Legacy VSAC AdultOutpatientEncounters encounter-type ValueSets (for --seed-cpt).
 AOE_ENCOUNTER_VALUE_SETS = [
     "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.101.12.1001",
     "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.526.3.1240",
@@ -46,6 +56,37 @@ AOE_ENCOUNTER_VALUE_SETS = [
     "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.101.12.1089",
     "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.101.12.1080",
 ]
+
+
+def bearer_token() -> str | None:
+    return (
+        os.environ.get("CLINICAL_HFS_BEARER_TOKEN")
+        or os.environ.get("HFS_BEARER_TOKEN")
+        or os.environ.get("FHIR_ACCESS_TOKEN")
+        or None
+    )
+
+
+def auth_headers(*, tenant: str, json_accept: bool = True) -> dict[str, str]:
+    headers = {"X-Tenant-ID": tenant}
+    if json_accept:
+        headers["Accept"] = "application/fhir+json"
+    token = bearer_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def explain_401(url: str) -> None:
+    print(
+        f"HTTP 401 Unauthorized talking to clinical HFS ({url}).\n"
+        "Clinical HFS likely has HFS_AUTH_ENABLED=true.\n"
+        "Fix one of:\n"
+        "  1. export CLINICAL_HFS_BEARER_TOKEN='<Keycloak access token>'\n"
+        "  2. Temporarily set HFS_AUTH_ENABLED=false and restart clinical HFS\n"
+        "  3. Point --clinical-url at an unauthenticated local HFS",
+        file=sys.stderr,
+    )
 
 
 def collect_cpt_codes_from_hts(db_path: Path) -> dict[str, str]:
@@ -81,21 +122,20 @@ def collect_cpt_codes_from_hts(db_path: Path) -> dict[str, str]:
     conn.close()
     if not codes:
         raise RuntimeError(
-            "No CPT codes found in HTS ValueSet compose — import VSAC terminology first"
+            "No CPT codes found in HTS ValueSet compose — import VSAC terminology first "
+            "(or skip --seed-cpt; Atrius path does not need CPT)"
         )
     return codes
 
 
 def post_json(url: str, body: dict, *, tenant: str = "default") -> tuple[int, str]:
     data = json.dumps(body).encode("utf-8")
+    headers = auth_headers(tenant=tenant)
+    headers["Content-Type"] = "application/fhir+json"
     req = urllib.request.Request(
         url,
         data=data,
-        headers={
-            "Content-Type": "application/fhir+json",
-            "Accept": "application/fhir+json",
-            "X-Tenant-ID": tenant,
-        },
+        headers=headers,
         method="POST",
     )
     try:
@@ -107,7 +147,7 @@ def post_json(url: str, body: dict, *, tenant: str = "default") -> tuple[int, st
 
 def seed_cpt(hts_url: str, db_path: Path) -> None:
     codes = collect_cpt_codes_from_hts(db_path)
-    print(f"Seeding {len(codes)} CPT demo concepts to HTS ({hts_url})")
+    print(f"Seeding {len(codes)} CPT demo concepts to HTS ({hts_url}) [legacy]")
 
     bundle = {
         "resourceType": "Bundle",
@@ -125,7 +165,7 @@ def seed_cpt(hts_url: str, db_path: Path) -> None:
                     "content": "complete",
                     "description": (
                         "Dev-only subset of CPT codes from VSAC ValueSet compose for "
-                        "AdultOutpatientEncounters. Not a full CPT release."
+                        "legacy AdultOutpatientEncounters. Not a full CPT release."
                     ),
                     "concept": [
                         {"code": code, "display": display}
@@ -136,6 +176,7 @@ def seed_cpt(hts_url: str, db_path: Path) -> None:
             }
         ],
     }
+    # HTS /import typically does not require clinical HFS auth
     status, body = post_json(f"{hts_url.rstrip('/')}/import", bundle)
     if status >= 400:
         print(f"HTS import failed HTTP {status}:\n{body[:2000]}", file=sys.stderr)
@@ -149,6 +190,9 @@ def import_clinical(clinical_url: str, *, tenant: str) -> None:
     bundle = json.loads(BUNDLE_PATH.read_text(encoding="utf-8"))
     print(f"Importing clinical bundle from {BUNDLE_PATH.name} -> {clinical_url}")
     status, body = post_json(f"{clinical_url.rstrip('/')}/", bundle, tenant=tenant)
+    if status == 401:
+        explain_401(clinical_url)
+        raise SystemExit(1)
     if status >= 400:
         print(f"Clinical import failed HTTP {status}:\n{body[:2000]}", file=sys.stderr)
         raise SystemExit(1)
@@ -164,13 +208,21 @@ def delete_stale_resources(clinical_url: str, patient_id: str, *, tenant: str) -
         ("Observation", "cms165-demo-bp"),
     }
     for rtype in ("Encounter", "Condition", "Observation"):
-        url = f"{clinical_url.rstrip('/')}/{rtype}?patient={patient_id}"
+        url = f"{clinical_url.rstrip('/')}/{rtype}?subject=Patient/{patient_id}"
+        if rtype in ("Condition", "Observation"):
+            url = f"{clinical_url.rstrip('/')}/{rtype}?patient={patient_id}"
         req = urllib.request.Request(
             url,
-            headers={"Accept": "application/fhir+json", "X-Tenant-ID": tenant},
+            headers=auth_headers(tenant=tenant),
         )
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            bundle = json.loads(resp.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                bundle = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                explain_401(clinical_url)
+                raise SystemExit(1) from e
+            raise
         for entry in bundle.get("entry", []):
             resource = entry.get("resource") or {}
             rid = resource.get("id")
@@ -179,7 +231,7 @@ def delete_stale_resources(clinical_url: str, patient_id: str, *, tenant: str) -
             del_url = f"{clinical_url.rstrip('/')}/{rtype}/{rid}"
             del_req = urllib.request.Request(
                 del_url,
-                headers={"X-Tenant-ID": tenant},
+                headers=auth_headers(tenant=tenant, json_accept=False),
                 method="DELETE",
             )
             try:
@@ -189,7 +241,14 @@ def delete_stale_resources(clinical_url: str, patient_id: str, *, tenant: str) -
                 print(f"Delete {rtype}/{rid} HTTP {e.code}", file=sys.stderr)
 
 
-def verify(sidecar_url: str, bridge_url: str, hts_url: str, kr_url: str) -> None:
+def verify(
+    sidecar_url: str,
+    bridge_url: str,
+    hts_url: str,
+    kr_url: str,
+    *,
+    tenant: str,
+) -> None:
     patient = "cms165-demo"
     mp = {
         "Measurement Period": {
@@ -200,28 +259,39 @@ def verify(sidecar_url: str, bridge_url: str, hts_url: str, kr_url: str) -> None
         }
     }
 
-    vs = "http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.464.1003.101.12.1001"
+    vs = ATRIUS_OFFICE_VISIT_VS
     expand_body = {
         "resourceType": "Parameters",
         "parameter": [{"name": "url", "valueUri": vs}],
     }
     status, expand_resp = post_json(f"{hts_url.rstrip('/')}/ValueSet/$expand", expand_body)
-    total = json.loads(expand_resp).get("expansion", {}).get("total", 0)
-    print(f"HTS expand office visit VS total: {total}")
+    try:
+        total = len(
+            json.loads(expand_resp).get("expansion", {}).get("contains", []) or []
+        )
+    except json.JSONDecodeError:
+        total = 0
+    print(f"HTS expand atrius-vs-office-visit codes: {total}")
 
     enc_search = (
-        f"{bridge_url.rstrip('/')}/Encounter?patient={patient}"
-        f"&type:in={vs}"
+        f"{bridge_url.rstrip('/')}/Encounter?subject=Patient/{patient}"
+        f"&type:in={urllib.request.quote(vs, safe='')}"
     )
-    req = urllib.request.Request(enc_search, headers={"Accept": "application/fhir+json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        enc_n = len(json.loads(resp.read()).get("entry", []))
-    print(f"Bridge qualifying encounter search matches: {enc_n}")
+    req = urllib.request.Request(
+        enc_search,
+        headers=auth_headers(tenant=tenant),
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            enc_n = len(json.loads(resp.read()).get("entry", []))
+        print(f"Bridge qualifying encounter search matches: {enc_n}")
+    except urllib.error.HTTPError as e:
+        print(f"Bridge encounter search HTTP {e.code} (is bridge up on {bridge_url}?)")
 
     for library, version, expr in [
-        ("AdultOutpatientEncounters", "4.19.000", "Qualifying Encounters"),
-        ("CMS165FHIRControllingHighBloodPressure", "0.3.000", "Initial Population"),
-        ("CMS165FHIRControllingHighBloodPressure", "0.3.000", "Numerator"),
+        ("AtriusAdultOutpatientEncounters", "0.1.0", "Qualifying Encounters"),
+        ("AtriusCMS165ControllingHighBP", "0.1.0", "Initial Population"),
+        ("AtriusCMS165ControllingHighBP", "0.1.0", "Numerator"),
     ]:
         body = {
             "libraryId": library,
@@ -251,51 +321,39 @@ def verify(sidecar_url: str, bridge_url: str, hts_url: str, kr_url: str) -> None
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--hts-url",
-        default="http://127.0.0.1:9091",
-        help="HTS base URL",
-    )
-    parser.add_argument(
-        "--clinical-url",
-        default="http://127.0.0.1:8082",
-        help="Clinical HFS base URL (Atrius profiles)",
-    )
-    parser.add_argument(
-        "--bridge-url",
-        default="http://127.0.0.1:8081",
-        help="Bridge URL for verify searches",
-    )
-    parser.add_argument(
-        "--sidecar-url",
-        default="http://127.0.0.1:8088",
-        help="JVM sidecar URL for verify",
-    )
-    parser.add_argument(
-        "--kr-url",
-        default="http://127.0.0.1:8079",
-        help="KR HFS URL for verify",
-    )
+    parser.add_argument("--hts-url", default="http://127.0.0.1:9091")
+    parser.add_argument("--clinical-url", default="http://127.0.0.1:8082")
+    parser.add_argument("--bridge-url", default="http://127.0.0.1:8081")
+    parser.add_argument("--sidecar-url", default="http://127.0.0.1:8088")
+    parser.add_argument("--kr-url", default="http://127.0.0.1:8079")
     parser.add_argument(
         "--hts-db",
         type=Path,
         default=HTS_DB_DEFAULT,
-        help="Path to hts.db for CPT compose walk",
+        help="Path to hts.db for legacy CPT compose walk (--seed-cpt)",
     )
     parser.add_argument(
         "--tenant",
-        default="default",
-        help="X-Tenant-ID for clinical HFS",
+        default=DEFAULT_CLINICAL_TENANT,
+        help=(
+            "X-Tenant-ID for clinical HFS (default: HFS_DEFAULT_TENANT env or "
+            "atrius-hospitals; must match clinical HFS default tenant for bridge/sidecar)"
+        ),
+    )
+    parser.add_argument(
+        "--seed-cpt",
+        action="store_true",
+        help="Legacy: seed CPT concepts for VSAC AdultOutpatientEncounters (not needed for Atrius)",
     )
     parser.add_argument(
         "--clinical-only",
         action="store_true",
-        help="Skip CPT seeding",
+        help="Skip terminology seeding (default already skips CPT)",
     )
     parser.add_argument(
         "--terminology-only",
         action="store_true",
-        help="Only seed CPT to HTS",
+        help="Only run --seed-cpt (requires --seed-cpt)",
     )
     parser.add_argument(
         "--no-clean",
@@ -309,8 +367,17 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not args.clinical_only:
+    if args.terminology_only and not args.seed_cpt:
+        print("--terminology-only requires --seed-cpt", file=sys.stderr)
+        return 1
+
+    if args.seed_cpt and not args.clinical_only:
         seed_cpt(args.hts_url, args.hts_db)
+    elif not args.clinical_only:
+        print(
+            "Skipping CPT seed (Atrius ValueSets use SNOMED). "
+            "Pass --seed-cpt only for legacy VSAC eCQM evaluation."
+        )
 
     if not args.terminology_only:
         if not args.no_clean:
@@ -323,11 +390,12 @@ def main() -> int:
             args.bridge_url,
             args.hts_url,
             args.kr_url,
+            tenant=args.tenant,
         )
 
     print(
-        "\nNext: restart HTS if it was running during CPT seed (CodeSystem cache), "
-        "then curl CDS invoke or $apply for cms165-demo."
+        "\nNext: ensure bridge :8081 + cds-server :8095 are up, then:\n"
+        "  ./scripts/cds-cms165-prefetch-smoke.sh"
     )
     return 0
 

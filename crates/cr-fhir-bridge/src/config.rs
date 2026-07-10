@@ -87,6 +87,11 @@ pub struct Args {
     /// Public bridge base URL used as sidecar `hfsBaseUrl` during `$apply` (defaults to listen URL).
     #[arg(long, env = "CR_FHIR_BRIDGE_PUBLIC_URL")]
     pub public_url: Option<String>,
+
+    /// When set, inject `X-Tenant-ID` on upstream requests that omit it (sidecar/CDS do not send tenant).
+    /// Should match clinical HFS `HFS_DEFAULT_TENANT` (e.g. `atrius-hospitals`).
+    #[arg(long, env = "CR_FHIR_BRIDGE_DEFAULT_TENANT")]
+    pub default_tenant: Option<String>,
 }
 
 impl Args {

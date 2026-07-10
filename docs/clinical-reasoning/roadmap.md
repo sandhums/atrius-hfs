@@ -70,7 +70,7 @@ Manual `POST /v1/admin/cache/libraries/clear` remains for emergencies.
 
 ## Slice 3 — PlanDefinition-first catalog (done)
 
-**Status (atrius-hfs):** infrastructure in place. The eCQM NPM package has **no PlanDefinitions** — run `./scripts/setup-plandefinition-cds-catalog.sh` (synthesizes from Library+Measure, uploads to KR, regenerates manifest), restart cds-server, smoke with `./scripts/cds-cms165-prefetch-smoke.sh --apply`. `/ready` reports `planDefinitionPins` when `CDS_VALIDATE_KR_LIBRARIES=true`.
+**Status (atrius-hfs):** infrastructure in place. Author PlanDefinitions in AtriusIGDraft → `import-atrius-kr-libraries.py --clinical-reasoning` → `./scripts/setup-plandefinition-cds-catalog.sh`. Smoke with `./scripts/cds-cms165-prefetch-smoke.sh --apply`. `/ready` reports `planDefinitionPins` when `CDS_VALIDATE_KR_LIBRARIES=true`.
 
 ### Background
 
@@ -94,7 +94,7 @@ CDS invoke → cds-server → sidecar POST /v1/plandefinition/apply
 | Legacy `libraryId` + `expression` | PlanDefinition `$apply` |
 |-----------------------------------|-------------------------|
 | One CQL expression per CDS card | Full measure logic: populations, recommendations, actions |
-| Good for debugging / smoke | Spec-aligned CDS Hooks + eCQM |
+| Good for debugging / smoke | Spec-aligned CDS Hooks + Clinical Reasoning |
 | Pins one Library version | PlanDefinition references libraries + data requirements |
 | cds-server builds evaluate request | Sidecar runs CQF Clinical Reasoning processor |
 
@@ -102,16 +102,15 @@ CDS invoke → cds-server → sidecar POST /v1/plandefinition/apply
 
 ### What slice 3 adds (engineering)
 
-1. **Generate/upload PlanDefinitions to KR** for services you care about (not only Libraries).
-2. **Regenerate CDS manifest from PlanDefinitions** (not from Libraries shortcut):
+1. **Author/upload PlanDefinitions to KR** (AtriusIGDraft FSH + `--clinical-reasoning` import).
+2. **Regenerate CDS manifest from PlanDefinitions**:
 
    ```bash
-   python3 scripts/generate-ecqm-plandefinitions.py \
-     --kr-base-url http://127.0.0.1:8079 --upload
-
-   python3 scripts/generate-cds-hooks-manifest.py --from-plandefinition \
+   ./scripts/setup-plandefinition-cds-catalog.sh
+   # or writer-only:
+   python3 scripts/generate-cds-hooks-manifest.py \
      --kr-base-url http://127.0.0.1:8079 \
-     --output manifests/cds-services-kr-ecqm.json
+     --output manifests/cds-services-kr.json
    ```
 
 3. **cds-server KR probe for PlanDefinitions** — `kr_readiness.rs` probes `GET /PlanDefinition/{id}`; `/ready` exposes `planDefinitionPins` + `krPlanDefinitions`.
@@ -121,11 +120,8 @@ CDS invoke → cds-server → sidecar POST /v1/plandefinition/apply
 
 | Slice 3 | Authoring (phase 4) |
 |---------|---------------------|
-| **Infrastructure** — tooling + probes + manifest shape | **Content** — new CQL measures you write |
-| Uses generated PlanDefinitions from eCQM Libraries | Uses **AtriusIGDraft** translate + import |
-| Proves `$apply` path at scale | Grows KR with your measures |
-
-You can run slice 3 on **eCQM-generated** PlanDefinitions first, then author **Atrius** PlanDefinitions the same way.
+| **Infrastructure** — tooling + probes + manifest shape | **Content** — new CQL measures / pathways you write |
+| Catalog from KR PlanDefinitions | Grows KR via **AtriusIGDraft** translate + import |
 
 ---
 
@@ -140,40 +136,28 @@ After slice 2 + 3, expand **knowledge content** on KR.
 From **AtriusIGDraft** (external repo):
 
 ```bash
-# 1. Author/edit CQL in the IG project
+# 1. Author/edit CQL + PlanDefinitions in the IG project
 # 2. Translate to ELM + FHIR Library resources
 ./scripts/translate-cql.sh
 
-# 3. Import Libraries to KR (8079)
-./scripts/import-atrius-kr-libraries.py
+# 3. Import Libraries + PlanDefinitions/ActivityDefinitions to KR (8079)
+./scripts/import-atrius-kr-libraries.py --clinical-reasoning
 ```
 
-Requires eCQM base libraries already on KR (`FHIRHelpers`, etc.) — see [data-import.md § KR HFS](./data-import.md#kr-hfs-knowledge-libraries).
+See [data-import.md § KR HFS](./data-import.md#kr-hfs-knowledge-libraries).
 
-### eCQM CMS measures (bulk)
+### PlanDefinitions
 
-```bash
-./scripts/import-ecqm-kr-libraries.py --download
-# Optional measures for PlanDefinition linkage:
-./scripts/import-ecqm-kr-libraries.py --download --include Measure --batch-size 5
-```
-
-### PlanDefinitions for authored libraries
-
-**Generated (eCQM):**
-
-```bash
-python3 scripts/generate-ecqm-plandefinitions.py --kr-base-url http://127.0.0.1:8079 --upload
-```
-
-**Atrius / custom:** author `PlanDefinition` resources in the IG (or hand-craft JSON) following `CDSHooksServicePlanDefinition` — hook, prefetch as `action.input`, library reference + condition expression. Upload to KR via bundle POST/PUT same as Libraries.
+Author `PlanDefinition` resources in the IG following `CDSHooksServicePlanDefinition` — hook, prefetch as `action.input`, library reference + condition expression. Import with `--clinical-reasoning`.
 
 ### Wire into cds-server
 
 ```bash
-python3 scripts/generate-cds-hooks-manifest.py --from-plandefinition \
+./scripts/setup-plandefinition-cds-catalog.sh
+# or:
+python3 scripts/generate-cds-hooks-manifest.py \
   --kr-base-url http://127.0.0.1:8079 \
-  --output manifests/cds-services-kr-ecqm.json
+  --output manifests/cds-services-kr.json
 
 # Restart cds-server; confirm /ready; flush sidecar cache if libraries changed
 curl -s -X POST http://127.0.0.1:8088/v1/admin/cache/libraries/clear \

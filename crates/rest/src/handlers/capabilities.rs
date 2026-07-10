@@ -19,6 +19,8 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::Response,
 };
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use helios_fhir::FhirVersion;
 use helios_persistence::core::{ResourceStorage, SearchProvider};
 use helios_persistence::search::SearchParameterRegistry;
@@ -313,6 +315,9 @@ fn build_sof_rest_extension<S: ResourceStorage + Send + Sync + 'static>(
     state: &AppState<S>,
 ) -> Option<serde_json::Value> {
     let caps = build_sof_capabilities(state);
+    let caps_json = serde_json::to_string(&caps).unwrap_or_default();
+    // Attachment.data is base64Binary per FHIR; HAPI and other strict clients reject raw JSON.
+    let caps_data = BASE64_STANDARD.encode(caps_json.as_bytes());
     // Inline the SOF Parameters as a contained extension value so consumers
     // that understand the SOF spec can discover the flags without an extra request.
     Some(serde_json::json!([
@@ -327,7 +332,7 @@ fn build_sof_rest_extension<S: ResourceStorage + Send + Sync + 'static>(
             "url": "https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-sof-capabilities-inline.html",
             "valueAttachment": {
                 "contentType": "application/json",
-                "data": serde_json::to_string(&caps).unwrap_or_default()
+                "data": caps_data
             }
         }
     ]))

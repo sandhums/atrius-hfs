@@ -1,6 +1,6 @@
 # Clinical Reasoning — Data Import
 
-What to load, where it lives, and in what order for CDS / eCQM evaluation.
+What to load, where it lives, and in what order for CDS / measure evaluation.
 
 ## Import order
 
@@ -12,10 +12,10 @@ What to load, where it lives, and in what order for CDS / eCQM evaluation.
 5. LOINC (optional; Synthea vitals/labs)
 6. Atrius IG → profile manifest for clinical HFS validation
 7. Clinical patient data → clinical HFS
-8. eCQM Libraries → KR HFS (`import-ecqm-kr-libraries.py`)
-9. Atrius IG Libraries → KR HFS (AtriusIGDraft: `translate-cql.sh` + `import-atrius-kr-libraries.py`)
-10. eCQM PlanDefinitions → KR HFS (generated — not in NPM package)
-11. CDS manifest → KR Binary or local JSON (from PlanDefinition or Library)
+8. Atrius IG Libraries + PlanDefinitions → KR HFS
+   (AtriusIGDraft: translate-cql.sh + import-atrius-kr-libraries.py --clinical-reasoning)
+9. CDS manifest → local JSON or KR Binary
+   (setup-plandefinition-cds-catalog.sh → manifests/cds-services-kr.json)
 ```
 
 ## HTS (terminology server)
@@ -122,117 +122,76 @@ curl -s -X POST http://127.0.0.1:8088/v1/plandefinition/apply \
 
 ## KR HFS (knowledge libraries)
 
-The **Knowledge Repository** is a dedicated HFS instance (default port **8079**, separate DB from clinical HFS). It stores FHIR **`Library`** resources (CQL + ELM attachments), optional **`Measure`** / **`PlanDefinition`**, and the CDS catalog **`Binary`**.
+The **Knowledge Repository** is a dedicated HFS instance (default port **8079**, separate DB from clinical HFS). It stores FHIR **`Library`** resources (CQL + ELM attachments), **`Measure`** / **`PlanDefinition`** / **`ActivityDefinition`**, and optionally the CDS catalog **`Binary`**.
 
 ```text
-eCQM NPM package (.tgz)          Atrius IG (external repo)
-        │                                  │
-        ▼                                  ▼
-import-ecqm-kr-libraries.py      translate-cql.sh + import-atrius-kr-libraries.py
-        │                                  │
-        └──────────────┬───────────────────┘
-                       ▼
-              KR HFS (8079)  —  Postgres/SQLite resources + search_index
-                       │
-                       ▼
-        generate-cds-hooks-manifest.py  →  cds-server pins (libraryId + libraryVersion)
-                       │
-                       ▼
-              JVM sidecar (libraryBaseUrl) + cds-server KR probe (GET /Library/{id})
+AtriusIGDraft (CQL + FSH PlanDefinitions)
+        │
+        ▼
+translate-cql.sh + import-atrius-kr-libraries.py --clinical-reasoning
+        │
+        ▼
+KR HFS (8079)  —  Libraries + PlanDefinitions
+        │
+        ▼
+setup-plandefinition-cds-catalog.sh
+  └─ generate-cds-hooks-manifest.py  →  manifests/cds-services-kr.json
+        │
+        ▼
+cds-server (pins) + JVM sidecar (libraryBaseUrl)
 ```
 
 ### Start KR
 
 ```bash
-# Configure deploy/kr/.env.kr (DB URL, port 8079) — see scripts/run-kr-hfs.sh
+# Configure deploy/env/hfs-kr.env (DB URL, port 8079)
+./scripts/build-clinical-reasoning.sh   # once
 ./scripts/run-kr-hfs.sh
 # GET http://127.0.0.1:8079/health
 ```
 
-Local example uses Postgres (`fhir_kr` in `deploy/kr/.env.kr`). Clinical chart data stays on **8082**; never mix KR and clinical in one DB.
+Local example uses Postgres (`fhir_kr` in `deploy/env/hfs-kr.env`). Clinical chart data stays on **8082**; never mix KR and clinical in one DB.
 
-### eCQM libraries (HL7 NPM package)
+### Atrius IG libraries and PlanDefinitions
 
-Script: [`scripts/import-ecqm-kr-libraries.py`](../../scripts/import-ecqm-kr-libraries.py)
-
-Source: [ecqm-content-qicore NPM package](https://build.fhir.org/ig/cqframework/ecqm-content-qicore-2025/package.tgz) (Library + Measure JSON under `package/`).
-
-```bash
-# KR must be running on 8079 (or pass --kr-base-url)
-./scripts/import-ecqm-kr-libraries.py --download
-# Or local file:
-./scripts/import-ecqm-kr-libraries.py ./ecqm-content-qicore-2025.tgz --batch-size 1
-```
-
-| Flag / detail | Notes |
-|---------------|-------|
-| `--batch-size 1` | Libraries are large (~61 MiB total); keep each transaction bundle under `HFS_MAX_BODY_SIZE` (default 10 MiB) |
-| `--method PUT` (default) | Idempotent re-import by `Library/{id}` |
-| `--include Measure` | Optional; links populations on generated PlanDefinitions |
-| `--verbose` | Log per-resource version alignment |
-
-**What the script does:**
-
-1. Unpacks `package/Library-*.json` (and optional `Measure-*.json`) from the `.tgz`.
-2. For each Library, reads **`identifier.version`** from the **`application/elm+json`** attachment (`elm_identifier_version()`).
-3. **`normalize_library_version()`** sets `Library.version` (and the `text/cql` header) to that ELM version so sidecar binary-compatibility checks succeed. NPM JSON may show a different version string (e.g. `0.4.000` in the file, `0.4.001` in ELM) — **ELM wins** on import.
-4. POSTs FHIR transaction/batch Bundles to `POST {kr}/` (each entry `PUT Library/{id}`).
-
-**Verify eCQM import:**
-
-```bash
-curl -s "http://127.0.0.1:8079/Library?_count=0" -H 'Accept: application/fhir+json' | jq '.total'
-curl -s http://127.0.0.1:8079/Library/CMS2FHIRPCSDepressionScreenAndFollowUp \
-  -H 'Accept: application/fhir+json' | jq '{id, name, version}'
-```
-
-Expect `version` to match ELM, not necessarily the raw version string in the NPM JSON file.
-
-### Atrius IG libraries (CMS165 and profile CQL)
-
-Atrius measure libraries (e.g. **`AtriusCMS165ControllingHighBP`**) and **`AtriusIn-ModelInfo`** are maintained in the **AtriusIGDraft** repository (not in the eCQM NPM package). Import **after** eCQM base libraries (`FHIRHelpers`, ValueSet helpers, etc.) are on KR.
+Measure libraries (e.g. **`AtriusCMS165ControllingHighBP`**), helpers (**`FHIRHelpers`**, **`AtriusIn-ModelInfo`**), and CDS **`PlanDefinition`** / **`ActivityDefinition`** resources are maintained in **AtriusIGDraft**.
 
 From **AtriusIGDraft** (KR HFS on **8079** must be up):
 
 ```bash
-# Translate CQL → ELM and build FHIR Library resources
 ./scripts/translate-cql.sh
+./scripts/import-atrius-kr-libraries.py --clinical-reasoning
+```
 
-# POST Libraries to KR (same HFS transaction pattern as eCQM import)
-./scripts/import-atrius-kr-libraries.py
+Or from atrius-hfs (auto-detects `ATRIUS_IG_ROOT`):
+
+```bash
+IMPORT_ATRIUS=1 ./scripts/setup-plandefinition-cds-catalog.sh
 ```
 
 Full stack notes: **`AtriusIGDraft/docs/clinical-reasoning-stack.md`**.
 
-**Why both eCQM and Atrius:**
+**Verify import:**
 
-| Source | Examples on KR | Used for |
-|--------|----------------|----------|
-| eCQM NPM | `CMS2FHIR…`, `FHIRHelpers`, `SupplementalDataElements` | CMS measure logic, includes |
-| Atrius IG | `AtriusCMS165ControllingHighBP`, `AtriusIn-ModelInfo` | Atrius-profiled measures, custom modelinfo |
+```bash
+curl -s "http://127.0.0.1:8079/Library?_count=0" -H 'Accept: application/fhir+json' | jq '.total'
+curl -s "http://127.0.0.1:8079/PlanDefinition?_count=0" -H 'Accept: application/fhir+json' | jq '.total'
+curl -s http://127.0.0.1:8079/Library/AtriusCMS165ControllingHighBP \
+  -H 'Accept: application/fhir+json' | jq '{id, name, version}'
+```
 
-Sidecar **`include`** libraries load via **`hfsBaseUrl`** → **cr-fhir-bridge** → KR (`CR_FHIR_BRIDGE_KR_URL`). The **primary** library loads from **`libraryBaseUrl`** (KR direct, **8079**).
+Expect `Library.version` to match the ELM `identifier.version` inside `application/elm+json`.
 
-### After KR library import (checklist)
+### After KR import
 
-1. **Regenerate CDS manifest** so pins match deployed KR (recommended — avoids probing libraries you did not import):
-
-   ```bash
-   ./scripts/generate-cds-hooks-manifest.py \
-     --kr-base-url http://127.0.0.1:8079 \
-     --output manifests/cds-services-local.json
-   ```
-
-   Or upload catalog Binary: `--upload-binary-id cds-services-catalog` and set `CDS_KR_SERVICES_BINARY_ID` on cds-server.
-
-2. **Spot-check a pin** (direct read — same check cds-server uses):
+1. Confirm direct read:
 
    ```bash
    curl -s http://127.0.0.1:8079/Library/AtriusCMS165ControllingHighBP \
      -H 'Accept: application/fhir+json' | jq '{id, version}'
    ```
 
-3. **Optional — search index** (sidecar fallback only; can drift — see [kr-library-pinning.md](./kr-library-pinning.md)):
+2. **Optional — search index** (sidecar fallback only; can drift — see [kr-library-pinning.md](./kr-library-pinning.md)):
 
    ```bash
    curl -s "http://127.0.0.1:8079/Library?name=AtriusCMS165ControllingHighBP&version=0.1.0" \
@@ -241,24 +200,24 @@ Sidecar **`include`** libraries load via **`hfsBaseUrl`** → **cr-fhir-bridge**
 
    If search returns 0 but direct read works, re-PUT the resource through HFS (export + PUT) to rebuild `search_index`.
 
-4. **Enable pinning on cds-server** (`CDS_VALIDATE_KR_LIBRARIES=true`) and confirm `GET /ready` — see [kr-library-pinning.md](./kr-library-pinning.md).
+3. **Enable pinning on cds-server** (`CDS_VALIDATE_KR_LIBRARIES=true`) and confirm `GET /ready` — see [kr-library-pinning.md](./kr-library-pinning.md).
 
-5. **After any KR content change**, flush sidecar cache: `POST /v1/admin/cache/libraries/clear`.
+4. **After any KR content change**, flush sidecar cache: `POST /v1/admin/cache/libraries/clear`.
 
 ### Version discipline
 
 | Layer | Source of truth |
 |-------|-----------------|
 | ELM attachment | `library.identifier.version` inside `application/elm+json` |
-| KR `Library.version` | Set by `import-ecqm-kr-libraries.py` / Atrius import to match ELM |
+| KR `Library.version` | Set by Atrius import to match ELM |
 | CDS manifest `libraryVersion` | From `generate-cds-hooks-manifest.py` reading KR `Library.version` |
 | cds-server probe | `GET /Library/{libraryId}` → compare `Library.version` to pin |
 
 Re-import when sidecar reports **`libraryVersion does not match ELM identifier version`** ([troubleshooting.md](./troubleshooting.md)).
 
-## eCQM PlanDefinitions (CDS Hooks services)
+## CDS service manifest
 
-> **Important:** The [eCQM QICore Content NPM package](https://build.fhir.org/ig/cqframework/ecqm-content-qicore-2025/package.tgz) contains **Library** and **Measure** JSON only — **no `PlanDefinition`**. Slice 3 does **not** import PlanDefinitions from the package; [`generate-ecqm-plandefinitions.py`](../../scripts/generate-ecqm-plandefinitions.py) **synthesizes** `CDSHooksServicePlanDefinition` resources from Library CQL + Measure populations, then PUTs them to KR.
+For **cds-server**, services come from KR **PlanDefinitions** (see toy schema in `crates/cds-server/cds-services.manifest.example.json`).
 
 Per [HL7 Clinical Reasoning ↔ CDS Hooks](https://build.fhir.org/ig/HL7/cds-hooks-clinical-reasoning/en/specification.html), each CDS **Service** maps to a **`PlanDefinition`** (`CDSHooksServicePlanDefinition` profile):
 
@@ -267,122 +226,41 @@ Per [HL7 Clinical Reasoning ↔ CDS Hooks](https://build.fhir.org/ig/HL7/cds-hoo
 | `Service.id` | `PlanDefinition.url` (last path segment / identifier) |
 | `Service.hook` | `action.trigger` (`named-event`) |
 | `Service.prefetch` | `action.input` (`DataRequirement` — not a root-level field in R4) |
-| Evaluation | `library` + CQL condition expression (future: `$apply`) |
+| Evaluation | `library` + CQL condition → **`PlanDefinition/$apply`** |
 
-Script: [`scripts/generate-ecqm-plandefinitions.py`](../../scripts/generate-ecqm-plandefinitions.py)
+Store the generated catalog on disk (`CDS_SERVICES_MANIFEST_PATH`) or as a FHIR `Binary` (`CDS_KR_SERVICES_BINARY_ID`).
 
-```bash
-# Preview (~61 services from a typical 74-Library / 53-Measure import)
-python3 scripts/generate-ecqm-plandefinitions.py --download --dry-run
+### Generate catalog
 
-# Write JSON for review
-python3 scripts/generate-ecqm-plandefinitions.py --download \\
-  --output-dir manifests/plandefinitions-ecqm
-
-# PUT to KR (after Libraries are imported)
-python3 scripts/generate-ecqm-plandefinitions.py --kr-base-url http://127.0.0.1:8079 --upload
-
-# Optional: tag CDS server endpoint on each PlanDefinition
-python3 scripts/generate-ecqm-plandefinitions.py --kr-base-url http://127.0.0.1:8079 \\
-  --cds-endpoint-base http://127.0.0.1:8095 --upload
-
-# All four population expressions per measure (~181 PlanDefinitions)
-python3 scripts/generate-ecqm-plandefinitions.py --download --populations --upload \\
-  --kr-base-url http://127.0.0.1:8079
-```
-
-Import **Measures** to KR when you want population criteria linked on each PlanDefinition (`relatedArtifact` → `Measure/...`):
+**Orchestrator** (import from AtriusIGDraft if KR is empty, then write the JSON):
 
 ```bash
-./scripts/import-ecqm-kr-libraries.py --download --include Measure --batch-size 5
-```
-
-## CDS service manifest
-
-For **cds-server**, define services in JSON (see `crates/cds-server/cds-services.manifest.example.json`):
-
-```json
-{
-  "services": [{
-    "id": "cms165-numerator",
-    "hook": "patient-view",
-    "description": "CMS165 numerator check",
-    "libraryId": "CMS165FHIRControllingHighBloodPressure",
-    "libraryVersion": "0.3.000",
-    "expression": "Numerator",
-    "resolveFromFhir": true,
-    "prefetch": {
-      "patient": "Patient/{{context.patientId}}",
-      "conditions": "Condition?patient={{context.patientId}}",
-      "encounters": "Encounter?patient={{context.patientId}}",
-      "observations": "Observation?patient={{context.patientId}}",
-      "procedures": "Procedure?patient={{context.patientId}}",
-      "medicationRequests": "MedicationRequest?patient={{context.patientId}}",
-      "immunizations": "Immunization?patient={{context.patientId}}",
-      "diagnosticReports": "DiagnosticReport?patient={{context.patientId}}",
-      "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
-      "allergies": "AllergyIntolerance?patient={{context.patientId}}",
-      "coverage": "Coverage?beneficiary=Patient/{{context.patientId}}"
-    }
-  }]
-}
-```
-
-Store on KR as a FHIR `Binary` (`contentType: application/json`, base64 payload) and set `CDS_KR_SERVICES_BINARY_ID`, or use `CDS_SERVICES_MANIFEST_PATH` locally.
-
-### Generate manifest from KR PlanDefinitions (recommended)
-
-One-shot (import libraries if KR is empty, synthesize PlanDefinitions, regenerate manifest):
-
-```bash
-# KR running; imports eCQM libraries when none are present
 ./scripts/setup-plandefinition-cds-catalog.sh
-
-# Force library import from NPM, then synthesize + manifest
-ECQM_IMPORT_LIBS=1 ./scripts/setup-plandefinition-cds-catalog.sh
+IMPORT_ATRIUS=1 ./scripts/setup-plandefinition-cds-catalog.sh   # force re-import
 ```
 
-Or step by step:
+**Writer only** (PlanDefinitions already on KR):
 
 ```bash
-python3 scripts/generate-ecqm-plandefinitions.py --kr-base-url http://127.0.0.1:8079 --upload
-
-python3 scripts/generate-cds-hooks-manifest.py --from-plandefinition \\
-  --kr-base-url http://127.0.0.1:8079 \\
-  --output manifests/cds-services-kr-ecqm.json
+python3 scripts/generate-cds-hooks-manifest.py \
+  --kr-base-url http://127.0.0.1:8079 \
+  --output manifests/cds-services-kr.json
 ```
 
-The manifest includes `planDefinitionId` / `planDefinitionUrl` for **`PlanDefinition/$apply`** (preferred). Legacy `libraryId` / `expression` remain for direct `evaluate/expression` fallback when no PlanDefinition is declared.
+| Script | Role |
+|--------|------|
+| `setup-plandefinition-cds-catalog.sh` | Ensure KR has Atrius Libraries/PlanDefinitions, then call the writer |
+| `generate-cds-hooks-manifest.py` | Read KR PlanDefinitions → `manifests/cds-services-kr.json` |
 
-### Generate manifest from KR Libraries (legacy shortcut)
+The manifest includes `planDefinitionId` / `planDefinitionUrl` for **`PlanDefinition/$apply`**, plus `libraryId` / `libraryVersion` / `expression` pins.
 
-After importing eCQM libraries to KR, generate one CDS Hook per evaluable Library:
+## Authoring workflow
 
-```bash
-# Writes manifests/cds-services-kr-ecqm.json (~62 services from a typical 76-Library import)
-python3 scripts/generate-cds-hooks-manifest.py --kr-base-url http://127.0.0.1:8079
+When adding **new** measures / pathways, follow **[roadmap.md § Phase 4](./roadmap.md#phase-4--authoring-more-libraries-and-plandefinitions)**:
 
-# Optional: all four population expressions per CMS measure (~181 services)
-python3 scripts/generate-cds-hooks-manifest.py --populations --output manifests/cds-services-kr-ecqm-populations.json
-
-# Upload catalog to KR for cds-server discovery
-python3 scripts/generate-cds-hooks-manifest.py --upload-binary-id cds-services-catalog
-
-# cds-server
-CDS_SERVICES_MANIFEST_PATH=./manifests/cds-services-kr-ecqm.json \
-CDS_HFS_BASE_URL=http://127.0.0.1:8081 \
-  cargo run -p cds-server
-```
-
-The generator skips NPM `Manifest-*` libraries and helper/include libraries (`FHIRHelpers`, `SupplementalDataElements`, …) that have no standalone CQL expression. Each service uses `patient-view`, `libraryId`, `libraryVersion`, and the best population expression (`Initial Population`, then `Numerator`, …).
-
-## Authoring workflow (after roadmap slice 2–3)
-
-When adding **new** measures (not bulk eCQM import), follow **[roadmap.md § Phase 4](./roadmap.md#phase-4--authoring-more-libraries-and-plandefinitions)**:
-
-1. Author CQL in **AtriusIGDraft** → `translate-cql.sh` → `import-atrius-kr-libraries.py`
-2. Create/upload **PlanDefinition** to KR (generated or hand-authored)
-3. Regenerate CDS manifest `--from-plandefinition`
+1. Author CQL in **AtriusIGDraft** → `translate-cql.sh` → `import-atrius-kr-libraries.py --clinical-reasoning`
+2. Ensure **PlanDefinition** (and related ActivityDefinitions) are in the IG and imported to KR
+3. Regenerate CDS catalog: `./scripts/setup-plandefinition-cds-catalog.sh`
 4. Restart cds-server, flush sidecar cache, smoke invoke
 
 ## Atrius runtime mapper
@@ -390,7 +268,7 @@ When adding **new** measures (not bulk eCQM import), follow **[roadmap.md § Pha
 Projection rules: `atrius-runtime-mapper` (v0.1: Condition). Optional custom manifest:
 
 ```bash
-ATRIUS_MAPPER_MANIFEST=path/to/manifest.json cargo run --bin cr-fhir-bridge
+ATRIUS_MAPPER_MANIFEST=path/to/manifest.json ./scripts/run-cr-fhir-bridge.sh
 ```
 
 Generate inventory from Atrius IG: `scripts/generate-atrius-mapper-manifest.py`.

@@ -36,8 +36,8 @@ The smoke script (`scripts/cds-cms165-prefetch-smoke.sh`) and Postman collection
 
 Sources:
 
-- `manifests/cds-services-kr-ecqm.json` (generated)
-- `scripts/ecqm_cds_common.py` — `STANDARD_PATIENT_CHART_PREFETCH` (11 keys: Patient + common chart searches)
+- `manifests/cds-services-kr.json` (generated)
+- `scripts/cds_manifest_common.py` — `STANDARD_PATIENT_CHART_PREFETCH` (11 keys: Patient + common chart searches)
 - `crates/cds-server/src/kr_manifest.rs` — same standard templates when building from KR
 
 **Invoke** receives the client’s populated `prefetch` and forwards it to the JVM sidecar on **both** evaluation paths:
@@ -135,8 +135,8 @@ When `prefetch` is empty or omitted, behavior is unchanged: the sidecar retrieve
 | Forward prefetch on invoke | `crates/cds-server/src/services/mod.rs` |
 | Measurement Period → CQL | `crates/cds-server/src/measurement_period.rs` |
 | Sidecar request DTOs | `crates/atrius-clinical-reasoning/src/dto.rs`, `request_builder.rs` |
-| Standard prefetch templates | `scripts/ecqm_cds_common.py` |
-| Generated manifest | `manifests/cds-services-kr-ecqm.json` |
+| Standard prefetch templates | `scripts/cds_manifest_common.py` |
+| Generated manifest | `manifests/cds-services-kr.json` |
 | Client simulation (local) | `scripts/cds-cms165-prefetch-smoke.sh`, `scripts/cds-er-chest-pain-smoke.sh` |
 | Sidecar prefetch consume | JVM repo: `PrefetchRetrieveSupport.kt`, `SidecarPrefetchRetrieveProvider.kt` |
 | BFF prefetch resolver | `atrius-bff/src/prefetch.rs`, `handlers/cds.rs` |

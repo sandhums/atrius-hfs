@@ -1,28 +1,27 @@
 #!/usr/bin/env bash
-# Run Helios HFS configured as a Knowledge Repository (KR).
+# Run Knowledge Repository HFS with deploy/env/hfs-kr.env (release binary).
 #
-#   cp deploy/kr/.env.kr deploy/kr/.env.kr
-#   edit deploy/kr/.env.kr
+#   ./scripts/build-clinical-reasoning.sh
 #   ./scripts/run-kr-hfs.sh
 #
-# Override env file: KR_ENV_FILE=/path/to/.env.kr ./scripts/run-kr-hfs.sh
-# Extra args are passed to `cargo run -p helios-hfs -- ...` (e.g. --log-level debug).
+# Override: ENV_FILE=/path/to/env ./scripts/run-kr-hfs.sh
+# (KR_ENV_FILE is accepted as an alias for ENV_FILE.)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${KR_ENV_FILE:-$ROOT/deploy/kr/.env.kr}"
+# shellcheck source=lib/common.sh
+source "${ROOT}/scripts/lib/common.sh"
 
-if [[ ! -f "$ENV_FILE" ]]; then
-	echo "Missing env file: $ENV_FILE" >&2
-	echo "Copy deploy/kr/.env.kr.example to deploy/kr/.env.kr or set KR_ENV_FILE." >&2
-	exit 1
-fi
+ATRIUS_HFS_PATH="${ATRIUS_HFS_PATH:-${ROOT}}"
+ENV_FILE="${ENV_FILE:-${KR_ENV_FILE:-${ROOT}/deploy/env/hfs-kr.env}}"
+BUILD_HINT="cargo build --release -p helios-hfs --bin hfs --features postgres,redis,R4"
 
-set -a
-# shellcheck source=/dev/null
-source "$ENV_FILE"
-set +a
+source_env_file "${ENV_FILE}"
+HFS_BIN="$(require_release_bin "${ATRIUS_HFS_PATH}" hfs "${BUILD_HINT}")"
 
-cd "$ROOT"
-exec cargo run -p helios-hfs -- "$@"
+mkdir -p "${ATRIUS_HFS_PATH}/data"
+cd "${ATRIUS_HFS_PATH}"
+echo "Starting KR HFS (env: ${ENV_FILE}) on port ${HFS_SERVER_PORT:-8079}..."
+echo "  db=${HFS_DATABASE_URL:-unset} terminology=${HFS_TERMINOLOGY_SERVER:-none}"
+exec "${HFS_BIN}"

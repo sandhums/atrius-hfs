@@ -35,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
             http,
             mapper,
             args.max_body_size,
+            args.default_tenant.clone(),
         )
         .with_clinical_reasoning(
             args.bridge_public_base(),

@@ -54,15 +54,15 @@ fetch_json() {
 }
 
 echo "Fetching standard chart prefetch from $bridge for patient $PATIENT ..." >&2
-echo "CDS service: $SERVICE_ID ($([[ "$APPLY_MODE" == "true" ]] && echo 'PlanDefinition/\$apply' || echo 'evaluate/expression'))" >&2
+echo "CDS service: $SERVICE_ID (cds-server uses PlanDefinition/\$apply when the manifest row has planDefinitionId)" >&2
 echo "Measurement period (hook context): $MP_LOW .. $MP_HIGH" >&2
 
 payload="$(
   jq -n \
     --argjson patientResource "$(fetch_json "$bridge/Patient/$PATIENT" "Patient")" \
-    --argjson conditions "$(fetch_json "$bridge/Condition?patient=$PATIENT" "Condition search")" \
-    --argjson encounters "$(fetch_json "$bridge/Encounter?patient=$PATIENT" "Encounter search")" \
-    --argjson observations "$(fetch_json "$bridge/Observation?patient=$PATIENT" "Observation search")" \
+    --argjson conditions "$(fetch_json "$bridge/Condition?subject=Patient/$PATIENT" "Condition search")" \
+    --argjson encounters "$(fetch_json "$bridge/Encounter?subject=Patient/$PATIENT" "Encounter search")" \
+    --argjson observations "$(fetch_json "$bridge/Observation?subject=Patient/$PATIENT" "Observation search")" \
     --argjson procedures "$(fetch_json "$bridge/Procedure?patient=$PATIENT" "Procedure search")" \
     --argjson medicationRequests "$(fetch_json "$bridge/MedicationRequest?patient=$PATIENT" "MedicationRequest search")" \
     --argjson immunizations "$(fetch_json "$bridge/Immunization?patient=$PATIENT" "Immunization search")" \

@@ -74,7 +74,7 @@ impl ManifestService {
     }
 }
 
-/// CDS Hooks prefetch templates aligned with `scripts/ecqm_cds_common.py` (`STANDARD_PATIENT_CHART_PREFETCH`).
+/// CDS Hooks prefetch templates aligned with `scripts/cds_manifest_common.py` (`STANDARD_PATIENT_CHART_PREFETCH`).
 fn standard_chart_prefetch() -> HashMap<String, String> {
     HashMap::from([
         ("patient".into(), "Patient/{{context.patientId}}".into()),

@@ -122,6 +122,7 @@ async fn test_state_with_kr(upstream: &str, kr: Option<&str>) -> Arc<BridgeState
         http,
         RuntimeMapper::new(MapperManifest::default_v0_1()),
         10 * 1024 * 1024,
+        None,
     ))
 }
 

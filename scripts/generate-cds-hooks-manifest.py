@@ -1,58 +1,46 @@
 #!/usr/bin/env python3
-"""Generate a CDS Hooks service catalog from KR PlanDefinition or Library resources.
+"""Generate a CDS Hooks service catalog from KR PlanDefinition resources.
 
-**Spec-aligned path:** generate ``PlanDefinition`` resources first (see
-``generate-ecqm-plandefinitions.py``), then build the cds-server manifest from
-those PlanDefinitions (``--from-plandefinition``).
+PlanDefinitions are authored in AtriusIGDraft and imported to KR
+(``import-atrius-kr-libraries.py --clinical-reasoning``). This script reads
+those PlanDefinitions (+ linked Libraries for version pins) and writes
+``manifests/cds-services-kr.json`` for cds-server.
 
-**Legacy path:** read ``Library`` resources directly and infer ``libraryId`` /
-``expression`` (shortcut until ``PlanDefinition/$apply`` is wired end-to-end).
+Prefer the orchestrator when KR may be empty::
 
-Part of the clinical reasoning stack — see ``docs/clinical-reasoning/data-import.md``.
+  ./scripts/setup-plandefinition-cds-catalog.sh
 
-Typical workflow::
+Manifest-only (PlanDefinitions already on KR)::
 
-  ./scripts/generate-ecqm-plandefinitions.py --kr-base-url http://127.0.0.1:8079 --upload
-  ./scripts/generate-cds-hooks-manifest.py --from-plandefinition \\
+  ./scripts/generate-cds-hooks-manifest.py \\
     --kr-base-url http://127.0.0.1:8079 \\
-    --output manifests/cds-services-kr-ecqm.json
+    --output manifests/cds-services-kr.json
 
-  CDS_SERVICES_MANIFEST_PATH=./manifests/cds-services-kr-ecqm.json \\
-  CDS_HFS_BASE_URL=http://127.0.0.1:8081 \\
-    cargo run -p cds-server
+See ``docs/clinical-reasoning/data-import.md``.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import sys
-from pathlib import Path
-
-# Allow `from ecqm_cds_common import …` when invoked as `python3 scripts/…`.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 import urllib.error
 from pathlib import Path
 from typing import Any
 
-from ecqm_cds_common import (
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from cds_manifest_common import (
     DEFAULT_KR_BASE_URL,
-    DEFAULT_SKIP_LIBRARY_IDS,
-    MANIFEST_LIBRARY_PREFIX,
     data_requirements_to_prefetch,
-    missing_plandefinitions_help,
-    plan_definition_data_requirements,
-    decode_cql,
-    expression_names_from_cql,
     fetch_paged_resources,
     human_title,
     kr_put_binary,
-    pick_expressions,
-    slugify,
+    missing_plandefinitions_help,
+    plan_definition_data_requirements,
 )
 
-DEFAULT_OUTPUT = Path("manifests/cds-services-kr-ecqm.json")
+DEFAULT_OUTPUT = Path("manifests/cds-services-kr.json")
 CDS_HOOKS_SERVICE_PROFILE = (
     "http://hl7.org/fhir/StructureDefinition/cdshooksserviceplandefinition"
 )
@@ -60,7 +48,7 @@ CDS_HOOKS_SERVICE_PROFILE = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate CDS Hooks manifest JSON from KR PlanDefinition or Library resources.",
+        description="Generate CDS Hooks manifest JSON from KR PlanDefinition resources.",
     )
     parser.add_argument(
         "--kr-base-url",
@@ -74,35 +62,9 @@ def parse_args() -> argparse.Namespace:
         help=f"Output manifest path (default: {DEFAULT_OUTPUT})",
     )
     parser.add_argument(
-        "--from-plandefinition",
-        action="store_true",
-        help="Build manifest from PlanDefinition resources (recommended; spec-aligned)",
-    )
-    parser.add_argument(
         "--hook",
         default="patient-view",
-        help="CDS Hooks hook name for every service (default: patient-view; Library mode only)",
-    )
-    parser.add_argument(
-        "--populations",
-        action="store_true",
-        help="Emit one service per eCQM population expression (Library mode only)",
-    )
-    parser.add_argument(
-        "--include-manifest-libraries",
-        action="store_true",
-        help="Include Manifest-* NPM libraries (Library mode only)",
-    )
-    parser.add_argument(
-        "--include-helper-libraries",
-        action="store_true",
-        help="Attempt hooks for known helper libraries (Library mode only)",
-    )
-    parser.add_argument(
-        "--library-id",
-        action="append",
-        dest="library_ids",
-        help="Restrict to specific Library.id (Library mode only; repeatable)",
+        help="Default CDS Hooks hook when PlanDefinition has no named-event trigger",
     )
     parser.add_argument(
         "--dry-run",
@@ -112,49 +74,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--upload-binary-id",
         metavar="ID",
-        help="POST manifest to KR as Binary/{ID} (contentType application/json)",
+        help="PUT manifest to KR as Binary/{ID} (contentType application/json)",
     )
     parser.add_argument(
         "--tenant",
         default="default",
         help="X-Tenant-ID header for KR requests (default: default)",
     )
+    # Kept for callers that still pass the old flag; PlanDefinition mode is the only path.
+    parser.add_argument(
+        "--from-plandefinition",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
     return parser.parse_args()
-
-
-def build_service_entry(
-    library: dict[str, Any],
-    expression: str,
-    hook: str,
-    service_id: str | None = None,
-    plan_definition_id: str | None = None,
-    prefetch: dict[str, str] | None = None,
-) -> dict[str, Any]:
-    library_id = library["id"]
-    version = library.get("version")
-    sid = service_id or slugify(library_id)
-    if expression != "Initial Population":
-        sid = slugify(f"{library_id}-{expression}")
-
-    entry: dict[str, Any] = {
-        "id": sid,
-        "hook": hook,
-        "title": human_title(library_id, expression),
-        "description": (
-            f"Evaluates CQL expression `{expression}` from Library `{library_id}`"
-            + (f" version {version}" if version else "")
-            + " via clinical reasoning sidecar."
-        ),
-        "prefetch": prefetch or data_requirements_to_prefetch(None),
-        "libraryId": library_id,
-        "libraryVersion": version,
-        "expression": expression,
-        "resolveFromFhir": True,
-        "cdsHooksVersion": "1.0",
-    }
-    if plan_definition_id:
-        entry["planDefinitionId"] = plan_definition_id
-    return entry
 
 
 def library_id_from_reference(reference: str) -> str:
@@ -269,106 +202,39 @@ def manifest_from_plans(
     return {"services": services}, skipped
 
 
-def generate_manifest_from_libraries(
-    libraries: list[dict[str, Any]],
-    *,
-    hook: str,
-    populations_mode: bool,
-    include_manifest_libraries: bool,
-    include_helper_libraries: bool,
-    filter_ids: set[str] | None,
-) -> tuple[dict[str, Any], list[str]]:
-    services: list[dict[str, Any]] = []
-    skipped: list[str] = []
-    seen_ids: set[str] = set()
-
-    for lib in libraries:
-        library_id = lib.get("id") or ""
-        if not library_id:
-            continue
-        if filter_ids and library_id not in filter_ids:
-            continue
-        if not include_manifest_libraries and library_id.startswith(MANIFEST_LIBRARY_PREFIX):
-            skipped.append(f"{library_id} (Manifest NPM library)")
-            continue
-        if (
-            not include_helper_libraries
-            and library_id in DEFAULT_SKIP_LIBRARY_IDS
-        ):
-            skipped.append(f"{library_id} (helper/include library)")
-            continue
-
-        cql = decode_cql(lib)
-        if not cql:
-            skipped.append(f"{library_id} (no text/cql content)")
-            continue
-
-        defines = expression_names_from_cql(cql)
-        expressions = pick_expressions(library_id, defines, populations_mode)
-        if not expressions:
-            skipped.append(f"{library_id} (no evaluable define — functions only?)")
-            continue
-
-        for expression in expressions:
-            entry = build_service_entry(lib, expression, hook)
-            if entry["id"] in seen_ids:
-                entry["id"] = slugify(f"{entry['id']}-{expression}")[:80]
-            if entry["id"] in seen_ids:
-                skipped.append(f"{library_id}/{expression} (duplicate service id)")
-                continue
-            seen_ids.add(entry["id"])
-            services.append(entry)
-
-    return {"services": services}, skipped
-
-
 def main() -> int:
     args = parse_args()
     base = args.kr_base_url.rstrip("/")
-    filter_ids = set(args.library_ids) if args.library_ids else None
 
     try:
         libraries = fetch_paged_resources(base, "Library", args.tenant)
-        if args.from_plandefinition:
-            plans = fetch_paged_resources(base, "PlanDefinition", args.tenant)
-            if not plans:
-                print(
-                    "KR has no PlanDefinition resources — cannot build "
-                    "--from-plandefinition manifest.",
-                    file=sys.stderr,
-                )
-                print(missing_plandefinitions_help(kr_base=base), file=sys.stderr)
-                return 1
-            libraries_by_id = {lib["id"]: lib for lib in libraries if lib.get("id")}
-            manifest, skipped = manifest_from_plans(
-                plans,
-                libraries_by_id,
-                default_hook=args.hook,
+        plans = fetch_paged_resources(base, "PlanDefinition", args.tenant)
+        if not plans:
+            print(
+                "KR has no PlanDefinition resources — cannot build CDS manifest.",
+                file=sys.stderr,
             )
-            source_label = f"PlanDefinition ({len(plans)} on KR)"
-            if not manifest["services"]:
-                print(
-                    "No CDS services built from PlanDefinitions "
-                    f"({len(plans)} on KR, {len(skipped)} skipped).",
-                    file=sys.stderr,
-                )
-                return 1
-        else:
-            manifest, skipped = generate_manifest_from_libraries(
-                libraries,
-                hook=args.hook,
-                populations_mode=args.populations,
-                include_manifest_libraries=args.include_manifest_libraries,
-                include_helper_libraries=args.include_helper_libraries,
-                filter_ids=filter_ids,
+            print(missing_plandefinitions_help(kr_base=base), file=sys.stderr)
+            return 1
+        libraries_by_id = {lib["id"]: lib for lib in libraries if lib.get("id")}
+        manifest, skipped = manifest_from_plans(
+            plans,
+            libraries_by_id,
+            default_hook=args.hook,
+        )
+        if not manifest["services"]:
+            print(
+                "No CDS services built from PlanDefinitions "
+                f"({len(plans)} on KR, {len(skipped)} skipped).",
+                file=sys.stderr,
             )
-            source_label = f"Library ({len(libraries)} on KR)"
+            return 1
     except urllib.error.URLError as exc:
         print(f"Failed to fetch resources from {base}: {exc}", file=sys.stderr)
         return 1
 
     print(
-        f"Source: {source_label}; "
+        f"Source: PlanDefinition ({len(plans)} on KR); "
         f"CDS services generated: {len(manifest['services'])}; "
         f"skipped: {len(skipped)}",
         file=sys.stderr,
@@ -381,11 +247,9 @@ def main() -> int:
 
     if args.dry_run:
         for svc in manifest["services"][:5]:
-            extra = ""
-            if svc.get("planDefinitionId"):
-                extra = f" plan={svc['planDefinitionId']}"
             print(
-                f"  example: {svc['id']} -> {svc['libraryId']} / {svc['expression']}{extra}",
+                f"  example: {svc['id']} -> {svc['libraryId']} / {svc['expression']} "
+                f"plan={svc.get('planDefinitionId')}",
                 file=sys.stderr,
             )
         if len(manifest["services"]) > 5:

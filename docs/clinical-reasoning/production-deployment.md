@@ -53,10 +53,12 @@ Env templates (committed): `deploy/env/*.env.example`
 From the atrius-hfs repository root:
 
 ```bash
-cargo build --release -p helios-hts
-cargo build --release -p helios-hfs --bin hfs
-cargo build --release -p cr-fhir-bridge
-cargo build --release -p cds-server
+./scripts/build-clinical-reasoning.sh
+# Equivalent:
+# cargo build --release -p helios-hts --bin hts
+# cargo build --release -p helios-hfs --bin hfs --features postgres,redis,R4
+# cargo build --release -p cr-fhir-bridge --bin cr-fhir-bridge
+# cargo build --release -p cds-server --bin cds-server
 ```
 
 ### 2. JVM sidecar jar
@@ -173,7 +175,7 @@ Regenerate the manifest after KR import so pins match deployed artifacts:
 **Upgrade runbook (eCQM library change):**
 
 1. Import new ELM to KR — prefer a **new** `Library.version` (e.g. `0.1.1`), not in-place overwrite.
-2. Regenerate CDS manifest / redeploy `cds-services-kr-ecqm.json`.
+2. Regenerate CDS manifest / redeploy `cds-services-kr.json`.
 3. Restart **cds-server** (re-probes KR pins) or rely on startup validation.
 4. **Flush sidecar ELM cache** (no full JVM restart required):
 

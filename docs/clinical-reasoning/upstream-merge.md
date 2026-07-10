@@ -98,7 +98,7 @@ manifests/
 deploy/
 scripts/activity-definition-apply-smoke.sh
 scripts/cds-*.sh
-scripts/ecqm_cds_common.py
+scripts/cds_manifest_common.py
 scripts/generate-*.py
 scripts/import-*.py
 scripts/run-kr-hfs.sh
@@ -252,12 +252,10 @@ git checkout origin/feat-clinical-reasoning -- \
   scripts/activity-definition-apply-smoke.sh \
   scripts/cds-cms165-prefetch-smoke.sh \
   scripts/cds-er-chest-pain-smoke.sh \
-  scripts/ecqm_cds_common.py \
+  scripts/cds_manifest_common.py \
   scripts/generate-atrius-mapper-manifest.py \
   scripts/generate-cds-hooks-manifest.py \
-  scripts/generate-ecqm-plandefinitions.py \
   scripts/import-cms165-demo.py \
-  scripts/import-ecqm-kr-libraries.py \
   scripts/import-synthea-atrius.py \
   scripts/run-kr-hfs.sh \
   scripts/setup-plandefinition-cds-catalog.sh \

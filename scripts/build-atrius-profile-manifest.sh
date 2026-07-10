@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # Regenerate Atrius IG profile manifests for HFS (HFS_PROFILE_MANIFEST).
 #
-# Prerequisites:
-#   1. AtriusIGDraft built: cd "$ATRIUS_IG_DRAFT" && ./_build.sh
-#   2. Run from atrius-hfs repo root (or set ATRIUS_HFS_ROOT)
+# Default: fetches the published NPM package from atrius.in (prod path).
+# Local IG draft output: ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
 #
 # Usage:
-#   export ATRIUS_IG_DRAFT=/Users/sandhu/AtriusIGDraft   # default if unset
 #   ./scripts/build-atrius-profile-manifest.sh
+#
+#   # Local AtriusIGDraft/output (dev, no network):
+#   ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
+#
+#   # Explicit package path or URL:
+#   ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/build-atrius-profile-manifest.sh
+#   ATRIUS_IG_PACKAGE_URL=https://atrius.in/fhir/r4/atrius-in/package.tgz \
+#     ./scripts/build-atrius-profile-manifest.sh
 #
 # Outputs:
 #   manifests/deps/hl7-r4-extensions/*.json  — HL7 core extension SDs (Patient slices)
@@ -20,7 +26,23 @@ set -euo pipefail
 
 ROOT="${ATRIUS_HFS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 IG="${ATRIUS_IG_DRAFT:-/Users/sandhu/AtriusIGDraft}"
-IG_OUTPUT="${IG}/output"
+PUBLISHED_PACKAGE_URL="${ATRIUS_IG_PACKAGE_URL:-https://atrius.in/fhir/r4/atrius-in/package.tgz}"
+
+# IG source: expanded dir, explicit tarball/URL, local draft output, or published package (default).
+if [[ -n "${ATRIUS_IG_EXPANDED:-}" ]]; then
+  IG_OUTPUT="${ATRIUS_IG_EXPANDED}"
+  echo "IG source: ATRIUS_IG_EXPANDED=${IG_OUTPUT}" >&2
+elif [[ -n "${ATRIUS_IG_PACKAGE_TGZ:-}" || -n "${ATRIUS_IG_PACKAGE_URL:-}" ]]; then
+  IG_OUTPUT="$("${ROOT}/scripts/load-atrius-ig-package.sh")"
+  echo "IG source: package (${ATRIUS_IG_PACKAGE_TGZ:-${ATRIUS_IG_PACKAGE_URL}})" >&2
+elif [[ "${ATRIUS_IG_SOURCE:-}" == "local" ]]; then
+  IG_OUTPUT="${IG}/output"
+  echo "IG source: local draft ${IG_OUTPUT}" >&2
+else
+  export ATRIUS_IG_PACKAGE_URL="${PUBLISHED_PACKAGE_URL}"
+  echo "IG source: published package ${PUBLISHED_PACKAGE_URL}" >&2
+  IG_OUTPUT="$("${ROOT}/scripts/load-atrius-ig-package.sh")"
+fi
 MANIFEST_DIR="${ROOT}/manifests"
 HL7_EXT_DIR="${MANIFEST_DIR}/deps/hl7-r4-extensions"
 HL7_CORE_TGZ="${HL7_CORE_TGZ:-${ROOT}/crates/hts/terminology-data/hl7.fhir.r4.core.tgz}"
@@ -42,28 +64,45 @@ HL7_EXT_IDS=(
 )
 
 if [[ ! -d "${IG_OUTPUT}" ]]; then
-  echo "AtriusIGDraft output not found: ${IG_OUTPUT}" >&2
-  echo "Build the IG first: cd \"${IG}\" && ./_build.sh" >&2
+  echo "Atrius IG source not found: ${IG_OUTPUT}" >&2
+  echo "Use ATRIUS_IG_SOURCE=local after building AtriusIGDraft, or set ATRIUS_IG_PACKAGE_TGZ / ATRIUS_IG_PACKAGE_URL" >&2
   exit 1
+fi
+
+# NPM package layout uses package/ prefix in some tarballs; expanded tree is flat.
+if [[ ! -f "${IG_OUTPUT}/StructureDefinition-atrius-in-patient.json" \
+  && -f "${IG_OUTPUT}/package/StructureDefinition-atrius-in-patient.json" ]]; then
+  IG_OUTPUT="${IG_OUTPUT}/package"
 fi
 
 mkdir -p "${HL7_EXT_DIR}"
 
 echo "Materializing HL7 R4 extension StructureDefinitions → ${HL7_EXT_DIR}"
-if [[ ! -f "${HL7_CORE_TGZ}" ]]; then
-  echo "HL7 core package not found: ${HL7_CORE_TGZ}" >&2
-  echo "Set HL7_CORE_TGZ to hl7.fhir.r4.core-4.0.1.tgz" >&2
-  exit 1
-fi
-
+need_hl7_extract=false
 for id in "${HL7_EXT_IDS[@]}"; do
-  dest="${HL7_EXT_DIR}/StructureDefinition-${id}.json"
-  if [[ ! -f "${dest}" ]]; then
-    tar -xzf "${HL7_CORE_TGZ}" -C "${HL7_EXT_DIR}" "package/StructureDefinition-${id}.json"
-    mv "${HL7_EXT_DIR}/package/StructureDefinition-${id}.json" "${dest}"
-    rmdir "${HL7_EXT_DIR}/package" 2>/dev/null || true
+  if [[ ! -f "${HL7_EXT_DIR}/StructureDefinition-${id}.json" ]]; then
+    need_hl7_extract=true
+    break
   fi
 done
+
+if [[ "${need_hl7_extract}" == true ]]; then
+  if [[ ! -f "${HL7_CORE_TGZ}" ]]; then
+    echo "HL7 core package not found: ${HL7_CORE_TGZ}" >&2
+    echo "Set HL7_CORE_TGZ to hl7.fhir.r4.core-4.0.1.tgz" >&2
+    exit 1
+  fi
+  for id in "${HL7_EXT_IDS[@]}"; do
+    dest="${HL7_EXT_DIR}/StructureDefinition-${id}.json"
+    if [[ ! -f "${dest}" ]]; then
+      tar -xzf "${HL7_CORE_TGZ}" -C "${HL7_EXT_DIR}" "package/StructureDefinition-${id}.json"
+      mv "${HL7_EXT_DIR}/package/StructureDefinition-${id}.json" "${dest}"
+      rmdir "${HL7_EXT_DIR}/package" 2>/dev/null || true
+    fi
+  done
+else
+  echo "HL7 extension deps already present — skipping ${HL7_CORE_TGZ} extract"
+fi
 
 # Not shipped in hl7.fhir.r4.core 4.0.1; published in HL7 FHIR Extensions pack.
 RSG="${HL7_EXT_DIR}/StructureDefinition-individual-recordedSexOrGender.json"

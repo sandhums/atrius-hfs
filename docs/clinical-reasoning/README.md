@@ -119,14 +119,16 @@ Clinical HFS must have `HFS_TERMINOLOGY_SERVER` set so `:in` search modifiers ex
 
 ## Recommended local port map
 
-| Service | Port | Env / flag |
+| Service | Port | Start with |
 |---------|------|------------|
-| Clinical HFS | 8082 | `HFS_SERVER_PORT`, `deploy/clinical/.env.atrius` |
-| KR HFS | 8079 | `deploy/kr/.env.kr`, `scripts/run-kr-hfs.sh` |
-| cr-fhir-bridge | 8081 | `CR_FHIR_BRIDGE_PORT` |
-| HTS | 9091 or 8090 | `HTS_SERVER_PORT` — **use one everywhere** |
-| JVM sidecar | 8088 | `SIDECAR_PORT` (sidecar repo) |
-| cds-server | 8095 | `CDS_SERVER_PORT` |
+| HTS | 9091 | `./scripts/run-hts.sh` → `deploy/env/hts.env` |
+| Clinical HFS | 8082 | `./scripts/run-hfs.sh` → `deploy/env/hfs-clinical.env` |
+| KR HFS | 8079 | `./scripts/run-kr-hfs.sh` → `deploy/env/hfs-kr.env` |
+| cr-fhir-bridge | 8081 | `./scripts/run-cr-fhir-bridge.sh` → `deploy/env/cr-fhir-bridge.env` |
+| JVM sidecar | 8088 | `./scripts/run-cql-sidecar.sh` |
+| cds-server | 8095 | `./scripts/run-cds-server.sh` → `deploy/env/cds-server.env` |
+
+Build once: `./scripts/build-clinical-reasoning.sh`. Full map: [scripts/README.md](../../scripts/README.md).
 
 Use **`127.0.0.1` consistently** (not `localhost`) if the sidecar runs in Docker or a JVM that resolves `localhost` differently from Rust services.
 
@@ -161,20 +163,23 @@ Checklist before expecting CMS165 (or similar eCQM) to evaluate cleanly:
 - `CDS_HFS_BASE_URL` = bridge URL (**8081**)
 - Sidecar evaluate requests use the same `hfsBaseUrl` / `htsBaseUrl` / `libraryBaseUrl`
 - `CR_FHIR_BRIDGE_KR_URL` set so `FHIRHelpers` and other includes resolve
-- `Library.version` on KR matches ELM identifier version (re-import with `import-ecqm-kr-libraries.py` if mismatched)
-- CDS catalog generated from KR Libraries: `scripts/generate-cds-hooks-manifest.py` → `manifests/cds-services-kr-ecqm.json` (see [data-import.md](./data-import.md))
+- `Library.version` on KR matches ELM identifier version (re-import with AtriusIGDraft `import-atrius-kr-libraries.py` if mismatched)
+- CDS catalog generated from KR PlanDefinitions: `scripts/generate-cds-hooks-manifest.py` → `manifests/cds-services-kr.json` (see [data-import.md](./data-import.md))
 
 ## Crates & entry points
 
-| Crate | Binary / lib | Doc |
-|-------|----------------|-----|
-| `cds-server` | `cargo run -p cds-server` | [crates/cds-server/README.md](../../crates/cds-server/README.md) |
-| `cr-fhir-bridge` | `cargo run --bin cr-fhir-bridge` | [crates/cr-fhir-bridge/README.md](../../crates/cr-fhir-bridge/README.md) |
+| Crate | Local start | Doc |
+|-------|-------------|-----|
+| `helios-hts` | `./scripts/run-hts.sh` | [crates/hts/README.md](../../crates/hts/README.md) |
+| `helios-hfs` | `./scripts/run-hfs.sh` / `./scripts/run-kr-hfs.sh` | CLAUDE.md |
+| `cr-fhir-bridge` | `./scripts/run-cr-fhir-bridge.sh` | [crates/cr-fhir-bridge/README.md](../../crates/cr-fhir-bridge/README.md) |
+| `cds-server` | `./scripts/run-cds-server.sh` | [crates/cds-server/README.md](../../crates/cds-server/README.md) |
+| JVM sidecar | `./scripts/run-cql-sidecar.sh` | external JVMsidecar repo |
 | `atrius-clinical-reasoning` | library | [crates/atrius-clinical-reasoning/README.md](../../crates/atrius-clinical-reasoning/README.md) |
 | `atrius-runtime-mapper` | library | [crates/atrius-runtime-mapper/README.md](../../crates/atrius-runtime-mapper/README.md) |
 | `helios-cds-hooks` | library (protocol types) | [crates/cds-hooks/README.md](../../crates/cds-hooks/README.md) |
-| `helios-hfs` | `cargo run --bin hfs` | CLAUDE.md |
-| `helios-hts` | `cargo run --bin hts` | [crates/hts/README.md](../../crates/hts/README.md) |
+
+Build all Rust binaries: `./scripts/build-clinical-reasoning.sh`. Script map: [scripts/README.md](../../scripts/README.md).
 
 ## Related docs
 

@@ -290,4 +290,43 @@ mod sof_capability_tests {
             "no extension references the capabilities endpoint, got: {refs:?}"
         );
     }
+
+    #[tokio::test]
+    async fn test_metadata_sof_inline_attachment_data_is_base64_parameters() {
+        use base64::Engine as _;
+        use base64::engine::general_purpose::STANDARD as B64;
+
+        let server = create_test_server().await;
+
+        let response = server
+            .get("/metadata")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+
+        let body: Value = serde_json::from_str(&response.text()).expect("body must be valid JSON");
+
+        let extensions = body["rest"][0]["extension"]
+            .as_array()
+            .expect("rest[0].extension must be an array when sof feature is enabled");
+
+        let inline = extensions
+            .iter()
+            .find(|e| {
+                e["url"]
+                    .as_str()
+                    .is_some_and(|u| u.contains("sof-capabilities-inline"))
+            })
+            .expect("inline SOF extension must be present");
+
+        let data = inline["valueAttachment"]["data"]
+            .as_str()
+            .expect("inline attachment data must be a base64 string");
+
+        let decoded = B64
+            .decode(data)
+            .expect("inline attachment data must be valid base64");
+        let caps: Value =
+            serde_json::from_slice(&decoded).expect("decoded inline data must be JSON Parameters");
+        assert_eq!(caps["resourceType"], "Parameters");
+    }
 }

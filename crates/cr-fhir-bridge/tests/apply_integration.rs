@@ -169,6 +169,7 @@ async fn build_apply_state(sidecar_url: &str, bridge_base: &str) -> Arc<BridgeSt
         http,
         RuntimeMapper::new(MapperManifest::default_v0_1()),
         10 * 1024 * 1024,
+        None,
     );
     state.cr = Some(ClinicalReasoningEndpoints::new(
         bridge_base.to_string(),

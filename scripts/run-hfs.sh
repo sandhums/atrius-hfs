@@ -1,37 +1,30 @@
 #!/usr/bin/env bash
-# Run Clinical HFS with deploy/env/hfs-clinical.env
+# Run Clinical HFS with deploy/env/hfs-clinical.env (release binary).
+#
+#   ./scripts/build-clinical-reasoning.sh
+#   ./scripts/run-hfs.sh
+#
+# Override: ENV_FILE=/path/to/env ./scripts/run-hfs.sh
+
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/common.sh
+source "${ROOT}/scripts/lib/common.sh"
+
 ATRIUS_HFS_PATH="${ATRIUS_HFS_PATH:-${ROOT}}"
 ENV_FILE="${ENV_FILE:-${ROOT}/deploy/env/hfs-clinical.env}"
-HFS_BIN="${ATRIUS_HFS_PATH}/target/release/hfs"
+BUILD_HINT="cargo build --release -p helios-hfs --bin hfs --features postgres,redis,R4"
 
-if [[ ! -f "${ENV_FILE}" ]]; then
-  echo "Missing ${ENV_FILE}. Copy from deploy/env/hfs-clinical.env.example first." >&2
-  exit 1
-fi
-
-if [[ ! -x "${HFS_BIN}" ]]; then
-  echo "Release binary not found at ${HFS_BIN}." >&2
-  echo "Build with: cargo build --release --bin hfs --features postgres,redis,R4" >&2
-  exit 1
-fi
-
-export ATRIUS_HFS_PATH
-set -a
-# shellcheck disable=SC1090
-source "${ENV_FILE}"
-set +a
+source_env_file "${ENV_FILE}"
+HFS_BIN="$(require_release_bin "${ATRIUS_HFS_PATH}" hfs "${BUILD_HINT}")"
 
 if [[ -n "${RUST_LOG:-}" ]]; then
   echo "Note: RUST_LOG=${RUST_LOG} overrides HFS_LOG_LEVEL (${HFS_LOG_LEVEL:-info})." >&2
-  echo "      Include hfs=info,helios_auth=info in RUST_LOG to see auth startup logs." >&2
 fi
 
 mkdir -p "${ATRIUS_HFS_PATH}/data"
-
 cd "${ATRIUS_HFS_PATH}"
-echo "Starting Clinical HFS from ${ATRIUS_HFS_PATH} (env: ${ENV_FILE}) on port ${HFS_SERVER_PORT:-8082}..."
-echo "  auth=${HFS_AUTH_ENABLED:-false} jti_revocation=${HFS_AUTH_JTI_REVOCATION:-false} audit=${HFS_AUDIT_BACKEND:-none} log=${HFS_LOG_LEVEL:-info}"
+echo "Starting Clinical HFS (env: ${ENV_FILE}) on port ${HFS_SERVER_PORT:-8082}..."
+echo "  auth=${HFS_AUTH_ENABLED:-false} tenant_default=${HFS_DEFAULT_TENANT:-default} log=${HFS_LOG_LEVEL:-info}"
 exec "${HFS_BIN}"

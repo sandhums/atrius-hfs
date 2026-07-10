@@ -40,11 +40,18 @@ Cannot invoke "ca.uhn.fhir.rest.api.MethodOutcome.getResource()" because the ret
 
 **Cause:** With prefetch present, CQF adds an in-memory retrieve provider (disabling server-side `:in` ValueSet searches). ValueSet membership then uses `ValueSet/{id}/$expand` via `IRepository.invoke(id, "$expand", …)`. CQF `ProxyRepository` returns **null** from that overload, so expansion fails. Without prefetch, REST `:in` searches avoid `$expand`.
 
-**Fix:** Rebuild/restart **JVM sidecar** with `SidecarRoutingRepository` (routes `invoke` by resource type to HTS/KR/clinical REST). `$apply` uses it via `LibraryEngine` instead of CQF `ProxyRepository`. CQF calls `invoke(id, "$expand", null)` — the router accepts null parameters and substitutes empty FHIR `Parameters` before delegating to REST.
+**Fix:** Rebuild/restart **JVM sidecar** so `$apply` builds `LibraryEngine(SidecarRoutingRepository)` and does **not** pass the three raw RestRepositories into CQF's 3-repo `apply` overload (that path wraps them in `ProxyRepository`, whose `invoke(id, "$expand", …)` returns null). `SidecarRoutingRepository` routes `ValueSet` ops to HTS and accepts null parameters by substituting empty FHIR `Parameters`.
 
 **Workaround:** empty prefetch until sidecar is updated.
 
-## HFS WARN: `ValueSet $expand returned empty expansion for :in modifier`
+## HAPI cannot parse KR `/metadata` (Attachment.data / SOF inline)
+
+**Symptom:** Sidecar `$apply` fails with HAPI-1821 on `Attachment.data` while fetching `http://127.0.0.1:8079/metadata`.
+
+**Cause:** CapabilityStatement SOF inline extension put raw JSON in `valueAttachment.data` (must be base64Binary).
+
+**Fix:** Rebuild/restart KR with a current `hfs` binary (`./scripts/build-clinical-reasoning.sh` then `./scripts/run-kr-hfs.sh`). Clinical HFS should use the same binary when HAPI clients read its metadata.
+
 
 **Symptom:** Clinical HFS logs warnings; `:in` searches match nothing.
 
@@ -87,9 +94,11 @@ Cannot invoke "ca.uhn.fhir.rest.api.MethodOutcome.getResource()" because the ret
 **Fix:**
 
 ```bash
-CR_FHIR_BRIDGE_UPSTREAM_URL=http://127.0.0.1:8082 \
-CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079 \
-  cargo run --bin cr-fhir-bridge
+./scripts/run-cr-fhir-bridge.sh
+# Ensure deploy/env/cr-fhir-bridge.env has:
+#   CR_FHIR_BRIDGE_UPSTREAM_URL=http://127.0.0.1:8082
+#   CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079
+#   CR_FHIR_BRIDGE_DEFAULT_TENANT=<same as clinical HFS_DEFAULT_TENANT>
 ```
 
 ## Sidecar bound to port 8081
@@ -125,7 +134,9 @@ CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079 \
 **Fix:** Re-import libraries:
 
 ```bash
-./scripts/import-ecqm-kr-libraries.py --download
+IMPORT_ATRIUS=1 ./scripts/setup-plandefinition-cds-catalog.sh
+# or from AtriusIGDraft:
+#   ./scripts/translate-cql.sh && ./scripts/import-atrius-kr-libraries.py --clinical-reasoning
 ```
 
 Ensure manifest `libraryVersion` matches imported resource.
@@ -246,9 +257,9 @@ Re-run SNOMED RF2 import; restart HTS.
 ## Useful log targets
 
 ```bash
-RUST_LOG=helios_rest::handlers::search=debug cargo run --bin hfs   # :in expansion warnings
-RUST_LOG=cr_fhir_bridge=debug cargo run --bin cr-fhir-bridge       # projection stats
-RUST_LOG=cds_server=debug cargo run -p cds-server                    # sidecar invoke
+RUST_LOG=helios_rest::handlers::search=debug ./scripts/run-hfs.sh
+RUST_LOG=cr_fhir_bridge=debug ./scripts/run-cr-fhir-bridge.sh
+RUST_LOG=cds_server=debug ./scripts/run-cds-server.sh
 ```
 
 HTS: `EX_PROBE` lines show expand cache hits/misses and result sizes.

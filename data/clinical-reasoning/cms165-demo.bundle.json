@@ -63,9 +63,9 @@
           {
             "coding": [
               {
-                "system": "http://www.ama-assn.org/go/cpt",
-                "code": "99213",
-                "display": "Office visit est"
+                "system": "http://snomed.info/sct",
+                "code": "185349003",
+                "display": "Encounter for check up (procedure)"
               }
             ],
             "text": "Office outpatient visit"

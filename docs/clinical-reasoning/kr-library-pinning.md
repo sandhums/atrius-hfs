@@ -17,7 +17,7 @@ Prefetch and SMART `fhirAuthorization` control **patient data**; this controls *
 ## Architecture (today)
 
 ```text
-manifests/cds-services-kr-ecqm.json
+manifests/cds-services-kr.json
   libraryId + libraryVersion  (per CDS service)
         ↓
 cds-server  — validate manifest, probe KR at startup (GET /Library/{id}), GET /ready
@@ -156,7 +156,7 @@ Full stack sequence (slice 2 → PlanDefinition-first → authoring): **[roadmap
 | Pinning + KR probe | `crates/cds-server/src/library_version.rs` |
 | Invoke wiring | `crates/cds-server/src/services/mod.rs` |
 | Manifest generation | `scripts/generate-cds-hooks-manifest.py` |
-| Catalog | `manifests/cds-services-kr-ecqm.json` |
+| Catalog | `manifests/cds-services-kr.json` |
 | Sidecar cache | JVM: `EvaluationLibraryCache.kt`, `SidecarLibraryCacheAdmin.kt` |
 | HTTP client flush | `crates/atrius-clinical-reasoning/src/client/http.rs` |
 

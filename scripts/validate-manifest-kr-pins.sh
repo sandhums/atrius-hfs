@@ -11,7 +11,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KR="${KR_HFS_URL:-http://127.0.0.1:8079}"
-MANIFEST="${MANIFEST:-$REPO_ROOT/manifests/cds-services-kr-ecqm.json}"
+MANIFEST="${MANIFEST:-$REPO_ROOT/manifests/cds-services-kr.json}"
 kr="${KR%/}"
 
 if [[ ! -f "$MANIFEST" ]]; then

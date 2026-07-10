@@ -24,8 +24,9 @@ cargo run --bin hts -- import ./RxNorm_full_current/rrf/ --format rxnorm --datab
 ./scripts/import-cms165-demo.py --verify
 # Or Synthea: ./scripts/import-synthea-atrius.py --patients 1 ./path/to/synthea/output/fhir/
 
-# KR eCQM libraries
-./scripts/import-ecqm-kr-libraries.py --download
+# KR libraries (AtriusIGDraft)
+IMPORT_ATRIUS=1 ./scripts/setup-plandefinition-cds-catalog.sh
+# or: (cd $ATRIUS_IG && ./scripts/translate-cql.sh && ./scripts/import-atrius-kr-libraries.py --clinical-reasoning)
 ```
 
 Verify concept counts:
@@ -36,71 +37,61 @@ sqlite3 ./data/hts.db "SELECT COUNT(*) FROM concepts;"   # expect 400k+ with SNO
 
 ## 2. Start services
 
-Use separate terminals for local dev, or **systemd** for production — see [production-deployment.md](./production-deployment.md). **Order matters**: HTS and both HFS instances before bridge and sidecar.
+Use **one terminal per service**, or **systemd** for production — see [production-deployment.md](./production-deployment.md). **Order matters**: HTS and both HFS instances before bridge and sidecar.
+
+```bash
+./scripts/build-clinical-reasoning.sh   # once after pulling / changing Rust code
+```
+
+Script inventory: [scripts/README.md](../../scripts/README.md).
 
 ### HTS (terminology)
 
 ```bash
-HTS_DATABASE_URL=./data/hts.db HTS_SERVER_PORT=9091 cargo run --bin hts
+./scripts/run-hts.sh
 # GET http://127.0.0.1:9091/health
 ```
 
 ### Clinical HFS (Atrius chart data)
 
 ```bash
-# From repo root; uses deploy/clinical/.env.atrius or equivalent
-HFS_SERVER_PORT=8082 \
-HFS_DATABASE_URL=./data/clinical-fhir.db \
-HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json \
-HFS_TERMINOLOGY_SERVER=http://127.0.0.1:9091 \
-  cargo run --bin hfs
+./scripts/run-hfs.sh
 # GET http://127.0.0.1:8082/health
+# Env: deploy/env/hfs-clinical.env (HFS_DEFAULT_TENANT must match chart data / bridge default tenant)
 ```
 
 ### KR HFS (libraries)
 
 ```bash
 ./scripts/run-kr-hfs.sh
-# Or: source deploy/kr/.env.kr && cargo run --bin hfs
 # GET http://127.0.0.1:8079/health
+# Env: deploy/env/hfs-kr.env (same release `hfs` binary as clinical, different DB/port)
 ```
 
 ### cr-fhir-bridge
 
 ```bash
-CR_FHIR_BRIDGE_PORT=8081 \
-CR_FHIR_BRIDGE_UPSTREAM_URL=http://127.0.0.1:8082 \
-CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079 \
-  cargo run --bin cr-fhir-bridge
+./scripts/run-cr-fhir-bridge.sh
 # GET http://127.0.0.1:8081/health
+# Sets CR_FHIR_BRIDGE_DEFAULT_TENANT to match clinical HFS when callers omit X-Tenant-ID
 ```
 
 ### JVM sidecar
 
-Build and run from the **JVMsidecar** project (port **8088** only — never bind the sidecar to **8081**).
-
 ```bash
-cd /path/to/JVMsidecar
-mvn package
-SIDECAR_PORT=8088 mvn exec:java -Dexec.mainClass=com.atrius.sidecar.MainKt
+./scripts/run-cql-sidecar.sh
 # GET http://127.0.0.1:8088/health
+# Uses JVMSIDECAR_HOME (default ~/IdeaProjects/JVMsidecar) or SIDECAR_JAR
 ```
 
-The sidecar includes **AtriusIn modelinfo** support and **process-wide library caching** (see `AtriusIGDraft/docs/clinical-reasoning-stack.md`). Restart after KR re-import.
-
-Ensure the sidecar can reach bridge **8081**, KR **8079**, and HTS **9091**.
+Never bind the sidecar to **8081** (that port is the bridge). Restart the sidecar after KR re-import or sidecar code changes (`mvn -q -DskipTests compile` in JVMsidecar).
 
 ### cds-server (CDS Hooks)
 
 ```bash
-CDS_SERVER_PORT=8095 \
-CDS_CLINICAL_REASONING_URL=http://127.0.0.1:8088 \
-CDS_HFS_BASE_URL=http://127.0.0.1:8081 \
-CDS_HTS_BASE_URL=http://127.0.0.1:9091 \
-CDS_LIBRARY_BASE_URL=http://127.0.0.1:8079 \
-CDS_SERVICES_MANIFEST_PATH=./manifests/cds-services-kr-ecqm.json \
-  cargo run -p cds-server
+./scripts/run-cds-server.sh
 # GET http://127.0.0.1:8095/cds-services
+# Env: deploy/env/cds-server.env — CDS_HFS_BASE_URL must be the bridge (:8081)
 ```
 
 ### Atrius CMS165 (after Atrius IG libraries imported to KR)
@@ -109,54 +100,38 @@ CDS_SERVICES_MANIFEST_PATH=./manifests/cds-services-kr-ecqm.json \
 # From AtriusIGDraft (KR must be up):
 # ./scripts/translate-cql.sh && ./scripts/import-atrius-kr-libraries.py
 
-# Discovery advertises standard chart prefetch (Patient + compartment searches for common QI-Core types).
-curl -s http://127.0.0.1:8095/cds-services | jq '.services[] | select(.id=="atriuscms165controllinghighbp") | .prefetch'
+curl -s http://127.0.0.1:8095/cds-services \
+  | jq '.services[] | select(.id=="atriuscms165controllinghighbp") | .prefetch'
 
-# EHR fills prefetch from those templates; cds-server forwards to the sidecar evaluate path.
-# JVM sidecar caches ValueSet $expand per HTS base (process-wide) to avoid duplicate url-search + expand calls.
-# Use the helper script (builds JSON with jq — avoids shell interpolation bugs):
 ./scripts/cds-cms165-prefetch-smoke.sh
+# ./scripts/cds-cms165-prefetch-smoke.sh --apply   # eCQM PlanDefinition service id
 
-# PlanDefinition/$apply path (slice 3): upload PlanDefinitions + regenerate manifest first:
-#   ./scripts/setup-plandefinition-cds-catalog.sh
-# Then restart cds-server and smoke with populated prefetch:
-#   ./scripts/cds-cms165-prefetch-smoke.sh --apply
+# Expect cards for cms165-demo when demo data + period align:
+# ./scripts/import-cms165-demo.py --verify
 
-# Pass Measurement Period on each CDS invoke (hook context — the eCQM reporting window):
-#   "context": { "patientId": "...", "userId": "...", "measurementPeriod": {"low":"2026-01-01","high":"2026-12-31"} }
-# Expect `"Initial Population: true"` for cms165-demo when demo data + period align (`import-cms165-demo.py --verify`).
+# Context-only (empty prefetch — REST fallback):
+curl -s -X POST http://127.0.0.1:8095/cds-services/atriuscms165controllinghighbp \
+  -H 'Content-Type: application/json' \
+  -d @docs/clinical-reasoning/postman/cms165-invoke-context-only.json | jq .
+```
+
+cds-server returns plain text (not JSON) on 502/412 — check HTTP status before piping to `jq`.
 
 ### ER chest pain pathway (encounter-start)
 
 After importing Atrius KR libraries (PlanDefinition `er-chest-pain-pathway`, Library `AtriusERChestPainPathway`):
 
 ```bash
-# cds-server must load manifests/cds-services-kr-ecqm.json (includes er-chest-pain-pathway service)
-CDS_SERVICES_MANIFEST_PATH=./manifests/cds-services-kr-ecqm.json cargo run -p cds-server
+# cds-server must load manifests/cds-services-kr.json (includes er-chest-pain-pathway)
+./scripts/run-cds-server.sh
 
-# Populated prefetch + encounter-start invoke (PlanDefinition/$apply path)
 ./scripts/cds-er-chest-pain-smoke.sh
+./scripts/cds-er-chest-pain-smoke.sh --bridge-apply   # optional FHIR REST $apply
 
-# Optional: also exercise bridge FHIR REST PlanDefinition/$apply
-./scripts/cds-er-chest-pain-smoke.sh --bridge-apply
-
-# Set patient/encounter when your clinical data uses different ids
 TEST_PATIENT_ID=my-ed-patient TEST_ENCOUNTER_ID=Encounter/xyz ./scripts/cds-er-chest-pain-smoke.sh
 ```
 
 Zero cards usually means CQL **In Scope** is false — confirm ED encounter with chest pain chief complaint exists for the test patient.
-
-# Avoid inline `$(curl ...)` JSON interpolation — it breaks easily and can confuse `jq`.
-# Prefer `./scripts/cds-cms165-prefetch-smoke.sh` (same prefetch, safe JSON assembly).
-
-# Minimal invoke without prefetch (sidecar fetches clinical data via REST):
-curl -s -X POST http://127.0.0.1:8095/cds-services/atriuscms165controllinghighbp \
-  -H 'Content-Type: application/json' \
-  -d @docs/clinical-reasoning/postman/cms165-invoke-context-only.json | jq .
-
-# cds-server returns plain text (not JSON) on 502/412 errors — if jq fails, check HTTP status:
-# curl -s -o /tmp/cds.out -w "%{http_code}\n" ... && cat /tmp/cds.out
-```
 
 Full stack documentation: **`AtriusIGDraft/docs/clinical-reasoning-stack.md`**.
 
@@ -348,11 +323,16 @@ curl -s -X POST http://127.0.0.1:8095/cds-services/cms165fhircontrollinghighbloo
 
 | File | Service |
 |------|---------|
-| `deploy/clinical/.env.atrius.example` | Clinical HFS (local dev) |
-| `deploy/kr/.env.kr.example` | KR HFS (local dev) |
-| `deploy/env/*.env.example` | Production templates → `/etc/atrius/*.env` via [production-deployment.md](./production-deployment.md) |
-| `CDS_*` env vars | cds-server — see `crates/cds-server/src/config.rs` |
-| `CR_FHIR_BRIDGE_*` | bridge — see `crates/cr-fhir-bridge/src/config.rs` |
+| `deploy/env/hts.env` | HTS — created by `run-hts.sh` if missing |
+| `deploy/env/hfs-clinical.env` | Clinical HFS (`run-hfs.sh`) |
+| `deploy/env/hfs-kr.env` | KR HFS (`run-kr-hfs.sh`) |
+| `deploy/env/cr-fhir-bridge.env` | Bridge (`run-cr-fhir-bridge.sh`) |
+| `deploy/env/cds-server.env` | cds-server (`run-cds-server.sh`) |
+| `deploy/env/cql-sidecar.env` | Sidecar (`run-cql-sidecar.sh`) |
+| `deploy/env/*.env.example` | Templates (also used for `/etc/atrius/*.env` in production) |
+| `deploy/clinical/.env.atrius.example` | Legacy sqlite-oriented notes — prefer `deploy/env/hfs-clinical.env` |
+
+See [scripts/README.md](../../scripts/README.md) for the full script map.
 
 ## Port consistency checklist
 

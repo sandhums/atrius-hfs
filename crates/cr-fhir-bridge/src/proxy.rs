@@ -73,6 +73,8 @@ pub struct BridgeState {
     pub http: Client,
     pub mapper: Arc<RuntimeMapper>,
     pub max_body_size: usize,
+    /// Injected as `X-Tenant-ID` when the inbound request omits it.
+    pub default_tenant: Option<String>,
 }
 
 impl BridgeState {
@@ -82,6 +84,7 @@ impl BridgeState {
         http: Client,
         mapper: RuntimeMapper,
         max_body_size: usize,
+        default_tenant: Option<String>,
     ) -> Self {
         Self {
             upstream_base: upstream_base.into(),
@@ -90,6 +93,9 @@ impl BridgeState {
             http,
             mapper: Arc::new(mapper),
             max_body_size,
+            default_tenant: default_tenant
+                .map(|t| t.trim().to_string())
+                .filter(|t| !t.is_empty()),
         }
     }
 
@@ -154,7 +160,8 @@ pub async fn proxy_fhir(
     let body_bytes = read_body(body, state.max_body_size).await?;
 
     let mut upstream = state.http.request(method.clone(), &upstream_url);
-    for (name, value) in forward_request_headers(&parts.headers) {
+    for (name, value) in forward_request_headers(&parts.headers, state.default_tenant.as_deref())
+    {
         upstream = upstream.header(name, value);
     }
     if !body_bytes.is_empty()
@@ -220,7 +227,10 @@ async fn read_body(body: Body, max: usize) -> Result<Bytes, BridgeProxyError> {
     Ok(bytes)
 }
 
-fn forward_request_headers(headers: &HeaderMap) -> Vec<(HeaderName, HeaderValue)> {
+fn forward_request_headers(
+    headers: &HeaderMap,
+    default_tenant: Option<&str>,
+) -> Vec<(HeaderName, HeaderValue)> {
     let mut out = Vec::new();
     for name in FORWARD_REQUEST_HEADERS {
         let Ok(header_name) = HeaderName::from_bytes(name.as_bytes()) else {
@@ -228,6 +238,14 @@ fn forward_request_headers(headers: &HeaderMap) -> Vec<(HeaderName, HeaderValue)
         };
         for value in headers.get_all(&header_name) {
             out.push((header_name.clone(), value.clone()));
+        }
+    }
+    if default_tenant.is_some() && !headers.contains_key("x-tenant-id") {
+        let Ok(header_name) = HeaderName::from_bytes(b"x-tenant-id") else {
+            return out;
+        };
+        if let Ok(value) = HeaderValue::from_str(default_tenant.unwrap()) {
+            out.push((header_name, value));
         }
     }
     out
@@ -302,9 +320,18 @@ mod tests {
     fn forwards_tenant_header_name() {
         let mut headers = HeaderMap::new();
         headers.insert("x-tenant-id", HeaderValue::from_static("clinic-a"));
-        let forwarded = forward_request_headers(&headers);
+        let forwarded = forward_request_headers(&headers, None);
         assert_eq!(forwarded.len(), 1);
         assert_eq!(forwarded[0].0, "x-tenant-id");
+    }
+
+    #[test]
+    fn injects_default_tenant_when_missing() {
+        let headers = HeaderMap::new();
+        let forwarded = forward_request_headers(&headers, Some("atrius-hospitals"));
+        assert_eq!(forwarded.len(), 1);
+        assert_eq!(forwarded[0].0, "x-tenant-id");
+        assert_eq!(forwarded[0].1, "atrius-hospitals");
     }
 
     #[test]

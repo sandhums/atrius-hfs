@@ -125,6 +125,24 @@ HFS startup supports optional environment variable `HFS_PROFILE_MANIFEST`:
 - failed loads are logged as warnings (startup continues)
 - this enables deployment-time verification while runtime validator wiring in `helios-rest` evolves
 
+### Atrius published package workflow
+
+1. **Publish** — Atrius IG CI builds `package.tgz` and deploys to `https://atrius.in/fhir/r4/atrius-in/package.tgz` (see `AtriusIGDraft/docs/ig-publish.md`).
+2. **Expand** — `atrius-hfs/scripts/load-atrius-ig-package.sh` fetches or unpacks the tarball.
+3. **Manifest** — `./scripts/build-atrius-profile-manifest.sh` (default: fetches published `package.tgz` from atrius.in) emits `manifests/atrius-r4-profile-manifest-core.json`.
+4. **Boot** — set `HFS_PROFILE_MANIFEST` and `HFS_PROFILE_VALIDATION_MODE=strict`; `enable_base_definition_url_lookup=false` (no network SD fetch in prod).
+
+```bash
+# Default — live published package
+./scripts/build-atrius-profile-manifest.sh
+
+# Local draft output (no network)
+ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
+
+# Explicit tarball
+ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/build-atrius-profile-manifest.sh
+```
+
 ---
 
 ## Plan status (completed deliverables)

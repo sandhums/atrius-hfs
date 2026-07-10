@@ -4,7 +4,7 @@ HTTP CDS Hooks discovery + invocation server. Loads **many CDS service ids** fro
 
 **Architecture & startup:** [docs/clinical-reasoning/README.md](../../docs/clinical-reasoning/README.md) · [startup guide](../../docs/clinical-reasoning/startup-guide.md)
 
-**Generate catalog from KR Libraries:** [scripts/generate-cds-hooks-manifest.py](../../scripts/generate-cds-hooks-manifest.py) → `manifests/cds-services-kr-ecqm.json`
+**Generate catalog from KR PlanDefinitions:** [scripts/generate-cds-hooks-manifest.py](../../scripts/generate-cds-hooks-manifest.py) → `manifests/cds-services-kr.json` (or `./scripts/setup-plandefinition-cds-catalog.sh`)
 
 See **[cds-services.manifest.example.json](cds-services.manifest.example.json)** for a multi-service template.
 
@@ -187,4 +187,4 @@ See **`cargo run -p cds-server -- --help`** for env names (`CDS_*`).
 
 **Clinical data 404s with Spring-style JSON:** If evaluation errors mention HTTP 404 with a body like `"timestamp"`, `"path":"/Condition"`, `"error":"Not Found"`, that shape is almost never from Helios HFS (FHIR uses `OperationOutcome` or search `Bundle`s). It usually means the **JVM FHIR client inside the sidecar** hit a **non-FHIR** HTTP stack—often **`localhost` vs `127.0.0.1`**, a **path prefix** mismatch, or the sidecar running in **Docker** where `localhost` is not the host. **`CDS_HFS_BASE_URL`** must be the exact clinical base reachable **from the sidecar process**, matching what you verify with Postman (same scheme/host/port/prefix). Example ports (yours may differ): HFS **8082**, KR **8079**, JVM sidecar **8088**, cds-server **8095**.
 
-**eCQM libraries / `FHIRHelpers` includes:** The sidecar loads the **primary** library from `libraryBaseUrl` (KR) but resolves CQL **`include`** libraries via **`hfsBaseUrl`**. Use **[`cr-fhir-bridge`](../cr-fhir-bridge)** as `hfsBaseUrl` with **`CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079`** so `/Library/*` reads reach KR while clinical resources still map Atrius→QI-Core. Re-import KR libraries with [`scripts/import-ecqm-kr-libraries.py`](../../scripts/import-ecqm-kr-libraries.py) so `Library.version` matches ELM (avoids `libraryVersion does not match ELM identifier version`).
+**CQL `include` libraries:** The sidecar loads the **primary** library from `libraryBaseUrl` (KR) but resolves CQL **`include`** libraries via **`hfsBaseUrl`**. Use **[`cr-fhir-bridge`](../cr-fhir-bridge)** as `hfsBaseUrl` with **`CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079`** so `/Library/*` reads reach KR while clinical resources still map Atrius→QI-Core. Re-import KR libraries from AtriusIGDraft (`import-atrius-kr-libraries.py`) so `Library.version` matches ELM (avoids `libraryVersion does not match ELM identifier version`).
