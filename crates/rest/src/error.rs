@@ -344,9 +344,11 @@ impl RestError {
                 "processing",
                 message.clone(),
             ),
-            RestError::ValidationOutcome { outcome } => {
-                return (StatusCode::UNPROCESSABLE_ENTITY, Json(outcome.clone())).into_response();
-            }
+            RestError::ValidationOutcome { .. } => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "processing",
+                "Profile validation failed".to_string(),
+            ),
             RestError::Unauthorized { message } => {
                 (StatusCode::UNAUTHORIZED, "login", message.clone())
             }
@@ -398,6 +400,11 @@ impl RestError {
 
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
+        // Profile validation failures already carry a full OperationOutcome.
+        if let RestError::ValidationOutcome { outcome } = &self {
+            return (StatusCode::UNPROCESSABLE_ENTITY, Json(outcome.clone())).into_response();
+        }
+
         let (status, code, details) = self.client_response();
         let operation_outcome = create_operation_outcome("error", code, &details);
 

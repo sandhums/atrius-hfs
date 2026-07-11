@@ -60,7 +60,7 @@ pub mod evaluator;
 pub mod parser;
 
 #[cfg(feature = "sqlite")]
-pub use evaluator::{filter_candidates, ResolvedConcept};
+pub use evaluator::{ResolvedConcept};
 pub use parser::{ConceptOperator, EclExpr, FocusConcept};
 
 #[cfg(feature = "sqlite")]

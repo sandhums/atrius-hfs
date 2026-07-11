@@ -68,6 +68,7 @@ mod tests {
         let principal = Principal {
             subject: "user-123".to_string(),
             issuer: "https://idp.example.com".to_string(),
+            fhir_user: None,
             tenant_id: None,
             scopes: ScopeSet::default(),
             jti: None,

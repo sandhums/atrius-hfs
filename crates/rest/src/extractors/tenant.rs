@@ -314,6 +314,7 @@ mod tests {
             Principal {
                 subject: "test-subject".to_string(),
                 issuer: "https://issuer.example".to_string(),
+                fhir_user: None,
                 tenant_id: tenant_id.map(|t| t.to_string()),
                 scopes: ScopeSet::empty(),
                 jti: None,
