@@ -137,8 +137,6 @@ fn build_capability_statement<S>(
 where
     S: ResourceStorage + SearchProvider + Send + Sync + 'static,
 {
-    let backend_name = state.storage().backend_name();
-
     // Get resource types for the requested FHIR version
     let resource_types = get_resource_type_names_for_version(version);
 
@@ -229,7 +227,7 @@ where
         "fhirVersion": version.full_version(),
         "format": formats,
         "implementation": {
-            "description": format!("Helios FHIR Server ({})", backend_name),
+            "description": "Helios FHIR Server",
             "url": base_url
         },
         "rest": [rest_entry]

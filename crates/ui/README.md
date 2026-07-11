@@ -112,6 +112,30 @@ note the version bump in the commit.
 
 ---
 
+## Design source
+
+The visual design is Brett's Figma file
+[`CcLtq79cH2aHv4Ii9aNQTP`](https://www.figma.com/design/CcLtq79cH2aHv4Ii9aNQTP/Untitled?node-id=34-2)
+— frames "Dashboard V1.1" (34:2, light), "… - Dark" (34:484), and
+"… - Tenant Selector" (34:222). Colors, type scale, radii, and shadows in
+`assets/app.css` are the inspected values from that file; change them there
+first, then here.
+
+Exported from Figma via the REST API (needs a `FIGMA_TOKEN` with file-content
+read access):
+
+- `templates/icons/*.svg` — icon nodes exported as SVG, fills normalized to
+  `currentColor` so CSS theming applies; inlined with `{% include %}`.
+- `assets/logo.png` — the brand mark, exported at 3×.
+- `assets/fonts/figtree-*.woff2` — vendored [Figtree](https://fonts.google.com/specimen/Figtree)
+  variable font (OFL), embedded like every other asset.
+
+Light/dark theming is CSS custom properties on `:root` /
+`[data-theme="dark"]`; `assets/theme.js` (loaded without `defer`, before
+first paint) applies the stored or OS preference and handles the top-bar
+toggle. The metric cards and chart render sample values from
+`DashboardMetrics::sample()` until real read paths land (below).
+
 ## Fragment / partial conventions & progressive enhancement
 
 - A **page** (`pages/`) extends `layouts/base.html` and returns a full document.
@@ -120,8 +144,11 @@ note the version bump in the commit.
   full-page render and the htmx swap render identical markup.
 - Handlers that back an htmx swap should also work as a **hard navigation**:
   when the `HX-Request` header is absent, return the full page. The POC's
-  `/ui/status` does exactly this, and the "Refresh status" control is a real
-  `<a href="/ui/status">` link so it works with JavaScript disabled.
+  `/ui/status` handler does exactly this and stays as the working reference
+  for the pattern; the dashboard no longer surfaces a control for it, so the
+  first real read paths (metric cards, chart) will wire their own swap
+  targets the same way — always with a real `<a href>`/`<form>` underneath
+  so the control works with JavaScript disabled.
 
 Relevant htmx request/response headers we rely on: `HX-Request` (present on
 htmx-issued requests). See the

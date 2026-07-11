@@ -9,7 +9,7 @@
 dozens of false-positive errors even when codes were loaded and curl-based
 `$validate-code` calls succeeded.
 
-**Validated consumer:** Atrius IG (`AtriusIGDraft`) — `./_build.sh` probes HTS via
+**Validated consumer:** a downstream IG — `./_build.sh` probes HTS via
 `-tx http://127.0.0.1:9091`. Clear the Publisher TX disk cache
 (`input-cache/txcache`) after HTS behaviour changes so stale false negatives are
 not replayed.
@@ -31,7 +31,7 @@ Seven independent gaps were fixed:
 | UCUM composed units (`mg`, etc.) | ActivityDefinition dosage: *Unknown code 'mg' in CodeSystem 'http://unitsofmeasure.org'* despite UCUM import | `ucum_validate.rs`, `backends/{sqlite,postgres}/code_system.rs` |
 
 After deploying a **rebuilt** `hts` binary, clearing Publisher TX cache, and keeping
-HTS up through the full IG validation phase, Atrius IG Publisher errors dropped
+HTS up through the full IG validation phase, IG Publisher errors dropped
 from **64 → 0** (with UCUM composed-unit validation and CQL SNOMED fix).
 
 ---
@@ -375,7 +375,7 @@ These fixes exist only in the **compiled binary**. Rebuild without a stale sandb
 target directory:
 
 ```bash
-cd /path/to/atrius-hfs
+cd /path/to/hfs
 unset CARGO_TARGET_DIR
 cargo build --release --bin hts
 ./target/release/hts run --port 9091
@@ -410,5 +410,4 @@ up for the entire `./_build.sh` validation phase (~30s of terminology traffic).
 ## Related docs
 
 - [ig-publisher-compatibility-pr.md](./ig-publisher-compatibility-pr.md) — suggested upstream PR title, summary, and test plan
-- [fork-ecl-fts-typeahead-expand.md](./fork-ecl-fts-typeahead-expand.md) — SNOMED typeahead `$expand` (separate Atrius fork change)
 - [expand-paths-architecture.md](./expand-paths-architecture.md) — ValueSet `$expand` internals

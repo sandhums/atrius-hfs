@@ -872,9 +872,8 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                     });
                                 }
                             }
-                            // Atrius fork: stored intensional VS + text filter uses the
-                            // same FTS-first path as inline compose (see
-                            // docs/fork-ecl-fts-typeahead-expand.md). Avoids full ECL
+                            // Stored intensional VS + text filter uses the
+                            // same FTS-first path as inline compose. Avoids full ECL
                             // materialisation and concept-id ordering on filtered typeahead.
                             let codes = if let Some(filter) = req.filter.as_deref() {
                                 if let Some(compose_str) = compose_json.as_deref() {
@@ -1182,7 +1181,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                 .unwrap_or(false)
                     })
                     .collect();
-                // Atrius fork: rank cached full expansions for typeahead UX.
+                // Rank cached full expansions for typeahead UX.
                 sort_typeahead_candidates(&mut hits, &lower);
                 hits
             } else {
@@ -2568,7 +2567,7 @@ fn expand_inline_filtered(
         //   FTS-first — query FTS by text → bounded candidate set → apply compose
         //               filters in Rust (hierarchy, property=, or ECL constraint).
         //               Used when filters are batchable OR when an ECL constraint is
-        //               present (Atrius fork — see docs/fork-ecl-fts-typeahead-expand.md).
+        //               present.
         //
         //   Property-first — start from `idx_concept_properties_value` (property,
         //               value, concept_id) → O(K_property) rows → text filter in
@@ -2620,8 +2619,7 @@ fn expand_inline_filtered(
             .iter()
             .any(|f| f["property"].as_str() == Some("constraint") && f["op"].as_str() == Some("="));
 
-        // Atrius fork: ECL + text filter → FTS-first + filter_candidates + rank.
-        // docs/fork-ecl-fts-typeahead-expand.md
+        // ECL + text filter → FTS-first + filter_candidates + rank.
         if filter_lower.len() >= 3 && !has_eq_filter && (all_batchable || has_ecl_constraint) {
             // FTS-first: text index narrows candidates, compose filters (including ECL)
             // intersect in Rust, then rank for typeahead UX.
@@ -4981,7 +4979,7 @@ fn batch_direct_children_in_set(
 
 /// Return concepts in `system_id` matching `filter_lower`, ranked for typeahead.
 ///
-/// **Atrius fork** (`docs/fork-ecl-fts-typeahead-expand.md`): prefers
+/// Prefers
 /// `concepts_search_fts` (preferred display + synonym designations) with FTS5
 /// `bm25`, then applies clinical heuristics via [`sort_typeahead_candidates`].
 /// Falls back to `concepts_fts` (display only) when the search index is empty.
@@ -5167,7 +5165,7 @@ fn apply_compose_filters_to_candidates(
 
         match (property_norm, op) {
             ("constraint", "=") => {
-                // Atrius fork: batch ECL membership without full expansion.
+                // Batch ECL membership without full expansion.
                 let codes: Vec<String> = candidates.iter().map(|c| c.code.clone()).collect();
                 let valid = ecl::filter_candidates(conn, system_id, value, &codes)?;
                 candidates.retain(|c| valid.contains(&c.code));
@@ -8292,7 +8290,7 @@ fn ensure_concepts_fts(conn: &Connection, system_id: &str) -> Result<(), HtsErro
 
 /// Populate `concepts_search_fts` with preferred terms and synonym designations.
 ///
-/// Atrius fork — see `docs/fork-ecl-fts-typeahead-expand.md`. Designation rows
+/// Designation rows
 /// use negative `rowid` (`-cd.id`) to avoid colliding with concept `id` rowids.
 fn populate_concepts_search_fts_for_system(
     conn: &Connection,

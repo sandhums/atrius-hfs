@@ -26,7 +26,7 @@ This PR aligns HTS with Publisher request shapes and tx.fhir.org behaviour for:
 - Handler cache policy (only cache `result=true`)
 - UCUM composed units (`mg`, etc.) via structural validation
 
-Validated against Atrius IG: Publisher errors **64 → 0** after rebuild, TX cache clear,
+Validated against a downstream IG: Publisher errors **64 → 0** after rebuild, TX cache clear,
 and HTS kept up through validation.
 
 Full design notes: [ig-publisher-compatibility.md](./ig-publisher-compatibility.md)
