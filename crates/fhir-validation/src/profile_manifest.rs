@@ -29,8 +29,8 @@ pub enum ProfileManifestPathStyle {
     #[default]
     Absolute,
     /// Paths relative to the output manifest file’s **parent directory** (portable when the
-    /// manifest and IG tree live under a common folder). Resolving listed files still depends on
-    /// **loader CWD** unless you run from that parent or rewrite paths.
+    /// manifest and IG tree live under a common folder).
+    /// [`load_profile_registry_from_manifest_file`] resolves these against the manifest’s parent.
     RelativeToManifestParent,
 }
 
@@ -360,17 +360,32 @@ pub fn build_and_write_profile_manifest_for_ig(
 }
 
 /// Load and merge all profiles from [`ProfileManifest::structure_definition_files`].
+///
+/// Absolute entry paths are used as-is. Relative entries are resolved against `base_dir`
+/// (typically the manifest file’s parent directory).
 pub fn load_profile_registry_from_manifest(
     manifest: &ProfileManifest,
 ) -> Result<ProfileRegistry, ValidationError> {
+    load_profile_registry_from_manifest_with_base(manifest, Path::new("."))
+}
+
+/// Like [`load_profile_registry_from_manifest`], resolving relative paths against `base_dir`.
+pub fn load_profile_registry_from_manifest_with_base(
+    manifest: &ProfileManifest,
+    base_dir: &Path,
+) -> Result<ProfileRegistry, ValidationError> {
     let mut registry = ProfileRegistry::new();
     for path in &manifest.structure_definition_files {
-        merge_structure_definition_file_into_registry(Path::new(path), &mut registry)?;
+        let resolved = resolve_manifest_entry_path(base_dir, path);
+        merge_structure_definition_file_into_registry(&resolved, &mut registry)?;
     }
     Ok(registry)
 }
 
 /// Read a manifest JSON file (`structure_definition_files` array) and build a registry.
+///
+/// Relative paths in the manifest are resolved against the manifest file’s parent directory
+/// (so committed relative manifests work regardless of process CWD).
 pub fn load_profile_registry_from_manifest_file(
     path: &Path,
 ) -> Result<ProfileRegistry, ValidationError> {
@@ -386,7 +401,17 @@ pub fn load_profile_registry_from_manifest_file(
             path.display()
         ))
     })?;
-    load_profile_registry_from_manifest(&manifest)
+    let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
+    load_profile_registry_from_manifest_with_base(&manifest, base_dir)
+}
+
+fn resolve_manifest_entry_path(base_dir: &Path, entry: &str) -> PathBuf {
+    let p = Path::new(entry);
+    if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        base_dir.join(p)
+    }
 }
 
 fn merge_structure_definition_file_into_registry(
@@ -481,6 +506,35 @@ mod tests {
         .unwrap();
 
         let reg = load_profile_registry_from_manifest_file(&mf_path).expect("load");
+        assert!(!reg.is_empty());
+    }
+
+    #[test]
+    fn loads_relative_paths_against_manifest_parent() {
+        let dir = std::env::temp_dir().join(format!("fv_manifest_rel_{}", std::process::id()));
+        let pkg = dir.join("atrius-ig-package");
+        std::fs::create_dir_all(&pkg).unwrap();
+        let sd: serde_json::Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/r4/profiles/StructureDefinition-Patient.json"
+        ))
+        .unwrap();
+        std::fs::write(pkg.join("sd.json"), serde_json::to_string(&sd).unwrap()).unwrap();
+
+        let mf_path = dir.join("manifest.json");
+        std::fs::write(
+            &mf_path,
+            serde_json::to_string(&serde_json::json!({
+                "structure_definition_files": ["atrius-ig-package/sd.json"]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        // Loader must not depend on process CWD for relative entries.
+        let prev = std::env::current_dir().unwrap();
+        std::env::set_current_dir(std::env::temp_dir()).unwrap();
+        let reg = load_profile_registry_from_manifest_file(&mf_path).expect("load relative");
+        std::env::set_current_dir(prev).unwrap();
         assert!(!reg.is_empty());
     }
 

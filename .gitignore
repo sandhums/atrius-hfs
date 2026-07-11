@@ -27,3 +27,7 @@ AGENTS.md
 /crates/hts/terminology-data/
 /crates/hts/data/
 /deploy/kr/.env.kr
+
+# Expanded Atrius IG package (regenerate via ./scripts/setup-atrius-profile-registry.sh)
+/manifests/atrius-ig-package/
+.cache/

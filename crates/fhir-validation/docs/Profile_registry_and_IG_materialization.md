@@ -93,7 +93,7 @@ IG packaging includes **Composition**, **Bundle**, and narrative artifacts. Only
 
 - [`ProfileManifest`](../src/profile_manifest.rs): JSON with `structure_definition_files` (required for registry load). Optional `code_system_files` and `value_set_files` are **written by the scanner** for HTS import / ops; they are **not** read by [`load_profile_registry_from_manifest`].
 - [`load_profile_registry_from_manifest_file`](../src/profile_manifest.rs): loads/merges SD files (single `StructureDefinition` or `Bundle` entries).
-- [`ProfileManifestPathStyle`](../src/profile_manifest.rs): **`Absolute`** (default) writes canonical paths independent of loader CWD; **`RelativeToManifestParent`** writes paths relative to the manifest file’s parent (portable beside the IG; resolving entries still depends on the process working directory unless paths are absolute).
+- [`ProfileManifestPathStyle`](../src/profile_manifest.rs): **`Absolute`** (default) writes canonical paths independent of loader CWD; **`RelativeToManifestParent`** writes paths relative to the manifest file’s parent. [`load_profile_registry_from_manifest_file`](../src/profile_manifest.rs) resolves relative entries against the manifest’s parent (CWD-independent).
 - [`build_and_write_profile_manifest_for_ig`](../src/profile_manifest.rs) / [`scan_ig_package_for_fhir_json`](../src/profile_manifest.rs): walk an expanded NPM `package/` tree, classify JSON by `resourceType` (including mixed Bundles), and emit a manifest using the chosen path style.
 
 Example (hand-authored **or** generated). Use **absolute** paths for machine-local manifests, or **relative** entries (or `--relative` from the example) when the manifest lives next to the IG tree in source control.
@@ -127,20 +127,24 @@ HFS startup supports optional environment variable `HFS_PROFILE_MANIFEST`:
 
 ### Atrius published package workflow
 
-1. **Publish** — Atrius IG CI builds `package.tgz` and deploys to `https://atrius.in/fhir/r4/atrius-in/package.tgz` (see `AtriusIGDraft/docs/ig-publish.md`).
-2. **Expand** — `atrius-hfs/scripts/load-atrius-ig-package.sh` fetches or unpacks the tarball.
-3. **Manifest** — `./scripts/build-atrius-profile-manifest.sh` (default: fetches published `package.tgz` from atrius.in) emits `manifests/atrius-r4-profile-manifest-core.json`.
-4. **Boot** — set `HFS_PROFILE_MANIFEST` and `HFS_PROFILE_VALIDATION_MODE=strict`; `enable_base_definition_url_lookup=false` (no network SD fetch in prod).
+1. **Publish** — Atrius IG CI builds `package.tgz` and deploys to `https://atrius.in/fhir/r4/atrius-in/package.tgz` (see `AtriusIGDraft/docs/ig-publish.md`). **Live as of Jul 2026.**
+2. **Setup (recommended)** — `./scripts/setup-atrius-profile-registry.sh` fetches the published tarball, expands into `manifests/atrius-ig-package/`, regenerates relative-path manifests, and verifies every SD path exists.
+3. **Expand only** — `scripts/load-atrius-ig-package.sh` (default expand dir: `manifests/atrius-ig-package/`).
+4. **Manifest only** — `./scripts/build-atrius-profile-manifest.sh` emits `manifests/atrius-r4-profile-manifest-core.json` with paths relative to `manifests/` (e.g. `atrius-ig-package/StructureDefinition-….json`, `deps/hl7-r4-extensions/…`).
+5. **Boot** — set `HFS_PROFILE_MANIFEST` and `HFS_PROFILE_VALIDATION_MODE=strict`. HFS already sets `enable_base_definition_url_lookup=false` (no network SD fetch).
 
 ```bash
-# Default — live published package
+# Recommended — fetch published package + verify ProfileRegistry load
+./scripts/setup-atrius-profile-registry.sh
+
+# Manifest only (same default published source)
 ./scripts/build-atrius-profile-manifest.sh
 
 # Local draft output (no network)
 ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
 
 # Explicit tarball
-ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/build-atrius-profile-manifest.sh
+ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/setup-atrius-profile-registry.sh
 ```
 
 ---

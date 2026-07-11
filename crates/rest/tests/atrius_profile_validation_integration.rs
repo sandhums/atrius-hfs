@@ -1,7 +1,7 @@
 //! Integration tests for Atrius IG profile validation (P0 #3 / #5).
 //!
 //! Uses the generated `manifests/atrius-r4-profile-manifest-core.json` when present.
-//! Run after `./scripts/build-atrius-profile-manifest.sh`.
+//! Run after `./scripts/setup-atrius-profile-registry.sh` (fetches published package.tgz).
 
 use std::path::PathBuf;
 

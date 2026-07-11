@@ -58,9 +58,14 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 
 | Script | Role |
 |--------|------|
-| `build-atrius-profile-manifest.sh` | Profile manifest from Atrius IG output |
-| `load-atrius-ig-package.sh` | Load IG package into HFS |
+| `setup-atrius-profile-registry.sh` | **Recommended**: fetch published `package.tgz` → expand → relative manifests → verify |
+| `build-atrius-profile-manifest.sh` | Regenerate `manifests/atrius-r4-profile-manifest-core.json` (default: atrius.in) |
+| `load-atrius-ig-package.sh` | Expand package into `manifests/atrius-ig-package/` |
 | `generate-atrius-mapper-manifest.py` | Runtime Atrius→QI-Core mapper |
+
+After setup, clinical HFS uses:
+`HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json` +
+`HFS_PROFILE_VALIDATION_MODE=strict`.
 
 ## Shared
 

@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Regenerate Atrius IG profile manifests for HFS (HFS_PROFILE_MANIFEST).
 #
-# Default: fetches the published NPM package from atrius.in (prod path).
+# Default: fetches the published NPM package from atrius.in (prod path),
+# expands into manifests/atrius-ig-package/, and writes **relative** paths
+# (resolved by HFS against the manifest parent directory).
+#
 # Local IG draft output: ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
 #
 # Usage:
 #   ./scripts/build-atrius-profile-manifest.sh
+#   ./scripts/setup-atrius-profile-registry.sh   # build + verify
 #
 #   # Local AtriusIGDraft/output (dev, no network):
 #   ATRIUS_IG_SOURCE=local ./scripts/build-atrius-profile-manifest.sh
@@ -16,7 +20,8 @@
 #     ./scripts/build-atrius-profile-manifest.sh
 #
 # Outputs:
-#   manifests/deps/hl7-r4-extensions/*.json  — HL7 core extension SDs (Patient slices)
+#   manifests/atrius-ig-package/               — expanded published package (gitignored)
+#   manifests/deps/hl7-r4-extensions/*.json    — HL7 core extension SDs (Patient slices)
 #   manifests/atrius-r4-profile-manifest-core.json  — atrius-in-* + HL7 extension deps
 #   manifests/atrius-r4-profile-manifest.json       — core + en/ duplicates + deps (debug/audit)
 #
@@ -27,12 +32,15 @@ set -euo pipefail
 ROOT="${ATRIUS_HFS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 IG="${ATRIUS_IG_DRAFT:-/Users/sandhu/AtriusIGDraft}"
 PUBLISHED_PACKAGE_URL="${ATRIUS_IG_PACKAGE_URL:-https://atrius.in/fhir/r4/atrius-in/package.tgz}"
+MANIFEST_DIR="${ROOT}/manifests"
+DEFAULT_EXPANDED="${MANIFEST_DIR}/atrius-ig-package"
 
 # IG source: expanded dir, explicit tarball/URL, local draft output, or published package (default).
 if [[ -n "${ATRIUS_IG_EXPANDED:-}" ]]; then
   IG_OUTPUT="${ATRIUS_IG_EXPANDED}"
   echo "IG source: ATRIUS_IG_EXPANDED=${IG_OUTPUT}" >&2
 elif [[ -n "${ATRIUS_IG_PACKAGE_TGZ:-}" || -n "${ATRIUS_IG_PACKAGE_URL:-}" ]]; then
+  export ATRIUS_IG_EXPANDED="${DEFAULT_EXPANDED}"
   IG_OUTPUT="$("${ROOT}/scripts/load-atrius-ig-package.sh")"
   echo "IG source: package (${ATRIUS_IG_PACKAGE_TGZ:-${ATRIUS_IG_PACKAGE_URL}})" >&2
 elif [[ "${ATRIUS_IG_SOURCE:-}" == "local" ]]; then
@@ -40,10 +48,10 @@ elif [[ "${ATRIUS_IG_SOURCE:-}" == "local" ]]; then
   echo "IG source: local draft ${IG_OUTPUT}" >&2
 else
   export ATRIUS_IG_PACKAGE_URL="${PUBLISHED_PACKAGE_URL}"
+  export ATRIUS_IG_EXPANDED="${DEFAULT_EXPANDED}"
   echo "IG source: published package ${PUBLISHED_PACKAGE_URL}" >&2
   IG_OUTPUT="$("${ROOT}/scripts/load-atrius-ig-package.sh")"
 fi
-MANIFEST_DIR="${ROOT}/manifests"
 HL7_EXT_DIR="${MANIFEST_DIR}/deps/hl7-r4-extensions"
 HL7_CORE_TGZ="${HL7_CORE_TGZ:-${ROOT}/crates/hts/terminology-data/hl7.fhir.r4.core.tgz}"
 CORE_OUT="${MANIFEST_DIR}/atrius-r4-profile-manifest-core.json"
@@ -115,11 +123,13 @@ fi
 
 # Optional NDHM package directory (terminology / cross-reference only; Atrius profiles parent FHIR R4).
 NDHM_PACKAGE="${NDHM_PACKAGE:-/Users/sandhu/Downloads/ndhm}"
-NDHM_RECORD_PROFILES=()
+# Optional extra NDHM StructureDefinition filenames under NDHM_PACKAGE (empty = none).
+NDHM_RECORD_PROFILES=("${NDHM_RECORD_PROFILES[@]:-}")
 
 NDHM_EXT_PATHS=()
-if [[ -d "${NDHM_PACKAGE}" ]]; then
+if [[ -d "${NDHM_PACKAGE}" && ${#NDHM_RECORD_PROFILES[@]} -gt 0 ]]; then
   for id in "${NDHM_RECORD_PROFILES[@]}"; do
+    [[ -z "${id}" ]] && continue
     path="${NDHM_PACKAGE}/${id}"
     if [[ -f "${path}" ]]; then
       NDHM_EXT_PATHS+=("$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]).replace(chr(92), "/"))' "${path}")")
@@ -142,9 +152,11 @@ echo "Generating full scan manifest..."
 (
   cd "${ROOT}"
   cargo run -q -p fhir-validation --example build_ig_profile_manifest -- \
-    "${IG_OUTPUT}" "${TMP_FULL}"
+    "${IG_OUTPUT}" "${TMP_FULL}" --relative
 )
 
+# macOS / bash 3.2: empty arrays are "unbound" under `set -u`.
+set +u
 python3 - "${IG_OUTPUT}" "${CORE_OUT}" "${FULL_OUT}" "${TMP_FULL}" "${HL7_EXT_PATHS[@]}" -- "${NDHM_EXT_PATHS[@]}" <<'PY'
 import glob
 import json
@@ -162,9 +174,19 @@ except ValueError:
 
 ig_output, core_out, full_out, tmp_full = main_args[0:4]
 hl7_ext_paths = main_args[4:]
+manifest_dir = os.path.dirname(os.path.realpath(core_out))
+tmp_parent = os.path.dirname(os.path.realpath(tmp_full))
 
 def abs_posix(path: str) -> str:
     return os.path.realpath(path).replace("\\", "/")
+
+def rel_to_manifest(path: str) -> str:
+    """Paths relative to manifests/ so HFS can resolve regardless of CWD."""
+    return os.path.relpath(abs_posix(path), manifest_dir).replace("\\", "/")
+
+def normalize_scanned(entry: str) -> str:
+    path = entry if os.path.isabs(entry) else os.path.join(tmp_parent, entry)
+    return rel_to_manifest(path)
 
 # Core: top-level atrius-in-* StructureDefinitions (no output/en/ duplicates).
 core_glob = os.path.join(ig_output, "StructureDefinition-atrius-in-*.json")
@@ -180,7 +202,7 @@ core_paths.extend(p for p in sorted(ndhm_ext_paths) if p not in core_paths)
 core_paths.sort()
 
 core_manifest = {
-    "structure_definition_files": core_paths,
+    "structure_definition_files": [rel_to_manifest(p) for p in core_paths],
     "code_system_files": [],
     "value_set_files": [],
 }
@@ -194,9 +216,13 @@ en_paths = sorted(abs_posix(p) for p in glob.glob(en_glob))
 
 full_sd = sorted(set(core_paths) | set(en_paths))
 full_manifest = {
-    "structure_definition_files": full_sd,
-    "code_system_files": scanned.get("code_system_files", []),
-    "value_set_files": scanned.get("value_set_files", []),
+    "structure_definition_files": [rel_to_manifest(p) for p in full_sd],
+    "code_system_files": sorted(
+        normalize_scanned(p) for p in scanned.get("code_system_files", [])
+    ),
+    "value_set_files": sorted(
+        normalize_scanned(p) for p in scanned.get("value_set_files", [])
+    ),
 }
 
 for path, manifest in ((core_out, core_manifest), (full_out, full_manifest)):
@@ -215,10 +241,16 @@ print(
     f"{len(full_manifest['code_system_files'])} CodeSystems, "
     f"{len(full_manifest['value_set_files'])} ValueSets)"
 )
-missing = [p for p in core_paths if not os.path.isfile(p)]
+missing = [
+    p
+    for p in core_manifest["structure_definition_files"]
+    if not os.path.isfile(os.path.join(manifest_dir, p) if not os.path.isabs(p) else p)
+]
 if missing:
     raise SystemExit(f"ERROR: {len(missing)} core paths missing on disk (IG rebuild required)")
 PY
+set -u
 
 rm -f "${TMP_FULL}"
 echo "Done. Point HFS at: manifests/atrius-r4-profile-manifest-core.json"
+echo "  (or run ./scripts/setup-atrius-profile-registry.sh to build + verify)"

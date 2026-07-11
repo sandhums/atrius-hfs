@@ -16,7 +16,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARBALL="${ATRIUS_IG_PACKAGE_TGZ:-}"
 URL="${ATRIUS_IG_PACKAGE_URL:-}"
-EXPAND_DIR="${ATRIUS_IG_EXPANDED:-${ROOT}/.cache/atrius-ig-package}"
+# Default under manifests/ so relative HFS_PROFILE_MANIFEST entries stay portable.
+EXPAND_DIR="${ATRIUS_IG_EXPANDED:-${ROOT}/manifests/atrius-ig-package}"
 
 if [[ -z "${TARBALL}" && -z "${URL}" ]]; then
   URL="https://atrius.in/fhir/r4/atrius-in/package.tgz"
