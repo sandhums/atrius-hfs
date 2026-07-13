@@ -14,7 +14,7 @@ use tower::ServiceExt;
 
 fn demo_state() -> AppState {
     AppState {
-        registry: registry_from_manifest(&demo_manifest(), CdsEvalBackend::Demo),
+        registry: registry_from_manifest(&demo_manifest(), CdsEvalBackend::Demo, None),
         kr_readiness: None,
     }
 }
@@ -101,7 +101,7 @@ async fn encounter_start_hook_returns_cards() {
     let m = parse_manifest_json(json.as_bytes()).unwrap();
     let app = build_router(
         AppState {
-            registry: registry_from_manifest(&m, CdsEvalBackend::Demo),
+            registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
             kr_readiness: None,
         },
         false,
@@ -138,7 +138,7 @@ async fn discovery_lists_multiple_kr_manifest_services() {
     let m = parse_manifest_json(json.as_bytes()).unwrap();
     let app = build_router(
         AppState {
-            registry: registry_from_manifest(&m, CdsEvalBackend::Demo),
+            registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
             kr_readiness: None,
         },
         false,

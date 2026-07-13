@@ -2281,3 +2281,155 @@ fn profile_discriminator_with_resolve_path_emits_warning() {
 
     assert!(issues.iter().any(|i| i.code == "business-rule"));
 }
+
+#[test]
+fn pattern_discriminator_on_this_matches_codeable_concept_category_slice() {
+    // Mirrors Atrius atrius-in-condition-encounter-diagnosis: category sliced by
+    // discriminator type=pattern path=$this with patternCodeableConcept on the slice root.
+    let sd_json = r#"
+    {
+      "resourceType": "StructureDefinition",
+      "id": "condition-category-this",
+      "url": "http://example.org/StructureDefinition/condition-category-this",
+      "name": "ConditionCategoryThis",
+      "status": "draft",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Condition",
+      "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Condition",
+      "derivation": "constraint",
+      "differential": {
+        "element": [
+          {
+            "id": "Condition.category",
+            "path": "Condition.category",
+            "slicing": {
+              "discriminator": [{ "type": "pattern", "path": "$this" }],
+              "rules": "open"
+            }
+          },
+          {
+            "id": "Condition.category:encounterDiagnosis",
+            "path": "Condition.category",
+            "sliceName": "encounterDiagnosis",
+            "min": 1,
+            "max": "1",
+            "patternCodeableConcept": {
+              "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis"
+              }]
+            }
+          }
+        ]
+      }
+    }
+    "#;
+
+    let sd: StructureDefinition = serde_json::from_str(sd_json).unwrap();
+    let extracted = extract_r5_structure_definition_profile(&sd).unwrap();
+
+    let matching = serde_json::json!({
+      "resourceType": "Condition",
+      "category": [{
+        "coding": [{
+          "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+          "code": "encounter-diagnosis"
+        }]
+      }]
+    });
+    let matching_issues = validate_slicing(&matching, "Condition", &extracted);
+    assert!(
+        matching_issues.is_empty(),
+        "Expected $this pattern slice to match encounter-diagnosis category, got: {matching_issues:#?}"
+    );
+
+    let non_matching = serde_json::json!({
+      "resourceType": "Condition",
+      "category": [{
+        "coding": [{
+          "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+          "code": "problem-list-item"
+        }]
+      }]
+    });
+    let non_matching_issues = validate_slicing(&non_matching, "Condition", &extracted);
+    // open slicing: unmatched category is allowed; no error required here — just ensure it
+    // does not falsely claim a multi-slice match.
+    assert!(
+        !non_matching_issues.iter().any(|i| i.diagnostics.contains("multiple declared slices")),
+        "unexpected multi-slice match: {non_matching_issues:#?}"
+    );
+}
+
+#[test]
+fn type_discriminator_on_this_matches_medication_codeable_concept_slice() {
+    // Mirrors FHIR / Atrius MedicationRequest.medication[x] closed type slicing.
+    let sd_json = r#"
+    {
+      "resourceType": "StructureDefinition",
+      "id": "medicationrequest-med-x",
+      "url": "http://example.org/StructureDefinition/medicationrequest-med-x",
+      "name": "MedicationRequestMedX",
+      "status": "draft",
+      "kind": "resource",
+      "abstract": false,
+      "type": "MedicationRequest",
+      "baseDefinition": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
+      "derivation": "constraint",
+      "differential": {
+        "element": [
+          {
+            "id": "MedicationRequest.medication[x]",
+            "path": "MedicationRequest.medication[x]",
+            "slicing": {
+              "discriminator": [{ "type": "type", "path": "$this" }],
+              "rules": "closed"
+            },
+            "type": [
+              { "code": "CodeableConcept" },
+              { "code": "Reference" }
+            ]
+          },
+          {
+            "id": "MedicationRequest.medication[x]:medicationCodeableConcept",
+            "path": "MedicationRequest.medication[x]",
+            "sliceName": "medicationCodeableConcept",
+            "min": 0,
+            "max": "1",
+            "type": [{ "code": "CodeableConcept" }]
+          },
+          {
+            "id": "MedicationRequest.medication[x]:medicationReference",
+            "path": "MedicationRequest.medication[x]",
+            "sliceName": "medicationReference",
+            "min": 0,
+            "max": "1",
+            "type": [{ "code": "Reference" }]
+          }
+        ]
+      }
+    }
+    "#;
+
+    let sd: StructureDefinition = serde_json::from_str(sd_json).unwrap();
+    let extracted = extract_r5_structure_definition_profile(&sd).unwrap();
+
+    let matching = serde_json::json!({
+      "resourceType": "MedicationRequest",
+      "status": "active",
+      "intent": "order",
+      "medicationCodeableConcept": {
+        "coding": [{ "system": "http://snomed.info/sct", "code": "387584000" }],
+        "text": "Simvastatin"
+      },
+      "subject": { "reference": "Patient/example" }
+    });
+    let matching_issues = validate_slicing(&matching, "MedicationRequest", &extracted);
+    assert!(
+        matching_issues.is_empty(),
+        "Expected medicationCodeableConcept to match CodeableConcept type slice, got: {matching_issues:#?}"
+    );
+}
+
+

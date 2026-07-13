@@ -15,6 +15,7 @@
 pub mod apply_context;
 pub mod config;
 pub mod cr_error;
+pub mod feedback_store;
 pub mod fhir_authorization;
 pub mod handlers;
 pub mod hook_context;

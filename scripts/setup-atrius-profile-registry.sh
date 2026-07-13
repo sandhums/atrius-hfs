@@ -13,6 +13,9 @@
 #   HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json
 #   HFS_PROFILE_VALIDATION_MODE=strict
 #
+# Verifies the HL7 datatype pack excludes abstract base types (Element, …) — including
+# Element breaks registry load (no derivation) and silently disables write validation.
+#
 # See: crates/fhir-validation/docs/Profile_registry_and_IG_materialization.md
 
 set -euo pipefail
@@ -56,6 +59,24 @@ print(
     f"OK: {len(files)} StructureDefinitions "
     f"({rel} relative to manifests/, {len(files) - rel} absolute)"
 )
+
+dt_dir = os.path.join(base, "deps", "hl7-r4-datatypes")
+sq = os.path.join(dt_dir, "StructureDefinition-SimpleQuantity.json")
+if not os.path.isfile(sq):
+    raise SystemExit(f"missing datatype pack SimpleQuantity at {sq}")
+dt_count = sum(
+    1
+    for name in os.listdir(dt_dir)
+    if name.startswith("StructureDefinition-") and name.endswith(".json")
+)
+if dt_count < 58:
+    raise SystemExit(f"expected ≥58 HL7 datatype SDs in {dt_dir}, got {dt_count}")
+for banned in ("Element", "BackboneElement", "Resource", "DomainResource"):
+    banned_path = os.path.join(dt_dir, f"StructureDefinition-{banned}.json")
+    if os.path.isfile(banned_path):
+        raise SystemExit(f"base type {banned} must not be in datatype pack: {banned_path}")
+print(f"OK: {dt_count} HL7 R4 datatype StructureDefinitions (incl. SimpleQuantity; base types excluded)")
+
 pkg = os.path.join(base, "atrius-ig-package", "package.json")
 if os.path.isfile(pkg):
     with open(pkg, encoding="utf-8") as f:

@@ -130,7 +130,24 @@ HFS startup supports optional environment variable `HFS_PROFILE_MANIFEST`:
 1. **Publish** — Atrius IG CI builds `package.tgz` and deploys to `https://atrius.in/fhir/r4/atrius-in/package.tgz` (see `AtriusIGDraft/docs/ig-publish.md`). **Live as of Jul 2026.**
 2. **Setup (recommended)** — `./scripts/setup-atrius-profile-registry.sh` fetches the published tarball, expands into `manifests/atrius-ig-package/`, regenerates relative-path manifests, and verifies every SD path exists.
 3. **Expand only** — `scripts/load-atrius-ig-package.sh` (default expand dir: `manifests/atrius-ig-package/`).
-4. **Manifest only** — `./scripts/build-atrius-profile-manifest.sh` emits `manifests/atrius-r4-profile-manifest-core.json` with paths relative to `manifests/` (e.g. `atrius-ig-package/StructureDefinition-….json`, `deps/hl7-r4-extensions/…`).
+4. **Manifest only** — `./scripts/build-atrius-profile-manifest.sh` emits `manifests/atrius-r4-profile-manifest-core.json` with paths relative to `manifests/` (e.g. `atrius-ig-package/StructureDefinition-….json`, `deps/hl7-r4-extensions/…`, `deps/hl7-r4-datatypes/…`).
+
+**HL7 datatype pack:** The same script materializes R4 datatype `StructureDefinition`s from
+`crates/fhir-gen/resources/R4/profiles-types.json` (the bundle `helios-fhir-gen` uses) into
+`manifests/deps/hl7-r4-datatypes/` (~61 after exclusions). That covers clinical/complex and
+primitive types plus constraint profiles such as `SimpleQuantity` and `MoneyQuantity`, so
+snapshot `type.profile` references resolve without network fetches.
+
+**Excluded abstract base types:** `Element`, `BackboneElement`, `Resource`, and `DomainResource`
+are **not** written into the pack. They are FHIR infrastructure roots, not useful
+`type.profile` targets. Critically, `Element` has **no** `derivation` / `baseDefinition`; the
+registry extractor requires `derivation` on every SD, so one bad file aborts the entire
+manifest load. HFS then logs a warning and continues **with write validation disabled**
+(strict-mode tests appear to “accept” invalid resources with HTTP 201). The materializer
+deletes any stale excluded files left from older runs.
+
+Resource SDs are still **not** loaded from HL7 core — Atrius snapshots remain the write
+contract for resources.
 5. **Boot** — set `HFS_PROFILE_MANIFEST` and `HFS_PROFILE_VALIDATION_MODE=strict`. HFS already sets `enable_base_definition_url_lookup=false` (no network SD fetch).
 
 ```bash
@@ -160,4 +177,6 @@ ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/setup-atrius-profile-regist
 
 ## Revision
 
+- **2026-07:** Document HL7 datatype pack exclusions (`Element` / abstract roots) — registry
+  load requires `derivation`; including `Element` disabled write-path validation silently.
 - **Initial:** Scaling plan for Atrius + NDHM + multi-IG registries; saved in-repo as this document.

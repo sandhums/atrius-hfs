@@ -106,7 +106,14 @@ async fn main() -> anyhow::Result<()> {
         "cds-server configuration"
     );
 
-    let registry = registry_from_manifest(&manifest, backend);
+    let feedback_store = args.feedback_store()?;
+    if feedback_store.is_none() {
+        tracing::info!(
+            "CDS_FEEDBACK_FHIR_BASE_URL not set; card feedback will be acknowledged but not persisted"
+        );
+    }
+
+    let registry = registry_from_manifest(&manifest, backend, feedback_store);
 
     let app = build_router(
         AppState {

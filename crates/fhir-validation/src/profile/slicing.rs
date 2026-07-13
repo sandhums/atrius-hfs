@@ -893,13 +893,19 @@ fn slice_discriminator_exists_expectation(
 /// Resolve the runtime values addressed by a discriminator path relative to the
 /// current repeated item.
 ///
-/// Choice paths such as `value[x]` are resolved by the shared profile helper
+/// FHIR `discriminator.path` of `$this` means the repeated element itself (common
+/// for CodeableConcept category slices with `patternCodeableConcept` on the slice
+/// root). Choice paths such as `value[x]` are resolved by the shared profile helper
 /// path traversal utilities.
 fn actual_discriminator_values<'a>(
     actual: &'a Value,
     discriminator: &crate::profile::types::ExtractedSliceDiscriminator,
 ) -> Vec<&'a Value> {
-    get_values_at_relative_path(actual, &discriminator.path)
+    let path = discriminator.path.trim();
+    if path.is_empty() || path == "$this" {
+        return vec![actual];
+    }
+    get_values_at_relative_path(actual, path)
 }
 
 /// Resolve the expected type codes for a slice `type` discriminator.

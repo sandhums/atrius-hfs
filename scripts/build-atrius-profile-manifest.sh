@@ -22,7 +22,10 @@
 # Outputs:
 #   manifests/atrius-ig-package/               — expanded published package (gitignored)
 #   manifests/deps/hl7-r4-extensions/*.json    — HL7 core extension SDs (Patient slices)
-#   manifests/atrius-r4-profile-manifest-core.json  — atrius-in-* + HL7 extension deps
+#   manifests/deps/hl7-r4-datatypes/*.json     — R4 datatype SDs from fhir-gen profiles-types.json
+#                                               (primitives + complex types + SimpleQuantity/MoneyQuantity;
+#                                               excludes abstract base types such as Element)
+#   manifests/atrius-r4-profile-manifest-core.json  — atrius-in-* + HL7 extension + datatype deps
 #   manifests/atrius-r4-profile-manifest.json       — core + en/ duplicates + deps (debug/audit)
 #
 # See: crates/fhir-validation/docs/Profile_registry_and_IG_materialization.md
@@ -53,6 +56,9 @@ else
   IG_OUTPUT="$("${ROOT}/scripts/load-atrius-ig-package.sh")"
 fi
 HL7_EXT_DIR="${MANIFEST_DIR}/deps/hl7-r4-extensions"
+HL7_DT_DIR="${MANIFEST_DIR}/deps/hl7-r4-datatypes"
+# Same R4 types bundle helios-fhir-gen uses — authoritative, offline, always in-repo.
+HL7_PROFILES_TYPES="${HL7_PROFILES_TYPES:-${ROOT}/crates/fhir-gen/resources/R4/profiles-types.json}"
 HL7_CORE_TGZ="${HL7_CORE_TGZ:-${ROOT}/crates/hts/terminology-data/hl7.fhir.r4.core.tgz}"
 CORE_OUT="${MANIFEST_DIR}/atrius-r4-profile-manifest-core.json"
 FULL_OUT="${MANIFEST_DIR}/atrius-r4-profile-manifest.json"
@@ -112,6 +118,85 @@ else
   echo "HL7 extension deps already present — skipping ${HL7_CORE_TGZ} extract"
 fi
 
+# R4 datatype StructureDefinitions (primitive + complex + SimpleQuantity / MoneyQuantity).
+# Source: fhir-gen profiles-types.json (same package used for helios-fhir codegen) — not a
+# selective whitelist of clinical datatypes. Abstract FHIR *base* types (Element, …) are
+# excluded: they are not useful type.profile targets and Element lacks `derivation`, which
+# aborts the HFS profile registry loader. Resource SDs stay out; Atrius snapshots cover
+# resource bases.
+mkdir -p "${HL7_DT_DIR}"
+echo "Materializing HL7 R4 datatype StructureDefinitions → ${HL7_DT_DIR}"
+if [[ ! -f "${HL7_PROFILES_TYPES}" ]]; then
+  echo "HL7 profiles-types.json not found: ${HL7_PROFILES_TYPES}" >&2
+  exit 1
+fi
+python3 - "${HL7_PROFILES_TYPES}" "${HL7_DT_DIR}" <<'PY'
+import json
+import os
+import sys
+
+# Abstract / infrastructure roots — not clinical datatypes for the Atrius profile registry.
+#
+# Why exclude:
+# - Element / BackboneElement / Resource / DomainResource are abstract FHIR base types, not
+#   useful targets for snapshot type.profile resolution (we want Quantity, Coding, …).
+# - Element has no StructureDefinition.derivation (and no baseDefinition). The HFS
+#   ProfileRegistry extractor requires derivation on every SD; one missing value aborts the
+#   whole manifest load. helios-rest then boots with write validation disabled, so Strict
+#   mode silently returns 201 for invalid Atrius resources.
+# Keep this list in sync with the banned-file checks later in this script and in
+# setup-atrius-profile-registry.sh.
+EXCLUDED_BASE_TYPE_IDS = frozenset(
+    {
+        "Element",
+        "BackboneElement",
+        "Resource",
+        "DomainResource",
+    }
+)
+
+src, dest_dir = sys.argv[1], sys.argv[2]
+with open(src, encoding="utf-8") as f:
+    bundle = json.load(f)
+
+written = 0
+ids = []
+skipped = []
+for entry in bundle.get("entry") or []:
+    resource = entry.get("resource") or {}
+    if resource.get("resourceType") != "StructureDefinition":
+        continue
+    sd_id = resource.get("id")
+    if not sd_id:
+        continue
+    # Prefer explicit id allow/deny; also skip abstract roots with no derivation (Element).
+    if sd_id in EXCLUDED_BASE_TYPE_IDS or (
+        resource.get("abstract") is True
+        and not resource.get("derivation")
+        and not resource.get("baseDefinition")
+    ):
+        skipped.append(sd_id)
+        continue
+    ids.append(sd_id)
+    path = os.path.join(dest_dir, f"StructureDefinition-{sd_id}.json")
+    with open(path, "w", encoding="utf-8") as out:
+        json.dump(resource, out, indent=2)
+        out.write("\n")
+    written += 1
+
+# Drop stale files from older runs that are no longer in the kept set (e.g. Element).
+expected = {f"StructureDefinition-{i}.json" for i in ids}
+for name in os.listdir(dest_dir):
+    if name.startswith("StructureDefinition-") and name.endswith(".json") and name not in expected:
+        os.remove(os.path.join(dest_dir, name))
+
+print(f"Wrote {written} datatype StructureDefinitions from {src}")
+if skipped:
+    print(f"Excluded abstract/base types: {', '.join(sorted(skipped))}")
+if written < 58:
+    raise SystemExit(f"expected ≥58 R4 datatype SDs after base-type exclusions, got {written}")
+PY
+
 # Not shipped in hl7.fhir.r4.core 4.0.1; published in HL7 FHIR Extensions pack.
 RSG="${HL7_EXT_DIR}/StructureDefinition-individual-recordedSexOrGender.json"
 if [[ ! -f "${RSG}" ]]; then
@@ -147,6 +232,28 @@ for id in "${HL7_EXT_IDS[@]}" individual-recordedSexOrGender; do
   HL7_EXT_PATHS+=("$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]).replace(chr(92), "/"))' "${path}")")
 done
 
+HL7_DT_PATHS=()
+while IFS= read -r path; do
+  HL7_DT_PATHS+=("$path")
+done < <(python3 - "${HL7_DT_DIR}" <<'PY'
+import glob, os, sys
+dt_dir = sys.argv[1]
+paths = sorted(
+    os.path.realpath(p).replace("\\", "/")
+    for p in glob.glob(os.path.join(dt_dir, "StructureDefinition-*.json"))
+)
+for p in paths:
+    print(p)
+if len(paths) < 58:
+    raise SystemExit(f"expected ≥58 datatype SDs in {dt_dir}, got {len(paths)}")
+# Abstract base types must stay out of the pack (registry loader requires derivation).
+for banned in ("Element", "BackboneElement", "Resource", "DomainResource"):
+    banned_path = os.path.join(dt_dir, f"StructureDefinition-{banned}.json")
+    if os.path.isfile(banned_path):
+        raise SystemExit(f"base type {banned} must not be in datatype pack: {banned_path}")
+PY
+)
+
 echo "IG output: ${IG_OUTPUT}"
 echo "Generating full scan manifest..."
 (
@@ -157,23 +264,36 @@ echo "Generating full scan manifest..."
 
 # macOS / bash 3.2: empty arrays are "unbound" under `set -u`.
 set +u
-python3 - "${IG_OUTPUT}" "${CORE_OUT}" "${FULL_OUT}" "${TMP_FULL}" "${HL7_EXT_PATHS[@]}" -- "${NDHM_EXT_PATHS[@]}" <<'PY'
+python3 - "${IG_OUTPUT}" "${CORE_OUT}" "${FULL_OUT}" "${TMP_FULL}" \
+  "${#HL7_EXT_PATHS[@]}" "${HL7_EXT_PATHS[@]}" \
+  -- \
+  "${#HL7_DT_PATHS[@]}" "${HL7_DT_PATHS[@]}" \
+  -- \
+  "${NDHM_EXT_PATHS[@]}" <<'PY'
 import glob
 import json
 import os
 import sys
 
 args = sys.argv[1:]
-try:
-    sep = args.index("--")
-    main_args = args[:sep]
-    ndhm_ext_paths = args[sep + 1 :]
-except ValueError:
-    main_args = args
-    ndhm_ext_paths = []
 
-ig_output, core_out, full_out, tmp_full = main_args[0:4]
-hl7_ext_paths = main_args[4:]
+def take_counted(seq):
+    """Pop N then N paths from seq (bash-friendly counted lists)."""
+    if not seq:
+        return [], seq
+    n = int(seq[0])
+    return list(seq[1 : 1 + n]), seq[1 + n :]
+
+ig_output, core_out, full_out, tmp_full = args[0:4]
+rest = args[4:]
+hl7_ext_paths, rest = take_counted(rest)
+if rest and rest[0] == "--":
+    rest = rest[1:]
+hl7_dt_paths, rest = take_counted(rest)
+if rest and rest[0] == "--":
+    rest = rest[1:]
+ndhm_ext_paths = rest
+
 manifest_dir = os.path.dirname(os.path.realpath(core_out))
 tmp_parent = os.path.dirname(os.path.realpath(tmp_full))
 
@@ -198,6 +318,7 @@ ad_paths = sorted(abs_posix(p) for p in glob.glob(ad_glob))
 
 core_paths.extend(p for p in ad_paths if p not in core_paths)
 core_paths.extend(p for p in sorted(hl7_ext_paths) if p not in core_paths)
+core_paths.extend(p for p in sorted(hl7_dt_paths) if p not in core_paths)
 core_paths.extend(p for p in sorted(ndhm_ext_paths) if p not in core_paths)
 core_paths.sort()
 
@@ -230,11 +351,18 @@ for path, manifest in ((core_out, core_manifest), (full_out, full_manifest)):
         json.dump(manifest, f, indent=2)
         f.write("\n")
 
-hl7_count = len(hl7_ext_paths)
+hl7_ext_count = len(hl7_ext_paths)
+hl7_dt_count = len(hl7_dt_paths)
 ndhm_count = len(ndhm_ext_paths)
-atrius_count = len(core_manifest["structure_definition_files"]) - hl7_count - ndhm_count
+atrius_count = (
+    len(core_manifest["structure_definition_files"])
+    - hl7_ext_count
+    - hl7_dt_count
+    - ndhm_count
+)
 print(
-    f"Wrote {core_out} ({atrius_count} Atrius + {hl7_count} HL7 extension + {ndhm_count} NDHM StructureDefinitions)"
+    f"Wrote {core_out} ({atrius_count} Atrius + {hl7_ext_count} HL7 extension "
+    f"+ {hl7_dt_count} HL7 datatype + {ndhm_count} NDHM StructureDefinitions)"
 )
 print(
     f"Wrote {full_out} ({len(full_manifest['structure_definition_files'])} StructureDefinitions, "
@@ -248,6 +376,10 @@ missing = [
 ]
 if missing:
     raise SystemExit(f"ERROR: {len(missing)} core paths missing on disk (IG rebuild required)")
+
+sq = os.path.join(manifest_dir, "deps/hl7-r4-datatypes/StructureDefinition-SimpleQuantity.json")
+if not os.path.isfile(sq):
+    raise SystemExit("ERROR: SimpleQuantity datatype SD missing after materialize")
 PY
 set -u
 

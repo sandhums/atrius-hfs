@@ -37,7 +37,7 @@ The smoke script (`scripts/cds-cms165-prefetch-smoke.sh`) and Postman collection
 Sources:
 
 - `manifests/cds-services-kr.json` (generated)
-- `scripts/cds_manifest_common.py` — `STANDARD_PATIENT_CHART_PREFETCH` (11 keys: Patient + common chart searches)
+- `scripts/cds_manifest_common.py` — `STANDARD_PATIENT_CHART_PREFETCH` (fallback **only** when PlanDefinition has no `action.input`); authored inputs map 1:1 to discovery templates
 - `crates/cds-server/src/kr_manifest.rs` — same standard templates when building from KR
 
 **Invoke** receives the client’s populated `prefetch` and forwards it to the JVM sidecar on **both** evaluation paths:
@@ -90,7 +90,7 @@ When `prefetch` is empty or omitted, behavior is unchanged: the sidecar retrieve
 
 ### 4. Manifest generation — wider templates, not wider server fetch
 
-`scripts/generate-cds-hooks-manifest.py` uses `data_requirements_to_prefetch()` to merge library `DataRequirement`s with `STANDARD_PATIENT_CHART_PREFETCH`. That only affects **what the client is told to fetch** at discovery time.
+`scripts/generate-cds-hooks-manifest.py` uses `data_requirements_to_prefetch()` from each PlanDefinition’s `action.input`. When inputs are present, discovery prefetch is **exactly those types**. The standard chart pack is used only if `action.input` is empty (legacy). That controls **what the client is told to fetch** at discovery time.
 
 ## End-to-end flow
 

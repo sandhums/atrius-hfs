@@ -210,8 +210,17 @@ pub(crate) fn json_type_codes(value: &Value) -> Vec<String> {
                 || map.contains_key("display")
                 || map.contains_key("type");
 
+            let has_codeable_concept_shape =
+                map.contains_key("coding") || (map.contains_key("text") && !has_reference_shape);
+
             let has_codeable_reference_shape =
                 map.contains_key("concept") || map.contains_key("reference");
+
+            // CodeableConcept before Reference: a coding+text object must not be
+            // misclassified as Reference just because unrelated keys exist.
+            if has_codeable_concept_shape {
+                out.push("CodeableConcept".to_string());
+            }
 
             if has_reference_shape {
                 out.push("Reference".to_string());

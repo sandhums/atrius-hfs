@@ -1,8 +1,7 @@
 //! ABDM / NDHM profile validation for the FHIR REST API.
 //!
-//! NDHM `StructureDefinition` resources ship a merged **snapshot** (HL7 R4 base + national
-//! constraints). Validation runs against that snapshot via [`ProfileRegistry`] — no separate
-//! HL7 `StructureDefinition/{Type}` entry is required.
+//! NDHM / Atrius `StructureDefinition` resources ship a merged **snapshot** (HL7 R4 base +
+//! national constraints). Validation runs against that snapshot via [`ProfileRegistry`].
 //!
 //! - **`recurse_on_base_definition`** is **off** for HFS: a second pass on `baseDefinition`
 //!   would duplicate snapshot content.
@@ -11,6 +10,12 @@
 //!   IGs; enable only if you also load HL7 core profiles into the manifest.
 //! - **`HFS_TERMINOLOGY_SERVER`**: when set (Helios Terminology Server / HTS), extensible and
 //!   required profile bindings call `ValueSet/$validate-code` during `$validate` and write paths.
+//!
+//! Snapshots still reference HL7 **datatype** profiles (e.g. `SimpleQuantity`). Those are loaded
+//! from `manifests/deps/hl7-r4-datatypes/` via `scripts/build-atrius-profile-manifest.sh`. That
+//! pack **excludes abstract base types** (`Element`, `BackboneElement`, …): `Element` has no
+//! `derivation`, and a single bad SD aborts registry load (writes then skip validation). See
+//! `crates/fhir-validation/docs/Profile_registry_and_IG_materialization.md`.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -85,9 +90,14 @@ impl ProfileValidationService {
 
         let mut validation_config = ValidationConfig::default();
         validation_config.enable_base_definition_url_lookup = false;
-        // NDHM/ABDM profiles include merged snapshots; base rules are already extracted.
+        // NDHM/ABDM / Atrius profiles include merged snapshots; base rules are already extracted.
         validation_config.recurse_on_base_definition = false;
         validation_config.strict_extensible_bindings = false;
+        // Snapshots still reference HL7 datatype profiles (e.g. SimpleQuantity|4.0.1 on
+        // doseQuantity). Those SDs are not loaded into the Atrius/NDHM manifest; treat as
+        // warnings so MedicationRequest / Observation writes are not blocked.
+        validation_config.error_on_unknown_profile = false;
+        validation_config.warn_on_unknown_profile = true;
 
         let terminology = terminology_url.as_ref().map(|url| {
             Arc::new(RemoteTerminologyService::new(

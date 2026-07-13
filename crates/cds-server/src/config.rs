@@ -125,6 +125,20 @@ pub struct Args {
     /// Probe KR for manifest library pins and `planDefinitionId` at startup; expose on `GET /ready`.
     #[arg(long, env = "CDS_VALIDATE_KR_LIBRARIES", default_value = "false")]
     pub validate_kr_libraries: bool,
+
+    /// Clinical FHIR base where CDS feedback is persisted as `GuidanceResponse`.
+    /// Empty → feedback is acknowledged but not persisted.
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_BASE_URL")]
+    pub feedback_fhir_base_url: Option<String>,
+
+    /// Static bearer token for feedback GuidanceResponse writes (dev/smoke; feedback
+    /// requests carry no `fhirAuthorization` per the CDS Hooks spec).
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_BEARER_TOKEN")]
+    pub feedback_fhir_bearer_token: Option<String>,
+
+    /// `X-Tenant-ID` header for feedback GuidanceResponse writes (multi-tenant HFS).
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_TENANT_ID")]
+    pub feedback_fhir_tenant_id: Option<String>,
 }
 
 impl Args {
@@ -198,6 +212,28 @@ impl Args {
             .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty())
+    }
+
+    /// Feedback persistence store when `CDS_FEEDBACK_FHIR_BASE_URL` is configured.
+    pub fn feedback_store(&self) -> anyhow::Result<Option<Arc<crate::feedback_store::FeedbackStore>>> {
+        let Some(base) = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        else {
+            return Ok(None);
+        };
+        let http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .context("reqwest client for feedback GuidanceResponse writes")?;
+        Ok(Some(Arc::new(crate::feedback_store::FeedbackStore::new(
+            http,
+            base,
+            self.feedback_fhir_bearer_token.clone(),
+            self.feedback_fhir_tenant_id.clone(),
+        ))))
     }
 }
 

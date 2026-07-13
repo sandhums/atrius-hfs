@@ -37,9 +37,13 @@ impl ProfileRegistry {
         &self.profiles
     }
 
-    /// Lookup by exact canonical URL string.
+    /// Lookup by canonical URL. Also tries the unversioned form when `url` includes `|version`.
     pub fn get(&self, url: &str) -> Option<&ExtractedProfile> {
-        self.profiles.get(url)
+        if let Some(profile) = self.profiles.get(url) {
+            return Some(profile);
+        }
+        url.rsplit_once('|')
+            .and_then(|(base, _)| self.profiles.get(base))
     }
 
     /// Returns whether `url` is a known key (same as `get(url).is_some()`).

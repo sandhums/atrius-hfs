@@ -21,6 +21,14 @@ pub enum StructureDefinitionExtractMessage {
     UrlRequired,
     KindRequired,
     UnknownKind { value: String },
+    /// `StructureDefinition.derivation` is required for registry extraction.
+    ///
+    /// **Atrius note:** HL7 abstract root `Element` omits `derivation` (no base to specialize).
+    /// Including it in `manifests/deps/hl7-r4-datatypes/` makes
+    /// [`crate::profile_manifest::load_profile_registry_from_manifest_file`] fail on the first
+    /// bad SD; HFS then boots with write validation disabled. The datatype pack materializer in
+    /// `scripts/build-atrius-profile-manifest.sh` excludes `Element` / `BackboneElement` /
+    /// `Resource` / `DomainResource` for that reason.
     DerivationRequired,
     UnknownDerivation { value: String },
     TypeRequired,

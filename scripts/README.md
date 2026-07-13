@@ -52,6 +52,7 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 |--------|------|
 | `cds-cms165-prefetch-smoke.sh` | CMS165 CDS Hooks with populated prefetch |
 | `cds-er-chest-pain-smoke.sh` | ER chest pain pathway |
+| `cds-atrius-services-smoke.sh` | All Atrius ECA rules and order sets (critical labs, preventive care, sepsis, DDI, HF admission, imaging appropriateness, renal dosing, surgical safety checklist) with synthetic prefetch and assertions |
 | `activity-definition-apply-smoke.sh` | ActivityDefinition `$apply` |
 
 ## IG / profiles

@@ -19,7 +19,9 @@ POPULATION_EXPRESSION_PRIORITY = (
     "Denominator Exclusions",
 )
 
-# Standard patient-chart prefetch (reduces sidecar clinical round-trips).
+# Fallback prefetch when a PlanDefinition has no action.input DataRequirements.
+# When inputs are present, discovery uses those types only (FHIR CR §14.5.2) —
+# do not merge this pack on top (that caused fat/serial BFF prefetch).
 STANDARD_PATIENT_CHART_PREFETCH: dict[str, str] = {
     "patient": "Patient/{{context.patientId}}",
     "conditions": "Condition?patient={{context.patientId}}",
@@ -32,6 +34,24 @@ STANDARD_PATIENT_CHART_PREFETCH: dict[str, str] = {
     "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
     "allergies": "AllergyIntolerance?patient={{context.patientId}}",
     "coverage": "Coverage?beneficiary=Patient/{{context.patientId}}",
+}
+
+# Stable discovery keys (plural where the standard pack already used plurals).
+_PREFETCH_KEY_BY_TYPE: dict[str, str] = {
+    "Patient": "patient",
+    "Condition": "conditions",
+    "Encounter": "encounters",
+    "Observation": "observations",
+    "Procedure": "procedures",
+    "MedicationRequest": "medicationRequests",
+    "Immunization": "immunizations",
+    "DiagnosticReport": "diagnosticReports",
+    "ServiceRequest": "serviceRequests",
+    "AllergyIntolerance": "allergies",
+    "Coverage": "coverage",
+    "QuestionnaireResponse": "questionnaireResponses",
+    "Task": "tasks",
+    "MedicationAdministration": "medicationAdministrations",
 }
 
 
@@ -147,19 +167,38 @@ def plan_definition_data_requirements(plan: dict[str, Any]) -> list[dict[str, An
     return requirements
 
 
+def _prefetch_key_for_type(resource_type: str, used: set[str]) -> str:
+    base = _PREFETCH_KEY_BY_TYPE.get(resource_type) or slugify(resource_type)
+    if base not in used:
+        return base
+    n = 2
+    while f"{base}-{n}" in used:
+        n += 1
+    return f"{base}-{n}"
+
+
 def data_requirements_to_prefetch(
     data_requirements: list[dict[str, Any]] | None,
 ) -> dict[str, str]:
+    """Map PlanDefinition DataRequirements to CDS Hooks prefetch templates.
+
+    Non-empty ``data_requirements`` → those templates only (no standard-pack
+    merge). Empty/missing → :data:`STANDARD_PATIENT_CHART_PREFETCH` for legacy.
+    """
+    requirements = list(data_requirements or [])
+    if not requirements:
+        return dict(STANDARD_PATIENT_CHART_PREFETCH)
+
     prefetch: dict[str, str] = {}
-    for index, req in enumerate(data_requirements or []):
-        resource_type = req.get("type") or "Resource"
-        key = slugify(resource_type) if index == 0 else slugify(f"{resource_type}-{index}")
+    used_keys: set[str] = set()
+    for req in requirements:
+        resource_type = str(req.get("type") or "Resource")
+        key = _prefetch_key_for_type(resource_type, used_keys)
+        used_keys.add(key)
         if resource_type == "Patient":
             prefetch[key] = "Patient/{{context.patientId}}"
+        elif resource_type == "Coverage":
+            prefetch[key] = "Coverage?beneficiary=Patient/{{context.patientId}}"
         else:
-            prefetch[key] = f"{resource_type}?patient={{context.patientId}}"
-    if not prefetch:
-        return dict(STANDARD_PATIENT_CHART_PREFETCH)
-    for key, template in STANDARD_PATIENT_CHART_PREFETCH.items():
-        prefetch.setdefault(key, template)
+            prefetch[key] = f"{resource_type}?patient=" + "{{context.patientId}}"
     return prefetch
