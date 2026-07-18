@@ -174,6 +174,28 @@
       "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriuspalliativecare-has-palliative-care-in-the-measurement-period"
     },
     {
+      "id": "er-acute-breathlessness-pathway",
+      "hook": "encounter-start",
+      "title": "Emergency Department Acute Breathlessness Pathway",
+      "description": "Person presenting to the emergency department with acute breathlessness: danger-sign review, airway rescue when indicated, parallel stabilization (access, monitoring, imaging, labs), working etiology classification, then branch-specific management.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusEDAcuteBreathlessness",
+      "libraryVersion": "0.1.4",
+      "expression": "In Scope",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "er-acute-breathlessness-pathway",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-acute-breathlessness-pathway"
+    },
+    {
       "id": "er-chest-pain-pathway",
       "hook": "encounter-start",
       "title": "Emergency Department Chest Pain Pathway",
@@ -201,12 +223,14 @@
       "id": "hf-admission-protocol",
       "hook": "encounter-start",
       "title": "Heart Failure Admission Protocol",
-      "description": "Active heart failure on the chart at encounter start: propose daily weight monitoring, sodium-restricted diet, IV furosemide, and an admission BNP when none resulted in the last 24 hours.",
+      "description": "Person with active heart failure on the chart at encounter start: confirm ED eligibility features, then propose daily weight monitoring, sodium-restricted diet, IV furosemide, and an admission BNP when none resulted in the last 24 hours.",
       "prefetch": {
         "patient": "Patient/{{context.patientId}}",
         "conditions": "Condition?patient={{context.patientId}}",
         "observations": "Observation?patient={{context.patientId}}",
-        "encounters": "Encounter?patient={{context.patientId}}"
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
       },
       "libraryId": "AtriusHFAdmission",
       "libraryVersion": "0.1.0",

@@ -267,14 +267,13 @@ impl SidecarEvalService {
                             );
                             let mut response = CdsResponse::with_cards(cards);
                             let mut ext = std::collections::HashMap::new();
-                            // Ship the $apply CarePlan alongside the cards so clients can
-                            // persist it on order-set acceptance (basedOn linkage).
-                            if !response.cards.is_empty()
-                                && resp
-                                    .care_plan_value()
-                                    .get("resourceType")
-                                    .and_then(|v| v.as_str())
-                                    == Some("CarePlan")
+                            // Ship the $apply CarePlan so clients can persist a proposed
+                            // pathway CarePlan on invoke (and link orders via basedOn later).
+                            if resp
+                                .care_plan_value()
+                                .get("resourceType")
+                                .and_then(|v| v.as_str())
+                                == Some("CarePlan")
                             {
                                 ext.insert(
                                     CARE_PLAN_EXTENSION_KEY.to_string(),

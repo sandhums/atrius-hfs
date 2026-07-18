@@ -70,6 +70,28 @@ put "Encounter/hf-smoke-enc" "$(jq -n '{
 }')"
 put "Condition/hf-smoke-cond" "$(condition_ed hf-smoke-cond 84114007 'Heart failure' hf-smoke2 hf-smoke-enc "$now")"
 
+# --- Acute breathlessness (dyspnea-smoke / dyspnea-smoke-enc) ----------------
+put "Patient/dyspnea-smoke" "$(jq -n '{
+  resourceType:"Patient", id:"dyspnea-smoke", gender:"female", birthDate:"1955-06-15",
+  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  identifier:[{system:"https://atrius.in/smoke", value:"dyspnea-smoke"}],
+  name:[{family:"Smoke", given:["Dyspnea"]}]
+}')"
+put "Encounter/dyspnea-smoke-enc" "$(jq -n '{
+  resourceType:"Encounter", id:"dyspnea-smoke-enc", status:"in-progress",
+  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"EMER", display:"emergency"},
+  subject:{reference:"Patient/dyspnea-smoke"},
+  reasonCode:[{
+    coding:[
+      {system:"https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-reason-for-encounter-cs", code:"dyspnea", display:"Dyspnea"},
+      {system:"http://snomed.info/sct", code:"267036007", display:"Dyspnea"}
+    ],
+    text:"Dyspnea"
+  }]
+}')"
+put "Condition/dyspnea-smoke-cond" "$(condition_ed dyspnea-smoke-cond 267036007 'Dyspnea' dyspnea-smoke dyspnea-smoke-enc "$now")"
+
 # --- Sepsis (sepsis-smoke / sepsis-smoke-enc) --------------------------------
 put "Patient/sepsis-smoke" "$(jq -n '{
   resourceType:"Patient", id:"sepsis-smoke", gender:"female", birthDate:"1960-01-01",
@@ -208,6 +230,7 @@ put "Observation/renal-egfr" "$(jq -n --arg now "$now" '{
 echo
 echo "Done. Dev simulator presets:"
 echo "  HF admission     → hf-smoke2 / hf-smoke-enc"
+echo "  Breathlessness   → dyspnea-smoke / dyspnea-smoke-enc"
 echo "  Sepsis           → sepsis-smoke / sepsis-smoke-enc"
 echo "  Surgical safety  → surg-smoke / surg-smoke-enc"
 echo "  Critical labs    → crit-ui-smoke / crit-ui-smoke-enc  (OPD)"

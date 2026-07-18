@@ -1190,10 +1190,7 @@ fn validate_target_profile_constraints<T: Serialize>(
                 continue;
             };
 
-            if allowed_target_types
-                .iter()
-                .any(|allowed| allowed == actual_target_type)
-            {
+            if reference_target_type_allowed(&allowed_target_types, actual_target_type) {
                 continue;
             }
 
@@ -1219,6 +1216,16 @@ fn validate_target_profile_constraints<T: Serialize>(
         }
     }
     issues
+}
+
+/// FHIR `Reference(Resource)` / `Reference(DomainResource)` means any (domain) resource,
+/// not a resource whose type name is literally `Resource`.
+fn reference_target_type_allowed(allowed: &[String], actual: &str) -> bool {
+    allowed.iter().any(|candidate| {
+        candidate == actual
+            || candidate == "Resource"
+            || (candidate == "DomainResource" && actual != "Binary" && actual != "Bundle")
+    })
 }
 
 /// Enforce `ElementDefinition.type.aggregation` and `type.versioning` when those
@@ -1612,11 +1619,16 @@ fn parse_reference_resource_type(reference: &str) -> Option<&str> {
 /// [`ProfileRegistry`] does not contain an entry for that canonical URL—so we
 /// cannot read [`ExtractedProfile::resource_type`] directly.
 ///
-/// The heuristic recognizes common HL7 core tail segments (`Patient`, `Observation`, …) and
-/// several `…-{lowercaseresource}` naming patterns from published IGs. Unknown shapes return
-/// [`None`] and callers may skip type-based fallbacks.
+/// The heuristic:
+/// - strips a trailing `|version` from the canonical before inspecting the URL tail
+/// - recognizes HL7 core `StructureDefinition/{ResourceType}` tails (PascalCase), including
+///   CarePlan activity targets such as `RequestGroup`, `Task`, and `CommunicationRequest`
+/// - recognizes several `…-{lowercaseresource}` naming patterns from published IGs
+///
+/// Unknown shapes return [`None`] and callers may skip type-based fallbacks.
 pub fn target_profile_resource_type(url: &str) -> Option<String> {
-    let tail = url.rsplit('/').next()?;
+    let bare = url.split('|').next().unwrap_or(url);
+    let tail = bare.rsplit('/').next()?;
 
     let candidate = match tail {
         "Patient" => "Patient",
@@ -1642,6 +1654,16 @@ pub fn target_profile_resource_type(url: &str) -> Option<String> {
         "ImagingStudy" => "ImagingStudy",
         "AllergyIntolerance" => "AllergyIntolerance",
         "Immunization" => "Immunization",
+        // R4 CarePlan.activity.reference (+ common request orchestration targets)
+        "Appointment" => "Appointment",
+        "CommunicationRequest" => "CommunicationRequest",
+        "DeviceRequest" => "DeviceRequest",
+        "NutritionOrder" => "NutritionOrder",
+        "Task" => "Task",
+        "VisionPrescription" => "VisionPrescription",
+        "RequestGroup" => "RequestGroup",
+        // R5+ rename kept for version-agnostic targetProfile URLs
+        "RequestOrchestration" => "RequestOrchestration",
         other if other.ends_with("-patient") => "Patient",
         other if other.ends_with("-practitioner") => "Practitioner",
         other if other.ends_with("-practitionerrole") => "PractitionerRole",
@@ -1661,11 +1683,26 @@ pub fn target_profile_resource_type(url: &str) -> Option<String> {
         other if other.ends_with("-careplan") => "CarePlan",
         other if other.ends_with("-appointment") => "Appointment",
         other if other.ends_with("-documentreference") => "DocumentReference",
+        other if other.ends_with("-task") => "Task",
+        other if other.ends_with("-requestgroup") => "RequestGroup",
         other if other.contains("diagnosticreport") => "DiagnosticReport",
+        // HL7 core StructureDefinition/{ResourceType} tails not listed above
+        other if looks_like_fhir_resource_type_name(other) => other,
         _ => return None,
     };
 
     Some(candidate.to_string())
+}
+
+/// True when `name` looks like an HL7 FHIR resource type (`Patient`, `RequestGroup`, …).
+fn looks_like_fhir_resource_type_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    first.is_ascii_uppercase()
+        && name.len() > 1
+        && chars.all(|c| c.is_ascii_alphanumeric())
 }
 
 /// Validate `type.profile` constraints on nested resource-valued elements.
@@ -3149,6 +3186,186 @@ mod target_profile_slice_scoping_tests {
         assert_eq!(
             issues[0].fhir_path,
             "Composition.section.entry:ChiefComplaints"
+        );
+    }
+}
+
+#[cfg(test)]
+mod target_profile_resource_type_tests {
+    use super::*;
+    use crate::profile::types::{ExtractedElementRule, ExtractedProfile, ExtractedTypeConstraint};
+    use fhir_validation_types::{StructureDefinitionKind, TypeDerivationRule};
+    use serde_json::json;
+
+    #[test]
+    fn strips_pipe_version_and_resolves_request_group() {
+        assert_eq!(
+            target_profile_resource_type(
+                "http://hl7.org/fhir/StructureDefinition/RequestGroup|4.0.1"
+            )
+            .as_deref(),
+            Some("RequestGroup")
+        );
+        assert_eq!(
+            target_profile_resource_type(
+                "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient|0.1.0"
+            )
+            .as_deref(),
+            Some("Patient")
+        );
+        assert_eq!(
+            target_profile_resource_type("http://hl7.org/fhir/StructureDefinition/Task|4.0.1")
+                .as_deref(),
+            Some("Task")
+        );
+    }
+
+    fn care_plan_activity_reference_profile() -> ExtractedProfile {
+        ExtractedProfile {
+            url: "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-careplan"
+                .to_string(),
+            version: Some("0.1.0".into()),
+            name: Some("AtriusInCarePlan".into()),
+            title: None,
+            resource_type: "CarePlan".to_string(),
+            base_definition: None,
+            snapshot_base_version: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
+            invariants: Vec::new(),
+            element_rules: vec![ExtractedElementRule {
+                id: "CarePlan.activity.reference".to_string(),
+                path: "CarePlan.activity.reference".to_string(),
+                type_constraints: vec![ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    target_profiles: vec![
+                        "http://hl7.org/fhir/StructureDefinition/Appointment|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/CommunicationRequest|4.0.1"
+                            .into(),
+                        "http://hl7.org/fhir/StructureDefinition/DeviceRequest|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/MedicationRequest|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/NutritionOrder|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/Task|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/ServiceRequest|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/VisionPrescription|4.0.1".into(),
+                        "http://hl7.org/fhir/StructureDefinition/RequestGroup|4.0.1".into(),
+                    ],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+        }
+    }
+
+    #[test]
+    fn care_plan_allows_contained_request_group_activity_reference() {
+        let profile = care_plan_activity_reference_profile();
+        let care_plan = json!({
+            "resourceType": "CarePlan",
+            "status": "active",
+            "intent": "proposal",
+            "subject": { "reference": "Patient/p1" },
+            "contained": [{
+                "resourceType": "RequestGroup",
+                "id": "rg",
+                "status": "active",
+                "intent": "proposal"
+            }],
+            "activity": [{
+                "reference": { "reference": "#rg" }
+            }]
+        });
+
+        let issues = validate_target_profile_constraints(
+            &care_plan,
+            "CarePlan",
+            &profile,
+            profile.element_rules.as_slice(),
+        );
+        assert!(
+            issues.is_empty(),
+            "contained RequestGroup should satisfy CarePlan.activity.reference targetProfile: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn care_plan_rejects_disallowed_activity_reference_type() {
+        let profile = care_plan_activity_reference_profile();
+        let care_plan = json!({
+            "resourceType": "CarePlan",
+            "status": "active",
+            "intent": "proposal",
+            "subject": { "reference": "Patient/p1" },
+            "contained": [{
+                "resourceType": "Observation",
+                "id": "obs",
+                "status": "final",
+                "code": { "text": "x" }
+            }],
+            "activity": [{
+                "reference": { "reference": "#obs" }
+            }]
+        });
+
+        let issues = validate_target_profile_constraints(
+            &care_plan,
+            "CarePlan",
+            &profile,
+            profile.element_rules.as_slice(),
+        );
+        assert_eq!(issues.len(), 1);
+        assert!(
+            issues[0]
+                .diagnostics
+                .contains("Observation"),
+            "{:?}",
+            issues[0].diagnostics
+        );
+    }
+
+    #[test]
+    fn reference_resource_target_profile_allows_any_concrete_type() {
+        let profile = ExtractedProfile {
+            url: "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-task"
+                .to_string(),
+            version: Some("0.1.0".into()),
+            name: Some("AtriusInTask".into()),
+            title: None,
+            resource_type: "Task".to_string(),
+            base_definition: None,
+            snapshot_base_version: None,
+            kind: StructureDefinitionKind::Resource,
+            derivation: TypeDerivationRule::Constraint,
+            invariants: Vec::new(),
+            element_rules: vec![ExtractedElementRule {
+                id: "Task.basedOn".to_string(),
+                path: "Task.basedOn".to_string(),
+                type_constraints: vec![ExtractedTypeConstraint {
+                    code: "Reference".into(),
+                    target_profiles: vec![
+                        "http://hl7.org/fhir/StructureDefinition/Resource|4.0.1".into(),
+                    ],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+        };
+        let task = json!({
+            "resourceType": "Task",
+            "status": "in-progress",
+            "intent": "order",
+            "basedOn": [{ "reference": "CarePlan/cp-1" }]
+        });
+
+        let issues = validate_target_profile_constraints(
+            &task,
+            "Task",
+            &profile,
+            profile.element_rules.as_slice(),
+        );
+        assert!(
+            issues.is_empty(),
+            "Reference(Resource) must accept CarePlan: {issues:?}"
         );
     }
 }
