@@ -5,9 +5,9 @@
 //! | Variable | Role |
 //! |----------|------|
 //! | `CDS_CLINICAL_REASONING_URL` | JVM sidecar base; empty → demo mode (no ELM) |
-//! | `CDS_HFS_BASE_URL` | **`hfsBaseUrl` sent to sidecar** — use `cr-fhir-bridge` in Atrius stack |
+//! | `CDS_HFS_BASE_URL` | **`hfsBaseUrl` sent to sidecar** — clinical data (patient chart HFS) |
 //! | `CDS_HTS_BASE_URL` | **`htsBaseUrl`** — HTS for ValueSet expansion during CQL |
-//! | `CDS_LIBRARY_BASE_URL` | **`libraryBaseUrl`** — KR for primary CQL `Library` + manifest Binary fetch |
+//! | `CDS_LIBRARY_BASE_URL` | **`libraryBaseUrl`** — KR for primary + include `Library` reads and manifest Binary fetch |
 //! | `CDS_SERVICES_MANIFEST_PATH` | Local JSON catalog (overrides KR Binary when set) |
 //! | `CDS_KR_SERVICES_BINARY_ID` | KR `Binary.id` holding base64 JSON service catalog |
 //! | `CDS_SIDECAR_TIMEOUT_SECS` | HTTP timeout for evaluate calls (default 120s) |
@@ -24,7 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use atrius_clinical_reasoning::{
+use crate::clinical_reasoning::{
     ClinicalReasoningClient, ClinicalReasoningConfig, FhirServiceEndpoints,
 };
 use clap::Parser;

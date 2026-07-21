@@ -104,6 +104,9 @@ pub struct AppState<S> {
 
     /// Bulk submit configuration.
     bulk_submit_config: Arc<BulkSubmitConfig>,
+
+    /// Optional `$reindex` controller (SQLite/Postgres backends).
+    reindex_controller: Option<Arc<dyn crate::handlers::ReindexController>>,
 }
 
 // Manually implement Clone since S is wrapped in Arc and doesn't need to be Clone
@@ -131,6 +134,7 @@ impl<S> Clone for AppState<S> {
             bulk_submit_output: self.bulk_submit_output.clone(),
             bulk_submit_file_auth: self.bulk_submit_file_auth.clone(),
             bulk_submit_config: Arc::clone(&self.bulk_submit_config),
+            reindex_controller: self.reindex_controller.clone(),
         }
     }
 }
@@ -167,6 +171,7 @@ impl<S: ResourceStorage> AppState<S> {
             bulk_submit_output: None,
             bulk_submit_file_auth: None,
             bulk_submit_config,
+            reindex_controller: None,
         }
     }
 
@@ -213,6 +218,7 @@ impl<S: ResourceStorage> AppState<S> {
             bulk_submit_output: None,
             bulk_submit_file_auth: None,
             bulk_submit_config,
+            reindex_controller: None,
         }
     }
 
@@ -236,6 +242,20 @@ impl<S: ResourceStorage> AppState<S> {
     pub fn with_export_controller(mut self, controller: Arc<dyn ExportJobController>) -> Self {
         self.export_controller = Some(controller);
         self
+    }
+
+    /// Wire `$reindex` controller (SQLite/Postgres).
+    pub fn with_reindex_controller(
+        mut self,
+        controller: Arc<dyn crate::handlers::ReindexController>,
+    ) -> Self {
+        self.reindex_controller = Some(controller);
+        self
+    }
+
+    /// Returns the `$reindex` controller when configured.
+    pub fn reindex_controller(&self) -> Option<&Arc<dyn crate::handlers::ReindexController>> {
+        self.reindex_controller.as_ref()
     }
 
     /// Returns the export job controller, if one has been configured.

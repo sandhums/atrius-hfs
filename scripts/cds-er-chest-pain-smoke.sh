@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # CDS Hooks ER chest pain pathway smoke (encounter-start + PlanDefinition/$apply).
 #
-# Simulates a CDS client: fetches Patient + chart prefetch from cr-fhir-bridge,
+# Simulates a CDS client: fetches Patient + chart prefetch from clinical HFS,
 # POSTs encounter-start invoke to cds-server for service er-chest-pain-pathway.
 #
-# Prerequisites: HTS, clinical HFS, bridge, KR (PlanDefinition + Library + ADs),
+# Prerequisites: HTS, clinical HFS, KR (PlanDefinition + Library + ADs),
 # JVM sidecar, cds-server with CDS_SERVICES_MANIFEST_PATH pointing at this manifest.
 #
 # Usage:
 #   ./scripts/cds-er-chest-pain-smoke.sh
 #   ./scripts/cds-er-chest-pain-smoke.sh --print-payload-only > /tmp/er-chest-pain-invoke.json
-#   ./scripts/cds-er-chest-pain-smoke.sh --bridge-apply
 #   TEST_PATIENT_ID=my-patient TEST_ENCOUNTER_ID=Encounter/abc ./scripts/cds-er-chest-pain-smoke.sh
 #
 # Import Atrius KR content first (from AtriusIGDraft):
@@ -19,16 +18,14 @@
 set -euo pipefail
 
 PRINT_PAYLOAD_ONLY=false
-BRIDGE_APPLY=false
 for arg in "$@"; do
   case "$arg" in
     --print-payload-only) PRINT_PAYLOAD_ONLY=true ;;
-    --bridge-apply) BRIDGE_APPLY=true ;;
   esac
 done
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BRIDGE="${HFS_BRIDGE_URL:-http://127.0.0.1:8081}"
+CLINICAL_HFS="${CLINICAL_HFS_URL:-http://127.0.0.1:8082}"
 CDS="${CDS_SERVER_URL:-http://127.0.0.1:8095}"
 KR="${KR_HFS_URL:-http://127.0.0.1:8079}"
 PATIENT="${TEST_PATIENT_ID:-er-chest-pain-smoke-patient}"
@@ -38,7 +35,7 @@ SERVICE_ID="${CDS_SERVICE_ID:-er-chest-pain-pathway}"
 PLAN_DEFINITION_ID="${PLAN_DEFINITION_ID:-er-chest-pain-pathway}"
 SKIP_READY="${SKIP_READY:-false}"
 
-bridge="${BRIDGE%/}"
+hfs="${CLINICAL_HFS%/}"
 cds="${CDS%/}"
 kr="${KR%/}"
 
@@ -47,7 +44,7 @@ fetch_json() {
   local label="$2"
   if ! curl -sfS -H 'Accept: application/fhir+json' "$url"; then
     echo "error: failed to fetch $label from $url" >&2
-    echo "hint: start cr-fhir-bridge + clinical HFS; import ER demo patient data if needed" >&2
+    echo "hint: start clinical HFS; import ER demo patient data if needed" >&2
     exit 1
   fi
 }
@@ -74,30 +71,30 @@ if [[ "$SKIP_READY" != "true" && "$PRINT_PAYLOAD_ONLY" != "true" ]]; then
   fi
 fi
 
-echo "Fetching ER chest pain prefetch from $bridge for patient $PATIENT (encounter-start) ..." >&2
+echo "Fetching ER chest pain prefetch from $hfs for patient $PATIENT (encounter-start) ..." >&2
 echo "CDS service: $SERVICE_ID (PlanDefinition/\$apply via sidecar)" >&2
 
 payload="$(
   jq -n \
-    --argjson patientResource "$(fetch_json "$bridge/Patient/$PATIENT" "Patient")" \
-    --argjson encounter1 "$(fetch_json "$bridge/Encounter?patient=$PATIENT" "Encounter search")" \
-    --argjson condition2 "$(fetch_json "$bridge/Condition?patient=$PATIENT" "Condition search")" \
-    --argjson observation3 "$(fetch_json "$bridge/Observation?patient=$PATIENT" "Observation search")" \
-    --argjson questionnaireresponse4 "$(fetch_json_optional "$bridge/QuestionnaireResponse?patient=$PATIENT" "QuestionnaireResponse search")" \
-    --argjson servicerequest5 "$(fetch_json_optional "$bridge/ServiceRequest?patient=$PATIENT" "ServiceRequest search")" \
-    --argjson medicationrequest6 "$(fetch_json_optional "$bridge/MedicationRequest?patient=$PATIENT" "MedicationRequest search")" \
-    --argjson diagnosticreport7 "$(fetch_json_optional "$bridge/DiagnosticReport?patient=$PATIENT" "DiagnosticReport search")" \
-    --argjson medicationadministration8 "$(fetch_json_optional "$bridge/MedicationAdministration?patient=$PATIENT" "MedicationAdministration search")" \
-    --argjson conditions "$(fetch_json "$bridge/Condition?patient=$PATIENT" "Condition search")" \
-    --argjson encounters "$(fetch_json "$bridge/Encounter?patient=$PATIENT" "Encounter search")" \
-    --argjson observations "$(fetch_json "$bridge/Observation?patient=$PATIENT" "Observation search")" \
-    --argjson procedures "$(fetch_json_optional "$bridge/Procedure?patient=$PATIENT" "Procedure search")" \
-    --argjson medicationRequests "$(fetch_json_optional "$bridge/MedicationRequest?patient=$PATIENT" "MedicationRequest search")" \
-    --argjson immunizations "$(fetch_json_optional "$bridge/Immunization?patient=$PATIENT" "Immunization search")" \
-    --argjson diagnosticReports "$(fetch_json_optional "$bridge/DiagnosticReport?patient=$PATIENT" "DiagnosticReport search")" \
-    --argjson serviceRequests "$(fetch_json_optional "$bridge/ServiceRequest?patient=$PATIENT" "ServiceRequest search")" \
-    --argjson allergies "$(fetch_json_optional "$bridge/AllergyIntolerance?patient=$PATIENT" "AllergyIntolerance search")" \
-    --argjson coverage "$(fetch_json_optional "$bridge/Coverage?beneficiary=Patient/$PATIENT" "Coverage search")" \
+    --argjson patientResource "$(fetch_json "$hfs/Patient/$PATIENT" "Patient")" \
+    --argjson encounter1 "$(fetch_json "$hfs/Encounter?patient=$PATIENT" "Encounter search")" \
+    --argjson condition2 "$(fetch_json "$hfs/Condition?patient=$PATIENT" "Condition search")" \
+    --argjson observation3 "$(fetch_json "$hfs/Observation?patient=$PATIENT" "Observation search")" \
+    --argjson questionnaireresponse4 "$(fetch_json_optional "$hfs/QuestionnaireResponse?patient=$PATIENT" "QuestionnaireResponse search")" \
+    --argjson servicerequest5 "$(fetch_json_optional "$hfs/ServiceRequest?patient=$PATIENT" "ServiceRequest search")" \
+    --argjson medicationrequest6 "$(fetch_json_optional "$hfs/MedicationRequest?patient=$PATIENT" "MedicationRequest search")" \
+    --argjson diagnosticreport7 "$(fetch_json_optional "$hfs/DiagnosticReport?patient=$PATIENT" "DiagnosticReport search")" \
+    --argjson medicationadministration8 "$(fetch_json_optional "$hfs/MedicationAdministration?patient=$PATIENT" "MedicationAdministration search")" \
+    --argjson conditions "$(fetch_json "$hfs/Condition?patient=$PATIENT" "Condition search")" \
+    --argjson encounters "$(fetch_json "$hfs/Encounter?patient=$PATIENT" "Encounter search")" \
+    --argjson observations "$(fetch_json "$hfs/Observation?patient=$PATIENT" "Observation search")" \
+    --argjson procedures "$(fetch_json_optional "$hfs/Procedure?patient=$PATIENT" "Procedure search")" \
+    --argjson medicationRequests "$(fetch_json_optional "$hfs/MedicationRequest?patient=$PATIENT" "MedicationRequest search")" \
+    --argjson immunizations "$(fetch_json_optional "$hfs/Immunization?patient=$PATIENT" "Immunization search")" \
+    --argjson diagnosticReports "$(fetch_json_optional "$hfs/DiagnosticReport?patient=$PATIENT" "DiagnosticReport search")" \
+    --argjson serviceRequests "$(fetch_json_optional "$hfs/ServiceRequest?patient=$PATIENT" "ServiceRequest search")" \
+    --argjson allergies "$(fetch_json_optional "$hfs/AllergyIntolerance?patient=$PATIENT" "AllergyIntolerance search")" \
+    --argjson coverage "$(fetch_json_optional "$hfs/Coverage?beneficiary=Patient/$PATIENT" "Coverage search")" \
     --arg patientId "$PATIENT" \
     --arg encounterId "$ENCOUNTER" \
     --arg userId "$PRACTITIONER" \
@@ -165,35 +162,3 @@ else
   echo "ok: $card_count card(s) from encounter-start PlanDefinition/\$apply" >&2
 fi
 
-if [[ "$BRIDGE_APPLY" == "true" ]]; then
-  echo "Bridge FHIR PlanDefinition/\$apply ..." >&2
-  apply_payload="$(
-    jq -n \
-      --arg subject "Patient/$PATIENT" \
-      --arg encounter "Encounter/$ENCOUNTER" \
-      --arg practitioner "$PRACTITIONER" \
-      '{
-        resourceType: "Parameters",
-        parameter: [
-          {name: "subject", valueString: $subject},
-          {name: "encounter", valueString: $encounter},
-          {name: "practitioner", valueString: $practitioner}
-        ]
-      }'
-  )"
-  apply_tmp="$(mktemp)"
-  apply_code="$(
-    curl -sS -o "$apply_tmp" -w '%{http_code}' \
-      -X POST "$bridge/PlanDefinition/$PLAN_DEFINITION_ID/\$apply" \
-      -H 'Content-Type: application/fhir+json' \
-      -d "$apply_payload"
-  )"
-  if [[ "$apply_code" != "200" ]]; then
-    echo "bridge \$apply HTTP $apply_code:" >&2
-    cat "$apply_tmp" >&2
-    exit 1
-  fi
-  jq '.parameter[] | select(.name=="return") | .resource | {resourceType, id, status}' "$apply_tmp"
-  echo "ok: bridge PlanDefinition/\$apply returned CarePlan" >&2
-  rm -f "$apply_tmp"
-fi

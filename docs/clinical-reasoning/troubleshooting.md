@@ -14,7 +14,7 @@ Duplicate key null (attempted merging values org.hl7.fhir.r4.model.Bundle@… an
 
 **Fix:** Rebuild/restart **JVM sidecar** with prefetch flattening in `SidecarPlanDefinitionApplier` (same logic as evaluate `PrefetchRetrieveSupport`). Regression test: `SidecarPlanDefinitionApplierPrefetchTest`.
 
-**Workaround until sidecar is updated:** invoke with empty prefetch (`"prefetch": {}`) so the sidecar uses REST fallback via cr-fhir-bridge (slower, but avoids the bug).
+**Workaround until sidecar is updated:** invoke with empty prefetch (`"prefetch": {}`) so the sidecar uses REST fallback via clinical HFS (slower, but avoids the bug).
 
 ## cds-server 502 / warning card: `Expected a list with at most one element`
 
@@ -85,29 +85,7 @@ Cannot invoke "ca.uhn.fhir.rest.api.MethodOutcome.getResource()" because the ret
    );
    ```
 
-## Bridge `upstream=http://127.0.0.1:8080` or clinical 404 on `:8081`
 
-**Symptom:** Bridge log shows default upstream **8080**; `GET /metadata` on **8081** returns 404 or clinical paths fail.
-
-**Cause:** `CR_FHIR_BRIDGE_UPSTREAM_URL` not passed to the bridge process (common when env vars are on separate shell lines).
-
-**Fix:**
-
-```bash
-./scripts/run-cr-fhir-bridge.sh
-# Ensure deploy/env/cr-fhir-bridge.env has:
-#   CR_FHIR_BRIDGE_UPSTREAM_URL=http://127.0.0.1:8082
-#   CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079
-#   CR_FHIR_BRIDGE_DEFAULT_TENANT=<same as clinical HFS_DEFAULT_TENANT>
-```
-
-## Sidecar bound to port 8081
-
-**Symptom:** `GET http://127.0.0.1:8081/metadata` returns 404 with Spring-style JSON; CDS fails with HAPI-1357 metadata errors.
-
-**Cause:** JVM sidecar started on **8081** instead of **cr-fhir-bridge**.
-
-**Fix:** Sidecar on **8088** only; bridge on **8081**. `lsof -ti :8081 | xargs kill` then restart bridge.
 
 ## `Could not load model information for model AtriusIn`
 
@@ -197,21 +175,22 @@ See [data-import.md § KR HFS](./data-import.md#kr-hfs-knowledge-libraries) and 
 
 ## `FHIRHelpers` / include library not found
 
-**Cause:** Sidecar loads CQL **`include`** via **`hfsBaseUrl`**, not `libraryBaseUrl`.
+**Cause:** Missing or wrong **`libraryBaseUrl`** (KR). The JVM sidecar loads primary and all CQL `include` libraries from `libraryBaseUrl`.
 
 **Fix:**
 
-- `hfsBaseUrl` → `cr-fhir-bridge` (**8081**)
-- `CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079`
-- Verify: `curl http://127.0.0.1:8081/Library/FHIRHelpers`
+- Set `CDS_LIBRARY_BASE_URL` / sidecar `libraryBaseUrl` → KR (**8079**)
+- Verify: `curl http://127.0.0.1:8079/Library/FHIRHelpers` (and `Library/AtriusCommon`)
+- Clinical `hfsBaseUrl` / `CDS_HFS_BASE_URL` points at clinical HFS (**8082**)
+
 
 ## Patient retrieve returns no data
 
 **Checks:**
 
 - Patient exists on clinical HFS: `curl http://127.0.0.1:8082/Patient/{id}`
-- Same id through bridge: `curl http://127.0.0.1:8081/Patient/{id}`
-- Compartment search: `curl 'http://127.0.0.1:8081/Observation?patient={id}'`
+- Same id through bridge: `curl http://127.0.0.1:8082/Patient/{id}`
+- Compartment search: `curl 'http://127.0.0.1:8082/Observation?patient={id}'`
 - Reference index: bare `?patient=cms165-demo` must match `Patient/{id}` and `urn:uuid:{id}` forms
 
 ## Empty Numerator / false Denominator Exclusions
@@ -258,7 +237,7 @@ Re-run SNOMED RF2 import; restart HTS.
 
 ```bash
 RUST_LOG=helios_rest::handlers::search=debug ./scripts/run-hfs.sh
-RUST_LOG=cr_fhir_bridge=debug ./scripts/run-cr-fhir-bridge.sh
+RUST_LOG=cr_fhir_bridge=debug ./scripts/run-hfs.sh
 RUST_LOG=cds_server=debug ./scripts/run-cds-server.sh
 ```
 

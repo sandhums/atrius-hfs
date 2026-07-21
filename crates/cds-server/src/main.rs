@@ -1,7 +1,7 @@
 //! CDS Hooks HTTP server (`cds-server`).
 //!
 //! Bridges CDS Clients (EHR) to the JVM clinical reasoning sidecar via
-//! [`atrius_clinical_reasoning`]. CDS service definitions load from a **KR `Binary`**
+//! [`cds_server::clinical_reasoning`]. CDS service definitions load from a **KR `Binary`**
 //! or local JSON manifest.
 //!
 //! Startup, env vars, and stack wiring: `docs/clinical-reasoning/startup-guide.md`.

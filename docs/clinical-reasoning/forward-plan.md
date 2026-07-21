@@ -10,14 +10,14 @@ The stack is **functionally complete for slice 1–3 infrastructure** with a **r
 |-------|--------|
 | **cds-server** | 68 services, `/ready` pins, `$apply` + legacy evaluate, all library hooks, SMART pass-through |
 | **JVM sidecar** | evaluate, PlanDefinition/ActivityDefinition `$apply`, prefetch dedupe, content-aware cache keys (**slice 2 done**) |
-| **cr-fhir-bridge** | Proxy, KR `/Library*` passthrough, FHIR REST `$apply` façade |
+| **clinical HFS** | Proxy, KR `/Library*` passthrough, FHIR REST `$apply` façade |
 | **ER chest pain** | AtriusIGDraft CQL 0.4.2, smoke script, RequestGroup with ACS + result-loop actions |
 | **Clinical UI + BFF** | SMART via Keycloak, classification QR, order proposals, fulfillment simulation |
 
 **Strategic split:**
 
 - **Atrius-authored pathways** (ER chest pain): CQL uses `AtriusIn` — runtime mapper optional.
-- **Imported CMS eCQMs** (~67 `patient-view`): QI-Core ELM — [atrius-runtime-mapper](../../crates/atrius-runtime-mapper) required beyond Condition (v0.1 today).
+- **Imported CMS eCQMs**: prefer Atrius-authored CQL against storage profiles (no runtime mapper).
 
 ## Priority sequence
 
@@ -60,8 +60,8 @@ Extend Observation/Encounter projection for legacy CMS eCQMs on Atrius storage p
 
 ## Architecture decisions (preserve)
 
-1. cds-server speaks **CDS Hooks only** — FHIR `$apply` REST on cr-fhir-bridge
-2. Sidecar `hfsBaseUrl` → **bridge (8081)**, not raw clinical HFS
+1. cds-server speaks **CDS Hooks only** — FHIR `$apply` REST on clinical HFS
+2. Sidecar `hfsBaseUrl` → **clinical HFS (8082)**; `libraryBaseUrl` → KR
 3. KR `/Library*` passthrough — no projection on knowledge reads
 4. **Prefetch: client/BFF resolves**, cds-server pass-through
 5. **PlanDefinition-first invoke** when manifest has `planDefinitionId`
@@ -71,7 +71,7 @@ Extend Observation/Encounter projection for legacy CMS eCQMs on Atrius storage p
 | Repo / crate | Next work |
 |--------------|-----------|
 | cds-server | Card indicator, optional JWT introspection |
-| cr-fhir-bridge | Broader mapper hooks when phase D |
+| clinical HFS | Broader mapper hooks when phase D |
 | atrius-bff | Prefetch resolver (done), production auth config |
 | atrius-clinical-ui | Generic pathway renderer |
 | AtriusIGDraft | Pathway content, translate/import |

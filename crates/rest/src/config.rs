@@ -782,6 +782,13 @@ pub struct ServerConfig {
     #[arg(long, env = "HFS_SOF_ENABLED", default_value = "true")]
     pub sof_enabled: bool,
 
+    /// Enable `$reindex` / `$reindex-status` for rebuilding search indexes after
+    /// custom SearchParameter changes. Supported on SQLite and PostgreSQL
+    /// (including composites whose primary is one of those). When enabled on an
+    /// unsupported backend, startup logs a warning and the endpoints return 501.
+    #[arg(long, env = "HFS_REINDEX_ENABLED", default_value = "false")]
+    pub reindex_enabled: bool,
+
     /// Export sink type: "fs" (default, local filesystem) or "s3" (AWS S3).
     #[arg(long, env = "HFS_EXPORT_SINK", default_value = "fs")]
     pub export_sink: String,
@@ -927,6 +934,7 @@ impl Default for ServerConfig {
             elasticsearch_username: None,
             elasticsearch_password: None,
             sof_enabled: true,
+            reindex_enabled: false,
             export_sink: "fs".to_string(),
             export_dir: "./exports".to_string(),
             export_s3_bucket: None,
@@ -1050,6 +1058,7 @@ impl ServerConfig {
             elasticsearch_username: None,
             elasticsearch_password: None,
             sof_enabled: true,
+            reindex_enabled: false,
             export_sink: "fs".to_string(),
             export_dir: "./exports".to_string(),
             export_s3_bucket: None,

@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Atrius CDS Hooks — CMS165",
-    "description": "CDS Hooks discovery and invoke examples for Atrius CMS165 (atriuscms165controllinghighbp).\n\nContract: GET /cds-services returns prefetch *templates*; the CDS client resolves them and POSTs populated prefetch on invoke. See docs/clinical-reasoning/startup-guide.md (CDS client responsibilities).\n\nPrerequisites: cr-fhir-bridge (8081), cds-server (8095), sidecar (8088), import-cms165-demo.py --verify.",
+    "name": "Atrius CDS Hooks \u2014 CMS165",
+    "description": "CDS Hooks discovery and invoke examples for Atrius CMS165 (atriuscms165controllinghighbp).\n\nContract: GET /cds-services returns prefetch *templates*; the CDS client resolves them and POSTs populated prefetch on invoke. See docs/clinical-reasoning/startup-guide.md (CDS client responsibilities).\n\nPrerequisites: clinical HFS (8082), cds-server (8095), sidecar (8088), import-cms165-demo.py --verify.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,8 +10,8 @@
       "value": "http://127.0.0.1:8095"
     },
     {
-      "key": "bridge_base",
-      "value": "http://127.0.0.1:8081"
+      "key": "clinical_hfs",
+      "value": "http://127.0.0.1:8082"
     },
     {
       "key": "patient_id",
@@ -36,7 +36,7 @@
   ],
   "item": [
     {
-      "name": "Discovery — CMS165 prefetch templates",
+      "name": "Discovery \u2014 CMS165 prefetch templates",
       "request": {
         "method": "GET",
         "header": [
@@ -46,12 +46,12 @@
           }
         ],
         "url": "{{cds_base}}/cds-services",
-        "description": "Returns CDS service catalog. Each service includes prefetch templates (FHIR search URLs with {{context.patientId}}). The CDS client resolves these — cds-server does not."
+        "description": "Returns CDS service catalog. Each service includes prefetch templates (FHIR search URLs with {{context.patientId}}). The CDS client resolves these \u2014 cds-server does not."
       },
       "response": []
     },
     {
-      "name": "Invoke — context + measurement period only",
+      "name": "Invoke \u2014 context + measurement period only",
       "request": {
         "method": "POST",
         "header": [
@@ -75,14 +75,14 @@
       "response": []
     },
     {
-      "name": "Invoke — client-simulated prefetch",
+      "name": "Invoke \u2014 client-simulated prefetch",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "const bridge = pm.collectionVariables.get('bridge_base').replace(/\\/$/, '');",
+              "const bridge = pm.collectionVariables.get('clinical_hfs').replace(/\\/$/, '');",
               "const patient = pm.collectionVariables.get('patient_id');",
               "const mpLow = pm.collectionVariables.get('measurement_period_low');",
               "const mpHigh = pm.collectionVariables.get('measurement_period_high');",
@@ -163,7 +163,7 @@
           }
         },
         "url": "{{cds_base}}/cds-services/{{service_id}}",
-        "description": "Simulates a CDS client: pre-request script fetches standard chart prefetch from bridge_base, then POSTs populated prefetch + measurementPeriod. Equivalent to ./scripts/cds-cms165-prefetch-smoke.sh."
+        "description": "Simulates a CDS client: pre-request script fetches standard chart prefetch from clinical_hfs, then POSTs populated prefetch + measurementPeriod. Equivalent to ./scripts/cds-cms165-prefetch-smoke.sh."
       },
       "response": []
     }

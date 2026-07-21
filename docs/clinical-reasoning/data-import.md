@@ -86,7 +86,7 @@ Script: [`scripts/import-synthea-atrius.py`](../../scripts/import-synthea-atrius
 ./scripts/import-synthea-atrius.py --base-url http://127.0.0.1:8082 ./synthea/output/fhir/
 ```
 
-**Read patient data through the bridge** (`8081`) when testing sidecar projection — not raw clinical HFS.
+**Read patient data from clinical HFS** (`8082`) for sidecar evaluation.
 
 ### Patient reference search
 
@@ -116,7 +116,7 @@ Verify:
 ```bash
 curl -s -X POST http://127.0.0.1:8088/v1/plandefinition/apply \
   -H 'Content-Type: application/json' \
-  -d '{"planDefinitionId":"cms165fhircontrollinghighbloodpressure","patientId":"cms165-demo","practitionerId":"Practitioner/example","hfsBaseUrl":"http://127.0.0.1:8081","htsBaseUrl":"http://127.0.0.1:9091","libraryBaseUrl":"http://127.0.0.1:8079"}' \
+  -d '{"planDefinitionId":"cms165fhircontrollinghighbloodpressure","patientId":"cms165-demo","practitionerId":"Practitioner/example","hfsBaseUrl":"http://127.0.0.1:8082","htsBaseUrl":"http://127.0.0.1:9091","libraryBaseUrl":"http://127.0.0.1:8079"}' \
   | jq '.requestGroup.action | length'   # expect >= 1
 ```
 
@@ -265,10 +265,8 @@ When adding **new** measures / pathways, follow **[roadmap.md § Phase 4](./road
 
 ## Atrius runtime mapper
 
-Projection rules: `atrius-runtime-mapper` (v0.1: Condition). Optional custom manifest:
 
 ```bash
-ATRIUS_MAPPER_MANIFEST=path/to/manifest.json ./scripts/run-cr-fhir-bridge.sh
+ATRIUS_MAPPER_MANIFEST=path/to/manifest.json ./scripts/run-clinical HFS.sh
 ```
 
-Generate inventory from Atrius IG: `scripts/generate-atrius-mapper-manifest.py`.

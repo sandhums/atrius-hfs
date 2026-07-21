@@ -10,7 +10,7 @@ Default install paths (`deploy/systemd/install.sh`):
 
 | Path | Contents |
 |------|----------|
-| `/opt/atrius/bin/` | `hts`, `hfs`, `cr-fhir-bridge`, `cds-server`, `run-cql-sidecar.sh` |
+| `/opt/atrius/bin/` | `hts`, `hfs`, `cds-server`, `run-cql-sidecar.sh` |
 | `/opt/atrius/lib/` | `cql-sidecar.jar` (from JVMsidecar build) |
 | `/opt/atrius/data/` | SQLite DBs, `HFS_DATA_DIR` artifacts |
 | `/opt/atrius/manifests/` | Profile manifest, CDS catalog JSON |
@@ -24,13 +24,10 @@ Override install root: `ATRIUS_HOME=/srv/atrius ./deploy/systemd/install.sh`
 ```text
 atrius-hts.service
 atrius-hfs-clinical.service  ──┐
-atrius-hfs-kr.service          ──┼──► atrius-cr-fhir-bridge.service
+atrius-hfs-kr.service          ──┼──► atrius-cql-sidecar.service
                                  │           │
                                  │           ▼
-                                 └──► atrius-cql-sidecar.service
-                                             │
-                                             ▼
-                                    atrius-cds-server.service
+                                 └──► atrius-cds-server.service
 
 atrius-clinical-reasoning.target  →  enables / starts all of the above
 ```
@@ -40,7 +37,6 @@ atrius-clinical-reasoning.target  →  enables / starts all of the above
 | `atrius-hts.service` | 9091 | `/etc/atrius/hts.env` |
 | `atrius-hfs-clinical.service` | 8082 | `/etc/atrius/hfs-clinical.env` |
 | `atrius-hfs-kr.service` | 8079 | `/etc/atrius/hfs-kr.env` |
-| `atrius-cr-fhir-bridge.service` | 8081 | `/etc/atrius/cr-fhir-bridge.env` |
 | `atrius-cql-sidecar.service` | 8088 | `/etc/atrius/cql-sidecar.env` |
 | `atrius-cds-server.service` | 8095 | `/etc/atrius/cds-server.env` |
 
@@ -57,7 +53,6 @@ From the atrius-hfs repository root:
 # Equivalent:
 # cargo build --release -p helios-hts --bin hts
 # cargo build --release -p helios-hfs --bin hfs --features postgres,redis,R4
-# cargo build --release -p cr-fhir-bridge --bin cr-fhir-bridge
 # cargo build --release -p cds-server --bin cds-server
 ```
 
@@ -88,12 +83,8 @@ Edit each file under `/etc/atrius/`. Critical wiring (must stay aligned):
 # clinical HFS
 HFS_TERMINOLOGY_SERVER=http://127.0.0.1:9091
 
-# bridge
-CR_FHIR_BRIDGE_UPSTREAM_URL=http://127.0.0.1:8082
-CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079
-
-# cds-server + sidecar evaluate requests
-CDS_HFS_BASE_URL=http://127.0.0.1:8081   # bridge — NOT 8082
+# cds-server + sidecar evaluate / $apply requests
+CDS_HFS_BASE_URL=http://127.0.0.1:8082   # clinical HFS
 CDS_HTS_BASE_URL=http://127.0.0.1:9091
 CDS_LIBRARY_BASE_URL=http://127.0.0.1:8079
 CDS_CLINICAL_REASONING_URL=http://127.0.0.1:8088
@@ -121,7 +112,6 @@ sudo systemctl enable --now atrius-clinical-reasoning.target
 Start or stop individual services:
 
 ```bash
-sudo systemctl restart atrius-cr-fhir-bridge
 sudo systemctl stop atrius-cds-server
 ```
 
@@ -143,7 +133,6 @@ journalctl -u atrius-cql-sidecar --since "1 hour ago"
 | HTS | `GET http://127.0.0.1:9091/health` |
 | Clinical HFS | `GET http://127.0.0.1:8082/health` |
 | KR HFS | `GET http://127.0.0.1:8079/health` |
-| Bridge | `GET http://127.0.0.1:8081/health` |
 | Sidecar | `GET http://127.0.0.1:8088/health` |
 | cds-server | `GET http://127.0.0.1:8095/health` (liveness), `GET /ready` (KR library pins) |
 | cds-server discovery | `GET http://127.0.0.1:8095/cds-services` |

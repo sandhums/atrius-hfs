@@ -1,0 +1,279 @@
+{
+  "services": [
+    {
+      "id": "atrius-critical-labs",
+      "hook": "patient-view",
+      "title": "Critical Lab Value Alerts",
+      "description": "Interruptive alerts when the most recent resulted potassium, sodium, glucose, or cardiac troponin crosses a critical threshold. Each alert proposes an immediate clinician review task and a confirmatory repeat sample.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusCriticalLabs",
+      "libraryVersion": "0.1.0",
+      "expression": "Has Critical Lab Value",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-critical-labs",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-critical-labs"
+    },
+    {
+      "id": "atrius-ddi-check",
+      "hook": "order-sign",
+      "title": "Drug-Drug Interaction Check",
+      "description": "Interruptive alerts at order signing when a draft medication order interacts with an active prescription: statin + CYP3A4-inhibiting macrolide (rhabdomyolysis), warfarin + NSAID (bleeding), ACE inhibitor + potassium-sparing diuretic (hyperkalemia). Cards propose safer alternatives or monitoring.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusDrugInteractions",
+      "libraryVersion": "0.1.0",
+      "expression": "Has Drug Interaction",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-ddi-check",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-ddi-check"
+    },
+    {
+      "id": "atrius-imaging-appropriateness",
+      "hook": "order-select",
+      "title": "Imaging Appropriateness (Lumbar MRI)",
+      "description": "When a lumbar spine MRI is selected for a patient whose low back pain began within 6 weeks and who has no red-flag condition (cauda equina, malignancy), advise conservative therapy first and propose a plain lumbar radiograph when imaging is required.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusImagingAppropriateness",
+      "libraryVersion": "0.1.0",
+      "expression": "Early Lumbar MRI Without Red Flags",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-imaging-appropriateness",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-imaging-appropriateness"
+    },
+    {
+      "id": "atrius-preventive-care",
+      "hook": "patient-view",
+      "title": "Preventive Care Reminders",
+      "description": "Non-interruptive reminders when preventive care is due: colorectal cancer screening (age 45–75, no colonoscopy in 10 years and no FIT/FOBT in 1 year) and seasonal influenza vaccination (adult, none in the last 12 months).",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "procedures": "Procedure?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "immunizations": "Immunization?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusPreventiveCare",
+      "libraryVersion": "0.1.0",
+      "expression": "Preventive Care Reminder Needed",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-preventive-care",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-preventive-care"
+    },
+    {
+      "id": "atrius-renal-dosing",
+      "hook": "order-sign",
+      "title": "Renal Dosing Check",
+      "description": "At order signing, compare draft metformin and gabapentin orders against the most recent eGFR (last 12 months): metformin is contraindicated below eGFR 30 and dose-limited at 30-45; gabapentin is dose-banded below 60. Replacement orders carry the renally-adjusted dose via dynamicValue.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusRenalDosing",
+      "libraryVersion": "0.1.0",
+      "expression": "Renal Dose Adjustment Needed",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-renal-dosing",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-renal-dosing"
+    },
+    {
+      "id": "atriusadultoutpatientencounters-qualifying-encounters",
+      "hook": "patient-view",
+      "title": "AtriusAdultOutpatientEncounters",
+      "description": "CDS Hooks service evaluating CQL expression `Qualifying Encounters` from Library `AtriusAdultOutpatientEncounters` version 0.1.0.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "AtriusAdultOutpatientEncounters",
+      "libraryVersion": "0.1.0",
+      "expression": "Qualifying Encounters",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atriusadultoutpatientencounters-qualifying-encounters",
+      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriusadultoutpatientencounters-qualifying-encounters"
+    },
+    {
+      "id": "atriusadvancedillnessandfrailty-has-frailty-device-order",
+      "hook": "patient-view",
+      "title": "AtriusAdvancedIllnessAndFrailty",
+      "description": "CDS Hooks service evaluating CQL expression `Has Frailty Device Order` from Library `AtriusAdvancedIllnessAndFrailty` version 0.1.0.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "AtriusAdvancedIllnessAndFrailty",
+      "libraryVersion": "0.1.0",
+      "expression": "Has Frailty Device Order",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atriusadvancedillnessandfrailty-has-frailty-device-order",
+      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriusadvancedillnessandfrailty-has-frailty-device-order"
+    },
+    {
+      "id": "atriuscms165controllinghighbp",
+      "hook": "patient-view",
+      "title": "Atrius CMS165 Controlling High BP",
+      "description": "CDS Hooks service evaluating Initial Population from Library AtriusCMS165ControllingHighBP at patient-view.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "procedures": "Procedure?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusCMS165ControllingHighBP",
+      "libraryVersion": "0.1.0",
+      "expression": "Initial Population",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atriuscms165controllinghighbp",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atriuscms165controllinghighbp"
+    },
+    {
+      "id": "atriuscqmcommon-inpatient-encounter",
+      "hook": "patient-view",
+      "title": "AtriusCQMCommon",
+      "description": "CDS Hooks service evaluating CQL expression `Inpatient Encounter` from Library `AtriusCQMCommon` version 0.1.0.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "AtriusCQMCommon",
+      "libraryVersion": "0.1.0",
+      "expression": "Inpatient Encounter",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atriuscqmcommon-inpatient-encounter",
+      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriuscqmcommon-inpatient-encounter"
+    },
+    {
+      "id": "atriuspalliativecare-has-palliative-care-in-the-measurement-period",
+      "hook": "patient-view",
+      "title": "AtriusPalliativeCare",
+      "description": "CDS Hooks service evaluating CQL expression `Has Palliative Care in the Measurement Period` from Library `AtriusPalliativeCare` version 0.1.0.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}"
+      },
+      "libraryId": "AtriusPalliativeCare",
+      "libraryVersion": "0.1.0",
+      "expression": "Has Palliative Care in the Measurement Period",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atriuspalliativecare-has-palliative-care-in-the-measurement-period",
+      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriuspalliativecare-has-palliative-care-in-the-measurement-period"
+    },
+    {
+      "id": "er-chest-pain-pathway",
+      "hook": "encounter-start",
+      "title": "Emergency Department Chest Pain Pathway",
+      "description": "Person presenting to the emergency department with chest pain: initial clinical assessment, classification into ACS / other cardiac / non-cardiac / other causes, then branch-specific management. ACS branch includes ECG, troponin, aspirin, and cardiology consult.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}",
+        "diagnosticReports": "DiagnosticReport?patient={{context.patientId}}",
+        "medicationAdministrations": "MedicationAdministration?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusERChestPainPathway",
+      "libraryVersion": "0.4.2",
+      "expression": "In Scope",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "er-chest-pain-pathway",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-chest-pain-pathway"
+    },
+    {
+      "id": "er-acute-breathlessness-pathway",
+      "hook": "encounter-start",
+      "title": "Emergency Department Acute Breathlessness Pathway",
+      "description": "Person presenting to the emergency department with acute breathlessness: danger-sign review, airway rescue when indicated, parallel stabilization, working etiology classification, then branch-specific management.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusEDAcuteBreathlessness",
+      "libraryVersion": "0.1.2",
+      "expression": "In Scope",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "er-acute-breathlessness-pathway",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-acute-breathlessness-pathway"
+    },
+    {
+      "id": "hf-admission-protocol",
+      "hook": "encounter-start",
+      "title": "Heart Failure Admission Protocol",
+      "description": "Active heart failure on the chart at encounter start: propose daily weight monitoring, sodium-restricted diet, IV furosemide, and an admission BNP when none resulted in the last 24 hours.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusHFAdmission",
+      "libraryVersion": "0.1.0",
+      "expression": "HF Admission Applicable",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "hf-admission-protocol",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/hf-admission-protocol"
+    },
+    {
+      "id": "sepsis-bundle",
+      "hook": "encounter-start",
+      "title": "Sepsis Management Bundle",
+      "description": "Suspected sepsis (>= 2 SIRS criteria with infection on the chart): hour-1 bundle of blood cultures, serum lactate, empiric broad-spectrum antibiotic, and crystalloid resuscitation, with lactate-driven follow-up.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusSepsis",
+      "libraryVersion": "0.1.0",
+      "expression": "Sepsis Suspected",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "sepsis-bundle",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/sepsis-bundle"
+    },
+    {
+      "id": "surgical-safety-checklist-rule",
+      "hook": "encounter-start",
+      "title": "Surgical Safety Checklist Gate",
+      "description": "At the start of a surgical encounter with no completed checklist response, remind the team to complete the WHO surgical safety checklist and propose a completion task.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusSurgicalSafety",
+      "libraryVersion": "0.1.0",
+      "expression": "Surgical Safety Checklist Needed",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "surgical-safety-checklist-rule",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/surgical-safety-checklist-rule"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ not ship CPT; AMA license).
 
 **Tenant:** default ``--tenant`` follows ``HFS_DEFAULT_TENANT`` (``atrius-hospitals``
 in ``deploy/env/hfs-clinical.env``). Chart data must live in that tenant because
-the sidecar/bridge do not send ``X-Tenant-ID``.
+the sidecar does not send ``X-Tenant-ID``.
 
 Usage:
   # Clinical HFS with auth disabled, or with a bearer token:
@@ -43,7 +43,7 @@ ATRIUS_OFFICE_VISIT_VS = (
     "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-office-visit"
 )
 
-# Must match clinical HFS `HFS_DEFAULT_TENANT` when callers omit `X-Tenant-ID` (bridge, sidecar).
+# Must match clinical HFS `HFS_DEFAULT_TENANT` when callers omit `X-Tenant-ID` (sidecar).
 DEFAULT_CLINICAL_TENANT = os.environ.get("HFS_DEFAULT_TENANT", "atrius-hospitals")
 
 # Legacy VSAC AdultOutpatientEncounters encounter-type ValueSets (for --seed-cpt).
@@ -243,7 +243,7 @@ def delete_stale_resources(clinical_url: str, patient_id: str, *, tenant: str) -
 
 def verify(
     sidecar_url: str,
-    bridge_url: str,
+    clinical_hfs_url: str,
     hts_url: str,
     kr_url: str,
     *,
@@ -274,7 +274,7 @@ def verify(
     print(f"HTS expand atrius-vs-office-visit codes: {total}")
 
     enc_search = (
-        f"{bridge_url.rstrip('/')}/Encounter?subject=Patient/{patient}"
+        f"{clinical_hfs_url.rstrip('/')}/Encounter?subject=Patient/{patient}"
         f"&type:in={urllib.request.quote(vs, safe='')}"
     )
     req = urllib.request.Request(
@@ -286,7 +286,7 @@ def verify(
             enc_n = len(json.loads(resp.read()).get("entry", []))
         print(f"Bridge qualifying encounter search matches: {enc_n}")
     except urllib.error.HTTPError as e:
-        print(f"Bridge encounter search HTTP {e.code} (is bridge up on {bridge_url}?)")
+        print(f"Clinical HFS encounter search HTTP {e.code} (is clinical HFS up on {clinical_hfs_url}?)")
 
     for library, version, expr in [
         ("AtriusAdultOutpatientEncounters", "0.1.0", "Qualifying Encounters"),
@@ -297,7 +297,7 @@ def verify(
             "libraryId": library,
             "libraryVersion": version,
             "expression": expr,
-            "hfsBaseUrl": bridge_url,
+            "hfsBaseUrl": clinical_hfs_url,
             "htsBaseUrl": hts_url,
             "libraryBaseUrl": kr_url,
             "resolveLibraryArtifactsFromFhir": True,
@@ -323,7 +323,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hts-url", default="http://127.0.0.1:9091")
     parser.add_argument("--clinical-url", default="http://127.0.0.1:8082")
-    parser.add_argument("--bridge-url", default="http://127.0.0.1:8081")
     parser.add_argument("--sidecar-url", default="http://127.0.0.1:8088")
     parser.add_argument("--kr-url", default="http://127.0.0.1:8079")
     parser.add_argument(
@@ -337,7 +336,7 @@ def main() -> int:
         default=DEFAULT_CLINICAL_TENANT,
         help=(
             "X-Tenant-ID for clinical HFS (default: HFS_DEFAULT_TENANT env or "
-            "atrius-hospitals; must match clinical HFS default tenant for bridge/sidecar)"
+            "atrius-hospitals; must match clinical HFS default tenant for sidecar)"
         ),
     )
     parser.add_argument(
@@ -387,14 +386,14 @@ def main() -> int:
     if args.verify or (not args.terminology_only and not args.clinical_only):
         verify(
             args.sidecar_url,
-            args.bridge_url,
+            args.clinical_url,
             args.hts_url,
             args.kr_url,
             tenant=args.tenant,
         )
 
     print(
-        "\nNext: ensure bridge :8081 + cds-server :8095 are up, then:\n"
+        "\nNext: ensure clinical HFS :8082 + cds-server :8095 are up, then:\n"
         "  ./scripts/cds-cms165-prefetch-smoke.sh"
     )
     return 0

@@ -29,8 +29,6 @@ default-members = [
 	"crates/audit",
 	"crates/subscriptions",
 	"crates/observability",
-	"crates/atrius-runtime-mapper",
-	"crates/cr-fhir-bridge",
 ]
 resolver = "2"
 

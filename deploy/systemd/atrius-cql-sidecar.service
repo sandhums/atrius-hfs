@@ -1,8 +1,8 @@
 [Unit]
 Description=Atrius JVM CQL clinical reasoning sidecar
 Documentation=file:///opt/atrius/share/docs/production-deployment.md
-After=network-online.target atrius-cr-fhir-bridge.service atrius-hts.service atrius-hfs-kr.service
-Wants=atrius-cr-fhir-bridge.service atrius-hts.service atrius-hfs-kr.service
+After=network-online.target atrius-hts.service atrius-hfs-clinical.service atrius-hfs-kr.service
+Wants=atrius-hts.service atrius-hfs-clinical.service atrius-hfs-kr.service
 
 [Service]
 Type=simple

@@ -1,0 +1,71 @@
+{
+  "resourceType": "Bundle",
+  "id": "atrius-custom-search-params",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "Location-physical-type",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Location-physical-type",
+        "version": "0.1.0",
+        "name": "physical-type",
+        "status": "active",
+        "description": "Physical form of the location (e.g. bed = bd)",
+        "code": "physical-type",
+        "base": ["Location"],
+        "type": "token",
+        "expression": "Location.physicalType",
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "ChargeItem-status",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItem-status",
+        "version": "0.1.0",
+        "name": "status",
+        "status": "active",
+        "description": "ChargeItem lifecycle status (billable, billed, aborted, …)",
+        "code": "status",
+        "base": ["ChargeItem"],
+        "type": "token",
+        "expression": "ChargeItem.status",
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "ChargeItemDefinition-schedule-id",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItemDefinition-schedule-id",
+        "version": "0.1.0",
+        "name": "schedule-id",
+        "status": "active",
+        "description": "Schedule of charges id on ChargeItemDefinition",
+        "code": "schedule-id",
+        "base": ["ChargeItemDefinition"],
+        "type": "token",
+        "expression": "ChargeItemDefinition.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-schedule-of-charges-ref').value.as(string)",
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "ChargeItem-gst-rate-class",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItem-gst-rate-class",
+        "version": "0.1.0",
+        "name": "gst-rate-class",
+        "status": "active",
+        "description": "GST rate class extension on ChargeItem",
+        "code": "gst-rate-class",
+        "base": ["ChargeItem"],
+        "type": "token",
+        "expression": "ChargeItem.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-gst-rate-class').value.as(code)",
+        "xpathUsage": "normal"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # cds-server
 
-HTTP CDS Hooks discovery + invocation server. Loads **many CDS service ids** from a **Knowledge Repository FHIR `Binary`** (JSON payload, base64 in `Binary.data`) or from **`CDS_SERVICES_MANIFEST_PATH`**. Each entry maps to a [CDS Hooks Library](https://cds-hooks.hl7.org/hooks/) hook plus JVM **`libraryId` / `expression`** or **`planDefinitionId`** for **[`atrius-clinical-reasoning`](../../atrius-clinical-reasoning)**.
+HTTP CDS Hooks discovery + invocation server. Loads **many CDS service ids** from a **Knowledge Repository FHIR `Binary`** (JSON payload, base64 in `Binary.data`) or from **`CDS_SERVICES_MANIFEST_PATH`**. Each entry maps to a [CDS Hooks Library](https://cds-hooks.hl7.org/hooks/) hook plus JVM **`libraryId` / `expression`** or **`planDefinitionId`** via the in-crate [`clinical_reasoning`](src/clinical_reasoning/) sidecar client.
 
 **Architecture & startup:** [docs/clinical-reasoning/README.md](../../docs/clinical-reasoning/README.md) · [startup guide](../../docs/clinical-reasoning/startup-guide.md)
 
@@ -86,7 +86,7 @@ The **CDS client** resolves those against its FHIR server and sends **populated*
 and sidecar consumption (JVM repo). Template resolution is not implemented in cds-server.
 Full breakdown: [docs/clinical-reasoning/cds-prefetch.md](../../docs/clinical-reasoning/cds-prefetch.md).
 
-- Context-only invoke (`prefetch: {}`): sidecar uses REST fallback via `CDS_HFS_BASE_URL` (bridge).
+- Context-only invoke (`prefetch: {}`): sidecar uses REST fallback via `CDS_HFS_BASE_URL` (clinical HFS).
 - Client-simulated invoke: see [startup guide — CDS client responsibilities](../../docs/clinical-reasoning/startup-guide.md#cds-client-responsibilities-prefetch--invoke) and Postman collection [docs/clinical-reasoning/postman/](../../docs/clinical-reasoning/postman/).
 
 ### SMART `fhirAuthorization` (production FHIR access)
@@ -102,7 +102,7 @@ cds-server:
 3. Overrides sidecar **`hfsBaseUrl`** with `fhirServer` for that invoke (HTS / KR bases unchanged).
 4. Forwards credentials to the JVM sidecar as `fhirAuthorization` (clinical REST only).
 
-Local dev without SMART: omit both fields; configured `CDS_HFS_BASE_URL` (bridge) is used.
+Local dev without SMART: omit both fields; configured `CDS_HFS_BASE_URL` (clinical HFS) is used.
 
 | Env | Role |
 |-----|------|
@@ -187,4 +187,4 @@ See **`cargo run -p cds-server -- --help`** for env names (`CDS_*`).
 
 **Clinical data 404s with Spring-style JSON:** If evaluation errors mention HTTP 404 with a body like `"timestamp"`, `"path":"/Condition"`, `"error":"Not Found"`, that shape is almost never from Helios HFS (FHIR uses `OperationOutcome` or search `Bundle`s). It usually means the **JVM FHIR client inside the sidecar** hit a **non-FHIR** HTTP stack—often **`localhost` vs `127.0.0.1`**, a **path prefix** mismatch, or the sidecar running in **Docker** where `localhost` is not the host. **`CDS_HFS_BASE_URL`** must be the exact clinical base reachable **from the sidecar process**, matching what you verify with Postman (same scheme/host/port/prefix). Example ports (yours may differ): HFS **8082**, KR **8079**, JVM sidecar **8088**, cds-server **8095**.
 
-**CQL `include` libraries:** The sidecar loads the **primary** library from `libraryBaseUrl` (KR) but resolves CQL **`include`** libraries via **`hfsBaseUrl`**. Use **[`cr-fhir-bridge`](../cr-fhir-bridge)** as `hfsBaseUrl` with **`CR_FHIR_BRIDGE_KR_URL=http://127.0.0.1:8079`** so `/Library/*` reads reach KR while clinical resources still map Atrius→QI-Core. Re-import KR libraries from AtriusIGDraft (`import-atrius-kr-libraries.py`) so `Library.version` matches ELM (avoids `libraryVersion does not match ELM identifier version`).
+**CQL `include` libraries:** The sidecar loads the **primary and all `include` libraries from `libraryBaseUrl` (KR)**. Set **`CDS_LIBRARY_BASE_URL`** to KR; clinical **`CDS_HFS_BASE_URL`** Re-import KR libraries from AtriusIGDraft (`import-atrius-kr-libraries.py`) so `Library.version` matches ELM (avoids `libraryVersion does not match ELM identifier version`).

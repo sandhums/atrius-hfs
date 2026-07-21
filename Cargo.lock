@@ -570,20 +570,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "atrius-clinical-reasoning"
-version = "0.2.1"
-dependencies = [
- "async-trait",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "wiremock",
-]
-
-[[package]]
 name = "atrius-fhir-valueset-gen"
 version = "0.2.1"
 dependencies = [
@@ -592,15 +578,6 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "atrius-runtime-mapper"
-version = "0.2.1"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1709,7 +1686,6 @@ version = "0.2.1"
 dependencies = [
  "anyhow",
  "async-trait",
- "atrius-clinical-reasoning",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -1718,6 +1694,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "thiserror 2.0.18",
  "tokio",
  "tower",
  "tower-http",
@@ -2060,31 +2037,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "cr-fhir-bridge"
-version = "0.2.1"
-dependencies = [
- "anyhow",
- "atrius-clinical-reasoning",
- "atrius-runtime-mapper",
- "axum",
- "bytes",
- "chrono",
- "clap",
- "http 1.4.0",
- "http-body-util",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "wiremock",
 ]
 
 [[package]]

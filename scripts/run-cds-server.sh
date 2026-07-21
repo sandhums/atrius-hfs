@@ -5,7 +5,7 @@
 #   ./scripts/build-clinical-reasoning.sh
 #   ./scripts/run-cds-server.sh
 #
-# Prerequisites: bridge (:8081), KR (:8079), HTS (:9091), sidecar (:8088).
+# Prerequisites: clinical HFS (:8082), KR (:8079), HTS (:9091), sidecar (:8088).
 
 set -euo pipefail
 
@@ -36,7 +36,7 @@ CDS_BIN="$(require_release_bin "${ATRIUS_HFS_PATH}" cds-server "${BUILD_HINT}")"
 
 cd "${ATRIUS_HFS_PATH}"
 echo "Starting cds-server (env: ${ENV_FILE}) on port ${CDS_SERVER_PORT:-8095}..."
-echo "  hfs(bridge)=${CDS_HFS_BASE_URL:-unset} kr=${CDS_LIBRARY_BASE_URL:-unset} sidecar=${CDS_CLINICAL_REASONING_URL:-unset}"
+echo "  hfs(clinical)=${CDS_HFS_BASE_URL:-unset} kr=${CDS_LIBRARY_BASE_URL:-unset} sidecar=${CDS_CLINICAL_REASONING_URL:-unset}"
 echo "  local manifest=${CDS_SERVICES_MANIFEST_PATH:-unset}"
 echo "  loading manifest from KR Binary=${CDS_KR_SERVICES_BINARY_ID:-no KR Binary}"
 exec "${CDS_BIN}"

@@ -11,7 +11,6 @@ service uses the same **release binary** + `deploy/env/*.env` wiring.
 ./scripts/run-hts.sh
 ./scripts/run-hfs.sh              # clinical :8082
 ./scripts/run-kr-hfs.sh           # KR :8079
-./scripts/run-cr-fhir-bridge.sh   # :8081
 ./scripts/run-cql-sidecar.sh      # :8088 (JVMsidecar or SIDECAR_JAR)
 ./scripts/run-cds-server.sh       # :8095
 ```
@@ -21,7 +20,6 @@ service uses the same **release binary** + `deploy/env/*.env` wiring.
 | `run-hts.sh` | `target/release/hts` | `deploy/env/hts.env` |
 | `run-hfs.sh` | `target/release/hfs` | `deploy/env/hfs-clinical.env` |
 | `run-kr-hfs.sh` | `target/release/hfs` | `deploy/env/hfs-kr.env` |
-| `run-cr-fhir-bridge.sh` | `target/release/cr-fhir-bridge` | `deploy/env/cr-fhir-bridge.env` |
 | `run-cds-server.sh` | `target/release/cds-server` | `deploy/env/cds-server.env` |
 | `run-cql-sidecar.sh` | jar or Maven `MainKt` | `deploy/env/cql-sidecar.env` |
 
@@ -53,7 +51,6 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 | `cds-cms165-prefetch-smoke.sh` | CMS165 CDS Hooks with populated prefetch |
 | `cds-er-chest-pain-smoke.sh` | ER chest pain pathway |
 | `cds-atrius-services-smoke.sh` | All Atrius ECA rules and order sets (critical labs, preventive care, sepsis, DDI, HF admission, imaging appropriateness, renal dosing, surgical safety checklist) with synthetic prefetch and assertions |
-| `activity-definition-apply-smoke.sh` | ActivityDefinition `$apply` |
 
 ## IG / profiles
 
@@ -62,7 +59,6 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 | `setup-atrius-profile-registry.sh` | **Recommended**: fetch published `package.tgz` → expand → relative manifests → verify |
 | `build-atrius-profile-manifest.sh` | Regenerate `manifests/atrius-r4-profile-manifest-core.json` (default: atrius.in) |
 | `load-atrius-ig-package.sh` | Expand package into `manifests/atrius-ig-package/` |
-| `generate-atrius-mapper-manifest.py` | Runtime Atrius→QI-Core mapper |
 
 After setup, clinical HFS uses:
 `HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json` +

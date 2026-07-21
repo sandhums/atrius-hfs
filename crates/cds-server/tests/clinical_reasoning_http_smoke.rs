@@ -1,10 +1,9 @@
-#![cfg(feature = "http-client")]
 
 use serde_json::json;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use atrius_clinical_reasoning::{
+use cds_server::clinical_reasoning::{
     ClinicalReasoningClient, ClinicalReasoningConfig, ClinicalReasoningError,
     EvaluateExpressionRequest, NormalizedSidecarResult,
 };

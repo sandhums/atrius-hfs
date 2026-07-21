@@ -49,7 +49,7 @@ If Git reports conflicts, use the [conflict resolution table](#conflict-resoluti
 
 ```bash
 cargo build
-cargo build -p cds-server -p cr-fhir-bridge -p atrius-clinical-reasoning -p atrius-runtime-mapper
+cargo build -p cds-server -p atrius-clinical-reasoning
 cargo test -p fhir-validation --lib
 cargo test -p helios-rest --test profile_validation_integration
 ```
@@ -85,9 +85,7 @@ These paths rarely conflict with Helios and should stay on feature branches:
 
 ```
 crates/atrius-clinical-reasoning/
-crates/atrius-runtime-mapper/
 crates/cds-server/
-crates/cr-fhir-bridge/
 crates/fhir-validation/
 crates/fhir-validation-gen/
 crates/fhir-validation-types/
@@ -96,7 +94,6 @@ docs/clinical-reasoning/
 docs/his/
 manifests/
 deploy/
-scripts/activity-definition-apply-smoke.sh
 scripts/cds-*.sh
 scripts/cds_manifest_common.py
 scripts/generate-*.py
@@ -237,9 +234,7 @@ git checkout origin/main -b feat-clinical-reasoning-v2
 # 1. Copy Atrius-only trees from the old branch
 git checkout origin/feat-clinical-reasoning -- \
   crates/atrius-clinical-reasoning \
-  crates/atrius-runtime-mapper \
   crates/cds-server \
-  crates/cr-fhir-bridge \
   crates/fhir-validation \
   crates/fhir-validation-gen \
   crates/fhir-validation-types \
@@ -249,11 +244,9 @@ git checkout origin/feat-clinical-reasoning -- \
   manifests \
   data/clinical-reasoning \
   deploy \
-  scripts/activity-definition-apply-smoke.sh \
   scripts/cds-cms165-prefetch-smoke.sh \
   scripts/cds-er-chest-pain-smoke.sh \
   scripts/cds_manifest_common.py \
-  scripts/generate-atrius-mapper-manifest.py \
   scripts/generate-cds-hooks-manifest.py \
   scripts/import-cms165-demo.py \
   scripts/import-synthea-atrius.py \
@@ -316,7 +309,7 @@ To reduce merge conflict surface:
 | Branch | Scope |
 |--------|--------|
 | `feat/fhir-validation` | `fhir-validation*`, `fhir-valueset-gen`, fhir `terminology/` trees |
-| `feat/cds-stack` | `cds-server`, `cr-fhir-bridge`, `atrius-clinical-reasoning`, `atrius-runtime-mapper` |
+| `feat/cds-stack` | `cds-server`, `atrius-clinical-reasoning` |
 | `feat/clinical-reasoning` | REST/HFS integration, docs, manifests, smokes |
 
 Merge order: `main` → validation → cds-stack → clinical-reasoning integration.
@@ -335,7 +328,7 @@ Merge order: `main` → validation → cds-stack → clinical-reasoning integrat
 **After merge:**
 
 - [ ] `cargo build` (default workspace)
-- [ ] `cargo build -p cds-server -p cr-fhir-bridge`
+- [ ] `cargo build -p cds-server`
 - [ ] `cargo test -p fhir-validation --lib`
 - [ ] `cargo test -p helios-rest --test profile_validation_integration`
 - [ ] No accidental deletion of `handlers/sof/`, `bulk_submit`, or `persistence/src/sof/`

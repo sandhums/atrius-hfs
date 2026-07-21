@@ -22,7 +22,7 @@ The stack is **ready for single-tenant production** with manual KR upgrade runbo
 | Sidecar cache flush | Done | `POST /v1/admin/cache/libraries/clear` (rare after slice 2) |
 | Minimal observability | Done | `cds_invoke_metrics` logs, sidecar `GET /metrics` — [observability.md](./observability.md) |
 | systemd / production docs | Done | [production-deployment.md](./production-deployment.md) |
-| cr-fhir-bridge + sidecar evaluate/`$apply` | Done | CMS165 + ER chest pain validated |
+| clinical HFS + sidecar evaluate/`$apply` | Done | CMS165 + ER chest pain validated |
 | ER chest pain pathway (phase 4 pilot) | Done | AtriusIGDraft + `er-chest-pain-pathway` manifest + smoke script |
 
 ### Ops enablement (you enabled these)
@@ -186,7 +186,6 @@ Full import order: [data-import.md](./data-import.md).
 | **cds-hooks** | Protocol types | — | New hooks if needed |
 | **atrius-clinical-reasoning** | Client + cache flush API | — | Resilience helpers |
 | **JVM sidecar** | Evaluate, `$apply`, metrics, cache admin | Content-aware cache keys | Prometheus |
-| **cr-fhir-bridge** | Proxy + projection | — | Broader Atrius→QI-Core map |
 | **KR HFS** | eCQM + Atrius import | PlanDefinition upload | Search index hardening (optional) |
 | **HTS** | Terminology import | — | — |
 
@@ -200,7 +199,6 @@ Lower priority until multi-tenant or ops scale demands it:
 - Prometheus / OTLP + Grafana dashboards
 - `/ready` live re-probe (not just startup)
 - CI job: manifest pins ⊆ KR for release tag
-- cr-fhir-bridge mapper coverage beyond current resources
 - cds-server admin API for manifest pins (optional; discovery stays spec-pure)
 
 ---

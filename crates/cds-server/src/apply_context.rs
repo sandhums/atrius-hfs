@@ -1,6 +1,6 @@
 //! Map CDS Hooks hook context → sidecar **`PlanDefinition/$apply`** operation parameters.
 
-use atrius_clinical_reasoning::ApplyPlanDefinitionRequestBuilder;
+use crate::clinical_reasoning::ApplyPlanDefinitionRequestBuilder;
 use helios_cds_hooks::CdsRequest;
 use serde_json::{Value, json};
 

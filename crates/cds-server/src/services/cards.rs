@@ -1,4 +1,4 @@
-//! Map sidecar [`NormalizedSidecarResult`](atrius_clinical_reasoning::NormalizedSidecarResult) to CDS [`Card`]s.
+//! Map sidecar [`NormalizedSidecarResult`](crate::clinical_reasoning::NormalizedSidecarResult) to CDS [`Card`]s.
 //!
 //! Sidecar results are attached to CDS Cards via extension
 //! [`EVAL_RESULT_EXTENSION_URL`] (`https://atrius.dev/cds-clinical-reasoning-eval-result`) so SMART
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use helios_cds_hooks::{Card, Indicator, Source};
 use serde_json::json;
 
-use atrius_clinical_reasoning::{NormalizedSidecarResult, unwrap_nested_fhir_json_strings};
+use crate::clinical_reasoning::{NormalizedSidecarResult, unwrap_nested_fhir_json_strings};
 
 const SOURCE_LABEL: &str = "Atrius clinical reasoning";
 /// Machine-readable evaluation payload for SMART/EHR clients (avoid parsing markdown `detail`).

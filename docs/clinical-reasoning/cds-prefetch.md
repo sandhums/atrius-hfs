@@ -57,7 +57,7 @@ POST /cds-services/{id}
 **cds-server does not:**
 
 - Substitute `{{context.patientId}}` in templates
-- Call clinical HFS or cr-fhir-bridge to fill prefetch
+- Call clinical HFS or clinical HFS to fill prefetch
 - Require prefetch (empty `{}` is valid — see REST fallback below)
 
 **Related (not prefetch):** `context.measurementPeriod` is parsed and forwarded as CQL `parameters["Measurement Period"]` (`crates/cds-server/src/measurement_period.rs`). That is the eCQM **reporting window**, also supplied by the client on each invoke.
@@ -81,12 +81,12 @@ When `prefetch` is present on `evaluate/expression`:
 |-----------|------|
 | `PrefetchRetrieveSupport` | Flatten prefetch (Patient resource + searchset `Bundle`s) into a resource list |
 | `SidecarPrefetchRetrieveProvider` | Answer CQL `retrieve` from prefetched resources (profile type aliasing, `:in` / ValueSet filters via HTS) |
-| `PriorityRetrieveProvider` | Prefetch first; REST against `hfsBaseUrl` (cr-fhir-bridge) only for misses |
+| `PriorityRetrieveProvider` | Prefetch first; REST against `hfsBaseUrl` (clinical HFS) only for misses |
 | `CachedR4FhirTerminologyProvider` | Process-wide ValueSet `$expand` cache per HTS base |
 
 When `prefetch` is empty or omitted, behavior is unchanged: the sidecar retrieves all clinical data via REST through the bridge.
 
-**cr-fhir-bridge** is unchanged for prefetch specifically. It remains the FHIR base for sidecar REST fallback (`CDS_HFS_BASE_URL`) and for local client-simulated testing.
+Sidecar REST fallback uses clinical HFS (`CDS_HFS_BASE_URL`).
 
 ### 4. Manifest generation — wider templates, not wider server fetch
 

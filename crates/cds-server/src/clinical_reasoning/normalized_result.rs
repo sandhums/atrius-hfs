@@ -1,4 +1,4 @@
-//! Normalize JVM sidecar [`crate::dto::EvaluateExpressionResponse::result`] JSON for Rust callers.
+//! Normalize JVM sidecar [`super::dto::EvaluateExpressionResponse::result`] JSON for Rust callers.
 //!
 //! CQ Framework may return FHIR resources as a **JSON string** whose contents are a FHIR JSON object
 //! (“double-encoded”). [`normalize_sidecar_result`] detects that pattern via a top-level `resourceType` field.
@@ -22,7 +22,7 @@ pub enum NormalizedSidecarResult {
     FhirResource(Value),
 }
 
-/// Classify `result` from [`crate::dto::EvaluateExpressionResponse`].
+/// Classify `result` from [`super::dto::EvaluateExpressionResponse`].
 #[must_use]
 pub fn normalize_sidecar_result(result: &Value) -> NormalizedSidecarResult {
     match result {

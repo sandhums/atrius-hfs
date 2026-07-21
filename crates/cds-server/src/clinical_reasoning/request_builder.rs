@@ -1,4 +1,4 @@
-//! Build [`crate::dto::EvaluateExpressionRequest`] from tenant / FHIR endpoint configuration.
+//! Build [`super::dto::EvaluateExpressionRequest`] from tenant / FHIR endpoint configuration.
 //!
 //! [`FhirServiceEndpoints`] holds the three bases forwarded to the sidecar on every evaluate call.
 //! [`EvaluateExpressionRequestBuilder`] adds library/expression/patient context and validates that
@@ -7,11 +7,11 @@
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::dto::{
+use super::dto::{
     ApplyActivityDefinitionRequest, ApplyPlanDefinitionRequest, ElmFormat,
     EvaluateExpressionRequest, IncludedLibrary,
 };
-use crate::fhir_authorization::SidecarFhirAuthorization;
+use super::fhir_authorization::SidecarFhirAuthorization;
 
 fn trim_trailing_slash(s: String) -> String {
     let mut s = s.trim().to_string();
@@ -28,7 +28,7 @@ fn trim_trailing_slash(s: String) -> String {
 ///
 /// # Atrius defaults (local dev)
 ///
-/// - `hfs_base_url` → `http://127.0.0.1:8081` (**cr-fhir-bridge**)
+/// - `hfs_base_url` → `http://127.0.0.1:8082` (clinical HFS)
 /// - `hts_base_url` → `http://127.0.0.1:9091` (or 8090 — align with HTS listen port)
 /// - `library_base_url` → `http://127.0.0.1:8079` (KR HFS)
 #[derive(Debug, Clone)]

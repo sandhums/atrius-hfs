@@ -266,6 +266,15 @@ where
             "/export-file/{job_id}/{part}",
             get(handlers::export_download_handler::<S>),
         )
+        // Search reindex ($reindex) — after custom SearchParameters are loaded.
+        .route(
+            "/$reindex",
+            post(handlers::reindex_kickoff_handler::<S>),
+        )
+        .route(
+            "/$reindex-status/{job_id}",
+            get(handlers::reindex_status_handler::<S>).delete(handlers::reindex_cancel_handler::<S>),
+        )
         // Bulk Data Submit ($bulk-submit) — operation routes precede the catch-all.
         .route(
             "/$bulk-submit",

@@ -49,7 +49,7 @@ install_bin() {
 	local name="$1"
 	local src="$BIN_SRC/$name"
 	if [[ ! -x "$src" && ! -f "$src" ]]; then
-		echo "error: missing binary $src — run: cargo build --release -p helios-hfs --bin hfs && cargo build --release --bin hts --bin cr-fhir-bridge -p cds-server" >&2
+		echo "error: missing binary $src — run: cargo build --release -p helios-hfs --bin hfs && cargo build --release --bin hts -p cds-server" >&2
 		exit 1
 	fi
 	echo "  bin/$name"
@@ -59,7 +59,6 @@ install_bin() {
 echo "Installing Rust binaries from ${BIN_SRC} ..."
 install_bin hts
 install_bin hfs
-install_bin cr-fhir-bridge
 install_bin cds-server
 
 echo "Installing sidecar launcher ..."

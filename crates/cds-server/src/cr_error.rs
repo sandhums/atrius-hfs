@@ -1,6 +1,6 @@
-//! Map [`ClinicalReasoningError`](atrius_clinical_reasoning::ClinicalReasoningError) to CDS Hooks HTTP errors.
+//! Map [`ClinicalReasoningError`](crate::clinical_reasoning::ClinicalReasoningError) to CDS Hooks HTTP errors.
 
-use atrius_clinical_reasoning::ClinicalReasoningError;
+use crate::clinical_reasoning::ClinicalReasoningError;
 use helios_cds_hooks::CdsHooksError;
 
 /// Convert façade failures into [`CdsHooksError`] with actionable HTTP status codes.
@@ -41,7 +41,7 @@ pub fn map_clinical_reasoning_err(e: ClinicalReasoningError) -> CdsHooksError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use atrius_clinical_reasoning::SidecarRejectionDetail;
+    use crate::clinical_reasoning::SidecarRejectionDetail;
 
     #[test]
     fn maps_404_to_precondition_failed() {

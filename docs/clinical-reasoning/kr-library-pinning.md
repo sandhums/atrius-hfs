@@ -62,7 +62,7 @@ Defaults: both flags **off** (local dev). Enable in production — see `deploy/e
 
 Implementation: `SidecarLibraryCacheAdmin.kt`, `EvaluationLibraryCache.clear()`, `FhirLibraryResourceCaches.clearAll()`, `ValueSetExpansionCache.clear()`.
 
-### atrius-clinical-reasoning
+### cds-server::clinical_reasoning
 
 `ClinicalReasoningClient::clear_library_cache()` — HTTP wrapper for the sidecar admin endpoint.
 
@@ -158,7 +158,7 @@ Full stack sequence (slice 2 → PlanDefinition-first → authoring): **[roadmap
 | Manifest generation | `scripts/generate-cds-hooks-manifest.py` |
 | Catalog | `manifests/cds-services-kr.json` |
 | Sidecar cache | JVM: `EvaluationLibraryCache.kt`, `SidecarLibraryCacheAdmin.kt` |
-| HTTP client flush | `crates/atrius-clinical-reasoning/src/client/http.rs` |
+| HTTP client flush | `crates/cds-server/src/clinical_reasoning/client/http.rs` |
 
 ## See also
 

@@ -4,17 +4,15 @@
 //!
 //! ```text
 //! LIBRARY_ID=MyLib EXPRESSION=MyDefine ELM_PATH=./MyLib.elm.json \
-//!   cargo run -p atrius-clinical-reasoning \
-//!   --example live_sidecar_roundtrip --features integration-demo
+//!   cargo run -p cds-server --example live_sidecar_roundtrip
 //! ```
 //!
 //! Resolve ELM from FHIR `Library` on the sidecar (omit inline ELM):
 //!
 //! ```text
 //! LIBRARY_ID=MyLib EXPRESSION=MyDefine RESOLVE_FROM_FHIR=true \
-//!   LIBRARY_BASE_URL=http://127.0.0.1:8080 \
-//!   cargo run -p atrius-clinical-reasoning \
-//!   --example live_sidecar_roundtrip --features integration-demo
+//!   LIBRARY_BASE_URL=http://127.0.0.1:8079 \
+//!   cargo run -p cds-server --example live_sidecar_roundtrip
 //! ```
 //!
 //! # Environment
@@ -43,7 +41,7 @@ use std::env;
 use std::fs;
 use std::time::Duration;
 
-use atrius_clinical_reasoning::{
+use cds_server::clinical_reasoning::{
     ClinicalReasoningClient, ClinicalReasoningConfig, ElmFormat, EvaluateExpressionRequest,
     NormalizedSidecarResult,
 };

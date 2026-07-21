@@ -10,7 +10,7 @@ Authoring reference for **reusable clinical actions** (labs, imaging, meds, refe
 |-------|------|
 | **AtriusIGDraft `catalogs/`** | FSH-authored ActivityDefinitions on KR |
 | **PlanDefinition** | `definitionCanonical` → catalog AD |
-| **cr-fhir-bridge** | `POST /ActivityDefinition/{id}/$apply` (FHIR Parameters) |
+| **clinical HFS** | `POST /ActivityDefinition/{id}/$apply` (FHIR Parameters) |
 | **JVM sidecar** | CQF `ActivityDefinitionProcessor` |
 | **Clinical HFS** | CRUD — POST accepted proposals (no operational tables required) |
 | **clinical UI + BFF** | RequestGroup proposals → chart write |
@@ -20,8 +20,6 @@ Authoring reference for **reusable clinical actions** (labs, imaging, meds, refe
 After KR import:
 
 ```bash
-./scripts/activity-definition-apply-smoke.sh atrius-ad-lab-troponin-cardiac
-./scripts/activity-definition-apply-smoke.sh atrius-ad-referral-cardiology
 ```
 
 ## ER chest pain

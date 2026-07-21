@@ -44,8 +44,13 @@ use helios_rest::bulk_export_auth::BearerScopeAuth;
 use helios_rest::create_app_with_auth_and_bulk;
 // Settings-capable standalone/composite backends (SQLite, PostgreSQL, MongoDB)
 // host the per-user settings store, wired alongside bulk export/submit.
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mongodb"))]
 use helios_rest::create_app_with_auth_bulk_and_settings;
+#[cfg(any(
+    all(feature = "sqlite", feature = "elasticsearch"),
+    all(feature = "postgres", feature = "elasticsearch"),
+))]
+use helios_rest::PersistenceReindexController;
 // S3 does not host a settings store (tracked follow-up #199), so its startup
 // paths use the plain app builder. Every other standalone/composite backend now
 // wires the per-user settings store via `create_app_with_auth_bulk_and_settings`.
@@ -543,6 +548,7 @@ async fn start_mongodb(
         export_bundle,
         None,
         settings_store,
+        None,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -900,6 +906,7 @@ async fn start_sqlite(
         export_bundle,
         submit_bundle,
         settings_store,
+        None,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1437,6 +1444,14 @@ async fn start_sqlite_elasticsearch(
 
     let export_bundle = build_bulk_export(&config, sqlite.clone(), sqlite.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, sqlite.clone()).await?;
+    let reindex_controller = if config.reindex_enabled {
+        Some(PersistenceReindexController::boxed(
+            sqlite.clone(),
+            std::sync::Arc::clone(sqlite.search_extractor()),
+        ))
+    } else {
+        None
+    };
     let app = create_app_with_auth_bulk_and_settings(
         composite,
         config.clone(),
@@ -1446,6 +1461,7 @@ async fn start_sqlite_elasticsearch(
         export_bundle,
         submit_bundle,
         settings_store,
+        reindex_controller,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1505,6 +1521,7 @@ async fn start_postgres(
         export_bundle,
         submit_bundle,
         settings_store,
+        None,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1655,6 +1672,14 @@ async fn start_postgres_elasticsearch(
 
     let export_bundle = build_bulk_export(&config, pg.clone(), pg.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, pg.clone()).await?;
+    let reindex_controller = if config.reindex_enabled {
+        Some(PersistenceReindexController::boxed(
+            pg.clone(),
+            std::sync::Arc::clone(pg.search_extractor()),
+        ))
+    } else {
+        None
+    };
     let app = create_app_with_auth_bulk_and_settings(
         composite,
         config.clone(),
@@ -1664,6 +1689,7 @@ async fn start_postgres_elasticsearch(
         export_bundle,
         submit_bundle,
         settings_store,
+        reindex_controller,
     );
     serve(app, &config, serve_audit_state).await
 }
@@ -1826,6 +1852,7 @@ async fn start_mongodb_elasticsearch(
         export_bundle,
         None,
         settings_store,
+        None,
     );
     serve(app, &config, serve_audit_state).await
 }

@@ -28,6 +28,7 @@ pub mod health;
 pub mod history;
 pub mod patch;
 pub mod read;
+pub mod reindex;
 pub mod search;
 pub mod smart_discovery;
 pub mod sof;
@@ -78,6 +79,10 @@ pub use history::{
 };
 pub use patch::patch_handler;
 pub use read::{head_read_handler, read_handler};
+pub use reindex::{
+    PersistenceReindexController, ReindexController, reindex_cancel_handler,
+    reindex_kickoff_handler, reindex_status_handler, try_auto_reindex_controller,
+};
 pub use search::{search_get_handler, search_post_handler};
 pub use update::{conditional_update_handler, update_handler};
 pub use user_settings::{get_user_settings, patch_user_settings, put_user_settings};

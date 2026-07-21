@@ -5,7 +5,7 @@
 //! for outbound clinical REST (prefetch gaps, CQL retrieve). HTS and KR bases stay on
 //! cds-server configuration.
 
-use atrius_clinical_reasoning::SidecarFhirAuthorization;
+use crate::clinical_reasoning::SidecarFhirAuthorization;
 use helios_cds_hooks::{CdsHooksError, CdsRequest, FhirAuthorization};
 
 /// Production policy for SMART FHIR access on CDS invoke.
@@ -227,12 +227,12 @@ mod tests {
         let policy = FhirAccessPolicy::default();
         let r = resolve_clinical_fhir_access(
             &base_request(None, None),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             Some("p1"),
         )
         .unwrap();
-        assert_eq!(r.hfs_base_url, "http://127.0.0.1:8081");
+        assert_eq!(r.hfs_base_url, "http://127.0.0.1:8082");
         assert!(r.fhir_authorization.is_none());
     }
 
@@ -244,7 +244,7 @@ mod tests {
         };
         let err = resolve_clinical_fhir_access(
             &base_request(None, None),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             None,
         )
@@ -257,7 +257,7 @@ mod tests {
         let policy = FhirAccessPolicy::default();
         let err = resolve_clinical_fhir_access(
             &base_request(Some(sample_auth()), None),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             Some("p1"),
         )
@@ -270,7 +270,7 @@ mod tests {
         let policy = FhirAccessPolicy::default();
         let r = resolve_clinical_fhir_access(
             &base_request(Some(sample_auth()), Some("https://ehr.example.com/fhir")),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             Some("p1"),
         )
@@ -287,7 +287,7 @@ mod tests {
         };
         let err = resolve_clinical_fhir_access(
             &base_request(Some(sample_auth()), Some("https://evil.example.org/fhir")),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             None,
         )
@@ -302,7 +302,7 @@ mod tests {
         let policy = FhirAccessPolicy::default();
         let err = resolve_clinical_fhir_access(
             &base_request(Some(auth), Some("https://ehr.example.com/fhir")),
-            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8082",
             &policy,
             None,
         )

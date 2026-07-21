@@ -7,12 +7,12 @@
 //! 1. **Discovery** — `GET /cds-services` returns services from a KR [`Binary`](crate::kr_manifest)
 //!    manifest or local JSON file.
 //! 2. **Invocation** — `POST /cds-services/{id}` maps hook context →
-//!    [`atrius_clinical_reasoning::EvaluateExpressionRequest`] → sidecar evaluate → CDS [`Card`]s.
+//!    [`clinical_reasoning::EvaluateExpressionRequest`] → sidecar evaluate / `$apply` → CDS [`Card`]s.
 //!
-//! Configure **`CDS_HFS_BASE_URL`** to the **bridge** URL (not raw clinical HFS). See
-//! `docs/clinical-reasoning/README.md` in the repo root.
+//! See `docs/clinical-reasoning/README.md` in the repo root.
 
 pub mod apply_context;
+pub mod clinical_reasoning;
 pub mod config;
 pub mod cr_error;
 pub mod feedback_store;

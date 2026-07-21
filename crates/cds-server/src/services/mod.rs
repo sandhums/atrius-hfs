@@ -17,8 +17,8 @@
 //! # FHIR endpoint wiring
 //!
 //! The sidecar receives [`FhirServiceEndpoints`] built in [`crate::config::Args::shared_sidecar`].
-//! **`hfs_base_url`** must reach `cr-fhir-bridge` so clinical retrieves are QI-Core projected and
-//! `/Library` includes resolve against KR.
+//! **`library_base_url`** (KR) carries primary + CQL `include` `Library` reads; **`hfs_base_url`**
+//! is clinical data only.
 
 mod cards;
 mod request_group_cards;
@@ -27,7 +27,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use async_trait::async_trait;
-use atrius_clinical_reasoning::{
+use crate::clinical_reasoning::{
     ApplyPlanDefinitionRequestBuilder, ClinicalReasoningClient, EvaluateExpressionRequestBuilder,
     FhirServiceEndpoints,
 };

@@ -6,7 +6,7 @@ Part of the **clinical reasoning stack** — see ``docs/clinical-reasoning/data-
 Transforms plain Synthea resources (no meta.profile) into Atrius-profiled instances
 before POST. Intended for dev/test datasets — not a full NDHM terminology crosswalk.
 
-After import, the JVM sidecar reads patient data through **cr-fhir-bridge** (not raw clinical
+After import, the JVM sidecar reads patient data from **clinical HFS** (
 HFS) so Atrius resources are projected to QI-Core before CQL evaluation.
 
 Usage:
@@ -30,7 +30,7 @@ Environment / flags:
   --tenant       X-Tenant-ID header (default default)
   --validate     POST $validate before first batch (requires HFS profile manifest)
 
-After import, read through cr-fhir-bridge (8081) to see QI-Core projection for the sidecar.
+After import, read through clinical HFS (8082) for the sidecar.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ HL7_OBS_CATEGORY = "http://terminology.hl7.org/CodeSystem/observation-category"
 HL7_ALLERGY_CLINICAL = "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical"
 HL7_ALLERGY_VER = "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification"
 
-# Default Atrius storage profile per FHIR type (runtime-mapper.md inventory)
+# Default Atrius storage profile per FHIR type (Atrius IG profile inventory)
 DEFAULT_PROFILE: dict[str, str] = {
     "Patient": f"{ATRIUS_SD}atrius-in-patient",
     "Organization": f"{ATRIUS_SD}atrius-in-organization",
@@ -87,7 +87,7 @@ DEFAULT_PROFILE: dict[str, str] = {
     "ServiceRequest": f"{ATRIUS_SD}atrius-in-servicerequest",
 }
 
-# Actor-first import order (runtime-mapper.md bundle ordering)
+# Actor-first import order (Atrius IG bundle ordering)
 IMPORT_ORDER: dict[str, int] = {
     "Patient": 0,
     "Organization": 1,

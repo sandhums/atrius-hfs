@@ -1098,7 +1098,7 @@ The SQLite backend includes a complete FHIR search implementation using pre-comp
 - [x] `ReindexableStorage` trait for backend-agnostic reindexing
 - [x] `ReindexOperation` with background task execution
 - [x] Progress tracking and cancellation support
-- [ ] `$reindex` HTTP endpoint (planned for server layer)
+- [x] `$reindex` HTTP endpoint (`HFS_REINDEX_ENABLED=true`; SQLite/Postgres)
 
 **Capability Reporting:**
 

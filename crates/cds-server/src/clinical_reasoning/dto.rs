@@ -11,19 +11,17 @@
 //!
 //! | Field | Sidecar use |
 //! |-------|-------------|
-//! | `hfsBaseUrl` | Clinical FHIR retrieve **and** CQL `include` Library resolution |
-//! | `libraryBaseUrl` | Primary measure/library ELM when `resolveLibraryArtifactsFromFhir` is true |
+//! | `hfsBaseUrl` | Clinical FHIR retrieve only |
+//! | `libraryBaseUrl` | Primary + CQL `include` `Library` reads (KR; required when resolving from FHIR) |
 //! | `htsBaseUrl` | Terminology (`$expand`, `$validate-code`, `$lookup`) |
-//!
-//! In Atrius deployments, **`hfsBaseUrl` must be `cr-fhir-bridge`**, not raw clinical HFS.
 //!
 //! Legacy JSON keys `fhirDataUrl` / `fhirTerminologyUrl` deserialize to `hfsBaseUrl` / `htsBaseUrl`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::fhir_authorization::SidecarFhirAuthorization;
-use crate::normalized_result::NormalizedSidecarResult;
+use super::fhir_authorization::SidecarFhirAuthorization;
+use super::normalized_result::NormalizedSidecarResult;
 
 /// How to interpret ELM payload strings (`elmFormat` on JVM; `"json"` \| `"xml"` \| `"auto"`).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -94,7 +92,7 @@ pub struct EvaluateExpressionRequest {
     /// CDS Hooks prefetch map (key → FHIR resource or searchset Bundle JSON).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prefetch: Option<serde_json::Map<String, Value>>,
-    /// SMART bearer token for clinical FHIR (`hfsBaseUrl`). Omitted when using server credentials (e.g. bridge).
+    /// SMART bearer token for clinical FHIR (`hfsBaseUrl`). Omitted when using server-trust clinical access (no SMART token).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fhir_authorization: Option<SidecarFhirAuthorization>,
 }
@@ -120,7 +118,7 @@ impl EvaluateExpressionResponse {
     /// Decode [`Self::result`] for downstream use (scalars, collections, double-encoded FHIR JSON strings).
     #[must_use]
     pub fn normalized_result(&self) -> NormalizedSidecarResult {
-        crate::normalized_result::normalize_sidecar_result(&self.result)
+        super::normalized_result::normalize_sidecar_result(&self.result)
     }
 }
 

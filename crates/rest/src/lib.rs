@@ -169,6 +169,7 @@ pub use config::{
 };
 pub use error::{RestError, RestResult};
 pub use middleware::auth::AuthMiddlewareState;
+pub use handlers::{PersistenceReindexController, ReindexController, try_auto_reindex_controller};
 pub use profile_validation::ProfileValidationService;
 pub use state::AppState;
 pub use tenant::{ResolvedTenant, TenantResolver, TenantSource};
@@ -345,6 +346,7 @@ where
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -382,6 +384,7 @@ where
         auth_state,
         audit_state,
         Some(bulk_export),
+        None,
         None,
         None,
     )
@@ -426,6 +429,7 @@ where
         bulk_export,
         bulk_submit,
         None,
+        None,
     )
 }
 
@@ -433,6 +437,10 @@ where
 /// store (used by the `/_user/settings` endpoints). `bulk_export` and
 /// `bulk_submit` are each optional, so this single entry point covers every
 /// combination for a settings-capable backend (SQLite, PostgreSQL).
+///
+/// `reindex_controller` is for composite backends whose primary supports
+/// `$reindex` (SQLite/Postgres). Standalone SQLite/Postgres auto-wire when
+/// `HFS_REINDEX_ENABLED=true`; pass `None` in that case.
 #[allow(clippy::too_many_arguments)]
 pub fn create_app_with_auth_bulk_and_settings<S>(
     storage: Arc<S>,
@@ -443,6 +451,7 @@ pub fn create_app_with_auth_bulk_and_settings<S>(
     bulk_export: Option<BulkExportBundle>,
     bulk_submit: Option<BulkSubmitBundle>,
     settings_store: Option<Arc<dyn helios_persistence::core::SettingsStore>>,
+    reindex_controller: Option<Arc<dyn ReindexController>>,
 ) -> Router
 where
     S: ResourceStorage
@@ -470,6 +479,7 @@ where
         bulk_export,
         bulk_submit,
         settings_store,
+        reindex_controller,
     )
 }
 
@@ -486,6 +496,7 @@ fn build_app<S>(
     bulk_export: Option<BulkExportBundle>,
     bulk_submit: Option<BulkSubmitBundle>,
     settings_store: Option<Arc<dyn helios_persistence::core::SettingsStore>>,
+    reindex_controller: Option<Arc<dyn ReindexController>>,
 ) -> Router
 where
     S: ResourceStorage
@@ -665,10 +676,31 @@ where
     };
 
     // Wire the per-user settings store if provided.
-    let state = match settings_store {
+    let mut state = match settings_store {
         Some(store) => state.with_settings_store(store),
         None => state,
     };
+
+    // Wire `$reindex` when enabled. Standalone SQLite/Postgres auto-detect;
+    // composites pass an explicit controller built from the primary.
+    if config.reindex_enabled {
+        let controller =
+            reindex_controller.or_else(|| try_auto_reindex_controller(&storage_arc));
+        match controller {
+            Some(ctrl) => {
+                info!("$reindex enabled");
+                state = state.with_reindex_controller(ctrl);
+            }
+            None => {
+                tracing::warn!(
+                    backend = storage_arc.backend_name(),
+                    "HFS_REINDEX_ENABLED=true but this storage backend does not support \
+                     $reindex (use sqlite, postgres, or pass a primary-backed controller \
+                     for composites)"
+                );
+            }
+        }
+    }
 
     // NDHM/ABDM profile validation from HFS_PROFILE_MANIFEST.
     let state = match ProfileValidationService::try_from_config(&config) {
@@ -1114,6 +1146,29 @@ mod builder_tests {
             None,
             None,
             Some(settings),
+            None,
+        );
+    }
+
+    #[tokio::test]
+    async fn wires_reindex_controller_when_enabled() {
+        let mut config = config();
+        config.reindex_enabled = true;
+        let backend = backend();
+        assert!(
+            try_auto_reindex_controller(&backend).is_some(),
+            "sqlite should auto-wire $reindex"
+        );
+        let _app: Router = create_app_with_auth_bulk_and_settings(
+            backend,
+            config,
+            helios_auth::AuthConfig::default(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         );
     }
 }

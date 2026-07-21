@@ -68,13 +68,6 @@ Script inventory: [scripts/README.md](../../scripts/README.md).
 # Env: deploy/env/hfs-kr.env (same release `hfs` binary as clinical, different DB/port)
 ```
 
-### cr-fhir-bridge
-
-```bash
-./scripts/run-cr-fhir-bridge.sh
-# GET http://127.0.0.1:8081/health
-# Sets CR_FHIR_BRIDGE_DEFAULT_TENANT to match clinical HFS when callers omit X-Tenant-ID
-```
 
 ### JVM sidecar
 
@@ -84,14 +77,14 @@ Script inventory: [scripts/README.md](../../scripts/README.md).
 # Uses JVMSIDECAR_HOME (default ~/IdeaProjects/JVMsidecar) or SIDECAR_JAR
 ```
 
-Never bind the sidecar to **8081** (that port is the bridge). Restart the sidecar after KR re-import or sidecar code changes (`mvn -q -DskipTests compile` in JVMsidecar).
+Restart the sidecar after KR re-import or sidecar code changes (`mvn -q -DskipTests compile` in JVMsidecar).
 
 ### cds-server (CDS Hooks)
 
 ```bash
 ./scripts/run-cds-server.sh
 # GET http://127.0.0.1:8095/cds-services
-# Env: deploy/env/cds-server.env — CDS_HFS_BASE_URL must be the bridge (:8081)
+# Env: deploy/env/cds-server.env — CDS_HFS_BASE_URL = clinical HFS (:8082)
 ```
 
 ### Atrius CMS165 (after Atrius IG libraries imported to KR)
@@ -144,7 +137,7 @@ GET  /cds-services
        → each service includes prefetch TEMPLATES (FHIR search URLs with {{context.patientId}})
 
 CDS client (EHR)
-       → resolves templates against its FHIR server (or cr-fhir-bridge in local dev)
+       → resolves templates against its FHIR server (or clinical HFS in local dev)
        → builds hook context (patientId, userId, measurementPeriod, …)
        → POST /cds-services/{id} with populated prefetch object
 
@@ -204,9 +197,9 @@ Import [postman/atrius-cds-cms165.postman_collection.json](./postman/atrius-cds-
 |---------|---------------------|
 | **Discovery — CMS165 prefetch templates** | `GET /cds-services` → `.prefetch` on `atriuscms165controllinghighbp` |
 | **Invoke — context only** | `measurementPeriod` + empty prefetch (REST fallback) |
-| **Invoke — client-simulated prefetch** | Pre-request script fetches from `bridge_base`, builds populated `prefetch` |
+| **Invoke — client-simulated prefetch** | Pre-request script fetches from clinical HFS, builds populated `prefetch` |
 
-Collection variables default to local ports (`cds_base` 8095, `bridge_base` 8081). Prerequisites: stack running + `./scripts/import-cms165-demo.py --verify`.
+Collection variables default to local ports (`cds_base` 8095, `clinical_hfs` 8082). Prerequisites: stack running + `./scripts/import-cms165-demo.py --verify`.
 
 ### What the backend implements (vs the client)
 
@@ -217,7 +210,7 @@ Prefetch **resolution** is not implemented on the server — only **advertisemen
 ### Bridge projection
 
 ```bash
-curl -s http://127.0.0.1:8081/Patient/cms165-demo | jq '.meta.profile'
+curl -s http://127.0.0.1:8082/Patient/cms165-demo | jq '.meta.profile'
 # Expect QI-Core or projected profiles, not raw Atrius-only shapes for mapped types
 ```
 
@@ -242,45 +235,12 @@ curl -s -X POST http://127.0.0.1:8088/v1/plandefinition/apply \
     "planDefinitionId": "cms165fhircontrollinghighbloodpressure",
     "patientId": "cms165-demo",
     "practitionerId": "Practitioner/example",
-    "hfsBaseUrl": "http://127.0.0.1:8081",
+    "hfsBaseUrl": "http://127.0.0.1:8082",
     "htsBaseUrl": "http://127.0.0.1:9091",
     "libraryBaseUrl": "http://127.0.0.1:8079",
     "useServerData": false
   }' | jq '.requestGroup.status'
 ```
-
-### Bridge FHIR REST `$apply` (Parameters in/out)
-
-**cr-fhir-bridge** exposes spec-shaped **`PlanDefinition/$apply`** and **`ActivityDefinition/$apply`** when **`CR_FHIR_BRIDGE_SIDECAR_URL`** is set (default `http://127.0.0.1:8088`). Request and response bodies are FHIR **Parameters**; the bridge translates to/from the sidecar JSON API.
-
-```bash
-# PlanDefinition instance apply → CarePlan in Parameters.return
-curl -sS -X POST http://127.0.0.1:8081/PlanDefinition/cms165fhircontrollinghighbloodpressure/\$apply \
-  -H 'Content-Type: application/fhir+json' \
-  -d '{
-    "resourceType": "Parameters",
-    "parameter": [
-      { "name": "subject", "valueString": "Patient/cms165-demo" },
-      { "name": "practitioner", "valueString": "Practitioner/example" }
-    ]
-  }' | jq '.parameter[] | select(.name=="return") | .resource.resourceType'
-
-# ActivityDefinition type apply → draft ServiceRequest (etc.) in Parameters.return
-curl -sS -X POST http://127.0.0.1:8081/ActivityDefinition/\$apply \
-  -H 'Content-Type: application/fhir+json' \
-  -d '{
-    "resourceType": "Parameters",
-    "parameter": [
-      { "name": "subject", "valueString": "Patient/cms165-demo" },
-      { "name": "activityDefinition", "resource": {
-        "resourceType": "ActivityDefinition",
-        "id": "your-activity-id"
-      }}
-    ]
-  }' | jq '.parameter[0].resource.resourceType'
-```
-
-`GET http://127.0.0.1:8081/metadata` lists `$apply` on PlanDefinition and ActivityDefinition when the sidecar is configured.
 
 ### Sidecar evaluate (legacy / debugging)
 
@@ -291,7 +251,7 @@ curl -s -X POST http://127.0.0.1:8088/v1/evaluate/expression \
     "libraryId":"CMS165FHIRControllingHighBloodPressure",
     "libraryVersion":"0.3.000",
     "expression":"Numerator",
-    "hfsBaseUrl":"http://127.0.0.1:8081",
+    "hfsBaseUrl":"http://127.0.0.1:8082",
     "htsBaseUrl":"http://127.0.0.1:9091",
     "libraryBaseUrl":"http://127.0.0.1:8079",
     "resolveLibraryArtifactsFromFhir":true,
@@ -311,7 +271,7 @@ curl -s -X POST http://127.0.0.1:8095/cds-services/cms165fhircontrollinghighbloo
   -d '{
     "hook": "patient-view",
     "hookInstance": "550e8400-e29b-41d4-a716-446655440000",
-    "fhirServer": "http://127.0.0.1:8081",
+    "fhirServer": "http://127.0.0.1:8082",
     "context": {
       "userId": "Practitioner/example",
       "patientId": "cms165-demo"
@@ -326,7 +286,7 @@ curl -s -X POST http://127.0.0.1:8095/cds-services/cms165fhircontrollinghighbloo
 | `deploy/env/hts.env` | HTS — created by `run-hts.sh` if missing |
 | `deploy/env/hfs-clinical.env` | Clinical HFS (`run-hfs.sh`) |
 | `deploy/env/hfs-kr.env` | KR HFS (`run-kr-hfs.sh`) |
-| `deploy/env/cr-fhir-bridge.env` | Bridge (`run-cr-fhir-bridge.sh`) |
+| `deploy/env/hfs-clinical.env` | Clinical HFS (`run-hfs.sh`) |
 | `deploy/env/cds-server.env` | cds-server (`run-cds-server.sh`) |
 | `deploy/env/cql-sidecar.env` | Sidecar (`run-cql-sidecar.sh`) |
 | `deploy/env/*.env.example` | Templates (also used for `/etc/atrius/*.env` in production) |
@@ -338,7 +298,6 @@ See [scripts/README.md](../../scripts/README.md) for the full script map.
 
 - [ ] `HFS_TERMINOLOGY_SERVER` (clinical HFS) = `CDS_HTS_BASE_URL` = sidecar `htsBaseUrl`
 - [ ] `CDS_HFS_BASE_URL` = bridge (**not** clinical HFS direct)
-- [ ] `CR_FHIR_BRIDGE_UPSTREAM_URL` = clinical HFS
-- [ ] All URLs use the same host (`127.0.0.1` vs `localhost`)
+- [ ] - [ ] All URLs use the same host (`127.0.0.1` vs `localhost`)
 
 See [troubleshooting.md](./troubleshooting.md) if any step fails.

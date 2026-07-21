@@ -1,18 +1,18 @@
 //! Async HTTP client for the JVM clinical reasoning sidecar.
 //!
-//! [`ClinicalReasoningClient`] posts [`EvaluateExpressionRequest`](crate::dto::EvaluateExpressionRequest)
+//! [`ClinicalReasoningClient`] posts [`EvaluateExpressionRequest`](super::super::dto::EvaluateExpressionRequest)
 //! to **`POST /v1/evaluate/expression`** and deserializes
-//! [`EvaluateExpressionResponse`](crate::dto::EvaluateExpressionResponse).
+//! [`EvaluateExpressionResponse`](super::super::dto::EvaluateExpressionResponse).
 //!
 //! Non-2xx responses become [`ClinicalReasoningError::SidecarRejected`] with the raw body for
 //! diagnostics (CQL errors, missing Library, FHIR 404 from retrieve provider, etc.).
 
 use reqwest::{Client, Url};
 
-use crate::ClinicalReasoningError;
-use crate::SidecarRejectionDetail;
-use crate::config::ClinicalReasoningConfig;
-use crate::dto::{
+use super::super::ClinicalReasoningError;
+use super::super::SidecarRejectionDetail;
+use super::super::config::ClinicalReasoningConfig;
+use super::super::dto::{
     ApplyActivityDefinitionRequest, ApplyActivityDefinitionResponse, ApplyPlanDefinitionRequest,
     ApplyPlanDefinitionResponse, ClearLibraryCacheResponse, EvaluateExpressionRequest,
     EvaluateExpressionResponse,
