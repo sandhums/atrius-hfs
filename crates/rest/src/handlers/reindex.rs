@@ -23,11 +23,8 @@ use crate::state::AppState;
 /// Trait object for reindex jobs (keeps AppState free of concrete storage type).
 #[async_trait]
 pub trait ReindexController: Send + Sync {
-    async fn start(
-        &self,
-        tenant: TenantContext,
-        request: ReindexRequest,
-    ) -> Result<String, String>;
+    async fn start(&self, tenant: TenantContext, request: ReindexRequest)
+    -> Result<String, String>;
     async fn progress(&self, job_id: &str) -> Option<ReindexProgress>;
     async fn cancel(&self, job_id: &str) -> Result<(), String>;
 }
@@ -53,7 +50,9 @@ where
         storage: Arc<S>,
         extractor: Arc<SearchParameterExtractor>,
     ) -> Arc<dyn ReindexController> {
-        Arc::new(Self::new(Arc::new(ReindexOperation::new(storage, extractor))))
+        Arc::new(Self::new(Arc::new(ReindexOperation::new(
+            storage, extractor,
+        ))))
     }
 }
 
@@ -69,8 +68,7 @@ pub fn try_auto_reindex_controller<S: 'static>(
         use helios_persistence::backends::sqlite::SqliteBackend;
         if TypeId::of::<S>() == TypeId::of::<SqliteBackend>() {
             // Safety: TypeId equality guarantees S == SqliteBackend.
-            let storage =
-                unsafe { &*(storage as *const Arc<S> as *const Arc<SqliteBackend>) };
+            let storage = unsafe { &*(storage as *const Arc<S> as *const Arc<SqliteBackend>) };
             return Some(PersistenceReindexController::boxed(
                 Arc::clone(storage),
                 Arc::clone(storage.search_extractor()),
@@ -82,8 +80,7 @@ pub fn try_auto_reindex_controller<S: 'static>(
         use helios_persistence::backends::postgres::PostgresBackend;
         if TypeId::of::<S>() == TypeId::of::<PostgresBackend>() {
             // Safety: TypeId equality guarantees S == PostgresBackend.
-            let storage =
-                unsafe { &*(storage as *const Arc<S> as *const Arc<PostgresBackend>) };
+            let storage = unsafe { &*(storage as *const Arc<S> as *const Arc<PostgresBackend>) };
             return Some(PersistenceReindexController::boxed(
                 Arc::clone(storage),
                 Arc::clone(storage.search_extractor()),

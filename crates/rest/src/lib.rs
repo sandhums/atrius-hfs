@@ -168,8 +168,8 @@ pub use config::{
     MultitenancyConfig, ProfileValidationMode, ServerConfig, StorageBackendMode, TenantRoutingMode,
 };
 pub use error::{RestError, RestResult};
-pub use middleware::auth::AuthMiddlewareState;
 pub use handlers::{PersistenceReindexController, ReindexController, try_auto_reindex_controller};
+pub use middleware::auth::AuthMiddlewareState;
 pub use profile_validation::ProfileValidationService;
 pub use state::AppState;
 pub use tenant::{ResolvedTenant, TenantResolver, TenantSource};
@@ -684,8 +684,7 @@ where
     // Wire `$reindex` when enabled. Standalone SQLite/Postgres auto-detect;
     // composites pass an explicit controller built from the primary.
     if config.reindex_enabled {
-        let controller =
-            reindex_controller.or_else(|| try_auto_reindex_controller(&storage_arc));
+        let controller = reindex_controller.or_else(|| try_auto_reindex_controller(&storage_arc));
         match controller {
             Some(ctrl) => {
                 info!("$reindex enabled");

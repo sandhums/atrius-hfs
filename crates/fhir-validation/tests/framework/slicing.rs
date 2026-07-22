@@ -2357,7 +2357,9 @@ fn pattern_discriminator_on_this_matches_codeable_concept_category_slice() {
     // open slicing: unmatched category is allowed; no error required here — just ensure it
     // does not falsely claim a multi-slice match.
     assert!(
-        !non_matching_issues.iter().any(|i| i.diagnostics.contains("multiple declared slices")),
+        !non_matching_issues
+            .iter()
+            .any(|i| i.diagnostics.contains("multiple declared slices")),
         "unexpected multi-slice match: {non_matching_issues:#?}"
     );
 }
@@ -2431,5 +2433,3 @@ fn type_discriminator_on_this_matches_medication_codeable_concept_slice() {
         "Expected medicationCodeableConcept to match CodeableConcept type slice, got: {matching_issues:#?}"
     );
 }
-
-

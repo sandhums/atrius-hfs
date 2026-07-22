@@ -26,11 +26,11 @@ mod request_group_cards;
 use std::sync::Arc;
 use std::time::Instant;
 
-use async_trait::async_trait;
 use crate::clinical_reasoning::{
     ApplyPlanDefinitionRequestBuilder, ClinicalReasoningClient, EvaluateExpressionRequestBuilder,
     FhirServiceEndpoints,
 };
+use async_trait::async_trait;
 use helios_cds_hooks::{CdsHooksError, CdsRequest, CdsResponse, CdsService, FeedbackRequest};
 
 use crate::apply_context::{apply_hook_context, apply_hook_context_to_builder};
@@ -495,7 +495,10 @@ mod tests {
             }
         });
         let mut existing = serde_json::Map::new();
-        existing.insert("patient".into(), json!({"resourceType": "Patient", "id": "p1"}));
+        existing.insert(
+            "patient".into(),
+            json!({"resourceType": "Patient", "id": "p1"}),
+        );
         let merged = merge_draft_orders_into_prefetch(&context, Some(existing)).expect("map");
         assert!(merged.contains_key("patient"));
         assert!(merged.contains_key(DRAFT_ORDERS_PREFETCH_KEY));

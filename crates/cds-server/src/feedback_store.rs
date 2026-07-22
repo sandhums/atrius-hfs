@@ -49,7 +49,8 @@ impl FeedbackStore {
         request: &FeedbackRequest,
     ) {
         for feedback in &request.feedback {
-            let resource = guidance_response_for_feedback(service_id, plan_definition_url, feedback);
+            let resource =
+                guidance_response_for_feedback(service_id, plan_definition_url, feedback);
             self.post_guidance_response(service_id, &feedback.card, resource)
                 .await;
         }
@@ -74,7 +75,10 @@ impl FeedbackStore {
 
         match req.send().await {
             Ok(resp) if resp.status().is_success() => {
-                debug!(service_id, card, "cds feedback persisted as GuidanceResponse");
+                debug!(
+                    service_id,
+                    card, "cds feedback persisted as GuidanceResponse"
+                );
             }
             Ok(resp) => {
                 let status = resp.status();
@@ -164,7 +168,9 @@ mod tests {
         Feedback {
             card: "card-1".into(),
             outcome,
-            accepted_suggestions: Some(vec![AcceptedSuggestion { id: "acs-ecg".into() }]),
+            accepted_suggestions: Some(vec![AcceptedSuggestion {
+                id: "acs-ecg".into(),
+            }]),
             override_reason: Some(OverrideReason {
                 reason: Some(Coding {
                     code: "clinical-judgment".into(),
@@ -187,14 +193,20 @@ mod tests {
         assert_eq!(gr["resourceType"], "GuidanceResponse");
         assert_eq!(gr["status"], "success");
         assert_eq!(gr["requestIdentifier"]["value"], "card-1");
-        assert!(gr["moduleCanonical"].as_str().unwrap().contains("er-chest-pain-pathway"));
+        assert!(
+            gr["moduleCanonical"]
+                .as_str()
+                .unwrap()
+                .contains("er-chest-pain-pathway")
+        );
         assert!(gr["note"][0]["text"].as_str().unwrap().contains("accepted"));
         assert!(gr["note"][0]["text"].as_str().unwrap().contains("acs-ecg"));
     }
 
     #[test]
     fn falls_back_to_module_uri_without_plan_definition() {
-        let gr = guidance_response_for_feedback("svc-x", None, &feedback(FeedbackOutcome::Overridden));
+        let gr =
+            guidance_response_for_feedback("svc-x", None, &feedback(FeedbackOutcome::Overridden));
         assert_eq!(gr["moduleUri"], "urn:atrius:cds-service:svc-x");
         let note = gr["note"][0]["text"].as_str().unwrap();
         assert!(note.contains("overridden"));

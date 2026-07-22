@@ -17,10 +17,14 @@ use std::fmt;
 pub enum StructureDefinitionExtractMessage {
     JsonMustBeObject,
     MissingResourceType,
-    ExpectedResourceType { got: String },
+    ExpectedResourceType {
+        got: String,
+    },
     UrlRequired,
     KindRequired,
-    UnknownKind { value: String },
+    UnknownKind {
+        value: String,
+    },
     /// `StructureDefinition.derivation` is required for registry extraction.
     ///
     /// **Atrius note:** HL7 abstract root `Element` omits `derivation` (no base to specialize).
@@ -30,7 +34,9 @@ pub enum StructureDefinitionExtractMessage {
     /// `scripts/build-atrius-profile-manifest.sh` excludes `Element` / `BackboneElement` /
     /// `Resource` / `DomainResource` for that reason.
     DerivationRequired,
-    UnknownDerivation { value: String },
+    UnknownDerivation {
+        value: String,
+    },
     TypeRequired,
     DifferentialElementMustBeArray,
     DifferentialElementNonEmpty,
@@ -44,9 +50,13 @@ pub enum StructureDefinitionExtractMessage {
     BindingMissingValueSet,
     BindingMustBeObject,
     BindingStrengthRequired,
-    UnknownBindingStrength { value: String },
+    UnknownBindingStrength {
+        value: String,
+    },
     SlicingMustBeObject,
-    SerializeFailed { error: String },
+    SerializeFailed {
+        error: String,
+    },
 }
 
 impl fmt::Display for StructureDefinitionExtractMessage {

@@ -23,10 +23,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context as _;
 use crate::clinical_reasoning::{
     ClinicalReasoningClient, ClinicalReasoningConfig, FhirServiceEndpoints,
 };
+use anyhow::Context as _;
 use clap::Parser;
 
 use crate::fhir_authorization::FhirAccessPolicy;
@@ -215,7 +215,9 @@ impl Args {
     }
 
     /// Feedback persistence store when `CDS_FEEDBACK_FHIR_BASE_URL` is configured.
-    pub fn feedback_store(&self) -> anyhow::Result<Option<Arc<crate::feedback_store::FeedbackStore>>> {
+    pub fn feedback_store(
+        &self,
+    ) -> anyhow::Result<Option<Arc<crate::feedback_store::FeedbackStore>>> {
         let Some(base) = self
             .feedback_fhir_base_url
             .as_deref()

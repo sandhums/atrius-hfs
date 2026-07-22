@@ -134,7 +134,9 @@ fn base_indicator(request_group: &Value) -> Indicator {
 }
 
 fn str_field<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
-    v.get(key).and_then(|s| s.as_str()).filter(|s| !s.is_empty())
+    v.get(key)
+        .and_then(|s| s.as_str())
+        .filter(|s| !s.is_empty())
 }
 
 fn resolve_contained<'a>(request_group: &'a Value, reference: &str) -> Option<&'a Value> {
@@ -528,7 +530,12 @@ mod tests {
         let rg = acs_style_request_group();
         let cards = cards_from_request_group("svc", "Fallback", &rg);
         assert_eq!(cards[0].indicator, Indicator::Critical);
-        assert!(cards[0].override_reasons.as_ref().is_some_and(|r| !r.is_empty()));
+        assert!(
+            cards[0]
+                .override_reasons
+                .as_ref()
+                .is_some_and(|r| !r.is_empty())
+        );
     }
 
     #[test]
@@ -553,7 +560,10 @@ mod tests {
         });
         let cards = cards_from_request_group("svc", "Fallback", &rg);
         assert_eq!(cards.len(), 1);
-        assert_eq!(cards[0].selection_behavior, Some(SelectionBehavior::AtMostOne));
+        assert_eq!(
+            cards[0].selection_behavior,
+            Some(SelectionBehavior::AtMostOne)
+        );
     }
 
     #[test]
@@ -675,7 +685,12 @@ mod tests {
         });
         let cards = cards_from_request_group("svc", "Fallback", &rg);
         assert_eq!(cards[0].indicator, Indicator::Critical);
-        assert!(cards[0].detail.as_ref().is_some_and(|d| d.contains("Could not resolve")));
+        assert!(
+            cards[0]
+                .detail
+                .as_ref()
+                .is_some_and(|d| d.contains("Could not resolve"))
+        );
     }
 
     #[test]

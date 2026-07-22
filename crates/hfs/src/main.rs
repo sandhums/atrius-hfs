@@ -44,13 +44,13 @@ use helios_rest::bulk_export_auth::BearerScopeAuth;
 use helios_rest::create_app_with_auth_and_bulk;
 // Settings-capable standalone/composite backends (SQLite, PostgreSQL, MongoDB)
 // host the per-user settings store, wired alongside bulk export/submit.
-#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mongodb"))]
-use helios_rest::create_app_with_auth_bulk_and_settings;
 #[cfg(any(
     all(feature = "sqlite", feature = "elasticsearch"),
     all(feature = "postgres", feature = "elasticsearch"),
 ))]
 use helios_rest::PersistenceReindexController;
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mongodb"))]
+use helios_rest::create_app_with_auth_bulk_and_settings;
 // S3 does not host a settings store (tracked follow-up #199), so its startup
 // paths use the plain app builder. Every other standalone/composite backend now
 // wires the per-user settings store via `create_app_with_auth_bulk_and_settings`.
@@ -801,8 +801,8 @@ async fn main() -> anyhow::Result<()> {
     // Propagate HFS_TERMINOLOGY_SERVER to FHIRPATH_TERMINOLOGY_SERVER so that any
     // FHIRPath evaluation (CDS Hooks, _filter, etc.) delegates terminology
     // operations (memberOf, subsumes) to the configured HTS instance.
-    if let Some(ref ts_url) = config.terminology_server {
-        if std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err() {
+    if let Some(ref ts_url) = config.terminology_server
+        && std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err() {
             // Safety: single-threaded at this point (before tokio runtime hands
             // off to worker threads), so set_var is safe here.
             // SAFETY: called before any threads are spawned by the tokio runtime.
@@ -811,7 +811,6 @@ async fn main() -> anyhow::Result<()> {
             }
             info!(url = %ts_url, "HFS_TERMINOLOGY_SERVER wired to FHIRPath context");
         }
-    }
 
     // Initialize audit subsystem
     let (audit_sink, audit_state) = init_audit(&config, backend_mode).await?;

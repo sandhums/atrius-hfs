@@ -42,9 +42,8 @@
 //! [`AppState`]: state::AppState
 //! [`create_app`]: server::create_app
 
-pub(crate) mod bcp13;
-pub(crate) mod ucum_validate;
 pub mod backends;
+pub(crate) mod bcp13;
 pub mod config;
 pub mod ecl;
 pub mod error;
@@ -55,3 +54,4 @@ pub mod server;
 pub mod state;
 pub mod traits;
 pub mod types;
+pub(crate) mod ucum_validate;

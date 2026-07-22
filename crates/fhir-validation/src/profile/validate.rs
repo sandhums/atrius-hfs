@@ -1700,9 +1700,7 @@ fn looks_like_fhir_resource_type_name(name: &str) -> bool {
     let Some(first) = chars.next() else {
         return false;
     };
-    first.is_ascii_uppercase()
-        && name.len() > 1
-        && chars.all(|c| c.is_ascii_alphanumeric())
+    first.is_ascii_uppercase() && name.len() > 1 && chars.all(|c| c.is_ascii_alphanumeric())
 }
 
 /// Validate `type.profile` constraints on nested resource-valued elements.
@@ -3240,8 +3238,7 @@ mod target_profile_resource_type_tests {
                     code: "Reference".into(),
                     target_profiles: vec![
                         "http://hl7.org/fhir/StructureDefinition/Appointment|4.0.1".into(),
-                        "http://hl7.org/fhir/StructureDefinition/CommunicationRequest|4.0.1"
-                            .into(),
+                        "http://hl7.org/fhir/StructureDefinition/CommunicationRequest|4.0.1".into(),
                         "http://hl7.org/fhir/StructureDefinition/DeviceRequest|4.0.1".into(),
                         "http://hl7.org/fhir/StructureDefinition/MedicationRequest|4.0.1".into(),
                         "http://hl7.org/fhir/StructureDefinition/NutritionOrder|4.0.1".into(),
@@ -3315,9 +3312,7 @@ mod target_profile_resource_type_tests {
         );
         assert_eq!(issues.len(), 1);
         assert!(
-            issues[0]
-                .diagnostics
-                .contains("Observation"),
+            issues[0].diagnostics.contains("Observation"),
             "{:?}",
             issues[0].diagnostics
         );

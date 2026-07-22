@@ -371,7 +371,8 @@ impl SqliteTerminologyBackend {
                      DELETE FROM concepts_fts_built;
                      DELETE FROM concepts_word_fts;
                      DELETE FROM concepts_search_fts;  -- Atrius fork: synonym typeahead index
-                ");
+                ",
+                );
 
                 // Update query-planner statistics for large tables.
                 let _ = conn.execute_batch(

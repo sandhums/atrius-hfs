@@ -386,7 +386,9 @@ fn filter_focus(
 ) -> Result<HashSet<String>, HtsError> {
     match (op, concept) {
         (_, FocusConcept::Wildcard) => Ok(candidates.iter().cloned().collect()),
-        (None, FocusConcept::Id(id)) => Ok(candidates.iter().filter(|c| *c == id).cloned().collect()),
+        (None, FocusConcept::Id(id)) => {
+            Ok(candidates.iter().filter(|c| *c == id).cloned().collect())
+        }
         (Some(ConceptOperator::DescendantOf), FocusConcept::Id(id)) => {
             batch_descendants_in_set(conn, system_id, id, false, candidates)
         }
