@@ -1,0 +1,53 @@
+name: Manifest KR Pins
+
+on:
+  push:
+    paths:
+      - "manifests/cds-services-kr.json"
+      - "scripts/validate-manifest-kr-pins.sh"
+      - ".github/workflows/manifest-kr-pins.yml"
+  pull_request:
+    paths:
+      - "manifests/cds-services-kr.json"
+      - "scripts/validate-manifest-kr-pins.sh"
+      - ".github/workflows/manifest-kr-pins.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      MANIFEST: manifests/cds-services-kr.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Structural validation (always)
+        run: |
+          jq -e '.services | length > 0' "$MANIFEST" >/dev/null
+
+          missing=$(jq -r '.services[]
+            | select((.id // "") == "" or (.libraryId // "") == "" or (.libraryVersion // "") == "")
+            | .id // .libraryId // "<unnamed>"' "$MANIFEST")
+          if [ -n "$missing" ]; then
+            echo "services missing id/libraryId/libraryVersion pins:" >&2
+            echo "$missing" >&2
+            exit 1
+          fi
+
+          dups=$(jq -r '.services[].id' "$MANIFEST" | sort | uniq -d)
+          if [ -n "$dups" ]; then
+            echo "duplicate service ids:" >&2
+            echo "$dups" >&2
+            exit 1
+          fi
+
+          echo "ok: $(jq '.services | length' "$MANIFEST") services, all pinned, no duplicate ids"
+
+      # Full pin resolution needs a live KR HFS with the Atrius KR content
+      # loaded. Configure the repository variable KR_HFS_URL (e.g. the staging
+      # KR endpoint) to enable this step; until then it is skipped.
+      - name: Resolve pins against KR (when KR_HFS_URL configured)
+        if: vars.KR_HFS_URL != ''
+        env:
+          KR_HFS_URL: ${{ vars.KR_HFS_URL }}
+        run: ./scripts/validate-manifest-kr-pins.sh
