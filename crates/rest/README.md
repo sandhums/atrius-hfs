@@ -14,6 +14,7 @@ This crate provides a complete implementation of the [FHIR RESTful API](https://
 - **Content Negotiation**: JSON format support with proper MIME types
 - **Multi-Tenant**: Built-in tenant isolation for multi-tenant deployments
 - **Bulk Data Export**: Asynchronous [FHIR Bulk Data Access](https://hl7.org/fhir/uv/bulkdata/export.html) `$export` (system / Patient / Group) with poll, manifest, download, and cancel
+- **Bulk Data Submit**: Asynchronous [FHIR Bulk Data Access **Submit**](https://build.fhir.org/ig/HL7/bulk-data/en/submit.html) `$bulk-submit` — HFS as Data Consumer fetches and ingests a provider's manifest/NDJSON, with poll, status manifest, and cancel
 
 ## Quick Start
 
@@ -76,11 +77,67 @@ cargo run --bin rest-server -- --port 3000 --log-level debug
 | export status / manifest | GET | `/export-status/[job_id]` |
 | export cancel + delete | DELETE | `/export-status/[job_id]` |
 | export file download | GET | `/export-file/[job_id]/[type]-[part]` |
+| bulk submit kick-off | POST | `/$bulk-submit` |
+| bulk submit status kick-off | POST | `/$bulk-submit-status` |
+| bulk submit poll / manifest | GET | `/bulk-submit-status/[poll_token]` |
+| bulk submit cancel | DELETE | `/bulk-submit-status/[poll_token]` |
+| bulk submit file download | GET | `/bulk-submit-file/[poll_token]/[part]` |
+| purge (instance) | DELETE | `/[type]/[id]/$purge` |
+| purge (type) | POST | `/[type]/$purge` |
+| reindex (system) | POST | `/$reindex` |
+| reindex (type) | POST | `/[type]/$reindex` |
+| reindex status | GET | `/$reindex-status/[job_id]` |
+| reindex cancel | DELETE | `/$reindex-status/[job_id]` |
 
 All `$export` kick-offs require `Prefer: respond-async` and return `202 Accepted`
 with a `Content-Location` status URL. See [Bulk Data Export](#bulk-data-export)
 for configuration; the storage-layer job/output internals are documented in the
 [helios-persistence README](../persistence/README.md).
+
+### Administrative Operations
+
+`$purge` and `$reindex` are **not** part of the FHIR specification. Both are
+gated on their own operation scope — `system/purge` and `system/reindex` — and
+**not** on ordinary resource scopes, following the `system/bulk-submit`
+precedent. A token that may soft-delete a Patient must not thereby be able to
+destroy it irrecoverably, and a token that may write a resource must not be able
+to rebuild the whole tenant's search index. As with `system/bulk-submit`, a
+`system/*.<perm>` wildcard also grants them.
+
+**`$purge`** permanently deletes a resource and all of its versions. This is not
+the FHIR `delete` interaction: an ordinary `DELETE` is a *soft* delete that
+writes a tombstone version, keeps the resource in `_history`, and answers reads
+with `410 Gone`. `$purge` removes the bytes, which is what erasure requirements
+(GDPR Article 17 and similar) actually need. It is irreversible.
+
+- `AuditEvent` can **never** be purged, whatever scope the caller holds. A caller
+  who can erase the audit trail can erase the evidence of their own actions.
+- On a composite deployment the purge targets the *composite*, so it reaches the
+  Elasticsearch secondary too — a resource purged only from the primary would
+  remain searchable, with its full content, in the index. Secondaries are purged
+  first; if any of them fails the primary is left untouched and the operation
+  reports `500` with a failure `AuditEvent` (outcome `8`) naming the backend, so
+  the purge stays retryable rather than destroying the system of record while
+  leaving a searchable copy behind.
+
+**`$reindex`** rebuilds the search index from the stored resources, which is
+needed after a `SearchParameter` is added or changed — existing resources were
+indexed under the old definition and will not match the new one until they are
+re-extracted. Kick-off returns `202 Accepted` with a job id; the rebuild runs in
+the background and is polled via `/$reindex-status/[job_id]`.
+
+- It writes to **every** search index in the deployment, including the
+  Elasticsearch secondary. Rebuilding only the primary on a deployment where
+  Elasticsearch serves search would rebuild an index nothing queries.
+- Job state is held **in memory on the node that accepted the kick-off**, so
+  `/$reindex-status/[job_id]` returns `404` from any other node. In a multi-node
+  deployment, poll the node you kicked off against.
+- The `s3` backend standalone has no search index of any kind, so `$reindex`
+  there returns `501`. Every other backend and composite supports it.
+
+Both operations emit BALP `AuditEvent`s — purge on completion or failure,
+reindex at start and at its terminal state (complete / cancel / fail, outcome
+`0` / `4` / `8`) — each attributed to the requesting principal.
 
 ## Configuration
 
@@ -139,6 +196,71 @@ Bulk export is available on the `sqlite`, `postgres`, `sqlite-elasticsearch`, an
 
 A runnable multi-instance stack (HFS + PostgreSQL + MinIO + Keycloak) is provided
 as a compose example in [`docker/bulk-export/`](../../docker/bulk-export/README.md).
+
+### Bulk Data Submit
+
+HFS implements the HL7 FHIR Bulk Data Access **Submit** operation
+([`submit.html`](https://build.fhir.org/ig/HL7/bulk-data/en/submit.html)) in the
+**Data Consumer** role: a Data Provider `POST`s `$bulk-submit` referencing a Bulk
+Export Manifest, HFS asynchronously fetches the manifest and NDJSON files, ingests
+them, and exposes results through a status manifest.
+
+- **Endpoints**: `POST /$bulk-submit` (kick-off, `200`), `POST /$bulk-submit-status`
+  (`202` + `Content-Location`), `GET`/`DELETE /bulk-submit-status/{poll_token}`
+  (poll / cancel), and `GET /bulk-submit-file/{poll_token}/{part}` (HFS-hosted
+  status artifacts). See the [API Endpoints](#api-endpoints) table.
+- **Scope**: every surface requires the `system/bulk-submit` SMART scope when auth is
+  enabled; status, cancel, and file surfaces also enforce submission ownership.
+- **Poll pacing**: an in-progress poll advertises `Retry-After`
+  (`HFS_BULK_SUBMIT_RETRY_AFTER`); a client that ignores it and hammers the poll URL
+  is throttled with `429` plus a `Retry-After` pointing at the end of the rate window
+  (`HFS_BULK_SUBMIT_POLL_RATE_LIMIT` / `_POLL_RATE_WINDOW`). Buckets are per client
+  (principal, else peer address) per poll token.
+- **Backends**: available on `sqlite`, `postgres`, and their `-elasticsearch`
+  composites; other backends return `501`. Job state reuses the FHIR-resource
+  backend — no separate job store to configure.
+- **Status manifest**: emits `output[]`, `outcome[]`, and `deleted[]` arrays (each
+  entry carries `url`, `count`, and `fileSize`), plus `requiresAccessToken`,
+  `transactionTime`, and `link[]`.
+- **Status pagination**: entries are split across pages of
+  `HFS_BULK_SUBMIT_MANIFEST_PAGE_SIZE` (default `1000`); when more remain, `link[]`
+  carries one `{"relation": "next", "url": ".../bulk-submit-status/{token}?page=N"}`
+  entry and every other manifest field repeats identically on each page. Pages are
+  fetched from the same status URL with `?page=N` (1-based); an out-of-range page is
+  `404` and a malformed one `400`. Set the page size to `0` to disable pagination.
+
+Configured via `HFS_BULK_SUBMIT_*` environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HFS_BULK_SUBMIT_ENABLED` | `true` | Master switch — when `false`, all `$bulk-submit` endpoints return `501`. |
+| `HFS_BULK_SUBMIT_OUTPUT_BACKEND` | `local-fs` | Status-artifact store: `local-fs` or `s3`. |
+| `HFS_BULK_SUBMIT_OUTPUT_DIR` | `${HFS_DATA_DIR}/submit` | Local-FS artifact root. |
+| `HFS_BULK_SUBMIT_S3_BUCKET` | *(none)* | S3 bucket — required when `OUTPUT_BACKEND=s3`. |
+| `HFS_BULK_SUBMIT_REQUIRES_ACCESS_TOKEN` | `auto` | Manifest posture: `auto` / `true` / `false`. **`false` is invalid with `local-fs`.** |
+| `HFS_BULK_SUBMIT_FILE_URL_TTL` | `3600` | Pre-signed artifact-URL lifetime, seconds. |
+| `HFS_BULK_SUBMIT_OUTPUT_TTL` | `86400` | Artifact retention after completion, seconds. |
+| `HFS_BULK_SUBMIT_RETRY_AFTER` | `120` | `Retry-After` (seconds) advertised on an in-progress status poll. |
+| `HFS_BULK_SUBMIT_MANIFEST_PAGE_SIZE` | `1000` | Max `output` + `outcome` + `deleted` entries per status-manifest page; further pages are chained by `link[]` `next`. `0` disables pagination. |
+| `HFS_BULK_SUBMIT_POLL_RATE_LIMIT` | `10` | Status polls allowed per client, per submission, per rate window. `0` disables poll rate limiting. |
+| `HFS_BULK_SUBMIT_POLL_RATE_WINDOW` | `60` | Sliding window for the poll rate limit, seconds. |
+| `HFS_BULK_SUBMIT_WORKER_CONCURRENCY` | `2` | In-process submit-worker pool size. |
+| `HFS_BULK_SUBMIT_DISABLE_LOCAL_WORKER` | `false` | Disable in-pod workers. |
+| `HFS_BULK_SUBMIT_MAX_CONCURRENT_PER_TENANT` | `4` | Per-tenant active-submission cap (kick-off returns `429` if exceeded). |
+| `HFS_BULK_SUBMIT_BATCH_SIZE` | `1000` | Resources per ingestion batch. |
+| `HFS_BULK_SUBMIT_LEASE_DURATION` | `60` | Initial manifest lease length, seconds. Must exceed the heartbeat interval. |
+| `HFS_BULK_SUBMIT_HEARTBEAT_INTERVAL` | `20` | Worker heartbeat cadence, seconds. |
+| `HFS_BULK_SUBMIT_CLEANUP_INTERVAL` | `300` | Cleanup-task scan interval, seconds. |
+| `HFS_BULK_SUBMIT_CLIENT_ID` | *(none)* | OAuth `client_id` for fetching protected provider files. |
+| `HFS_BULK_SUBMIT_PRIVATE_KEY` | *(none)* | PEM key for the `private_key_jwt` client assertion. |
+| `HFS_BULK_SUBMIT_SIGNING_ALG` | `ES384` | Client-assertion signing algorithm: `ES384` or `RS384`. |
+| `HFS_BULK_SUBMIT_OUTBOUND_SCOPE` | `system/*.rs` | Read scope requested for file-retrieval tokens (never `system/bulk-submit`). |
+
+For protected provider files (`requiresAccessToken`), HFS acquires a read-scoped
+token via SMART Backend Services (`client_credentials` + `private_key_jwt`) when
+`HFS_BULK_SUBMIT_CLIENT_ID` and `HFS_BULK_SUBMIT_PRIVATE_KEY` are set. JWE-encrypted
+files (`fileEncryptionKey`) are supported for `dir` + `A128GCM`/`A256GCM` when built
+with the `bulk-submit-jwe` feature.
 
 ### SQL-on-FHIR Async Export
 

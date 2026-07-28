@@ -9,9 +9,54 @@ repository.workspace = true
 homepage = "https://github.com/HeliosSoftware/hfs/tree/main/crates/ui"
 keywords = ["helios-software", "fhir", "ui", "htmx"]
 
+[features]
+# FHIR version features forward to helios-fhir so the viewer read paths
+# (SearchParameter + CompartmentDefinition fetched from the FHIR API) cover
+# exactly the versions the server is built with. R4 is the workspace default.
+default = ["R4"]
+R4 = ["helios-fhir/R4", "helios-fhir-validator/R4"]
+R4B = ["helios-fhir/R4B", "helios-fhir-validator/R4B"]
+R5 = ["helios-fhir/R5", "helios-fhir-validator/R5"]
+R6 = ["helios-fhir/R6", "helios-fhir-validator/R6"]
+
 [dependencies]
+# Read paths into the rest of the workspace: the SearchParameter spec loader
+# and registry types (#238) and the per-version compartment-params table
+# (#237). Data flows one way — the UI depends on the workspace, never the
+# reverse.
+helios-fhir = { path = "../fhir", version = "0.2.1", default-features = false }
+
+# The FHIR Schema IR and the editor projection (#264, on top of #232). The
+# resolver is a synchronous hashmap lookup, and FHIRPath is an optional feature
+# we deliberately do not take: the live editing loop needs the cheap structural
+# pass, not the async effects pass.
+helios-fhir-validator = { path = "../fhir-validator", version = "0.2.1", default-features = false }
+
+# Deserializes the FHIR resources fetched from the server's own
+# `/SearchParameter` and `/CompartmentDefinition` endpoints, and derives the
+# query-string extractors. Both already in the workspace dependency graph.
+serde = { version = "1", features = ["derive"] }
+
+# Warn-level breadcrumb when persisting the FHIR-version choice fails (#343).
+tracing = "0.1"
+serde_json = "1"
+
+# The UI reads conformance data (SearchParameter, CompartmentDefinition) from
+# the server's own FHIR API over HTTP — storage is the source of truth. Plain
+# HTTP against a loopback URL, so no TLS backend is needed.
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+async-trait = "0.1"
+
+# `OutboundAuthProvider`: the credentials the UI attaches to its server-to-server
+# self-calls (a service token when auth is enabled; a no-op when it is not).
+helios-auth = { path = "../auth", version = "0.2.1" }
+
 # Web framework (matches the version used by helios-hfs / helios-rest)
 axum = "0.8"
+
+# Chart bucket timestamps: formatting x-axis labels, and shaping the placeholder
+# series rendered when no dashboard provider is registered.
+chrono.workspace = true
 
 # Compile-time, type-checked, auto-escaping templates (Jinja2-like).
 # Markup lives in templates/, never in Rust source.
@@ -25,7 +70,10 @@ axum-htmx = { version = "0.8", features = ["auto-vary"] }
 # Static assets (htmx, CSS) embedded into the binary at compile time so the
 # server has no runtime CDN dependency and works in air-gapped deployments.
 # `axum-embed` serves them with precompressed (br/gzip/deflate) negotiation.
-rust-embed = "8"
+# `debug-embed` makes debug builds embed too (the default reads them from the
+# source tree at runtime), so the binary is self-contained wherever it runs —
+# notably the e2e container, which has the binary but not the asset folder.
+rust-embed = { version = "8", features = ["debug-embed"] }
 axum-embed = "0.1"
 
 # Fluent message catalogs (locales/<locale>/main.ftl at the workspace root),
@@ -34,6 +82,29 @@ axum-embed = "0.1"
 fluent-templates = "0.13"
 unic-langid = { version = "0.9", features = ["macros"] }
 
+# History & Versions diff rendering (#236, decision recorded in
+# docs/history-diff-rendering.md). Two layers, both server-side:
+#  - json-patch: the semantic field-level view. Already in the workspace lock
+#    (a default dep of helios-rest/helios-persistence), so zero new transitive
+#    weight; it is the exact inverse of the RFC 6902 PATCH the server applies.
+#  - similar: the textual word-level view over pretty-printed JSON. No HTML
+#    formatter of its own — we iterate its changes into an Askama template.
+json-patch = "3"
+similar = { version = "2", features = ["inline"] }
+
+# Storage-agnostic dashboard snapshot registry. The server registers a
+# provider (backed by the persistence layer) at startup; this crate reads the
+# latest snapshot to render the "FHIR resources over time" chart without any
+# dependency on the persistence layer itself. Falls back to placeholder data
+# when no provider is registered (e.g. the standalone UI example).
+helios-observability = { path = "../observability", version = "0.2.1" }
+
+# Read path for the tenant-maintenance page: the `ResourceStorage` tenant
+# registry (list/register/deregister) + per-tenant resource counts. The UI
+# depends on the rest of the server, never the reverse.
+helios-persistence = { path = "../persistence", version = "0.2.1", default-features = false, features = ["R4"] }
+
+
 [dev-dependencies]
 # Parses the .ftl sources so tests can enforce key-set parity across locales.
 fluent-syntax = "0.11"
@@ -41,3 +112,9 @@ fluent-syntax = "0.11"
 tokio = { version = "1", features = ["macros", "rt"] }
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
+# A real SQLite-backed store so the tenant-maintenance page tests exercise the
+# actual registry read/write path (the `sqlite` feature is test-only).
+helios-persistence = { path = "../persistence", version = "0.2.1", default-features = false, features = ["R4", "sqlite"] }
+# Seed a FHIR resource in tests so a data-only (unregistered) tenant appears.
+helios-fhir = { path = "../fhir", version = "0.2.1", default-features = false, features = ["R4"] }
+serde_json = "1"

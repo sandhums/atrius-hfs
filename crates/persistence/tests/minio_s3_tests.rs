@@ -22,8 +22,10 @@ use helios_persistence::core::bulk_submit::{
 use helios_persistence::core::history::{
     HistoryParams, InstanceHistoryProvider, SystemHistoryProvider, TypeHistoryProvider,
 };
-use helios_persistence::core::{ResourceStorage, VersionedStorage};
-use helios_persistence::error::{ConcurrencyError, ResourceError, SearchError, StorageError};
+use helios_persistence::core::{ResourceStorage, SettingsStore, VersionedStorage};
+use helios_persistence::error::{
+    BackendError, ConcurrencyError, ResourceError, SearchError, StorageError,
+};
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use helios_persistence::types::{CursorValue, PageCursor, Pagination, PaginationMode};
 use serde_json::json;
@@ -914,4 +916,380 @@ async fn test_minio_s3_output_store_round_trip() {
     store.delete_job_outputs(&tenant, &job_id).await.unwrap();
     store.delete_job_outputs(&tenant, &job_id).await.unwrap();
     assert!(store.open_reader(&key).await.is_err());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-user settings store
+//
+// The mock-backed unit tests prove the store's *logic*. These prove the thing
+// the mock cannot: that a real S3-compatible service actually enforces the
+// conditional-write preconditions the store's optimistic locking is built on.
+// Conditional PutObject is a comparatively recent S3 feature, so this is the
+// whole risk of the design — if the store silently ignored `If-Match`, every
+// concurrent settings write would be a lost update, with no error anywhere.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A user key unique to one test run, so tests never share a settings object.
+fn unique_user_key(scope: &str) -> String {
+    format!(
+        "https://idp.example.com/realms/test|{scope}-{}",
+        Uuid::new_v4()
+    )
+}
+
+#[tokio::test]
+async fn test_minio_settings_round_trip() {
+    if skip_if_disabled("test_minio_settings_round_trip") {
+        return;
+    }
+
+    let harness = make_prefix_backend("settings-round-trip").await;
+    let user = unique_user_key("round-trip");
+
+    assert!(harness.backend.get_settings(&user).await.unwrap().is_none());
+
+    let doc = json!({"theme": "dark", "defaultTenant": "acme"});
+    let stored = harness
+        .backend
+        .put_settings(&user, doc.clone(), None)
+        .await
+        .unwrap();
+    assert_eq!(stored.version, 1);
+
+    let fetched = harness.backend.get_settings(&user).await.unwrap().unwrap();
+    assert_eq!(fetched.document, doc);
+    assert_eq!(fetched.version, 1);
+
+    let patched = harness
+        .backend
+        .patch_settings(
+            &user,
+            json!({"theme": "light", "defaultTenant": null}),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(patched.document, json!({"theme": "light"}));
+    assert_eq!(patched.version, 2);
+
+    let refetched = harness.backend.get_settings(&user).await.unwrap().unwrap();
+    assert_eq!(refetched.document, json!({"theme": "light"}));
+    assert_eq!(refetched.version, 2);
+}
+
+/// `If-None-Match: *` really is enforced: of N concurrent "create if absent"
+/// writes, exactly one wins and the rest see an optimistic-lock failure.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_settings_create_only_single_winner() {
+    if skip_if_disabled("test_minio_settings_create_only_single_winner") {
+        return;
+    }
+
+    let harness = make_prefix_backend("settings-create-race").await;
+    let user = unique_user_key("create-race");
+    let attempts = 8usize;
+    let mut tasks = Vec::new();
+
+    for i in 0..attempts {
+        let backend = harness.backend.clone();
+        let user = user.clone();
+        tasks.push(tokio::spawn(async move {
+            // `Some(0)` asserts "this user has no settings yet".
+            backend
+                .put_settings(&user, json!({"writer": i}), Some(0))
+                .await
+        }));
+    }
+
+    let mut winners = 0usize;
+    let mut lock_failures = 0usize;
+    for task in tasks {
+        match task.await.unwrap() {
+            Ok(stored) => {
+                assert_eq!(stored.version, 1);
+                winners += 1;
+            }
+            Err(StorageError::Concurrency(ConcurrencyError::OptimisticLockFailure { .. })) => {
+                lock_failures += 1;
+            }
+            Err(other) => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    assert_eq!(winners, 1, "create-if-absent admitted more than one winner");
+    assert_eq!(lock_failures, attempts - 1);
+
+    let stored = harness.backend.get_settings(&user).await.unwrap().unwrap();
+    assert_eq!(stored.version, 1);
+}
+
+/// `If-Match` really is enforced: a write pinned to a stale version is rejected,
+/// and one pinned to the live version succeeds.
+#[tokio::test]
+async fn test_minio_settings_stale_if_match_conflicts() {
+    if skip_if_disabled("test_minio_settings_stale_if_match_conflicts") {
+        return;
+    }
+
+    let harness = make_prefix_backend("settings-if-match").await;
+    let user = unique_user_key("if-match");
+
+    harness
+        .backend
+        .put_settings(&user, json!({"a": 1}), None)
+        .await
+        .unwrap(); // version 1
+
+    // Stale precondition: asserts "not yet created", but it now exists.
+    let err = harness
+        .backend
+        .put_settings(&user, json!({"a": 2}), Some(0))
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        StorageError::Concurrency(ConcurrencyError::OptimisticLockFailure { .. })
+    ));
+
+    // Live precondition succeeds.
+    let updated = harness
+        .backend
+        .put_settings(&user, json!({"a": 2}), Some(1))
+        .await
+        .unwrap();
+    assert_eq!(updated.version, 2);
+
+    // The rejected write left nothing behind.
+    let stored = harness.backend.get_settings(&user).await.unwrap().unwrap();
+    assert_eq!(stored.document, json!({"a": 2}));
+    assert_eq!(stored.version, 2);
+}
+
+/// The canonical lost-update proof, against a real object store: concurrent
+/// unconditional merge-patches each adding a distinct key must all survive.
+/// Every writer that loses the compare-and-swap re-reads the winner's document
+/// and merges onto it, so no key may go missing and the version must equal the
+/// number of writers.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_minio_settings_concurrent_patches_never_lose_an_update() {
+    if skip_if_disabled("test_minio_settings_concurrent_patches_never_lose_an_update") {
+        return;
+    }
+
+    let harness = make_prefix_backend("settings-lost-update").await;
+    let user = unique_user_key("lost-update");
+    let writers = 4usize;
+    let mut tasks = Vec::new();
+
+    for i in 0..writers {
+        let backend = harness.backend.clone();
+        let user = user.clone();
+        tasks.push(tokio::spawn(async move {
+            // Each writer merges in a key of its own, so a lost update is
+            // visible as a missing key rather than an overwritten value.
+            let mut patch = serde_json::Map::new();
+            patch.insert(format!("key{i}"), json!(i));
+            backend
+                .patch_settings(&user, serde_json::Value::Object(patch), None)
+                .await
+        }));
+    }
+
+    for task in tasks {
+        task.await
+            .unwrap()
+            .expect("an unconditional patch must retry on conflict, not fail");
+    }
+
+    let stored = harness.backend.get_settings(&user).await.unwrap().unwrap();
+    for i in 0..writers {
+        assert_eq!(
+            stored.document.get(format!("key{i}")),
+            Some(&json!(i)),
+            "writer {i}'s update was lost: {:?}",
+            stored.document
+        );
+    }
+    assert_eq!(stored.version, writers as i64);
+}
+
+/// `delete_settings` removes the object and reports whether one was there,
+/// which is what makes the #270 legacy-key migration able to move a document
+/// rather than duplicate it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_settings_delete_is_idempotent() {
+    if skip_if_disabled("test_minio_settings_delete_is_idempotent") {
+        return;
+    }
+
+    let harness = make_prefix_backend("settings-delete").await;
+    let user = unique_user_key("delete");
+
+    // Deleting an absent document is not an error, and reports "nothing there".
+    assert!(!harness.backend.delete_settings(&user).await.unwrap());
+
+    harness
+        .backend
+        .put_settings(&user, json!({"theme": "dark"}), None)
+        .await
+        .unwrap();
+    assert!(harness.backend.get_settings(&user).await.unwrap().is_some());
+
+    assert!(harness.backend.delete_settings(&user).await.unwrap());
+    assert!(harness.backend.get_settings(&user).await.unwrap().is_none());
+
+    // Idempotent: a second delete succeeds and reports nothing was removed.
+    assert!(!harness.backend.delete_settings(&user).await.unwrap());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #284: a missing bucket must never read as an empty store on the real client.
+//
+// These are the end-to-end anchor for the mock-level tests in
+// `src/backends/s3/tests.rs`: they exercise the real `AwsS3Client` HEAD-path
+// disambiguation (a bodyless 404 → follow-up `HeadBucket`; a `HeadBucket` 404 →
+// `BucketNotFound`) against a genuine S3 API, so the mock cannot silently drift
+// from production behaviour. A dead-endpoint test (`backend_error_handling.rs`)
+// cannot cover this — it needs a responsive server whose configured bucket is
+// simply absent.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Builds an S3 backend pointed at a bucket that is deliberately never created.
+/// `validate_on_startup=false` lets construction succeed so the missing bucket
+/// is hit at operation time; `true` makes construction itself validate it.
+async fn make_absent_bucket_backend(validate_on_startup: bool) -> Result<S3Backend, StorageError> {
+    let shared = shared_minio().await;
+    ensure_backend_env_credentials(shared);
+
+    let bucket = format!("hfs-absent-{}", Uuid::new_v4().simple());
+    let config = S3BackendConfig {
+        tenancy_mode: S3TenancyMode::PrefixPerTenant { bucket },
+        prefix: Some(format!("integration/{}", Uuid::new_v4())),
+        region: Some("us-east-1".to_string()),
+        endpoint_url: Some(shared.endpoint_url.clone()),
+        force_path_style: true,
+        allow_http: true,
+        validate_buckets_on_startup: validate_on_startup,
+        ..Default::default()
+    };
+    S3Backend::from_env_async(config).await
+}
+
+/// Against a responsive server whose bucket is missing, `read`/`create`/`count`
+/// must error — never `Ok(None)` / `Ok(_)` / `Ok(0)`. This proves the real
+/// client's HEAD-path disambiguation (not just the mock's) refuses to let a
+/// misconfigured store masquerade as an empty one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_missing_bucket_reads_and_writes_are_errors() {
+    if skip_if_disabled("test_minio_missing_bucket_reads_and_writes_are_errors") {
+        return;
+    }
+
+    let backend = make_absent_bucket_backend(false)
+        .await
+        .expect("construction must succeed when startup validation is off");
+    let tenant = tenant("minio-tenant-absent");
+
+    let read = backend.read(&tenant, "Patient", "some-id").await;
+    assert!(
+        matches!(read, Err(StorageError::Backend(_))),
+        "read against a missing bucket must be a backend error, not Ok(None): {read:?}"
+    );
+
+    let id = format!("p-{}", Uuid::new_v4());
+    let created = backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({"resourceType":"Patient","id":id}),
+            FhirVersion::default(),
+        )
+        .await;
+    assert!(
+        matches!(created, Err(StorageError::Backend(_))),
+        "create into a missing bucket must be a backend error: {created:?}"
+    );
+
+    let counted = backend.count(&tenant, Some("Patient")).await;
+    assert!(
+        !matches!(counted, Ok(0)),
+        "count against a missing bucket must not report zero resources: {counted:?}"
+    );
+}
+
+/// `validate_buckets` (via startup validation) reports a missing bucket as a
+/// bucket-level error, not "resource not found in S3" — exercising the real
+/// `head_bucket` → `BucketNotFound` mapping end to end.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_validate_buckets_missing_bucket_is_bucket_flavored() {
+    if skip_if_disabled("test_minio_validate_buckets_missing_bucket_is_bucket_flavored") {
+        return;
+    }
+
+    let err = make_absent_bucket_backend(true)
+        .await
+        .expect_err("startup validation must fail against a missing bucket");
+    match &err {
+        StorageError::Backend(BackendError::Unavailable { message, .. }) => {
+            assert!(
+                message.contains("bucket"),
+                "expected a bucket-flavored message, got {message:?}"
+            );
+            assert!(
+                !message.contains("resource not found in S3"),
+                "a missing bucket must not be reported as a missing resource: {message:?}"
+            );
+        }
+        other => panic!("expected Backend(Unavailable), got {other:?}"),
+    }
+}
+
+/// #330: on the real SDK path, a tenant deregistered without purge must stay
+/// discoverable through count_by_tenant (delimiter LIST + per-tenant counts).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_count_by_tenant_survives_deregistration() {
+    if skip_if_disabled("test_minio_count_by_tenant_survives_deregistration") {
+        return;
+    }
+
+    let harness = make_prefix_backend("count-by-tenant").await;
+    let backend = &harness.backend;
+
+    backend.register_tenant("count-a", None).await.unwrap();
+    backend
+        .create(
+            &tenant("count-a"),
+            "Patient",
+            json!({"resourceType":"Patient","id":"p1"}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+    backend
+        .create(
+            &tenant("count-b"),
+            "Patient",
+            json!({"resourceType":"Patient","id":"q1"}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+    backend
+        .create(
+            &tenant("count-b"),
+            "Observation",
+            json!({"resourceType":"Observation","id":"o1"}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    assert!(backend.deregister_tenant("count-a").await.unwrap());
+
+    let mut counts = backend.count_by_tenant().await.unwrap();
+    counts.sort();
+    assert_eq!(
+        counts,
+        vec![("count-a".to_string(), 1), ("count-b".to_string(), 2)]
+    );
 }

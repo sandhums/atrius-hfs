@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Workspace Structure
 
-The project is a Rust workspace with 17 crates (16 default-members; `pysof` excluded from the default build):
+The project is a Rust workspace with 19 crates (18 default-members; `pysof` excluded from the default build):
 
 | Crate | Description |
 |-------|-------------|
@@ -15,6 +15,7 @@ The project is a Rust workspace with 17 crates (16 default-members; `pysof` excl
 | **`helios-fhir-macro`** | Procedural macros for FHIR functionality. |
 | **`helios-fhirpath`** | FHIRPath expression language — parser (chumsky), evaluator, CLI tool, and HTTP server. |
 | **`helios-fhirpath-support`** | Shared support utilities for FHIRPath. |
+| **`helios-fhir-validator`** | FHIR resource validation — FHIR Schema based structural/profile engine, SD→schema converter, embedded core packs (R4–R6), deferred FHIRPath-constraint and terminology-binding effects. Configured via `HFS_VALIDATION_*`. |
 | **`helios-serde`** | JSON and XML serialization for FHIR resources (`xml` feature flag). |
 | **`helios-serde-support`** | Shared serde helpers. |
 | **`helios-rest`** | FHIR RESTful API layer (Axum) — handlers, middleware, extractors, multi-tenancy routing. |
@@ -22,10 +23,11 @@ The project is a Rust workspace with 17 crates (16 default-members; `pysof` excl
 | **`helios-hfs`** | Main FHIR server binary. Combines `helios-rest` with storage backends. |
 | **`helios-sof`** | SQL-on-FHIR implementation — ViewDefinition processing, CLI and HTTP server. |
 | **`helios-hts`** | FHIR Terminology Server (HTS) — CodeSystem/ValueSet/ConceptMap operations and terminology import (SNOMED, LOINC, RxNorm, ICD-10-CM). Provides the `hts` binary. |
-| **`helios-auth`** | Authentication & authorization — SMART-on-FHIR / OAuth2 JWT bearer validation, JWKS, scopes, JTI replay cache. Configured via `HFS_AUTH_*`. |
+| **`helios-auth`** | Authentication & authorization — SMART-on-FHIR / OAuth2 JWT bearer validation, JWKS, scopes. Configured via `HFS_AUTH_*`. |
 | **`helios-audit`** | Audit logging — FHIR AuditEvent with IHE BALP profiles; pluggable sinks (database, file, CloudWatch, S3). Configured via `HFS_AUDIT_*`. |
 | **`helios-subscriptions`** | FHIR topic-based Subscriptions engine — rest-hook, websocket, email, and messaging channels. Configured via `HFS_SUBSCRIPTION(S)_*`. |
 | **`helios-cds-hooks`** | CDS Hooks protocol types and async service trait (HL7 CDS Hooks v3.0.0-ballot). Standalone library. |
+| **`helios-web`** | HTMX-first web UI foundation for HFS. |
 | **`pysof`** | Python bindings (PyO3/maturin) for SQL-on-FHIR. Excluded from default workspace build. |
 
 ### Binaries
@@ -39,6 +41,7 @@ The project is a Rust workspace with 17 crates (16 default-members; `pysof` excl
 | `sof-server` | helios-sof | SQL-on-FHIR HTTP server |
 | `config-advisor` | helios-persistence | Storage configuration advisor |
 | `hts` | helios-hts | FHIR Terminology Server (HTS) |
+| `validator-cli` | helios-fhir-validator | FHIR resource validator CLI (`cli` feature) |
 
 ### Key Design Patterns
 
@@ -85,7 +88,7 @@ Use those skills instead of expanding this always-loaded file:
 - `/work-with-pysof` - Python bindings under `crates/pysof`, maturin setup, API usage, and pysof tests.
 - `/test-hfs` - Test strategy, testcontainers, persistence integration tests, and shared test data.
 - `/work-with-hts` - Terminology server configuration, APIs, bootstrap sync, and terminology imports.
-- `/work-with-auth` - Authentication/authorization, SMART-on-FHIR, JWT/JWKS, scopes, JTI cache, and `HFS_AUTH_*` config.
+- `/work-with-auth` - Authentication/authorization, SMART-on-FHIR, JWT/JWKS, scopes, and `HFS_AUTH_*` config.
 - `/work-with-audit` - FHIR AuditEvent logging, IHE BALP, audit sinks, and `HFS_AUDIT_*` config.
 - `/work-with-subscriptions` - Topic-based Subscriptions engine, channels (rest-hook/websocket/email/messaging), and config.
 - `/work-with-cds-hooks` - CDS Hooks protocol types and async service trait for clinical decision support.

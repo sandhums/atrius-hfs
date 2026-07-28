@@ -51,11 +51,12 @@ pub(crate) struct TenantLocation {
 }
 
 impl S3Backend {
-    /// Returns the backend-level capability declarations for S3.
+    /// The capabilities S3 declares regardless of how tenants are placed.
     ///
-    /// Kept independent of client construction so reporting/tests do not need
-    /// AWS SDK initialization.
-    pub fn declared_capabilities() -> Vec<BackendCapability> {
+    /// Deliberately excludes every tenant-placement variant — those depend on
+    /// the configured [`S3TenancyMode`] and are added by
+    /// [`declared_capabilities_for`](Self::declared_capabilities_for).
+    fn base_capabilities() -> Vec<BackendCapability> {
         vec![
             BackendCapability::Crud,
             BackendCapability::Versioning,
@@ -66,9 +67,41 @@ impl S3Backend {
             BackendCapability::CursorPagination,
             BackendCapability::BulkExport,
             BackendCapability::BulkSubmitIngest,
-            BackendCapability::SharedSchema,
-            BackendCapability::DatabasePerTenant,
         ]
+    }
+
+    /// The capabilities an S3 backend configured with `mode` declares.
+    ///
+    /// Kept independent of client construction so reporting and tests do not
+    /// need AWS SDK initialization — the reason the previous no-argument
+    /// `declared_capabilities()` existed. It takes the mode because, unlike
+    /// every other backend in this crate, S3's tenant-placement topology is a
+    /// property of the *instance*, not of the backend type:
+    ///
+    /// | Mode | Placement | Declares |
+    /// |---|---|---|
+    /// | [`S3TenancyMode::PrefixPerTenant`] | one shared bucket, tenant-scoped key prefixes | `SharedSchema` |
+    /// | [`S3TenancyMode::BucketPerTenant`] | a dedicated bucket per tenant | `DatabasePerTenant` |
+    ///
+    /// Exactly one tenancy variant is declared, per the mutual-exclusivity rule
+    /// on [`BackendCapability`]. `BucketPerTenant` does **not** additionally
+    /// declare `SharedSchema` when `default_system_bucket` is set: whether
+    /// cross-tenant state is storable is a different axis, answered by
+    /// [`supports_user_settings`](Self::supports_user_settings) and
+    /// `ResourceStorage::supports_tenant_registry`.
+    ///
+    /// The `match` is exhaustive without a wildcard arm on purpose, so adding a
+    /// third `S3TenancyMode` is a compile error here rather than a silently
+    /// stale claim.
+    pub fn declared_capabilities_for(mode: &S3TenancyMode) -> Vec<BackendCapability> {
+        let tenancy = match mode {
+            S3TenancyMode::PrefixPerTenant { .. } => BackendCapability::SharedSchema,
+            S3TenancyMode::BucketPerTenant { .. } => BackendCapability::DatabasePerTenant,
+        };
+
+        let mut capabilities = Self::base_capabilities();
+        capabilities.push(tenancy);
+        capabilities
     }
 
     /// Creates a new S3 backend using AWS standard credential provider chain.
@@ -159,12 +192,7 @@ impl S3Backend {
     /// Returns a `TenantError` if the tenant has no bucket assignment in the
     /// `BucketPerTenant` mapping.
     pub(crate) fn tenant_location(&self, tenant: &TenantContext) -> StorageResult<TenantLocation> {
-        let global_prefix = self
-            .config
-            .prefix
-            .as_ref()
-            .map(|p| p.trim_matches('/').to_string())
-            .filter(|p| !p.is_empty());
+        let global_prefix = self.global_prefix();
 
         match &self.config.tenancy_mode {
             S3TenancyMode::PrefixPerTenant { bucket } => Ok(TenantLocation {
@@ -201,6 +229,88 @@ impl S3Backend {
         }
     }
 
+    /// Returns the configured global key prefix, with surrounding slashes
+    /// stripped and an empty prefix normalised to `None`.
+    pub(crate) fn global_prefix(&self) -> Option<String> {
+        self.config
+            .prefix
+            .as_ref()
+            .map(|p| p.trim_matches('/').to_string())
+            .filter(|p| !p.is_empty())
+    }
+
+    /// Resolves the bucket and (un-tenanted) keyspace for state that spans
+    /// tenants — the tenant registry and the per-user settings store.
+    ///
+    /// Such state lives outside any tenant prefix: in `PrefixPerTenant` mode it
+    /// sits under `[prefix/]` in the shared bucket, alongside the per-tenant
+    /// directories; in `BucketPerTenant` mode there is no single natural bucket,
+    /// so the tenant-independent `default_system_bucket` is used. Returns `None`
+    /// when no such location exists (bucket-per-tenant without a system bucket),
+    /// in which case cross-tenant state cannot be stored at all.
+    ///
+    /// Note the keyspace is deliberately *not* passed through
+    /// [`with_tenant_prefix`](S3Keyspace::with_tenant_prefix): callers own the
+    /// segment that distinguishes their namespace.
+    pub(crate) fn shared_location(&self) -> Option<TenantLocation> {
+        let bucket = match &self.config.tenancy_mode {
+            S3TenancyMode::PrefixPerTenant { bucket } => bucket.clone(),
+            S3TenancyMode::BucketPerTenant {
+                default_system_bucket,
+                ..
+            } => default_system_bucket.clone()?,
+        };
+        Some(TenantLocation {
+            bucket,
+            keyspace: S3Keyspace::new(self.global_prefix()),
+        })
+    }
+
+    /// Resolves the bucket and keyspace holding the tenant registry, which spans
+    /// tenants and so lives under `[prefix/]tenants/`. `None` means the registry
+    /// is unsupported for this configuration.
+    pub(crate) fn registry_location(&self) -> Option<TenantLocation> {
+        self.shared_location()
+    }
+
+    /// Whether this configuration can host the per-user settings store.
+    ///
+    /// False only in bucket-per-tenant mode with no `default_system_bucket`,
+    /// where there is nowhere tenant-independent to keep a user-global document.
+    /// Callers should wire the store only when this holds, so an operator on such
+    /// a configuration gets the explained `501 Not Implemented` from
+    /// `/_user/settings` rather than a `500` on every request. Mirrors
+    /// [`supports_tenant_registry`](crate::core::ResourceStorage::supports_tenant_registry),
+    /// which answers the same question for the tenant registry.
+    pub fn supports_user_settings(&self) -> bool {
+        self.shared_location().is_some()
+    }
+
+    /// Resolves the bucket and keyspace holding the per-user settings objects.
+    ///
+    /// Unlike [`tenant_location`](Self::tenant_location) this takes no
+    /// [`TenantContext`]: per-user settings are *user-global*, not per-tenant (a
+    /// "default tenant" preference is inherently cross-tenant), and the
+    /// [`SettingsStore`](crate::core::SettingsStore) trait accordingly has no
+    /// tenant argument.
+    ///
+    /// When no tenant-independent bucket is configured (bucket-per-tenant with no
+    /// `default_system_bucket`) per-user settings cannot be stored. Callers are
+    /// expected to have gated on [`supports_user_settings`](Self::supports_user_settings)
+    /// first, so reaching this path is a configuration error; it is reported as
+    /// one rather than silently writing into some arbitrary tenant's bucket.
+    pub(crate) fn settings_location(&self) -> StorageResult<TenantLocation> {
+        self.shared_location().ok_or_else(|| {
+            StorageError::Backend(BackendError::Internal {
+                backend_name: "s3".to_string(),
+                message: "per-user settings require a tenant-independent bucket: set \
+                          `default_system_bucket` in bucket-per-tenant mode"
+                    .to_string(),
+                source: None,
+            })
+        })
+    }
+
     /// Maps a low-level `S3ClientError` to the shared `StorageError` taxonomy.
     ///
     /// This is the error boundary between the S3 SDK layer and the storage
@@ -212,6 +322,15 @@ impl S3Backend {
                 backend_name: "s3".to_string(),
                 message: "resource not found in S3".to_string(),
             }),
+            // The bucket is missing or invisible: the store is misconfigured. This
+            // must always be an error — never an empty read — so a typo'd or
+            // deleted bucket can't masquerade as a store with no data in it.
+            S3ClientError::BucketNotFound(message) => {
+                StorageError::Backend(BackendError::Unavailable {
+                    backend_name: "s3".to_string(),
+                    message: format!("S3 bucket not found or not accessible: {message}"),
+                })
+            }
             S3ClientError::PreconditionFailed => StorageError::Backend(BackendError::QueryError {
                 message: "S3 precondition failed".to_string(),
             }),
@@ -253,11 +372,11 @@ impl Backend for S3Backend {
     }
 
     fn supports(&self, capability: BackendCapability) -> bool {
-        Self::declared_capabilities().contains(&capability)
+        self.capabilities().contains(&capability)
     }
 
     fn capabilities(&self) -> Vec<BackendCapability> {
-        Self::declared_capabilities()
+        Self::declared_capabilities_for(&self.config.tenancy_mode)
     }
 
     async fn acquire(&self) -> Result<Self::Connection, BackendError> {

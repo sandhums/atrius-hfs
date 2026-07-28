@@ -18,7 +18,9 @@
 //! | ValidationError | 400 | invalid |
 //! | UnsupportedResourceType | 400 | not-supported |
 //! | AccessDenied | 403 | forbidden |
-//! | BackendError | 500 | exception |
+//! | BackendError::{Unavailable, ConnectionFailed, PoolExhausted} | 503 | transient |
+//! | BackendError::UnsupportedCapability | 501 | not-supported |
+//! | BackendError::{Migration, Internal, Query, Serialization} | 500 | exception |
 //!
 //! [`RestError::NotSupported`] (400 + `not-supported`) is reserved for
 //! spec-defined parameters/features that the server explicitly refuses;
@@ -35,6 +37,13 @@ use helios_persistence::error::{
     TransactionError, ValidationError,
 };
 use std::fmt;
+
+/// `Retry-After` value (delta-seconds, per RFC 9110 §10.2.3) sent with every
+/// `503 Service Unavailable` response and with the `/_readiness` 503, so clients,
+/// load balancers, and service meshes back off and retry rather than hammer a
+/// struggling backend. Kept short because a down/saturated backend typically
+/// recovers within seconds; shared with the readiness handler for consistency.
+pub(crate) const SERVICE_UNAVAILABLE_RETRY_AFTER_SECS: &str = "5";
 
 /// The primary error type for REST API operations.
 ///
@@ -116,6 +125,13 @@ pub enum RestError {
         message: String,
     },
 
+    /// Resource validation failed in enforce mode (HTTP 422). Carries the
+    /// full multi-issue OperationOutcome from the validator.
+    ValidationFailed {
+        /// The OperationOutcome to return as the response body.
+        outcome: serde_json::Value,
+    },
+
     /// Unauthorized — missing or invalid authentication (HTTP 401).
     Unauthorized {
         /// Error message.
@@ -142,8 +158,20 @@ pub enum RestError {
         message: String,
     },
 
-    /// Too many requests — e.g. a concurrent submission is in progress (HTTP 429).
+    /// Too many requests — e.g. a concurrent submission is in progress, or a
+    /// rate limiter rejected the call (HTTP 429).
     TooManyRequests {
+        /// Error message.
+        message: String,
+        /// Delta-seconds to advertise in `Retry-After`. `None` when the server
+        /// has no honest estimate — better silent than a made-up number the
+        /// client would sleep on.
+        retry_after_secs: Option<u64>,
+    },
+
+    /// Backend temporarily over capacity — e.g. the database connection pool is
+    /// exhausted (HTTP 503). Retryable: the server is healthy, just saturated.
+    ServiceUnavailable {
         /// Error message.
         message: String,
     },
@@ -231,6 +259,9 @@ impl fmt::Display for RestError {
             RestError::UnprocessableEntity { message } => {
                 write!(f, "Unprocessable entity: {}", message)
             }
+            RestError::ValidationFailed { .. } => {
+                write!(f, "Resource validation failed")
+            }
             RestError::Unauthorized { message } => {
                 write!(f, "Unauthorized: {}", message)
             }
@@ -246,8 +277,11 @@ impl fmt::Display for RestError {
             RestError::Conflict { message } => {
                 write!(f, "Conflict: {}", message)
             }
-            RestError::TooManyRequests { message } => {
+            RestError::TooManyRequests { message, .. } => {
                 write!(f, "Too many requests: {}", message)
+            }
+            RestError::ServiceUnavailable { message } => {
+                write!(f, "Service unavailable: {}", message)
             }
             RestError::NotImplemented { feature } => {
                 write!(f, "Not implemented: {}", feature)
@@ -335,6 +369,11 @@ impl RestError {
                 "processing",
                 message.clone(),
             ),
+            RestError::ValidationFailed { .. } => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "processing",
+                "Resource validation failed".to_string(),
+            ),
             RestError::Unauthorized { message } => {
                 (StatusCode::UNAUTHORIZED, "login", message.clone())
             }
@@ -350,9 +389,14 @@ impl RestError {
                 format!("Method {} not allowed on {}", method, resource_type),
             ),
             RestError::Conflict { message } => (StatusCode::CONFLICT, "conflict", message.clone()),
-            RestError::TooManyRequests { message } => {
+            RestError::TooManyRequests { message, .. } => {
                 (StatusCode::TOO_MANY_REQUESTS, "throttled", message.clone())
             }
+            RestError::ServiceUnavailable { message } => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "transient",
+                message.clone(),
+            ),
             RestError::NotImplemented { feature } => (
                 StatusCode::NOT_IMPLEMENTED,
                 "not-supported",
@@ -386,6 +430,12 @@ impl RestError {
 
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
+        // ValidationFailed carries a fully-formed OperationOutcome (potentially
+        // many issues from the write-path validator); surface it verbatim
+        // rather than collapsing it to the generic single-issue shape.
+        if let RestError::ValidationFailed { outcome } = &self {
+            return (StatusCode::UNPROCESSABLE_ENTITY, Json(outcome.clone())).into_response();
+        }
         let (status, code, details) = self.client_response();
         let operation_outcome = create_operation_outcome("error", code, &details);
 
@@ -401,6 +451,38 @@ impl IntoResponse for RestError {
                 Json(operation_outcome),
             )
                 .into_response();
+        }
+
+        // Service-unavailable responses carry a Retry-After hint (delta-seconds)
+        // so clients and load balancers back off rather than hammer a struggling
+        // backend (issue #286).
+        if matches!(self, RestError::ServiceUnavailable { .. }) {
+            return (
+                status,
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    axum::http::HeaderValue::from_static(SERVICE_UNAVAILABLE_RETRY_AFTER_SECS),
+                )],
+                Json(operation_outcome),
+            )
+                .into_response();
+        }
+
+        // A throttled response carries the back-off the limiter computed, so the
+        // client knows when it may poll again instead of guessing (issue #399).
+        if let RestError::TooManyRequests {
+            retry_after_secs: Some(secs),
+            ..
+        } = &self
+        {
+            if let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string()) {
+                return (
+                    status,
+                    [(axum::http::header::RETRY_AFTER, value)],
+                    Json(operation_outcome),
+                )
+                    .into_response();
+            }
         }
 
         (status, Json(operation_outcome)).into_response()
@@ -675,11 +757,34 @@ impl From<TransactionError> for RestError {
 
 impl From<BackendError> for RestError {
     fn from(err: BackendError) -> Self {
+        // NOTE: this match is deliberately exhaustive — there is no `_` arm. A
+        // newly added `BackendError` variant must be classified here on purpose;
+        // otherwise it would silently collapse to a 500 and mask a possibly
+        // transient, retryable condition (issue #286).
         match err {
             BackendError::UnsupportedCapability { capability, .. } => RestError::NotImplemented {
                 feature: capability,
             },
-            _ => RestError::InternalError {
+
+            // Transient, retryable conditions: the backend is down or saturated,
+            // not the request's fault. Surfaced as 503 (with Retry-After) so
+            // clients, load balancers, and service meshes retry/route instead of
+            // treating it as a server bug.
+            BackendError::Unavailable { message, .. }
+            | BackendError::ConnectionFailed { message, .. } => {
+                RestError::ServiceUnavailable { message }
+            }
+            BackendError::PoolExhausted { backend_name } => RestError::ServiceUnavailable {
+                message: format!("connection pool exhausted for {backend_name}"),
+            },
+
+            // Genuine server-side faults: retrying will not help, so keep them
+            // 500. Their raw detail is sanitized and logged by
+            // `RestError::client_response`, never leaked to the client.
+            BackendError::MigrationError { .. }
+            | BackendError::Internal { .. }
+            | BackendError::QueryError { .. }
+            | BackendError::SerializationError { .. } => RestError::InternalError {
                 message: err.to_string(),
             },
         }
@@ -866,6 +971,7 @@ mod tests {
     fn test_too_many_requests_display() {
         let err = RestError::TooManyRequests {
             message: "submission in progress".to_string(),
+            retry_after_secs: None,
         };
         assert_eq!(err.to_string(), "Too many requests: submission in progress");
     }
@@ -885,9 +991,34 @@ mod tests {
     fn test_too_many_requests_into_response_status() {
         let resp = RestError::TooManyRequests {
             message: "x".to_string(),
+            retry_after_secs: None,
         }
         .into_response();
         assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert!(
+            resp.headers()
+                .get(axum::http::header::RETRY_AFTER)
+                .is_none(),
+            "no Retry-After when the server has no estimate to give"
+        );
+    }
+
+    #[test]
+    fn test_too_many_requests_carries_retry_after_when_known() {
+        // Spec (build.fhir.org submit.html): a rate-limited status poll SHOULD
+        // tell the client when to come back (issue #399).
+        let resp = RestError::TooManyRequests {
+            message: "slow down".to_string(),
+            retry_after_secs: Some(42),
+        }
+        .into_response();
+        assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(
+            resp.headers()
+                .get(axum::http::header::RETRY_AFTER)
+                .expect("throttled response must carry Retry-After"),
+            "42"
+        );
     }
 
     // ── StorageError::BulkSubmit → RestError mapping ──────────────
@@ -976,5 +1107,235 @@ mod tests {
             message: "db down".to_string(),
         });
         assert_eq!(status_of(err), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    // ── ServiceUnavailable (503) — over-capacity / pool exhaustion ─
+
+    #[test]
+    fn test_service_unavailable_display() {
+        let err = RestError::ServiceUnavailable {
+            message: "connection pool exhausted".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "Service unavailable: connection pool exhausted"
+        );
+    }
+
+    #[test]
+    fn test_service_unavailable_client_response_preserves_message() {
+        // 503 with a `transient` issue code. Unlike InternalError, the message is
+        // preserved: it carries no backend/SQL detail, and the client needs it to
+        // understand the failure is retryable.
+        let err = RestError::ServiceUnavailable {
+            message: "connection pool exhausted".to_string(),
+        };
+        let (status, code, message) = err.client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+        assert_eq!(message, "connection pool exhausted");
+    }
+
+    #[tokio::test]
+    async fn test_service_unavailable_into_response_body() {
+        let err = RestError::ServiceUnavailable {
+            message: "connection pool exhausted".to_string(),
+        };
+        let response = err.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body = String::from_utf8(bytes.to_vec()).unwrap();
+        let outcome: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(outcome["resourceType"], "OperationOutcome");
+        assert_eq!(outcome["issue"][0]["severity"], "error");
+        assert_eq!(outcome["issue"][0]["code"], "transient");
+        assert_eq!(
+            outcome["issue"][0]["details"]["text"],
+            "connection pool exhausted"
+        );
+    }
+
+    // ── From<BackendError> → RestError (all three arms) ────────────
+
+    #[test]
+    fn test_backend_unavailable_maps_to_503_transient() {
+        // A saturated-but-healthy backend must surface as a retryable 503, not a
+        // 500 that reads as a server fault (issue #224).
+        let err = StorageError::Backend(BackendError::Unavailable {
+            backend_name: "postgres".to_string(),
+            message: "connection pool exhausted".to_string(),
+        });
+        let (status, code, message) = RestError::from(err).client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+        assert_eq!(message, "connection pool exhausted");
+    }
+
+    #[test]
+    fn test_backend_unsupported_capability_maps_to_501() {
+        let err = StorageError::Backend(BackendError::UnsupportedCapability {
+            backend_name: "postgres".to_string(),
+            capability: "GraphQL".to_string(),
+        });
+        assert_eq!(status_of(err), StatusCode::NOT_IMPLEMENTED);
+    }
+
+    #[test]
+    fn test_backend_other_error_maps_to_500_and_is_sanitized() {
+        // Every other backend error collapses to a generic 500 whose body must
+        // not leak the raw driver/SQL detail carried in the message.
+        let err = StorageError::Backend(BackendError::QueryError {
+            message: "relation \"resources\" does not exist".to_string(),
+        });
+        let (status, code, message) = RestError::from(err).client_response();
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(code, "exception");
+        assert!(!message.contains("resources"), "leaked detail: {message}");
+    }
+
+    #[test]
+    fn test_backend_connection_failed_maps_to_503_transient() {
+        // A failed connection to the backend is transient infrastructure, not an
+        // application fault — the client/LB should retry (issue #286). Before the
+        // fix this fell through the `_` arm to a 500.
+        let err = BackendError::ConnectionFailed {
+            backend_name: "postgres".to_string(),
+            message: "connection refused".to_string(),
+        };
+        let (status, code, _message) = RestError::from(err).client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+    }
+
+    #[test]
+    fn test_backend_pool_exhausted_maps_to_503_transient() {
+        let err = BackendError::PoolExhausted {
+            backend_name: "postgres".to_string(),
+        };
+        let (status, code, _message) = RestError::from(err).client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+    }
+
+    #[test]
+    fn test_backend_faults_stay_500_and_are_sanitized() {
+        // Genuine server faults must NOT become 503 — a retry won't help, and
+        // 503'ing them would mask real defects. Each also sanitizes its detail.
+        let faults = vec![
+            BackendError::MigrationError {
+                message: "column \"foo\" already exists".to_string(),
+            },
+            BackendError::Internal {
+                backend_name: "sqlite".to_string(),
+                message: "poisoned mutex".to_string(),
+                source: None,
+            },
+            BackendError::QueryError {
+                message: "relation \"resources\" does not exist".to_string(),
+            },
+            BackendError::SerializationError {
+                message: "invalid utf-8 at byte 3".to_string(),
+            },
+        ];
+        for err in faults {
+            let (status, code, message) = RestError::from(err).client_response();
+            assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+            assert_eq!(code, "exception");
+            assert_eq!(
+                message,
+                "An internal error occurred while processing the request."
+            );
+        }
+    }
+
+    #[test]
+    fn test_every_backend_error_variant_has_a_deliberate_status() {
+        // Human-readable spec of the exhaustive `From<BackendError>` mapping.
+        // Paired with the removal of the `_` catch-all, adding a 9th variant is a
+        // compile error in the mapping until it is classified there too, and this
+        // table must be updated to match (issue #286).
+        let cases: Vec<(BackendError, StatusCode)> = vec![
+            (
+                BackendError::Unavailable {
+                    backend_name: "b".to_string(),
+                    message: "down".to_string(),
+                },
+                StatusCode::SERVICE_UNAVAILABLE,
+            ),
+            (
+                BackendError::ConnectionFailed {
+                    backend_name: "b".to_string(),
+                    message: "refused".to_string(),
+                },
+                StatusCode::SERVICE_UNAVAILABLE,
+            ),
+            (
+                BackendError::PoolExhausted {
+                    backend_name: "b".to_string(),
+                },
+                StatusCode::SERVICE_UNAVAILABLE,
+            ),
+            (
+                BackendError::UnsupportedCapability {
+                    backend_name: "b".to_string(),
+                    capability: "GraphQL".to_string(),
+                },
+                StatusCode::NOT_IMPLEMENTED,
+            ),
+            (
+                BackendError::MigrationError {
+                    message: "m".to_string(),
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                BackendError::Internal {
+                    backend_name: "b".to_string(),
+                    message: "i".to_string(),
+                    source: None,
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                BackendError::QueryError {
+                    message: "q".to_string(),
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                BackendError::SerializationError {
+                    message: "s".to_string(),
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+        ];
+        for (err, expected) in cases {
+            let (status, _, _) = RestError::from(err).client_response();
+            assert_eq!(status, expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_service_unavailable_response_carries_retry_after() {
+        // The 503 must carry a Retry-After hint (delta-seconds) so clients and
+        // load balancers back off rather than hammer the backend (issue #286).
+        let response = RestError::ServiceUnavailable {
+            message: "backend down".to_string(),
+        }
+        .into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let retry_after = response
+            .headers()
+            .get(axum::http::header::RETRY_AFTER)
+            .expect("503 must carry Retry-After");
+        let secs: u64 = retry_after
+            .to_str()
+            .unwrap()
+            .parse()
+            .expect("Retry-After must be delta-seconds");
+        assert!(secs > 0, "Retry-After must be a positive delta-seconds");
     }
 }

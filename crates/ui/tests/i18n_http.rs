@@ -11,7 +11,21 @@ use http_body_util::BodyExt;
 use tower::ServiceExt;
 
 fn app() -> Router {
-    helios_ui::mount(Router::new(), "9.9.9")
+    helios_ui::mount_with_conformance_source(
+        Router::new(),
+        "9.9.9",
+        None,
+        helios_ui::NlSearch {
+            enabled: true,
+            configured: true,
+            model: "test-model".to_string(),
+        },
+        None,
+        None,
+        "default".to_string(),
+        std::sync::Arc::new(helios_ui::StaticConformanceSource::empty()),
+        helios_fhir::FhirVersion::R4,
+    )
 }
 
 async fn body_text(response: axum::response::Response) -> String {

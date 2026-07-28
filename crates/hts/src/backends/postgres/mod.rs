@@ -19,7 +19,7 @@ use tracing::info;
 use crate::error::HtsError;
 use crate::import::bundle_parser::{self, ParsedCodeSystem, ParsedConceptMap, ParsedValueSet};
 use crate::import::{BundleImportBackend, ImportStats};
-use crate::traits::TerminologyMetadata;
+use crate::traits::{TerminologyCaches, TerminologyMetadata};
 use crate::types::{ExpansionContains, LookupResponse, SubsumesResponse, TranslateResponse};
 use helios_persistence::tenant::TenantContext;
 
@@ -165,37 +165,6 @@ impl PostgresTerminologyBackend {
         })
     }
 
-    /// Drop every per-instance response cache. Invoked after a successful
-    /// `import_bundle` so stale `$lookup` / `resolve_code_system` results
-    /// don't shadow newly-imported codes. Mirrors SQLite's eviction at
-    /// backends/sqlite/mod.rs (`clear_response_caches` flow).
-    pub(super) fn clear_response_caches(&self) {
-        if let Ok(mut g) = self.lookup_response_cache.write() {
-            g.clear();
-        }
-        if let Ok(mut g) = self.cs_resolved_meta_cache.write() {
-            g.clear();
-        }
-        if let Ok(mut g) = self.inline_compose_cache.write() {
-            g.clear();
-        }
-        if let Ok(mut g) = self.subsumes_response_cache.write() {
-            g.clear();
-        }
-        if let Ok(mut g) = self.translate_response_cache.write() {
-            g.clear();
-        }
-        // Iter 7k+: process-global closure COUNT(*) memo (see
-        // backends/postgres/value_set.rs::CLOSURE_COUNT_CACHE).
-        if let Ok(mut g) = self::value_set::closure_count_cache().write() {
-            g.clear();
-        }
-        // Iter 7n: process-global `?fhir_vs=isa/X` per-root prefix cache.
-        if let Ok(mut g) = self::value_set::root_prefix_cache().write() {
-            g.clear();
-        }
-    }
-
     /// Borrow the underlying `deadpool-postgres` connection pool.
     pub fn pool(&self) -> &Pool {
         &self.pool
@@ -219,6 +188,59 @@ impl PostgresTerminologyBackend {
                 HtsError::StorageError(format!("concept_closure migration: {}", error_chain(&e)))
             })?;
         Ok(())
+    }
+}
+
+impl TerminologyCaches for PostgresTerminologyBackend {
+    /// Drop every per-instance response cache plus the two process-global
+    /// closure memos, so stale `$lookup` / `$translate` / `resolve_code_system`
+    /// answers cannot shadow content that has just changed.
+    ///
+    /// Invoked after a successful `import_bundle` / `import_parsed`, from
+    /// `delete_normalized`, and — since issue #304 — from the generic CRUD
+    /// write seam. The CRUD create/update path reaches this twice (once through
+    /// the importer, once through the seam); the method is idempotent, and a
+    /// second clear of already-empty maps is not worth branching to avoid.
+    ///
+    /// # Totality is enforced by the compiler
+    ///
+    /// The destructuring below names every field with no `..` rest pattern, so
+    /// adding a sixth cache to [`PostgresTerminologyBackend`] fails to compile
+    /// (E0027) until the author names it here. This mirrors the SQLite backend,
+    /// where the same shape closes a real six-of-sixteen eviction gap.
+    fn invalidate_caches(&self) {
+        // Exhaustive by construction: no `..`. See the doc comment above.
+        let Self {
+            // Not a cache: the connection pool itself.
+            pool: _,
+            inline_compose_cache,
+            lookup_response_cache,
+            cs_resolved_meta_cache,
+            subsumes_response_cache,
+            translate_response_cache,
+        } = self;
+
+        // Clear one `RwLock`-guarded map, ignoring a poisoned lock: a poisoned
+        // cache is already unusable, and failing a write because some unrelated
+        // reader panicked would be worse than leaving it be.
+        macro_rules! clear {
+            ($($cache:expr),* $(,)?) => {
+                $(if let Ok(mut guard) = $cache.write() { guard.clear(); })*
+            };
+        }
+
+        clear!(
+            inline_compose_cache,
+            lookup_response_cache,
+            cs_resolved_meta_cache,
+            subsumes_response_cache,
+            translate_response_cache,
+            // Iter 7k+: process-global closure COUNT(*) memo (see
+            // backends/postgres/value_set.rs::CLOSURE_COUNT_CACHE).
+            self::value_set::closure_count_cache(),
+            // Iter 7n: process-global `?fhir_vs=isa/X` per-root prefix cache.
+            self::value_set::root_prefix_cache(),
+        );
     }
 }
 
@@ -308,16 +330,13 @@ impl TerminologyMetadata for PostgresTerminologyBackend {
                                 return Some(row.get::<_, String>(0));
                             }
                         }
-                        let rows = client
-                            .query(
-                                "SELECT url FROM code_systems \
-                                 WHERE (resource_json->>'id') = $1 \
-                                 ORDER BY COALESCE(version, '') DESC \
-                                 LIMIT 1",
-                                &[&id],
-                            )
-                            .await
-                            .ok()?;
+                        let sql = format!(
+                            "SELECT url FROM code_systems \
+                             WHERE (resource_json->>'id') = $1 \
+                             ORDER BY {} LIMIT 1",
+                            crate::backends::cs_precedence_order_by("code_systems")
+                        );
+                        let rows = client.query(&sql, &[&id]).await.ok()?;
                         rows.into_iter().next().map(|r| r.get::<_, String>(0))
                     }
                     "ValueSet" => {
@@ -473,7 +492,7 @@ impl BundleImportBackend for PostgresTerminologyBackend {
 
         // Invalidate per-instance response caches — they may now shadow
         // newly-imported codes.
-        self.clear_response_caches();
+        self.invalidate_caches();
 
         Ok(stats)
     }
@@ -559,7 +578,7 @@ impl BundleImportBackend for PostgresTerminologyBackend {
 
         // Invalidate per-instance response caches — they may reference the
         // now-deleted resource.
-        self.clear_response_caches();
+        self.invalidate_caches();
 
         Ok(())
     }
@@ -629,8 +648,9 @@ async fn write_code_system(
     client
         .execute(
             "INSERT INTO code_systems
-             (id, url, version, name, title, status, content, resource_json, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+             (id, url, version, name, title, status, content, resource_json, created_at, updated_at,
+              authority_rank)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, $10)
              ON CONFLICT DO NOTHING",
             &[
                 &storage_id,
@@ -642,22 +662,32 @@ async fn write_code_system(
                 &cs.content,
                 &resource_json,
                 &now,
+                &cs.authority_rank,
             ],
         )
         .await
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
+    // authority_rank keeps the strongest claim ever asserted for this row; the
+    // COALESCE sentinel (9 — above any real rank) means a row that predates the
+    // column ("never claimed") is overwritten by the first source to claim it.
+    // See the SQLite twin in `import/fhir_bundle.rs::write_code_system`.
+    let cs_update = format!(
+        "UPDATE code_systems SET
+           name           = $1,
+           title          = $2,
+           status         = $3,
+           content        = $4,
+           resource_json  = $5,
+           updated_at     = $6,
+           authority_rank = LEAST(COALESCE(authority_rank, {unclaimed}), $9)
+         WHERE url = $7 AND COALESCE(version, '') = COALESCE($8, '')
+         RETURNING id",
+        unclaimed = bundle_parser::AUTHORITY_UNCLAIMED
+    );
     let cs_rows = client
         .query(
-            "UPDATE code_systems SET
-               name          = $1,
-               title         = $2,
-               status        = $3,
-               content       = $4,
-               resource_json = $5,
-               updated_at    = $6
-             WHERE url = $7 AND COALESCE(version, '') = COALESCE($8, '')
-             RETURNING id",
+            &cs_update,
             &[
                 &cs.name,
                 &cs.title,
@@ -667,6 +697,7 @@ async fn write_code_system(
                 &now,
                 &cs.url,
                 &cs.version,
+                &cs.authority_rank,
             ],
         )
         .await
@@ -880,8 +911,9 @@ async fn write_value_set(
     client
         .execute(
             "INSERT INTO value_sets
-             (id, url, version, name, title, status, compose_json, resource_json, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+             (id, url, version, name, title, status, compose_json, resource_json, created_at, updated_at,
+              authority_rank)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, $10)
              ON CONFLICT DO NOTHING",
             &[
                 &storage_id,
@@ -893,21 +925,28 @@ async fn write_value_set(
                 &vs.compose_json,
                 &resource_json,
                 &now,
+                &vs.authority_rank,
             ],
         )
         .await
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
+    // See `write_code_system` for the LEAST/COALESCE-sentinel rationale.
+    let vs_update = format!(
+        "UPDATE value_sets SET
+           name           = $1,
+           title          = $2,
+           status         = $3,
+           compose_json   = $4,
+           resource_json  = $5,
+           updated_at     = $6,
+           authority_rank = LEAST(COALESCE(authority_rank, {unclaimed}), $9)
+         WHERE url = $7 AND COALESCE(version, '') = COALESCE($8, '')",
+        unclaimed = bundle_parser::AUTHORITY_UNCLAIMED
+    );
     client
         .execute(
-            "UPDATE value_sets SET
-               name          = $1,
-               title         = $2,
-               status        = $3,
-               compose_json  = $4,
-               resource_json = $5,
-               updated_at    = $6
-             WHERE url = $7 AND COALESCE(version, '') = COALESCE($8, '')",
+            &vs_update,
             &[
                 &vs.name,
                 &vs.title,
@@ -917,6 +956,7 @@ async fn write_value_set(
                 &now,
                 &vs.url,
                 &vs.version,
+                &vs.authority_rank,
             ],
         )
         .await

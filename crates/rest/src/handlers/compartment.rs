@@ -72,7 +72,7 @@ where
     }
 
     // Get the reference parameters for this compartment/target combination
-    let fhir_version = version.storage_version();
+    let fhir_version = version.storage_version_or(state.config().default_fhir_version);
     let ref_params =
         helios_fhir::get_compartment_params(fhir_version, &compartment_type, &target_type);
 
@@ -94,7 +94,8 @@ where
     // Convert REST params to persistence SearchQuery. Scope the registry read
     // guard tightly so it doesn't span any await.
     let mut query = {
-        let registry = state.storage().search_param_registry().read();
+        let reg = state.storage().search_param_registry(tenant.context());
+        let registry = reg.read();
         build_search_query(&target_type, &search_params, &registry)?
     };
 
@@ -179,7 +180,7 @@ async fn compartment_search_all<S>(
 where
     S: ResourceStorage + SearchProvider + Send + Sync,
 {
-    let fhir_version = version.storage_version();
+    let fhir_version = version.storage_version_or(state.config().default_fhir_version);
     let compartment_ref = format!("{}/{}", compartment_type, compartment_id);
     let search_params = SearchParams::from_pairs(pairs.clone());
 
@@ -193,7 +194,8 @@ where
     // restricted to the compartment. Building happens under the registry read
     // lock (no await); the lock is released before any search executes.
     let queries: Vec<helios_persistence::types::SearchQuery> = {
-        let registry = state.storage().search_param_registry().read();
+        let reg = state.storage().search_param_registry(tenant.context());
+        let registry = reg.read();
         crate::fhir_types::get_resource_type_names_for_version(fhir_version)
             .iter()
             .filter_map(|target_type| {

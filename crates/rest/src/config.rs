@@ -18,11 +18,29 @@
 //! | `HFS_CORS_HEADERS` | Content-Type,Authorization,Accept,If-Match,If-None-Match,Prefer,Content-Encoding | Allowed headers |
 //! | `HFS_DEFAULT_TENANT` | default | Default tenant ID |
 //! | `HFS_BASE_URL` | http://localhost:8080 | Server base URL |
+//! | `HFS_NL_SEARCH_ENABLED` | true | Natural-language search master switch: `false` removes the feature entirely (no endpoint, no UI affordance) |
+//! | `HFS_NL_SEARCH_API_KEY` | (unset) | LLM provider API key. Present → NL search functional; absent (with ENABLED) → UI shows the setup/teaser state |
+//! | `HFS_NL_SEARCH_MODEL` | claude-opus-4-8 | LLM model id for query translation |
+//! | `HFS_NL_SEARCH_BASE_URL` | https://api.anthropic.com | LLM endpoint base URL (self-hosted / proxied deployments) |
+//! | `HFS_NL_SEARCH_RATE_LIMIT` | 10 | NL search requests allowed per window, per user/tenant (or per IP) |
+//! | `HFS_NL_SEARCH_RATE_WINDOW_SECS` | 60 | Rate-limit window size (seconds) |
+//! | `HFS_NL_SEARCH_DAILY_LIMIT` | 200 | NL search requests per key per UTC day (slow-drip backstop) |
+//! | `HFS_NL_SEARCH_MAX_CHARS` | 500 | Maximum accepted input length (characters) |
 //! | `HFS_DEFAULT_FHIR_VERSION` | R4 | Default FHIR version (R4, R4B, R5, R6) |
 //! | `HFS_TENANT_ROUTING_MODE` | header_only | Tenant routing mode (header_only, url_path, both) |
 //! | `HFS_TENANT_STRICT_VALIDATION` | false | Error if URL and header tenant disagree |
+//! | `HFS_TENANT_REQUIRE_PROVISIONED` | false | Reject tenants not provisioned via the admin API (registry backends only) |
 //! | `HFS_JWT_TENANT_CLAIM` | tenant_id | JWT claim name for tenant (future use) |
 //! | `HFS_TERMINOLOGY_SERVER` | (none) | HTS base URL for `:in`/`:not-in` search and FHIRPath terminology functions |
+//! | `HFS_VALIDATION_MODE` | off | Write-path validation: off, log, or enforce (422 on invalid) |
+//! | `HFS_VALIDATION_META_PROFILES` | true | Validate against `meta.profile` claims |
+//! | `HFS_VALIDATION_UNKNOWN_PROFILE` | warn | Unresolvable profiles: warn, error, or ignore |
+//! | `HFS_VALIDATION_CONSTRAINTS` | true | Evaluate FHIRPath invariants |
+//! | `HFS_VALIDATION_SUPPRESS_CONSTRAINTS` | dom-6 | Comma-separated constraint ids to skip |
+//! | `HFS_VALIDATION_TERMINOLOGY` | embedded | Required-binding checks: embedded (offline FHIR core value sets), remote (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or off |
+//! | `HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS` | 3000 | Per-check terminology timeout |
+//! | `HFS_VALIDATION_TERMINOLOGY_FAIL` | open | Terminology outage posture: open (warn) or closed (error) |
+//! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
 //!
 //! # Example
 //!
@@ -202,6 +220,15 @@ pub struct MultitenancyConfig {
     pub strict_validation: bool,
     /// JWT claim name containing tenant ID (for future JWT-based tenant resolution).
     pub jwt_tenant_claim: String,
+    /// If true, only tenants provisioned through the admin API are valid: a
+    /// request resolving to a tenant absent from the registry is rejected rather
+    /// than implicitly created. The default (`"default"`) tenant is
+    /// auto-provisioned at startup, so single-tenant/unauthenticated deployments
+    /// keep working. Only enforced on backends that maintain a tenant registry.
+    ///
+    /// Defaults to `false` for backward compatibility (ad-hoc tenant ids keep
+    /// working); set `HFS_TENANT_REQUIRE_PROVISIONED=true` for the strict model.
+    pub require_provisioned_tenant: bool,
 }
 
 impl Default for MultitenancyConfig {
@@ -210,6 +237,7 @@ impl Default for MultitenancyConfig {
             routing_mode: TenantRoutingMode::HeaderOnly,
             strict_validation: false,
             jwt_tenant_claim: "tenant_id".to_string(),
+            require_provisioned_tenant: false,
         }
     }
 }
@@ -229,10 +257,15 @@ impl MultitenancyConfig {
         let jwt_tenant_claim =
             std::env::var("HFS_JWT_TENANT_CLAIM").unwrap_or_else(|_| "tenant_id".to_string());
 
+        let require_provisioned_tenant = std::env::var("HFS_TENANT_REQUIRE_PROVISIONED")
+            .map(|s| s.to_lowercase() == "true" || s == "1")
+            .unwrap_or(false);
+
         Self {
             routing_mode,
             strict_validation,
             jwt_tenant_claim,
+            require_provisioned_tenant,
         }
     }
 }
@@ -426,12 +459,143 @@ impl BulkExportConfig {
     }
 }
 
+/// Resource validation configuration, loaded from `HFS_VALIDATION_*`
+/// environment variables.
+///
+/// The `$validate` operation is always available; these settings gate the
+/// **write-path** behavior (create/update/batch) and tune the shared
+/// validation service.
+#[derive(Debug, Clone)]
+pub struct ValidationConfig {
+    /// Write-path behavior: `off` (skip), `log` (validate, log issues,
+    /// proceed), or `enforce` (reject invalid resources with `422`).
+    pub mode: String,
+    /// Validate against the profiles a resource claims in `meta.profile`.
+    pub meta_profiles: bool,
+    /// Unresolvable profile references: `warn`, `error`, or `ignore`.
+    pub unknown_profile: String,
+    /// Evaluate FHIRPath invariant constraints.
+    pub constraints: bool,
+    /// Constraint ids never evaluated (comma-separated in the env var).
+    pub suppress_constraints: Vec<String>,
+    /// Terminology binding checking: `embedded` (default — offline checks
+    /// against the FHIR core value sets embedded in helios-fhir-validator),
+    /// `remote` (`HFS_TERMINOLOGY_SERVER`'s `ValueSet/$validate-code`), or `off`.
+    pub terminology: String,
+    /// Per-check terminology timeout, in milliseconds.
+    pub terminology_timeout_ms: u64,
+    /// Terminology outages: `open` (warn and proceed) or `closed`
+    /// (treat as validation errors).
+    pub terminology_fail: String,
+    /// Maintain per-tenant profile registries from stored
+    /// StructureDefinitions (updated on StructureDefinition writes).
+    pub stored_profiles: bool,
+}
+
+impl Default for ValidationConfig {
+    fn default() -> Self {
+        Self {
+            mode: "off".to_string(),
+            meta_profiles: true,
+            unknown_profile: "warn".to_string(),
+            constraints: true,
+            suppress_constraints: vec!["dom-6".to_string()],
+            terminology: "embedded".to_string(),
+            terminology_timeout_ms: 3000,
+            terminology_fail: "open".to_string(),
+            stored_profiles: true,
+        }
+    }
+}
+
+impl ValidationConfig {
+    /// Loads validation configuration from `HFS_VALIDATION_*` env vars.
+    pub fn from_env() -> Self {
+        fn env_bool(key: &str, default: bool) -> bool {
+            std::env::var(key)
+                .map(|s| {
+                    let s = s.to_lowercase();
+                    s == "true" || s == "1"
+                })
+                .unwrap_or(default)
+        }
+        fn env_u64(key: &str, default: u64) -> u64 {
+            std::env::var(key)
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(default)
+        }
+        let d = Self::default();
+        Self {
+            mode: std::env::var("HFS_VALIDATION_MODE").unwrap_or(d.mode),
+            meta_profiles: env_bool("HFS_VALIDATION_META_PROFILES", d.meta_profiles),
+            unknown_profile: std::env::var("HFS_VALIDATION_UNKNOWN_PROFILE")
+                .unwrap_or(d.unknown_profile),
+            constraints: env_bool("HFS_VALIDATION_CONSTRAINTS", d.constraints),
+            suppress_constraints: std::env::var("HFS_VALIDATION_SUPPRESS_CONSTRAINTS")
+                .map(|s| {
+                    s.split(',')
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or(d.suppress_constraints),
+            terminology: std::env::var("HFS_VALIDATION_TERMINOLOGY").unwrap_or(d.terminology),
+            terminology_timeout_ms: env_u64(
+                "HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS",
+                d.terminology_timeout_ms,
+            ),
+            terminology_fail: std::env::var("HFS_VALIDATION_TERMINOLOGY_FAIL")
+                .unwrap_or(d.terminology_fail),
+            stored_profiles: env_bool("HFS_VALIDATION_STORED_PROFILES", d.stored_profiles),
+        }
+    }
+
+    /// Validates the validation configuration.
+    pub fn validate(&self) -> Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+        if !matches!(self.mode.as_str(), "off" | "log" | "enforce") {
+            errors.push(format!(
+                "HFS_VALIDATION_MODE '{}' invalid (expected off|log|enforce)",
+                self.mode
+            ));
+        }
+        if !matches!(self.unknown_profile.as_str(), "warn" | "error" | "ignore") {
+            errors.push(format!(
+                "HFS_VALIDATION_UNKNOWN_PROFILE '{}' invalid (expected warn|error|ignore)",
+                self.unknown_profile
+            ));
+        }
+        if !matches!(self.terminology.as_str(), "off" | "embedded" | "remote") {
+            errors.push(format!(
+                "HFS_VALIDATION_TERMINOLOGY '{}' invalid (expected off|embedded|remote)",
+                self.terminology
+            ));
+        }
+        if !matches!(self.terminology_fail.as_str(), "open" | "closed") {
+            errors.push(format!(
+                "HFS_VALIDATION_TERMINOLOGY_FAIL '{}' invalid (expected open|closed)",
+                self.terminology_fail
+            ));
+        }
+        if self.terminology_timeout_ms == 0 {
+            errors.push("HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS must be > 0".to_string());
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
 /// Bulk Data **Submit** (`$bulk-submit`) configuration, loaded from
 /// `HFS_BULK_SUBMIT_*` environment variables.
 ///
 /// HFS acts as the Data Consumer: it accepts submissions, fetches the referenced
 /// manifests/files, ingests them, and serves a status manifest whose
-/// `output`/`error`/`deleted` artifacts are written to the output store below.
+/// `output`/`outcome`/`deleted` artifacts are written to the output store below.
 #[derive(Debug, Clone)]
 pub struct BulkSubmitConfig {
     /// Master switch — when `false`, the `$bulk-submit` endpoints return `501`.
@@ -472,6 +636,18 @@ pub struct BulkSubmitConfig {
     pub signing_alg: String,
     /// Read scope requested for the outbound file-retrieval token.
     pub outbound_scope: String,
+    /// `Retry-After` (seconds) advertised on an in-progress status poll.
+    pub retry_after_secs: u64,
+    /// Maximum `output` + `outcome` + `deleted` entries per status-manifest page.
+    ///
+    /// Larger result sets are split across pages chained by the manifest's
+    /// `link[]` `next` relation. `0` disables pagination (single manifest).
+    pub manifest_page_size: u32,
+    /// Status polls allowed per client, per submission, per rate window.
+    /// `0` disables poll rate limiting.
+    pub poll_rate_limit: u32,
+    /// Sliding window for [`Self::poll_rate_limit`], in seconds.
+    pub poll_rate_window_secs: u64,
 }
 
 impl Default for BulkSubmitConfig {
@@ -496,6 +672,13 @@ impl Default for BulkSubmitConfig {
             private_key: None,
             signing_alg: "ES384".to_string(),
             outbound_scope: "system/*.rs".to_string(),
+            retry_after_secs: 120,
+            manifest_page_size: 1000,
+            // A client honouring the advertised Retry-After polls twice an
+            // hour, so 10 polls a minute is far above any well-behaved cadence
+            // and only bites on a hammering loop.
+            poll_rate_limit: 10,
+            poll_rate_window_secs: 60,
         }
     }
 }
@@ -562,6 +745,13 @@ impl BulkSubmitConfig {
             signing_alg: std::env::var("HFS_BULK_SUBMIT_SIGNING_ALG").unwrap_or(d.signing_alg),
             outbound_scope: std::env::var("HFS_BULK_SUBMIT_OUTBOUND_SCOPE")
                 .unwrap_or(d.outbound_scope),
+            retry_after_secs: env_u64("HFS_BULK_SUBMIT_RETRY_AFTER", d.retry_after_secs),
+            manifest_page_size: env_u32("HFS_BULK_SUBMIT_MANIFEST_PAGE_SIZE", d.manifest_page_size),
+            poll_rate_limit: env_u32("HFS_BULK_SUBMIT_POLL_RATE_LIMIT", d.poll_rate_limit),
+            poll_rate_window_secs: env_u64(
+                "HFS_BULK_SUBMIT_POLL_RATE_WINDOW",
+                d.poll_rate_window_secs,
+            ),
         }
     }
 
@@ -618,6 +808,12 @@ impl BulkSubmitConfig {
         }
         if self.cleanup_interval_secs == 0 {
             errors.push("HFS_BULK_SUBMIT_CLEANUP_INTERVAL must be > 0".to_string());
+        }
+        if self.poll_rate_limit > 0 && self.poll_rate_window_secs == 0 {
+            errors.push(
+                "HFS_BULK_SUBMIT_POLL_RATE_WINDOW must be > 0 when POLL_RATE_LIMIT is set"
+                    .to_string(),
+            );
         }
         if errors.is_empty() {
             Ok(())
@@ -726,6 +922,14 @@ pub struct ServerConfig {
     #[arg(long, env = "HFS_DATA_DIR")]
     pub data_dir: Option<PathBuf>,
 
+    /// Seconds between refreshes of the in-memory SearchParameter registry
+    /// from storage (#235). In a cluster, a SearchParameter POSTed to one
+    /// node becomes visible to the others within this interval: deliberate
+    /// eventual consistency, trading propagation latency for not hitting the
+    /// database on every search. `0` disables the periodic refresh.
+    #[arg(long, env = "HFS_SEARCH_PARAM_CACHE_TTL", default_value = "3600")]
+    pub search_param_cache_ttl: u64,
+
     /// Default page size for search results.
     #[arg(long, env = "HFS_DEFAULT_PAGE_SIZE", default_value = "20")]
     pub default_page_size: usize,
@@ -766,6 +970,53 @@ pub struct ServerConfig {
     /// SOF runner (sqlite or postgres) — there is no in-process fallback.
     #[arg(long, env = "HFS_SOF_ENABLED", default_value = "true")]
     pub sof_enabled: bool,
+
+    /// Natural-language search master switch. When false the feature is
+    /// completely off: the endpoint 404s and the UI renders nothing.
+    #[arg(long, env = "HFS_NL_SEARCH_ENABLED", default_value = "true")]
+    pub nl_search_enabled: bool,
+
+    /// LLM provider API key for natural-language search. Present makes the
+    /// feature functional; absent (with the switch on) leaves the UI in an
+    /// advertise/setup state and the endpoint non-functional.
+    #[arg(long, env = "HFS_NL_SEARCH_API_KEY")]
+    pub nl_search_api_key: Option<String>,
+
+    /// LLM model id used for query translation.
+    #[arg(long, env = "HFS_NL_SEARCH_MODEL", default_value = "claude-opus-4-8")]
+    pub nl_search_model: String,
+
+    /// LLM endpoint base URL, for self-hosted or proxied deployments.
+    #[arg(
+        long,
+        env = "HFS_NL_SEARCH_BASE_URL",
+        default_value = "https://api.anthropic.com"
+    )]
+    pub nl_search_base_url: String,
+
+    /// Natural-language search requests allowed per window, per
+    /// authenticated user/tenant (per IP when unauthenticated).
+    #[arg(long, env = "HFS_NL_SEARCH_RATE_LIMIT", default_value = "10")]
+    pub nl_search_rate_limit: u32,
+
+    /// Rate-limit window size in seconds.
+    #[arg(long, env = "HFS_NL_SEARCH_RATE_WINDOW_SECS", default_value = "60")]
+    pub nl_search_rate_window_secs: u64,
+
+    /// Requests per key per UTC day — a backstop against a slow-drip abuser
+    /// who stays under the per-window limit.
+    #[arg(long, env = "HFS_NL_SEARCH_DAILY_LIMIT", default_value = "200")]
+    pub nl_search_daily_limit: u32,
+
+    /// Maximum accepted natural-language input length, in characters.
+    #[arg(long, env = "HFS_NL_SEARCH_MAX_CHARS", default_value = "500")]
+    pub nl_search_max_chars: usize,
+    /// Seed the spec conformance resources (SearchParameters and
+    /// CompartmentDefinitions) into primary storage for every provisioned tenant
+    /// — at startup and on tenant provisioning. Disable to leave storage
+    /// untouched (e.g. in tests that assert exact resource counts).
+    #[arg(long, env = "HFS_SEED_CONFORMANCE", default_value = "true")]
+    pub seed_conformance: bool,
 
     /// Export sink type: "fs" (default, local filesystem) or "s3" (AWS S3).
     #[arg(long, env = "HFS_EXPORT_SINK", default_value = "fs")]
@@ -861,6 +1112,10 @@ pub struct ServerConfig {
     /// Bulk data submit configuration (loaded from environment variables).
     #[arg(skip)]
     pub bulk_submit: BulkSubmitConfig,
+
+    /// Resource validation configuration (loaded from environment variables).
+    #[arg(skip)]
+    pub validation: ValidationConfig,
 }
 
 impl ServerConfig {
@@ -891,6 +1146,7 @@ impl Default for ServerConfig {
             require_if_match: false,
             default_fhir_version: FhirVersion::default_enabled(),
             data_dir: None,
+            search_param_cache_ttl: 3600,
             default_page_size: 20,
             max_page_size: 1000,
             storage_backend: "sqlite".to_string(),
@@ -899,6 +1155,15 @@ impl Default for ServerConfig {
             elasticsearch_username: None,
             elasticsearch_password: None,
             sof_enabled: true,
+            nl_search_enabled: true,
+            nl_search_api_key: None,
+            nl_search_model: "claude-opus-4-8".to_string(),
+            nl_search_base_url: "https://api.anthropic.com".to_string(),
+            nl_search_rate_limit: 10,
+            nl_search_rate_window_secs: 60,
+            nl_search_daily_limit: 200,
+            nl_search_max_chars: 500,
+            seed_conformance: true,
             export_sink: "fs".to_string(),
             export_dir: "./exports".to_string(),
             export_s3_bucket: None,
@@ -917,6 +1182,7 @@ impl Default for ServerConfig {
             multitenancy: MultitenancyConfig::default(),
             bulk_export: BulkExportConfig::default(),
             bulk_submit: BulkSubmitConfig::default(),
+            validation: ValidationConfig::default(),
         }
     }
 }
@@ -935,6 +1201,8 @@ impl ServerConfig {
         config.bulk_export = BulkExportConfig::from_env();
         // Load bulk submit config from environment
         config.bulk_submit = BulkSubmitConfig::from_env();
+        // Load validation config from environment
+        config.validation = ValidationConfig::from_env();
         config
     }
 
@@ -980,6 +1248,17 @@ impl ServerConfig {
             errors.append(&mut submit_errors);
         }
 
+        if let Err(mut validation_errors) = self.validation.validate() {
+            errors.append(&mut validation_errors);
+        }
+
+        // Remote terminology checking needs a terminology server to call.
+        if self.validation.terminology == "remote" && self.terminology_server.is_none() {
+            errors.push(
+                "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER".to_string(),
+            );
+        }
+
         if errors.is_empty() {
             Ok(())
         } else {
@@ -1011,6 +1290,7 @@ impl ServerConfig {
             require_if_match: false,
             default_fhir_version: FhirVersion::default_enabled(),
             data_dir: None,
+            search_param_cache_ttl: 3600,
             default_page_size: 10,
             max_page_size: 100,
             storage_backend: "sqlite".to_string(),
@@ -1019,6 +1299,15 @@ impl ServerConfig {
             elasticsearch_username: None,
             elasticsearch_password: None,
             sof_enabled: true,
+            nl_search_enabled: true,
+            nl_search_api_key: None,
+            nl_search_model: "claude-opus-4-8".to_string(),
+            nl_search_base_url: "https://api.anthropic.com".to_string(),
+            nl_search_rate_limit: 10,
+            nl_search_rate_window_secs: 60,
+            nl_search_daily_limit: 200,
+            nl_search_max_chars: 500,
+            seed_conformance: true,
             export_sink: "fs".to_string(),
             export_dir: "./exports".to_string(),
             export_s3_bucket: None,
@@ -1037,6 +1326,7 @@ impl ServerConfig {
             multitenancy: MultitenancyConfig::default(),
             bulk_export: BulkExportConfig::default(),
             bulk_submit: BulkSubmitConfig::default(),
+            validation: ValidationConfig::default(),
         }
     }
 
@@ -1487,6 +1777,7 @@ mod tests {
             routing_mode: TenantRoutingMode::UrlPath,
             strict_validation: true,
             jwt_tenant_claim: "custom_claim".to_string(),
+            ..Default::default()
         };
         assert_eq!(config.routing_mode, TenantRoutingMode::UrlPath);
         assert!(config.strict_validation);
