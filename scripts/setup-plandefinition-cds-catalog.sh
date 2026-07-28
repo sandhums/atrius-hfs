@@ -17,6 +17,7 @@
 #   ATRIUS_IG_ROOT=/path/to/AtriusIGDraft ./scripts/setup-plandefinition-cds-catalog.sh
 #   KR_BASE_URL=http://127.0.0.1:8079 MANIFEST_OUT=manifests/cds-services-kr.json \
 #     ./scripts/setup-plandefinition-cds-catalog.sh
+#   KR_MANIFEST_BINARY_ID="" ./scripts/setup-plandefinition-cds-catalog.sh   # skip Binary upload
 
 set -euo pipefail
 
@@ -25,6 +26,9 @@ export PYTHONPATH="${REPO_ROOT}/scripts${PYTHONPATH:+:${PYTHONPATH}}"
 KR_BASE="${KR_BASE_URL:-http://127.0.0.1:8079}"
 MANIFEST_OUT="${MANIFEST_OUT:-$REPO_ROOT/manifests/cds-services-kr.json}"
 IMPORT_ATRIUS="${IMPORT_ATRIUS:-0}"
+# Also PUT the catalog to KR as Binary/{id} (cds-server: CDS_KR_SERVICES_BINARY_ID).
+# Set to "" to write the local JSON only.
+KR_MANIFEST_BINARY_ID="${KR_MANIFEST_BINARY_ID-cds-services-catalog-v2}"
 
 cd "$REPO_ROOT"
 
@@ -96,10 +100,17 @@ fi
 
 echo "KR: $LIB_COUNT Library(ies), $PLAN_COUNT PlanDefinition(s)" >&2
 echo "Regenerating CDS manifest -> $MANIFEST_OUT ..." >&2
-python3 scripts/generate-cds-hooks-manifest.py \
-  --kr-base-url "$KR_BASE" \
-  --output "$MANIFEST_OUT"
+GEN_ARGS=(--kr-base-url "$KR_BASE" --output "$MANIFEST_OUT")
+if [[ -n "$KR_MANIFEST_BINARY_ID" ]]; then
+  echo "Uploading catalog to KR as Binary/$KR_MANIFEST_BINARY_ID ..." >&2
+  GEN_ARGS+=(--upload-binary-id "$KR_MANIFEST_BINARY_ID")
+fi
+python3 scripts/generate-cds-hooks-manifest.py "${GEN_ARGS[@]}"
 
 echo "Done ($PLAN_COUNT PlanDefinition(s) on KR)." >&2
-echo "Restart cds-server with CDS_SERVICES_MANIFEST_PATH=$MANIFEST_OUT" >&2
+if [[ -n "$KR_MANIFEST_BINARY_ID" ]]; then
+  echo "Restart cds-server with CDS_KR_SERVICES_BINARY_ID=$KR_MANIFEST_BINARY_ID (or CDS_SERVICES_MANIFEST_PATH=$MANIFEST_OUT)" >&2
+else
+  echo "Restart cds-server with CDS_SERVICES_MANIFEST_PATH=$MANIFEST_OUT" >&2
+fi
 echo "Smoke: ./scripts/cds-cms165-prefetch-smoke.sh --apply" >&2

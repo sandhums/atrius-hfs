@@ -1,0 +1,8 @@
+.git
+target
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/node_modules
+.claude
+.agents

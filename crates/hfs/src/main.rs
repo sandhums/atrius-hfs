@@ -802,15 +802,16 @@ async fn main() -> anyhow::Result<()> {
     // FHIRPath evaluation (CDS Hooks, _filter, etc.) delegates terminology
     // operations (memberOf, subsumes) to the configured HTS instance.
     if let Some(ref ts_url) = config.terminology_server
-        && std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err() {
-            // Safety: single-threaded at this point (before tokio runtime hands
-            // off to worker threads), so set_var is safe here.
-            // SAFETY: called before any threads are spawned by the tokio runtime.
-            unsafe {
-                std::env::set_var("FHIRPATH_TERMINOLOGY_SERVER", ts_url);
-            }
-            info!(url = %ts_url, "HFS_TERMINOLOGY_SERVER wired to FHIRPath context");
+        && std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err()
+    {
+        // Safety: single-threaded at this point (before tokio runtime hands
+        // off to worker threads), so set_var is safe here.
+        // SAFETY: called before any threads are spawned by the tokio runtime.
+        unsafe {
+            std::env::set_var("FHIRPATH_TERMINOLOGY_SERVER", ts_url);
         }
+        info!(url = %ts_url, "HFS_TERMINOLOGY_SERVER wired to FHIRPath context");
+    }
 
     // Initialize audit subsystem
     let (audit_sink, audit_state) = init_audit(&config, backend_mode).await?;

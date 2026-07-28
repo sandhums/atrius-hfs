@@ -398,6 +398,10 @@ fn extract_operation(path: &str, method: &str) -> Option<(String, FhirOperation)
         "POST" => {
             if segments.len() >= 2 && segments.get(1) == Some(&"_search") {
                 FhirOperation::Search
+            } else if segments.iter().any(|s| *s == "$validate") {
+                // POST /{type}/$validate and /{type}/{id}/$validate are read-only
+                // checks — require read, not create (export preflight / UI validate).
+                FhirOperation::Read
             } else {
                 // POST /Patient → create
                 FhirOperation::Create
@@ -723,6 +727,17 @@ mod tests {
         // A first segment starting with '$' is a system-level operation → None.
         assert!(extract_operation("/$export", "GET").is_none());
         assert!(extract_operation("/$export", "POST").is_none());
+    }
+
+    #[test]
+    fn test_extract_operation_type_validate_is_read() {
+        let (rt, op) = extract_operation("/Bundle/$validate", "POST").unwrap();
+        assert_eq!(rt, "Bundle");
+        assert_eq!(op, FhirOperation::Read);
+
+        let (rt, op) = extract_operation("/Patient/abc/$validate", "POST").unwrap();
+        assert_eq!(rt, "Patient");
+        assert_eq!(op, FhirOperation::Read);
     }
 
     #[test]

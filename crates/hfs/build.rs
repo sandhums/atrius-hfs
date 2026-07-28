@@ -33,15 +33,14 @@ fn main() {
     // Check if the file already exists and is recent (skip download if less than 24 hours old)
     if let Ok(metadata) = fs::metadata(&output_path)
         && let Ok(modified) = metadata.modified()
-            && let Ok(duration) = modified.elapsed() {
-                // Skip if file was modified less than 24 hours ago
-                if duration.as_secs() < 86400 {
-                    println!(
-                        "cargo:warning=R6 search parameters file is recent, skipping download"
-                    );
-                    return;
-                }
-            }
+        && let Ok(duration) = modified.elapsed()
+    {
+        // Skip if file was modified less than 24 hours ago
+        if duration.as_secs() < 86400 {
+            println!("cargo:warning=R6 search parameters file is recent, skipping download");
+            return;
+        }
+    }
 
     println!("cargo:warning=Downloading R6 search parameters from HL7 build server");
 

@@ -30,6 +30,7 @@ AGENTS.md
 
 # Expanded Atrius IG package (regenerate via ./scripts/setup-atrius-profile-registry.sh)
 /manifests/atrius-ig-package/
+/manifests/atrius-ig-package.tgz
 .cache/
 
 # Local service env (secrets) — keep only *.env.example in git
