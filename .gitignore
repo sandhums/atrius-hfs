@@ -8,10 +8,6 @@ crates/sof/output.csv
 package-lock.json
 .prettierrc
 off
-.claude
-AGENTS.md
-.claude/
-
 # Build script download markers
 .download_marker
 
@@ -37,3 +33,7 @@ AGENTS.md
 deploy/env/*.env
 !deploy/env/*.env.example
 .env
+
+# Python bytecode (e.g. audit test helpers under crates/hfs/tests/audit)
+__pycache__/
+*.pyc

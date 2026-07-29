@@ -324,8 +324,9 @@ impl SearchProvider for MongoBackend {
 
     fn search_param_registry(
         &self,
-    ) -> &std::sync::Arc<parking_lot::RwLock<crate::search::SearchParameterRegistry>> {
-        self.search_registry()
+        tenant: &crate::tenant::TenantContext,
+    ) -> std::sync::Arc<parking_lot::RwLock<crate::search::SearchParameterRegistry>> {
+        self.tenant_registry(tenant.tenant_id().as_str())
     }
 
     fn supports_contained_search(&self) -> bool {
@@ -846,19 +847,24 @@ impl MongoBackend {
             }));
         }
 
-        let lowered = value.value.to_lowercase();
+        // `value_string` holds the value as written, so the insensitive
+        // variants ask Mongo for a case-insensitive regex (`$options: "i"`)
+        // rather than relying on a pre-lowercased index. `:exact` compares the
+        // raw value, which is what makes it case-sensitive per the spec.
         match param.modifier.as_ref() {
             None => Ok(doc! {
                 "value_string": {
-                    "$regex": format!("^{}", regex_escape(&lowered))
+                    "$regex": format!("^{}", regex_escape(&value.value)),
+                    "$options": "i"
                 }
             }),
-            Some(SearchModifier::Exact) => Ok(doc! { "value_string": lowered }),
+            Some(SearchModifier::Exact) => Ok(doc! { "value_string": value.value.as_str() }),
             // `:text` on a string is a case-insensitive partial match,
             // implemented here as a substring match (same as `:contains`).
             Some(SearchModifier::Contains | SearchModifier::Text) => Ok(doc! {
                 "value_string": {
-                    "$regex": regex_escape(&lowered)
+                    "$regex": regex_escape(&value.value),
+                    "$options": "i"
                 }
             }),
             Some(other) => Err(StorageError::Search(SearchError::UnsupportedModifier {
@@ -1370,7 +1376,7 @@ impl MongoBackend {
             return Ok(Vec::new());
         }
 
-        let search_params = self.build_search_parameters(resource_type, &parsed_params);
+        let search_params = self.build_search_parameters(tenant, resource_type, &parsed_params);
 
         let query = SearchQuery {
             resource_type: resource_type.to_string(),
@@ -1385,10 +1391,12 @@ impl MongoBackend {
 
     fn build_search_parameters(
         &self,
+        tenant: &TenantContext,
         resource_type: &str,
         params: &[(String, String)],
     ) -> Vec<SearchParameter> {
-        let registry = self.search_registry().read();
+        let registry_arc = self.tenant_registry(tenant.tenant_id().as_str());
+        let registry = registry_arc.read();
 
         params
             .iter()

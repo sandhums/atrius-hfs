@@ -10,6 +10,8 @@
 //! - [`middleware`] — per-request count/latency metrics and a tracing span.
 //! - [`telemetry`] — `tracing-subscriber` init, optionally bridged to OTLP
 //!   (feature `otel`).
+//! - [`dashboard`] — process-global provider of storage-count snapshots for the
+//!   web UI's "FHIR resources over time" chart, registered by the server.
 //!
 //! ## Typical wiring
 //!
@@ -34,8 +36,10 @@
 //! - OTLP *metrics* are expected to be produced by an OpenTelemetry Collector
 //!   scraping `/metrics`; the app itself only pushes OTLP *traces*.
 
+pub mod dashboard;
 pub mod metrics;
 pub mod middleware;
+pub mod mode;
 pub mod reqlog;
 pub mod telemetry;
 pub mod uptime;

@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="RequestOrchestration"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -1645,8 +1645,7 @@
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy"/>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">0..1</td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
-            <a href="datatypes.html#canonical">canonical</a>(
-            <a href="structuremap.html">StructureMap</a>)
+            <a href="datatypes.html#canonical">canonical</a>()
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Transform to apply the template
             <br/>
@@ -1761,7 +1760,7 @@
   <name value="RequestOrchestration"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / Clinical Decision Support"/>
   <contact>
     <telecom>
@@ -4868,7 +4867,6 @@
       </base>
       <type>
         <code value="canonical"/>
-        <targetProfile value="http://hl7.org/fhir/StructureDefinition/StructureMap"/>
       </type>
       <constraint>
         <key value="ele-1"/>
@@ -6472,7 +6470,6 @@
       <max value="1"/>
       <type>
         <code value="canonical"/>
-        <targetProfile value="http://hl7.org/fhir/StructureDefinition/StructureMap"/>
       </type>
       <mustSupport value="false"/>
       <isModifier value="false"/>

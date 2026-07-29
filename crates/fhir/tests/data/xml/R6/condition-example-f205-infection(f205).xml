@@ -28,7 +28,7 @@
     </coding>
   </code>
   <bodyStructure>
-    <reference value="BodyStructure/skin-patch"/>
+    <reference/>
   </bodyStructure>
   <subject>
     <reference value="Patient/f201"/>

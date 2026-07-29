@@ -131,7 +131,7 @@
           </security>
         </meta>
         <text>
-          <status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"><p class="res-header-id"><b>Generated Narrative: Condition anon0</b></p><div style="display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%"><p style="margin-bottom: 0px"/><p style="margin-bottom: 0px">Security Labels: <a href="http://terminology.hl7.org/7.2.0/CodeSystem-v3-Confidentiality.html">low (Details: Confidentiality code L = 'low')</a>, <a href="http://terminology.hl7.org/7.2.0/CodeSystem-v3-ObservationValue.html">pseudonymized (Details: ObservationValue code PSEUDED = 'pseudonymized')</a></p></div><p><b>clinicalStatus</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-clinical active}">Active</span></p><p><b>verificationStatus</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-ver-status confirmed}">Confirmed</span></p><p><b>category</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-category encounter-diagnosis}, {http://snomed.info/sct 439401001}">Encounter Diagnosis</span></p><p><b>severity</b>: <span title="Codes:{http://snomed.info/sct 24484000}">Severe</span></p><p><b>code</b>: <span title="Codes:{http://snomed.info/sct 39065001}">Burn of ear</span></p><p><b>bodySite</b>: <span title="Codes:{http://snomed.info/sct 49521004}">Left external ear structure</span></p><p><b>subject</b>: <a href="broken-link.html">Patient/anon0</a></p><p><b>onset</b>: 2012-05-01</p></div>
+          <status value="generated"/><div xmlns="http://www.w3.org/1999/xhtml"><p class="res-header-id"><b>Generated Narrative: Condition anon0</b></p><div style="display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%"><p style="margin-bottom: 0px"/><p style="margin-bottom: 0px">Security Labels: <a href="http://terminology.hl7.org/7.2.0/CodeSystem-v3-Confidentiality.html">low (Details: Confidentiality code L = 'low')</a>, <a href="http://terminology.hl7.org/7.2.0/CodeSystem-v3-ObservationValue.html">pseudonymized (Details: ObservationValue code PSEUDED = 'pseudonymized')</a></p></div><p><b>clinicalStatus</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-clinical active}">Active</span></p><p><b>verificationStatus</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-ver-status confirmed}">Confirmed</span></p><p><b>category</b>: <span title="Codes:{http://terminology.hl7.org/CodeSystem/condition-category encounter-diagnosis}, {http://snomed.info/sct 439401001}">Encounter Diagnosis</span></p><p><b>severity</b>: <span title="Codes:{http://snomed.info/sct 24484000}">Severe</span></p><p><b>code</b>: <span title="Codes:{http://snomed.info/sct 39065001}">Burn of ear</span></p><p><b>subject</b>: <a href="broken-link.html">Patient/anon0</a></p><p><b>onset</b>: 2012-05-01</p></div>
         </text>
         <clinicalStatus>
           <coding>
@@ -172,13 +172,6 @@
             <display value="Burn of ear"/>
           </coding>
         </code>
-        <bodySite>
-          <coding>
-            <system value="http://snomed.info/sct"/>
-            <code value="49521004"/>
-            <display value="Left external ear structure"/>
-          </coding>
-        </bodySite>
         <subject>
           <!-- patient as anon0 id -->
           <reference value="Patient/anon0"/>

@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "OperationDefinition",
   "meta": {
-    "lastUpdated": "2026-07-04T18:53:58.933+00:00"
+    "lastUpdated": "2026-07-17T03:44:13.245+00:00"
   },
   "text": {
     "status": "generated",
@@ -39,7 +39,7 @@
   "name": "OperationDefinition",
   "status": "active",
   "experimental": false,
-  "date": "2026-07-04T18:53:58+00:00",
+  "date": "2026-07-17T03:44:13+00:00",
   "publisher": "HL7 International / FHIR Infrastructure",
   "contact": [
     {
@@ -802,7 +802,7 @@
         "path": "OperationDefinition.kind",
         "short": "operation | query",
         "definition": "Whether this is an operation or a named query.",
-        "comment": "Named queries are invoked differently, and have different capabilities.",
+        "comment": "Named queries are invoked differently, and have different capabilities. If there is a need to pre-adopt new codes from a future version, set this element to \u0027operation\u0027 and convey the additional concept in an extension.",
         "min": 1,
         "max": "1",
         "base": {
@@ -2537,7 +2537,7 @@
         "path": "OperationDefinition.parameter.binding.valueSet",
         "short": "Source of value set",
         "definition": "Points to the value set or external definition (e.g. implicit value set) that identifies the set of codes to be used.",
-        "comment": "For value sets with a referenceResource, the display can contain the value set description.  The reference may be version-specific or not.",
+        "comment": "If an operation has bindings with strengths other than those listed here, they can be expressed computably in the input or output profile for the operation.  Good practice is to also include a descriptive binding here to highlight that the terminology constraint exists for readers who don\u0027t know to check the profile.",
         "min": 1,
         "max": "1",
         "base": {
@@ -3340,7 +3340,7 @@
         "path": "OperationDefinition.kind",
         "short": "operation | query",
         "definition": "Whether this is an operation or a named query.",
-        "comment": "Named queries are invoked differently, and have different capabilities.",
+        "comment": "Named queries are invoked differently, and have different capabilities. If there is a need to pre-adopt new codes from a future version, set this element to \u0027operation\u0027 and convey the additional concept in an extension.",
         "min": 1,
         "max": "1",
         "type": [
@@ -4307,7 +4307,7 @@
         "path": "OperationDefinition.parameter.binding.valueSet",
         "short": "Source of value set",
         "definition": "Points to the value set or external definition (e.g. implicit value set) that identifies the set of codes to be used.",
-        "comment": "For value sets with a referenceResource, the display can contain the value set description.  The reference may be version-specific or not.",
+        "comment": "If an operation has bindings with strengths other than those listed here, they can be expressed computably in the input or output profile for the operation.  Good practice is to also include a descriptive binding here to highlight that the terminology constraint exists for readers who don\u0027t know to check the profile.",
         "min": 1,
         "max": "1",
         "type": [

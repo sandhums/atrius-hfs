@@ -14,14 +14,13 @@ use crate::core::transaction::{
 };
 use crate::core::{
     ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
-    PurgableStorage, ResourceStorage, SearchProvider, VersionedStorage,
+    PurgableStorage, ResourceStorage, SearchProvider, VersionedStorage, bundle_if_match_gate,
+    if_match_field_satisfied, normalize_etag,
 };
 use crate::error::TransactionError;
 use crate::error::{BackendError, ConcurrencyError, ResourceError, StorageError, StorageResult};
-use crate::search::loader::SearchParameterLoader;
-use crate::search::registry::SearchParameterStatus;
-use crate::search::reindex::{ReindexableStorage, ResourcePage};
-use crate::tenant::TenantContext;
+use crate::search::reindex::{ReindexSource, ReindexTarget, ResourcePage};
+use crate::tenant::{Operation, TenantContext};
 use crate::types::Pagination;
 use crate::types::{CursorValue, Page, PageCursor, PageInfo, StoredResource};
 use crate::types::{SearchParamType, SearchParameter, SearchQuery, SearchValue};
@@ -64,6 +63,15 @@ impl ResourceStorage for PostgresBackend {
         "postgres"
     }
 
+    async fn readiness_check(&self) -> Result<(), BackendError> {
+        <Self as crate::core::Backend>::health_check(self).await
+    }
+
+    fn bulk_write_concurrency(&self) -> usize {
+        // Bulk seeding is round-trip bound; the pool absorbs parallel writers.
+        8
+    }
+
     fn is_cluster_shared(&self) -> bool {
         true
     }
@@ -80,6 +88,8 @@ impl ResourceStorage for PostgresBackend {
         resource: Value,
         fhir_version: FhirVersion,
     ) -> StorageResult<StoredResource> {
+        tenant.check_permission(Operation::Create, resource_type)?;
+
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
 
@@ -145,9 +155,16 @@ impl ResourceStorage for PostgresBackend {
         self.index_resource(&client, tenant_id, resource_type, &id, &resource)
             .await?;
 
-        // Handle SearchParameter resources specially - update registry
-        if resource_type == "SearchParameter" {
-            self.handle_search_parameter_create(&resource)?;
+        // An *active* SearchParameter write changes a tenant's overlay: reload
+        // the stored cache and drop the per-tenant registries so they rebuild.
+        // Draft copies (the seeded spec set) never overlay, so skip them and
+        // avoid an O(n²) reload storm during bulk seeding.
+        if resource_type == "SearchParameter"
+            && crate::search::search_parameter_create_affects_overlay(&resource)
+        {
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
         }
 
         // Return the stored resource with updated metadata
@@ -173,22 +190,33 @@ impl ResourceStorage for PostgresBackend {
         fhir_version: FhirVersion,
     ) -> StorageResult<(StoredResource, bool)> {
         // Check if exists
-        let existing = self.read(tenant, resource_type, id).await?;
-
-        if let Some(current) = existing {
+        match self.read(tenant, resource_type, id).await {
             // Update existing (preserves original FHIR version)
-            let updated = self.update(tenant, &current, resource).await?;
-            Ok((updated, false))
-        } else {
-            // Create new with specific ID
-            let mut resource = resource;
-            if let Some(obj) = resource.as_object_mut() {
-                obj.insert("id".to_string(), Value::String(id.to_string()));
+            Ok(Some(current)) => {
+                let updated = self.update(tenant, &current, resource).await?;
+                Ok((updated, false))
             }
-            let created = self
-                .create(tenant, resource_type, resource, fhir_version)
-                .await?;
-            Ok((created, true))
+            // Create new with specific ID
+            Ok(None) => {
+                let mut resource = resource;
+                if let Some(obj) = resource.as_object_mut() {
+                    obj.insert("id".to_string(), Value::String(id.to_string()));
+                }
+                let created = self
+                    .create(tenant, resource_type, resource, fhir_version)
+                    .await?;
+                Ok((created, true))
+            }
+            // A deleted resource is brought back to life by a subsequent update
+            // (FHIR http.html#delete), continuing the existing version chain
+            // rather than being rejected with `Gone`.
+            Err(StorageError::Resource(ResourceError::Gone { .. })) => {
+                let restored = self
+                    .restore_deleted(tenant, resource_type, id, resource)
+                    .await?;
+                Ok((restored, true))
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -254,9 +282,11 @@ impl ResourceStorage for PostgresBackend {
         current: &StoredResource,
         resource: Value,
     ) -> StorageResult<StoredResource> {
+        let resource_type = current.resource_type();
+        tenant.check_permission(Operation::Update, resource_type)?;
+
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
-        let resource_type = current.resource_type();
         let id = current.id();
 
         // Check that the resource still exists with the expected version
@@ -342,9 +372,11 @@ impl ResourceStorage for PostgresBackend {
         self.index_resource(&client, tenant_id, resource_type, id, &resource)
             .await?;
 
-        // Handle SearchParameter resources specially - update registry
+        // A SearchParameter write invalidates the tenant overlays.
         if resource_type == "SearchParameter" {
-            self.handle_search_parameter_update(current.content(), &resource)?;
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
         }
 
         Ok(StoredResource::from_storage(
@@ -366,6 +398,8 @@ impl ResourceStorage for PostgresBackend {
         resource_type: &str,
         id: &str,
     ) -> StorageResult<()> {
+        tenant.check_permission(Operation::Delete, resource_type)?;
+
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
 
@@ -432,9 +466,11 @@ impl ResourceStorage for PostgresBackend {
                 .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
         }
 
-        // Handle SearchParameter resources specially - update registry
+        // A SearchParameter delete invalidates the tenant overlays.
         if resource_type == "SearchParameter" {
-            self.handle_search_parameter_delete(&data)?;
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
         }
 
         Ok(())
@@ -502,6 +538,65 @@ impl ResourceStorage for PostgresBackend {
             out.push(crate::core::DailyResourceCount {
                 day,
                 count: n.max(0) as u64,
+            });
+        }
+        Ok(out)
+    }
+
+    async fn count_deltas_by_bucket(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        since: DateTime<Utc>,
+        bucket_seconds: i64,
+    ) -> StorageResult<Vec<crate::core::ResourceCountDelta>> {
+        if bucket_seconds <= 0 {
+            return Err(internal_error(
+                "count_deltas_by_bucket: bucket_seconds must be positive".to_string(),
+            ));
+        }
+        let client = self.get_client().await?;
+        let tenant_id = tenant.tenant_id().as_str();
+        let since_bound = crate::core::bucket_floor(since, bucket_seconds);
+
+        // Floor each version's `last_updated` to its epoch-aligned bucket:
+        // epoch seconds / width, floored, scaled back, then read as a timestamptz.
+        // Epoch arithmetic is timezone-independent, so buckets are stable whatever
+        // the session TimeZone. The `(tenant_id, last_updated)` history index
+        // supports the `>= $3` range scan. Delta rule per the trait doc: creation
+        // `+1`, delete `-1`, plain update `0`.
+        //
+        // `$4::bigint` is cast explicitly: `EXTRACT(EPOCH FROM ...)` is `numeric`, so
+        // without it Postgres infers the parameter as `numeric` too and rejects the
+        // `i64` we bind.
+        let rows = client
+            .query(
+                "SELECT to_timestamp( \
+                          (FLOOR(EXTRACT(EPOCH FROM last_updated) / $4::bigint) * $4::bigint) \
+                          ::double precision \
+                        ) AS bucket, \
+                        SUM(CASE WHEN is_deleted THEN -1 \
+                                 WHEN version_id = '1' THEN 1 \
+                                 ELSE 0 END)::bigint AS delta \
+                 FROM resource_history \
+                 WHERE tenant_id = $1 AND resource_type = $2 AND last_updated >= $3 \
+                 GROUP BY bucket \
+                 HAVING SUM(CASE WHEN is_deleted THEN -1 \
+                                 WHEN version_id = '1' THEN 1 \
+                                 ELSE 0 END) <> 0 \
+                 ORDER BY bucket",
+                &[&tenant_id, &resource_type, &since_bound, &bucket_seconds],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to count resource deltas: {}", e)))?;
+
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            let bucket_start: DateTime<Utc> = row.get(0);
+            let delta: i64 = row.get(1);
+            out.push(crate::core::ResourceCountDelta {
+                bucket_start,
+                delta,
             });
         }
         Ok(out)
@@ -636,6 +731,113 @@ impl ResourceStorage for PostgresBackend {
         }
         Ok(out)
     }
+
+    fn supports_tenant_registry(&self) -> bool {
+        true
+    }
+
+    async fn list_tenants(&self) -> StorageResult<Vec<crate::core::TenantRecord>> {
+        let client = self.get_client().await?;
+        let rows = client
+            .query(
+                "SELECT id, display_name, created_at FROM tenants \
+                 ORDER BY created_at ASC, id ASC",
+                &[],
+            )
+            .await
+            .map_err(|e| internal_error(format!("query list_tenants: {e}")))?;
+        Ok(rows
+            .iter()
+            .map(|row| crate::core::TenantRecord {
+                id: row.get(0),
+                display_name: row.get(1),
+                created_at: row.get(2),
+            })
+            .collect())
+    }
+
+    async fn get_tenant(&self, id: &str) -> StorageResult<Option<crate::core::TenantRecord>> {
+        let client = self.get_client().await?;
+        let row = client
+            .query_opt(
+                "SELECT id, display_name, created_at FROM tenants WHERE id = $1",
+                &[&id],
+            )
+            .await
+            .map_err(|e| internal_error(format!("query get_tenant: {e}")))?;
+        Ok(row.map(|row| crate::core::TenantRecord {
+            id: row.get(0),
+            display_name: row.get(1),
+            created_at: row.get(2),
+        }))
+    }
+
+    async fn register_tenant(
+        &self,
+        id: &str,
+        display_name: Option<&str>,
+    ) -> StorageResult<crate::core::TenantRecord> {
+        let client = self.get_client().await?;
+        // Plain INSERT so a duplicate id surfaces as a constraint error; the
+        // admin handler pre-checks existence and returns 409, so reaching here
+        // with a duplicate is a race and a 500 is acceptable.
+        let row = client
+            .query_one(
+                "INSERT INTO tenants (id, display_name) VALUES ($1, $2) \
+                 RETURNING id, display_name, created_at",
+                &[&id, &display_name],
+            )
+            .await
+            .map_err(|e| internal_error(format!("register_tenant: {e}")))?;
+        Ok(crate::core::TenantRecord {
+            id: row.get(0),
+            display_name: row.get(1),
+            created_at: row.get(2),
+        })
+    }
+
+    async fn deregister_tenant(&self, id: &str) -> StorageResult<bool> {
+        let client = self.get_client().await?;
+        let changed = client
+            .execute("DELETE FROM tenants WHERE id = $1", &[&id])
+            .await
+            .map_err(|e| internal_error(format!("deregister_tenant: {e}")))?;
+        Ok(changed > 0)
+    }
+
+    async fn purge_tenant_data(&self, id: &str) -> StorageResult<u64> {
+        let mut client = self.get_client().await?;
+        let tx = client
+            .transaction()
+            .await
+            .map_err(|e| internal_error(format!("purge begin: {e}")))?;
+        // Count current-version rows first (soft-deleted included) so we can
+        // report what was removed.
+        let removed: i64 = tx
+            .query_one(
+                "SELECT COUNT(*)::bigint FROM resources WHERE tenant_id = $1",
+                &[&id],
+            )
+            .await
+            .map_err(|e| internal_error(format!("purge count: {e}")))?
+            .get(0);
+        // search_index and resource_fts cascade from resources, but delete them
+        // explicitly too, mirroring the purge/purge_all deletion order.
+        for sql in [
+            "DELETE FROM search_index WHERE tenant_id = $1",
+            "DELETE FROM resource_fts WHERE tenant_id = $1",
+            "DELETE FROM resource_history WHERE tenant_id = $1",
+            "DELETE FROM resources WHERE tenant_id = $1",
+        ] {
+            tx.execute(sql, &[&id])
+                .await
+                .map_err(|e| internal_error(format!("purge delete: {e}")))?;
+        }
+        tx.commit()
+            .await
+            .map_err(|e| internal_error(format!("purge commit: {e}")))?;
+        Ok(removed.max(0) as u64)
+    }
 }
 
 // ============================================================================
@@ -643,6 +845,120 @@ impl ResourceStorage for PostgresBackend {
 // ============================================================================
 
 impl PostgresBackend {
+    /// Brings a soft-deleted resource back to life with new content.
+    ///
+    /// FHIR permits a deleted resource to be restored by a subsequent update
+    /// ([http.html#delete](https://hl7.org/fhir/http.html#delete)), so a `PUT`
+    /// onto a deleted id must succeed instead of failing with `Gone`. The
+    /// restored resource continues the existing version chain (the deletion
+    /// record keeps its version, the restore gets the next one) and keeps the
+    /// FHIR version the resource was originally stored under.
+    ///
+    /// Returns `NotFound` if no deleted row is present — the caller has already
+    /// established one exists, so that only happens under a concurrent write.
+    async fn restore_deleted(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        resource: Value,
+    ) -> StorageResult<StoredResource> {
+        tenant.check_permission(Operation::Update, resource_type)?;
+
+        let client = self.get_client().await?;
+        let tenant_id = tenant.tenant_id().as_str();
+
+        let row = client
+            .query_opt(
+                "SELECT version_id, fhir_version FROM resources
+                 WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = TRUE",
+                &[&tenant_id, &resource_type, &id],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to read deleted resource: {}", e)))?;
+
+        let (deleted_version, fhir_version_str) = match row {
+            Some(row) => (row.get::<_, String>(0), row.get::<_, String>(1)),
+            None => {
+                return Err(StorageError::Resource(ResourceError::NotFound {
+                    resource_type: resource_type.to_string(),
+                    id: id.to_string(),
+                }));
+            }
+        };
+
+        let new_version: u64 = deleted_version.parse().unwrap_or(0) + 1;
+        let new_version_str = new_version.to_string();
+
+        // Ensure the resource has correct type and id
+        let mut resource = resource;
+        if let Some(obj) = resource.as_object_mut() {
+            obj.insert(
+                "resourceType".to_string(),
+                Value::String(resource_type.to_string()),
+            );
+            obj.insert("id".to_string(), Value::String(id.to_string()));
+        }
+
+        let now = Utc::now();
+        let is_deleted = false;
+
+        client
+            .execute(
+                "UPDATE resources
+                 SET version_id = $1, data = $2, last_updated = $3, is_deleted = FALSE, deleted_at = NULL
+                 WHERE tenant_id = $4 AND resource_type = $5 AND id = $6",
+                &[
+                    &new_version_str,
+                    &resource,
+                    &now,
+                    &tenant_id,
+                    &resource_type,
+                    &id,
+                ],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to restore resource: {}", e)))?;
+
+        client
+            .execute(
+                "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                &[&tenant_id, &resource_type, &id, &new_version_str, &resource, &now, &is_deleted, &fhir_version_str],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to insert restore history: {}", e)))?;
+
+        // The delete dropped the search index entries; rebuild them for the
+        // resource that is live again.
+        self.delete_search_index(&client, tenant_id, resource_type, id)
+            .await?;
+        self.index_resource(&client, tenant_id, resource_type, id, &resource)
+            .await?;
+
+        // A restored SearchParameter re-enters the tenant overlays.
+        if resource_type == "SearchParameter" {
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
+        }
+
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+
+        Ok(StoredResource::from_storage(
+            resource_type,
+            id,
+            new_version_str,
+            tenant.tenant_id().clone(),
+            resource,
+            now,
+            now,
+            None,
+            fhir_version,
+        ))
+    }
+
     /// Index a resource for search.
     ///
     /// This method uses the SearchParameterExtractor to dynamically extract
@@ -670,7 +986,10 @@ impl PostgresBackend {
             .map_err(|e| internal_error(format!("Failed to clear search index: {}", e)))?;
 
         // Extract values using the registry-driven extractor
-        match self.search_extractor().extract(resource, resource_type) {
+        match self
+            .tenant_extractor(tenant_id)
+            .extract(resource, resource_type)
+        {
             Ok(values) => {
                 let mut count = 0;
                 for value in values {
@@ -735,7 +1054,7 @@ impl PostgresBackend {
     ) -> StorageResult<usize> {
         let mut count = 0;
         let container = (container_type, container_id);
-        for contained in self.search_extractor().extract_contained(resource) {
+        for contained in self.tenant_extractor(tenant_id).extract_contained(resource) {
             for value in &contained.values {
                 PostgresSearchIndexWriter::write_contained_entry(
                     client,
@@ -855,20 +1174,22 @@ impl PostgresBackend {
     }
 
     /// Delete search index entries for a resource.
+    /// Removes a resource's search entries, returning how many `search_index`
+    /// rows were deleted.
     pub(crate) async fn delete_search_index(
         &self,
         client: &deadpool_postgres::Client,
         tenant_id: &str,
         resource_type: &str,
         resource_id: &str,
-    ) -> StorageResult<()> {
+    ) -> StorageResult<u64> {
         // When search is offloaded to a secondary backend, skip local index cleanup
         if self.is_search_offloaded() {
-            return Ok(());
+            return Ok(0);
         }
 
         // Delete from main search index
-        client
+        let deleted = client
             .execute(
                 "DELETE FROM search_index WHERE tenant_id = $1 AND resource_type = $2 AND resource_id = $3",
                 &[&tenant_id, &resource_type, &resource_id],
@@ -884,115 +1205,7 @@ impl PostgresBackend {
             )
             .await;
 
-        Ok(())
-    }
-}
-
-// ============================================================================
-// SearchParameter Resource Handling
-// ============================================================================
-
-impl PostgresBackend {
-    /// Handle creation of a SearchParameter resource.
-    ///
-    /// If the SearchParameter has status=active, it will be registered in the
-    /// search parameter registry, making it available for searches on new resources.
-    /// Existing resources will NOT be indexed for this parameter until $reindex is run.
-    fn handle_search_parameter_create(&self, resource: &Value) -> StorageResult<()> {
-        let loader = SearchParameterLoader::new(self.config().fhir_version);
-
-        match loader.parse_resource(resource) {
-            Ok(def) => {
-                // Only register if status is active
-                if def.status == SearchParameterStatus::Active {
-                    let mut registry = self.search_registry().write();
-                    // Ignore duplicate URL errors - the param may already be embedded
-                    if let Err(e) = registry.register(def) {
-                        tracing::debug!("SearchParameter registration skipped: {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                // Log but don't fail - the resource is still stored
-                tracing::warn!("Failed to parse SearchParameter for registry: {}", e);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Handle update of a SearchParameter resource.
-    ///
-    /// Updates the registry based on status changes:
-    /// - active -> retired: Parameter disabled for searches
-    /// - retired -> active: Parameter re-enabled for searches
-    /// - Any other change: Updates the registry entry
-    fn handle_search_parameter_update(
-        &self,
-        old_resource: &Value,
-        new_resource: &Value,
-    ) -> StorageResult<()> {
-        let loader = SearchParameterLoader::new(self.config().fhir_version);
-
-        let old_def = loader.parse_resource(old_resource).ok();
-        let new_def = loader.parse_resource(new_resource).ok();
-
-        match (old_def, new_def) {
-            (Some(old), Some(new)) => {
-                let mut registry = self.search_registry().write();
-
-                // If URL changed, unregister old and register new
-                if old.url != new.url {
-                    let _ = registry.unregister(&old.url);
-                    if new.status == SearchParameterStatus::Active {
-                        let _ = registry.register(new);
-                    }
-                } else if old.status != new.status {
-                    // Status change - update in registry
-                    if let Err(e) = registry.update_status(&new.url, new.status) {
-                        tracing::debug!("SearchParameter status update skipped: {}", e);
-                    }
-                } else {
-                    // Other changes - re-register (unregister then register)
-                    let _ = registry.unregister(&old.url);
-                    if new.status == SearchParameterStatus::Active {
-                        let _ = registry.register(new);
-                    }
-                }
-            }
-            (None, Some(new)) => {
-                // Old wasn't valid, try to register new
-                if new.status == SearchParameterStatus::Active {
-                    let mut registry = self.search_registry().write();
-                    let _ = registry.register(new);
-                }
-            }
-            (Some(old), None) => {
-                // New isn't valid, unregister old
-                let mut registry = self.search_registry().write();
-                let _ = registry.unregister(&old.url);
-            }
-            (None, None) => {
-                // Neither valid - nothing to do
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Handle deletion of a SearchParameter resource.
-    ///
-    /// Removes the parameter from the registry. Search index entries for this
-    /// parameter are NOT automatically cleaned up (use $reindex for that).
-    fn handle_search_parameter_delete(&self, resource: &Value) -> StorageResult<()> {
-        if let Some(url) = resource.get("url").and_then(|v| v.as_str()) {
-            let mut registry = self.search_registry().write();
-            if let Err(e) = registry.unregister(url) {
-                tracing::debug!("SearchParameter unregistration skipped: {}", e);
-            }
-        }
-
-        Ok(())
+        Ok(deleted)
     }
 }
 
@@ -1067,13 +1280,17 @@ impl VersionedStorage for PostgresBackend {
             })
         })?;
 
-        // Check version match
-        if current.version_id() != expected_version {
+        // Check version match. `expected_version` may arrive in any ETag
+        // spelling (`W/"1"`, `"1"`, `1`), so normalise both sides — same as the
+        // MongoDB and S3 backends.
+        // `expected_version` is the client's `If-Match` field value, which is a
+        // LIST and is satisfied when any listed tag matches (issue #311).
+        if !if_match_field_satisfied(expected_version, current.version_id()) {
             return Err(StorageError::Concurrency(
                 ConcurrencyError::VersionConflict {
                     resource_type: resource_type.to_string(),
                     id: id.to_string(),
-                    expected_version: expected_version.to_string(),
+                    expected_version: normalize_etag(expected_version).to_string(),
                     actual_version: current.version_id().to_string(),
                 },
             ));
@@ -1113,12 +1330,13 @@ impl VersionedStorage for PostgresBackend {
             }
         };
 
-        if current_version != expected_version {
+        let expected = normalize_etag(expected_version);
+        if !if_match_field_satisfied(expected_version, &current_version) {
             return Err(StorageError::Concurrency(
                 ConcurrencyError::VersionConflict {
                     resource_type: resource_type.to_string(),
                     id: id.to_string(),
-                    expected_version: expected_version.to_string(),
+                    expected_version: expected.to_string(),
                     actual_version: current_version,
                 },
             ));
@@ -2225,7 +2443,7 @@ impl PostgresBackend {
         }
 
         // Build SearchParameter objects by looking up types from the registry
-        let search_params = self.build_search_parameters(resource_type, &parsed_params)?;
+        let search_params = self.build_search_parameters(tenant, resource_type, &parsed_params)?;
 
         // Build a SearchQuery
         let query = SearchQuery {
@@ -2244,10 +2462,12 @@ impl PostgresBackend {
     /// Builds SearchParameter objects from parsed (name, value) pairs.
     fn build_search_parameters(
         &self,
+        tenant: &TenantContext,
         resource_type: &str,
         params: &[(String, String)],
     ) -> StorageResult<Vec<SearchParameter>> {
-        let registry = self.search_registry().read();
+        let registry_arc = self.tenant_registry(tenant.tenant_id().as_str());
+        let registry = registry_arc.read();
         let mut search_params = Vec::with_capacity(params.len());
 
         for (name, value) in params {
@@ -2466,13 +2686,14 @@ impl BundleProvider for PostgresBackend {
         &self,
         tenant: &TenantContext,
         entries: Vec<BundleEntry>,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> Result<BundleResult, TransactionError> {
         use crate::core::transaction::{Transaction, TransactionOptions, TransactionProvider};
         use std::collections::HashMap;
 
         // Start a transaction
         let mut tx = self
-            .begin_transaction(tenant, TransactionOptions::new())
+            .begin_transaction(tenant, TransactionOptions::new().fhir_version(fhir_version))
             .await
             .map_err(|e| TransactionError::RolledBack {
                 reason: format!("Failed to begin transaction: {}", e),
@@ -2553,12 +2774,13 @@ impl BundleProvider for PostgresBackend {
         &self,
         tenant: &TenantContext,
         entries: Vec<BundleEntry>,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> StorageResult<BundleResult> {
         let mut results = Vec::with_capacity(entries.len());
 
         // Process each entry independently
         for entry in &entries {
-            let result = self.process_batch_entry(tenant, entry).await;
+            let result = self.process_batch_entry(tenant, entry, fhir_version).await;
             results.push(result);
         }
 
@@ -2623,21 +2845,23 @@ impl PostgresBackend {
 
                 let (resource_type, id) = self.parse_url(&entry.url)?;
 
-                match tx.read(&resource_type, &id).await? {
+                let existing = tx.read(&resource_type, &id).await?;
+
+                // `ifMatch` is a list and is satisfied when any listed tag
+                // matches; this used to compare the whole field value against
+                // `existing.etag()` as one raw string, so a multi-valued header
+                // could never match and `*` was unsupported (issue #311). An
+                // absent resource now also fails a supplied `ifMatch` instead of
+                // silently creating.
+                if let Some(failure) = bundle_if_match_gate(
+                    entry.if_match.as_deref(),
+                    existing.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok(failure);
+                }
+
+                match existing {
                     Some(existing) => {
-                        // Check If-Match if provided
-                        if let Some(ref if_match) = entry.if_match {
-                            let current_etag = existing.etag();
-                            if current_etag != if_match.as_str() {
-                                return Ok(BundleEntryResult::error(
-                                    412,
-                                    serde_json::json!({
-                                        "resourceType": "OperationOutcome",
-                                        "issue": [{"severity": "error", "code": "conflict", "diagnostics": "ETag mismatch"}]
-                                    }),
-                                ));
-                            }
-                        }
                         let updated = tx.update(&existing, resource).await?;
                         Ok(BundleEntryResult::ok(updated))
                     }
@@ -2652,6 +2876,21 @@ impl PostgresBackend {
             }
             BundleMethod::Delete => {
                 let (resource_type, id) = self.parse_url(&entry.url)?;
+
+                // Honor `ifMatch` on DELETE — previously ignored here, so a
+                // client asking to delete only the version it had reviewed could
+                // destroy a concurrent amendment with no 412. The read is
+                // skipped entirely when no precondition was supplied.
+                if entry.if_match.is_some() {
+                    let existing = tx.read(&resource_type, &id).await?;
+                    if let Some(failure) = bundle_if_match_gate(
+                        entry.if_match.as_deref(),
+                        existing.as_ref().map(|r| r.version_id()),
+                    ) {
+                        return Ok(failure);
+                    }
+                }
+
                 tx.delete(&resource_type, &id).await?;
                 Ok(BundleEntryResult::deleted())
             }
@@ -2673,8 +2912,12 @@ impl PostgresBackend {
         &self,
         tenant: &TenantContext,
         entry: &BundleEntry,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> BundleEntryResult {
-        match self.process_batch_entry_inner(tenant, entry).await {
+        match self
+            .process_batch_entry_inner(tenant, entry, fhir_version)
+            .await
+        {
             Ok(result) => result,
             Err(e) => BundleEntryResult::error(
                 500,
@@ -2690,6 +2933,7 @@ impl PostgresBackend {
         &self,
         tenant: &TenantContext,
         entry: &BundleEntry,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> StorageResult<BundleEntryResult> {
         match entry.method {
             BundleMethod::Get => {
@@ -2725,12 +2969,7 @@ impl PostgresBackend {
                     })?;
 
                 let created = self
-                    .create(
-                        tenant,
-                        &resource_type,
-                        resource,
-                        FhirVersion::default_enabled(),
-                    )
+                    .create(tenant, &resource_type, resource, fhir_version)
                     .await?;
                 Ok(BundleEntryResult::created(created))
             }
@@ -2742,19 +2981,55 @@ impl PostgresBackend {
                 })?;
 
                 let (resource_type, id) = self.parse_url(&entry.url)?;
+
+                // `ifMatch` was previously dropped on the floor in the BATCH
+                // path (the transaction path did check it), so optimistic
+                // locking silently disappeared for anyone who wrapped a PUT in a
+                // `type: batch` Bundle — a lost update reported as 200 OK.
+                // Only pay for the extra read when a precondition was supplied.
+                if entry.if_match.is_some() {
+                    // A deleted resource has no current representation, so
+                    // `Gone` is `None` here; real storage errors must not be
+                    // swallowed into a bogus precondition failure.
+                    let existing = match self.read(tenant, &resource_type, &id).await {
+                        Ok(v) => v,
+                        Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
+                        Err(e) => return Err(e),
+                    };
+                    if let Some(failure) = bundle_if_match_gate(
+                        entry.if_match.as_deref(),
+                        existing.as_ref().map(|r| r.version_id()),
+                    ) {
+                        return Ok(failure);
+                    }
+                }
+
                 let (stored, _created) = self
-                    .create_or_update(
-                        tenant,
-                        &resource_type,
-                        &id,
-                        resource,
-                        FhirVersion::default_enabled(),
-                    )
+                    .create_or_update(tenant, &resource_type, &id, resource, fhir_version)
                     .await?;
                 Ok(BundleEntryResult::ok(stored))
             }
             BundleMethod::Delete => {
                 let (resource_type, id) = self.parse_url(&entry.url)?;
+
+                // As above: `ifMatch` on DELETE was ignored here entirely.
+                if entry.if_match.is_some() {
+                    // A deleted resource has no current representation, so
+                    // `Gone` is `None` here; real storage errors must not be
+                    // swallowed into a bogus precondition failure.
+                    let existing = match self.read(tenant, &resource_type, &id).await {
+                        Ok(v) => v,
+                        Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
+                        Err(e) => return Err(e),
+                    };
+                    if let Some(failure) = bundle_if_match_gate(
+                        entry.if_match.as_deref(),
+                        existing.as_ref().map(|r| r.version_id()),
+                    ) {
+                        return Ok(failure);
+                    }
+                }
+
                 match self.delete(tenant, &resource_type, &id).await {
                     Ok(()) => Ok(BundleEntryResult::deleted()),
                     Err(StorageError::Resource(ResourceError::NotFound { .. })) => {
@@ -2827,11 +3102,12 @@ fn resolve_bundle_references(
 }
 
 // ============================================================================
-// ReindexableStorage Implementation
+// ReindexSource Implementation — PostgreSQL is a primary, so it is where
+// resources are read from during a reindex.
 // ============================================================================
 
 #[async_trait]
-impl ReindexableStorage for PostgresBackend {
+impl ReindexSource for PostgresBackend {
     async fn list_resource_types(&self, tenant: &TenantContext) -> StorageResult<Vec<String>> {
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
@@ -2949,13 +3225,21 @@ impl ReindexableStorage for PostgresBackend {
             next_cursor,
         })
     }
+}
 
+// ============================================================================
+// ReindexTarget Implementation — PostgreSQL keeps search entries in its own
+// `search_index` table, so it is also a writer and can reindex itself.
+// ============================================================================
+
+#[async_trait]
+impl ReindexTarget for PostgresBackend {
     async fn delete_search_entries(
         &self,
         tenant: &TenantContext,
         resource_type: &str,
         resource_id: &str,
-    ) -> StorageResult<()> {
+    ) -> StorageResult<u64> {
         let client = self.get_client().await?;
         self.delete_search_index(
             &client,
@@ -2969,17 +3253,18 @@ impl ReindexableStorage for PostgresBackend {
     async fn write_search_entries(
         &self,
         tenant: &TenantContext,
-        resource_type: &str,
-        resource_id: &str,
-        resource: &Value,
+        resource: &StoredResource,
     ) -> StorageResult<usize> {
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
+        let resource_type = resource.resource_type();
+        let resource_id = resource.id();
+        let content = resource.content();
 
-        // Use the dynamic extraction
+        // Use the dynamic extraction over the tenant's registry
         let values = self
-            .search_extractor()
-            .extract(resource, resource_type)
+            .tenant_extractor(tenant_id)
+            .extract(content, resource_type)
             .map_err(|e| internal_error(format!("Search parameter extraction failed: {}", e)))?;
 
         let mut count = 0;
@@ -2998,7 +3283,7 @@ impl ReindexableStorage for PostgresBackend {
         // Re-index contained resources too, so `$reindex` rebuilds `_contained`
         // search entries.
         count += self
-            .index_contained_resources(&client, tenant_id, resource_type, resource_id, resource)
+            .index_contained_resources(&client, tenant_id, resource_type, resource_id, content)
             .await?;
 
         Ok(count)

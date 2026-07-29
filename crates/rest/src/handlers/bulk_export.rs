@@ -411,7 +411,7 @@ where
         &tenant,
         principal.as_ref(),
         level,
-        version.storage_version(),
+        version.storage_version_or(state.config().default_fhir_version),
         &method,
         &headers,
         raw_query.as_deref(),
@@ -685,6 +685,13 @@ where
 }
 
 /// Emits a bulk-export lifecycle `AuditEvent` when an audit sink is configured.
+///
+/// Delegates to the shared emit helper in `helios-persistence`, which the export
+/// *worker* also calls for the terminal complete/cancelled/failed events. This
+/// used to be a hand-rolled duplicate of that helper — REST could not reach it,
+/// because `helios-persistence` gated its audit code behind a cargo feature that
+/// only the `hfs` binary enabled. Two implementations of one event drift; now
+/// there is one.
 async fn emit_export_audit<S>(
     state: &AppState<S>,
     principal: Option<&Principal>,
@@ -699,6 +706,8 @@ async fn emit_export_audit<S>(
     let Some(sink) = state.audit_sink() else {
         return;
     };
+    // Atrius audit attribution: keep the richer agent identity (fhirUser-aware)
+    // and issuer rather than upstream's subject-only helper.
     let mut builder = helios_audit::AuditEventBuilder::new(state.audit_source_observer())
         .event_type(
             "http://terminology.hl7.org/CodeSystem/audit-event-type",

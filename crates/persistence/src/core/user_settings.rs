@@ -10,8 +10,10 @@
 //! # Design
 //!
 //! - **One document per user.** Each user owns a single JSON *object* keyed by a
-//!   caller-supplied `user_key` (e.g. `"{issuer}|{subject}"` from an
-//!   authenticated principal, or a fixed local key when auth is disabled).
+//!   caller-supplied `user_key` (e.g. `"u2:{issuer_len}:{issuer}:{subject}"`
+//!   from an authenticated principal, or a fixed local key when auth is
+//!   disabled). The key is opaque to this layer; deriving it injectively is the
+//!   caller's job — see `helios_rest::extractors::UserKey`.
 //! - **Opaque and extensible.** The document is stored as an arbitrary
 //!   [`serde_json::Value`] object, so new settings keys require no schema or
 //!   code changes — the frontend owns the document shape.
@@ -23,6 +25,54 @@
 //!   that increments on every write and is surfaced to clients as a weak ETag
 //!   (`W/"{version}"`). Callers may pass `if_match_version` to make a write
 //!   conditional and avoid lost updates.
+//!
+//! # Document conventions
+//!
+//! The document is schema-less, but keys shared between clients follow agreed
+//! conventions. The established ones:
+//!
+//! - `theme` — `"light"` / `"dark"` (the web UI theme toggle).
+//! - `savedQueries` — per-user saved FHIR queries, grouped by resource type
+//!   and **keyed by query id** so a JSON merge patch can create, update, or
+//!   delete a single entry without clobbering its siblings (RFC 7386 replaces
+//!   arrays wholesale, hence objects, not arrays):
+//!
+//!   ```json
+//!   {
+//!     "savedQueries": {
+//!       "Patient": {
+//!         "01J8ZQ3F9V": {
+//!           "name": "Smiths in Boston",
+//!           "query": "name=smith&address-city=Boston",
+//!           "createdAt": "2026-07-01T12:00:00Z",
+//!           "lastAccessedAt": "2026-07-09T09:14:22Z",
+//!           "accessCount": 12
+//!         }
+//!       }
+//!     }
+//!   }
+//!   ```
+//!
+//!   Clients bump `lastAccessedAt` / `accessCount` with a merge patch when the
+//!   query is run, and sort by `lastAccessedAt` descending, falling back to
+//!   `createdAt` for never-run entries. The REST layer enforces structural
+//!   bounds on this key (entries-per-type and whole-document size caps); see
+//!   `helios-rest`'s user-settings handlers.
+//!
+//! - `recentSearches` — the search-builder's run history, newest first,
+//!   deduped by query and capped by the client (currently 10):
+//!
+//!   ```json
+//!   {
+//!     "recentSearches": [
+//!       { "query": "/Patient?name=smith", "at": "2026-07-11T09:14:22Z" }
+//!     ]
+//!   }
+//!   ```
+//!
+//!   Unlike `savedQueries`, this is an array on purpose: it is a small
+//!   bounded cache rewritten wholesale on every run, not sibling-keyed
+//!   state, so RFC 7386's replace-the-array semantics are exactly right.
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -47,7 +97,9 @@ pub struct StoredUserSettings {
 
 /// Storage abstraction for opaque, per-user JSON settings documents.
 ///
-/// Implemented by the SQLite and PostgreSQL backends. The trait is intentionally
+/// Implemented by every standalone primary backend: SQLite, PostgreSQL, and
+/// MongoDB, and S3 (where the read-modify-write is a compare-and-swap over
+/// conditional `PutObject` rather than a transaction). The trait is intentionally
 /// minimal — get the whole document, replace it, or merge-patch it — because the
 /// document body is opaque to the server.
 #[async_trait]
@@ -84,6 +136,18 @@ pub trait SettingsStore: Send + Sync {
         merge_patch: Value,
         if_match_version: Option<i64>,
     ) -> StorageResult<StoredUserSettings>;
+
+    /// Deletes the user's settings document, returning whether one existed.
+    ///
+    /// Deleting an absent document is not an error — the method is idempotent,
+    /// so a caller that races another deleter still sees success.
+    ///
+    /// This exists to complete the lifecycle the other three methods imply: a
+    /// document that can be created must be removable, both to migrate a
+    /// document written under a superseded key encoding (see issue #270) and so
+    /// that a user's stored preferences — which may include recent FHIR search
+    /// strings — are erasable at all.
+    async fn delete_settings(&self, user_key: &str) -> StorageResult<bool>;
 }
 
 /// Applies an [RFC 7386](https://www.rfc-editor.org/rfc/rfc7386) JSON Merge

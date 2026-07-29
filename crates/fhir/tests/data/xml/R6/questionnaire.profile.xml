@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="Questionnaire"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -636,7 +636,7 @@
             <span style="font-style: italic" title="que-14">+ Warning: Can only have answerConstraint if answerOption or answerValueSet are present.  (This is a warning because extensions may serve the same purpose)</span>
             <br/>
             <span style="font-style: italic" title="que-17">+ Rule: If question is non-repeating, cannot have more than one initialSelected answer option</span>
-            <br/>
+            <br/>This repeating element order: The order items are listed indicates the order in which they should be presented to the user (if they are enabled)
             <br/>
           </td>
         </tr>
@@ -797,6 +797,8 @@
             <span style="font-style: italic" title="que-7">+ Rule: If the operator is 'exists', the value must be a boolean</span>
             <br/>
             <span style="font-style: italic" title="que-18">+ Warning: Referenced questions SHOULD exist in the Questionnaire (unless still in draft, working with modular forms, etc.)</span>
+            <br/>
+            <span style="font-style: italic" title="que-19">+ Guideline: When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance.</span>
             <br/>
             <br/>
           </td>
@@ -1282,6 +1284,8 @@
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Permitted answer
             <br/>
+            <span style="font-style: italic" title="que-20">+ Guideline: When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance.</span>
+            <br/>This repeating element order: The order of the options indicates the order in which they should be presented to the user by default.  Extensions may drive changes to the presentation order.
             <br/>
           </td>
         </tr>
@@ -1528,6 +1532,8 @@
             <a href="types.html#BackBoneElement">BackboneElement</a>
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Initial value(s) when item is first rendered
+            <br/>
+            <span style="font-style: italic" title="que-21">+ Guideline: When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance.</span>
             <br/>
             <br/>
           </td>
@@ -1823,7 +1829,7 @@
   <name value="Questionnaire"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -3120,6 +3126,7 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order items are listed indicates the order in which they should be presented to the user (if they are enabled)"/>
       <constraint>
         <key value="ele-1"/>
         <severity value="error"/>
@@ -3635,6 +3642,19 @@
         <severity value="warning"/>
         <human value="Referenced questions SHOULD exist in the Questionnaire (unless still in draft, working with modular forms, etc.)"/>
         <expression value="question.exists() implies (%resource.repeat(item).linkId contains question)"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
+      </constraint>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-19"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="answer is Coding implies answer.system.exists()"/>
         <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
       </constraint>
       <mustSupport value="false"/>
@@ -4199,6 +4219,7 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order of the options indicates the order in which they should be presented to the user by default.  Extensions may drive changes to the presentation order."/>
       <condition value="que-5"/>
       <condition value="que-4"/>
       <condition value="que-11"/>
@@ -4209,6 +4230,19 @@
         <human value="All FHIR elements must have a @value or children or both"/>
         <expression value="hasValue() or (children().count() &gt; id.count())"/>
         <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+      </constraint>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-20"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="value is Coding implies value.system.exists()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
       </constraint>
       <mustSupport value="false"/>
       <isModifier value="false"/>
@@ -4453,6 +4487,19 @@
         <human value="All FHIR elements must have a @value or children or both"/>
         <expression value="hasValue() or (children().count() &gt; id.count())"/>
         <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+      </constraint>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-21"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="value is Coding implies value.system.exists()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
       </constraint>
       <mustSupport value="false"/>
       <isModifier value="false"/>
@@ -5376,6 +5423,7 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order items are listed indicates the order in which they should be presented to the user (if they are enabled)"/>
       <constraint>
         <key value="que-17"/>
         <severity value="error"/>
@@ -5692,6 +5740,19 @@
         <severity value="error"/>
         <human value="If the operator is 'exists', the value must be a boolean"/>
         <expression value="operator = 'exists' implies (answer is boolean)"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
+      </constraint>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-19"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="answer is Coding implies answer.system.exists()"/>
         <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
       </constraint>
       <mustSupport value="false"/>
@@ -6011,10 +6072,24 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order of the options indicates the order in which they should be presented to the user by default.  Extensions may drive changes to the presentation order."/>
       <condition value="que-5"/>
       <condition value="que-4"/>
       <condition value="que-11"/>
       <condition value="que-14"/>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-20"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="value is Coding implies value.system.exists()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
+      </constraint>
       <mustSupport value="false"/>
       <isModifier value="false"/>
       <isSummary value="false"/>
@@ -6115,6 +6190,19 @@
       <condition value="que-8"/>
       <condition value="que-13"/>
       <condition value="que-11"/>
+      <constraint>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice">
+          <valueBoolean value="true"/>
+        </extension>
+        <extension url="http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice-explanation">
+          <valueMarkdown value="It's not uncommon for legacy questionnaires to have &quot;coded&quot; questions that have a code but no system or sometimes even just a display value.  While this is not prohibited, it's not good practice."/>
+        </extension>
+        <key value="que-21"/>
+        <severity value="warning"/>
+        <human value="When using codings, both code and system should be present.  See FHIR specification Questionnaire 'Using Coded Answers' usage notes for guidance."/>
+        <expression value="value is Coding implies value.system.exists()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Questionnaire"/>
+      </constraint>
       <mustSupport value="false"/>
       <isModifier value="false"/>
       <isSummary value="false"/>

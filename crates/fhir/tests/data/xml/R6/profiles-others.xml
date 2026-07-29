@@ -3,7 +3,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
   <id value="profiles-others"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <type value="collection"/>
   <entry>
@@ -40608,7 +40608,7 @@
         <title value="History bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <description value="This profile holds all the requirements and constraints related to a FHIR history bundle."/>
         <fhirVersion value="6.0.0-ballot4"/>
         <mapping>
@@ -40669,8 +40669,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -40942,7 +40942,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -41462,7 +41462,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -42444,7 +42444,7 @@
           <element id="Bundle.entry:put.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -43427,7 +43427,7 @@
           <element id="Bundle.entry:post.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -44410,7 +44410,7 @@
           <element id="Bundle.entry:get.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -45393,7 +45393,7 @@
           <element id="Bundle.entry:delete.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -46376,7 +46376,7 @@
           <element id="Bundle.entry:patch.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -47149,31 +47149,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -47359,7 +47334,7 @@
         <title value="Search Set Bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -47427,8 +47402,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -47700,7 +47675,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -48220,7 +48195,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -49202,7 +49177,7 @@
           <element id="Bundle.entry:operationOutcome.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -50185,7 +50160,7 @@
           <element id="Bundle.entry:other.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -50958,31 +50933,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -51099,7 +51049,7 @@
         <title value="Subscription Notification bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -51167,8 +51117,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -51440,7 +51390,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -51960,7 +51910,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -52942,7 +52892,7 @@
           <element id="Bundle.entry:first.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -53924,7 +53874,7 @@
           <element id="Bundle.entry:other.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -54697,31 +54647,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -54832,7 +54757,7 @@
         <title value="Batch bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -54900,8 +54825,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -55173,7 +55098,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -55693,7 +55618,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -56675,7 +56600,7 @@
           <element id="Bundle.entry:put.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -57658,7 +57583,7 @@
           <element id="Bundle.entry:post.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -58641,7 +58566,7 @@
           <element id="Bundle.entry:get.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -59624,7 +59549,7 @@
           <element id="Bundle.entry:delete.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -60607,7 +60532,7 @@
           <element id="Bundle.entry:patch.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -61590,7 +61515,7 @@
           <element id="Bundle.entry:head.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -62360,31 +62285,6 @@
               <code value="Resource"/>
               <profile value="http://hl7.org/fhir/StructureDefinition/OperationOutcome"/>
             </type>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
             <mustSupport value="false"/>
             <isModifier value="false"/>
             <isSummary value="true"/>
@@ -62624,7 +62524,7 @@
         <title value="Batch response bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -62692,8 +62592,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -62965,7 +62865,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -63476,7 +63376,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -64249,31 +64149,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -64345,7 +64220,7 @@
         <title value="Transaction bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -64413,8 +64288,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -64686,7 +64561,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -65206,7 +65081,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -66188,7 +66063,7 @@
           <element id="Bundle.entry:put.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -67171,7 +67046,7 @@
           <element id="Bundle.entry:post.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -68154,7 +68029,7 @@
           <element id="Bundle.entry:get.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -69137,7 +69012,7 @@
           <element id="Bundle.entry:delete.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -70120,7 +69995,7 @@
           <element id="Bundle.entry:patch.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -71103,7 +70978,7 @@
           <element id="Bundle.entry:head.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="0"/>
@@ -71877,31 +71752,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -72137,7 +71987,7 @@
         <title value="Transaction response bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -72205,8 +72055,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -72478,7 +72328,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <min value="1"/>
             <max value="1"/>
             <base>
@@ -72989,7 +72839,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="0"/>
             <max value="1"/>
@@ -73762,31 +73612,6 @@
             <isModifier value="false"/>
             <isSummary value="true"/>
           </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
           <element id="Bundle.issues">
             <path value="Bundle.issues"/>
             <short value="OperationOutcome with issues about the Bundle"/>
@@ -73858,7 +73683,7 @@
         <title value="Document bundle"/>
         <status value="active"/>
         <experimental value="false"/>
-        <date value="2026-07-04T18:53:58+00:00"/>
+        <date value="2026-07-17T03:44:13+00:00"/>
         <publisher value="HL7 International / FHIR Infrastructure"/>
         <contact>
           <telecom>
@@ -73926,8 +73751,8 @@
             <constraint>
               <key value="bdl-7"/>
               <severity value="error"/>
-              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)"/>
-              <expression value="(type = 'history') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
+              <human value="FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history and collection bundles)"/>
+              <expression value="(type = 'history') or (type = 'collection') or entry.where(fullUrl.exists()).select(fullUrl&amp;iif(resource.meta.versionId.exists(), resource.meta.versionId, '')).isDistinct()"/>
               <source value="http://hl7.org/fhir/StructureDefinition/Bundle"/>
             </constraint>
             <constraint>
@@ -74508,7 +74333,7 @@
             <path value="Bundle.type"/>
             <short value="document | message | transaction | transaction-response | batch | batch-response | history | searchset | collection | subscription-notification"/>
             <definition value="Indicates the purpose of this bundle - how it is intended to be used."/>
-            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types."/>
+            <comment value="It's possible to use a bundle for other purposes (e.g. a document can be accepted as a transaction). This is primarily defined so that there can be specific rules for some of the bundle types. If dealing with some other type of Bundle that doesn't map cleanly to a more specialized type, use 'collection' as it imposes the least constraints and has the most flexible semantic."/>
             <requirements value="Set type to document."/>
             <min value="1"/>
             <max value="1"/>
@@ -75021,7 +74846,7 @@
           <element id="Bundle.entry.resource">
             <path value="Bundle.entry.resource"/>
             <short value="A resource in the bundle"/>
-            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type. This is allowed to be a Parameters resource if and only if it is referenced by something else within the Bundle that provides context/meaning."/>
+            <definition value="The Resource for the entry. The purpose/meaning of the resource is determined by the Bundle.type."/>
             <comment value="This may be a resource defined in the FHIR specification, or an [additional resource](resource.html#additional)"/>
             <min value="1"/>
             <max value="1"/>
@@ -75790,31 +75615,6 @@
               <code value="Resource"/>
               <profile value="http://hl7.org/fhir/StructureDefinition/OperationOutcome"/>
             </type>
-            <mustSupport value="false"/>
-            <isModifier value="false"/>
-            <isSummary value="true"/>
-          </element>
-          <element id="Bundle.signature">
-            <path value="Bundle.signature"/>
-            <short value="Digital Signature (deprecated: use Provenance Signatures)"/>
-            <definition value="Digital Signature: XML-DSig or JWS. This element is deprecated, and [Provenance based Signatures](signatures.html#Bundle) should be used instead."/>
-            <min value="0"/>
-            <max value="1"/>
-            <base>
-              <path value="Bundle.signature"/>
-              <min value="0"/>
-              <max value="1"/>
-            </base>
-            <type>
-              <code value="Signature"/>
-            </type>
-            <constraint>
-              <key value="ele-1"/>
-              <severity value="error"/>
-              <human value="All FHIR elements must have a @value or children"/>
-              <expression value="hasValue() or (children().count() &gt; id.count())"/>
-              <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
-            </constraint>
             <mustSupport value="false"/>
             <isModifier value="false"/>
             <isSummary value="true"/>

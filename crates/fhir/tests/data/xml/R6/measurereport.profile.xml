@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="MeasureReport"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -1970,14 +1970,14 @@
     <valueInteger value="4"/>
   </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
-    <valueCode value="business"/>
+    <valueCode value="patient"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/MeasureReport"/>
   <version value="6.0.0-ballot4"/>
   <name value="MeasureReport"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / Clinical Quality Information"/>
   <contact>
     <telecom>

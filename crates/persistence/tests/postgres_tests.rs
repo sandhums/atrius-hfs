@@ -9,7 +9,17 @@
 #![cfg(feature = "postgres")]
 
 use helios_persistence::backends::postgres::PostgresConfig;
-use helios_persistence::core::{BackendCapability, BackendKind};
+use helios_persistence::core::BackendKind;
+
+/// The backend-agnostic `ifMatch` scenarios (issue #311), shared verbatim with
+/// the SQLite suite that owns the file.
+///
+/// Declared at the top level rather than inside `mod postgres_integration`
+/// because `#[path]` on a module nested in an *inline* module resolves relative
+/// to `tests/postgres_tests/postgres_integration/`, which does not exist. At the
+/// crate root it resolves relative to `tests/`, which does.
+#[path = "transactions/if_match_suite.rs"]
+mod if_match_suite;
 
 // ============================================================================
 // Backend Configuration Tests (no PostgreSQL instance required)
@@ -23,11 +33,17 @@ fn test_postgres_config_defaults() {
     assert_eq!(config.dbname, "helios");
     assert_eq!(config.user, "helios");
     assert!(config.password.is_none());
-    assert_eq!(config.max_connections, 10);
+    // Derived from the core count (cores * 4, clamped) rather than a fixed 10, which
+    // throttled search badly under concurrent load — see #224. Assert the contract
+    // (the clamp bounds), not the machine-dependent value.
+    assert!(
+        (16..=64).contains(&config.max_connections),
+        "pool size {} outside the 16..=64 clamp",
+        config.max_connections
+    );
     assert_eq!(config.connect_timeout_secs, 5);
     assert_eq!(config.statement_timeout_ms, 30000);
     assert!(!config.search_offloaded);
-    assert!(config.schema_name.is_none());
 }
 
 #[test]
@@ -54,46 +70,24 @@ fn test_postgres_config_serialization() {
 // Backend Capability Tests (no PostgreSQL instance required)
 // ============================================================================
 
-// NOTE: These tests verify capability declarations. They cannot construct a
-// PostgresBackend without a real database (the constructor connects immediately).
-// We verify via config + trait bounds instead.
+// NOTE: capability *declarations* are asserted in
+// `tests/backend_capability_contract.rs`, against the constructor-free
+// `PostgresBackend::declared_capabilities()`. They live there rather than here
+// because a `PostgresBackend` cannot be constructed without a real database
+// (the constructor connects immediately), and because the assertions are
+// cross-backend.
+//
+// A `test_postgres_expected_capabilities` used to live here. It listed the
+// capabilities by hand and then asserted `!expected.is_empty()` — which passes
+// for any non-empty list, so it verified nothing while reading like a contract.
+// Worse, its hand list was a third copy of the false `SchemaPerTenant` /
+// `DatabasePerTenant` claim corrected in #369. Deleted rather than repaired.
 
 #[test]
 fn test_postgres_config_backend_kind() {
     // Verify BackendKind::Postgres exists and is usable
     let kind = BackendKind::Postgres;
     assert_eq!(format!("{}", kind), "postgres");
-}
-
-#[test]
-fn test_postgres_expected_capabilities() {
-    // Verify the capability enum variants that PostgreSQL should support exist
-    let expected = [
-        BackendCapability::Crud,
-        BackendCapability::Versioning,
-        BackendCapability::InstanceHistory,
-        BackendCapability::TypeHistory,
-        BackendCapability::SystemHistory,
-        BackendCapability::BasicSearch,
-        BackendCapability::DateSearch,
-        BackendCapability::ReferenceSearch,
-        BackendCapability::FullTextSearch,
-        BackendCapability::Sorting,
-        BackendCapability::OffsetPagination,
-        BackendCapability::CursorPagination,
-        BackendCapability::Transactions,
-        BackendCapability::OptimisticLocking,
-        BackendCapability::BulkExport,
-        BackendCapability::BulkSubmitIngest,
-        BackendCapability::BulkSubmitRestWorker,
-        BackendCapability::Include,
-        BackendCapability::Revinclude,
-        BackendCapability::SharedSchema,
-        BackendCapability::SchemaPerTenant,
-        BackendCapability::DatabasePerTenant,
-    ];
-    // This is a compile-time check: all variants exist
-    assert!(!expected.is_empty());
 }
 
 // ============================================================================
@@ -151,8 +145,18 @@ mod query_builder_tests {
         let result = PostgresQueryBuilder::build_search_query(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
-        // Default string search is starts-with (case-insensitive via ILIKE)
-        assert!(fragment.sql.contains("ILIKE"));
+        // Default string search is starts-with. `LIKE`, not `ILIKE`: both the stored
+        // column and the bound pattern are already case-folded by `fold_text`, and
+        // `ILIKE` cannot use a btree index (#224). The raw-column fallback is wrapped
+        // in `lower()` so un-backfilled rows keep matching case-insensitively.
+        assert!(
+            fragment
+                .sql
+                .contains("COALESCE(value_string_folded, lower(value_string)) LIKE"),
+            "string search must target the indexed folded expression: {}",
+            fragment.sql
+        );
+        assert!(!fragment.sql.contains("ILIKE"));
         assert!(fragment.sql.contains("param_name = 'name'"));
         // Parameter should be "Smith%"
         match &fragment.params[0] {
@@ -197,7 +201,12 @@ mod query_builder_tests {
         let result = PostgresQueryBuilder::build_search_query(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
-        assert!(fragment.sql.contains("ILIKE"));
+        assert!(
+            fragment
+                .sql
+                .contains("COALESCE(value_string_folded, lower(value_string)) LIKE")
+        );
+        assert!(!fragment.sql.contains("ILIKE"));
         // Parameter should be "%mit%"
         match &fragment.params[0] {
             SqlParam::Text(s) => {
@@ -278,9 +287,14 @@ mod query_builder_tests {
         let result = PostgresQueryBuilder::build_search_query(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
-        // Accent-folded substring match: COALESCE(folded, raw) ILIKE %mit%
+        // Accent-folded substring match against the indexed folded expression.
         assert!(fragment.sql.contains("value_string_folded"));
-        assert!(fragment.sql.contains("ILIKE"));
+        assert!(
+            fragment
+                .sql
+                .contains("COALESCE(value_string_folded, lower(value_string)) LIKE")
+        );
+        assert!(!fragment.sql.contains("ILIKE"));
         // Substring match: param wrapped as %mit%
         match &fragment.params[0] {
             SqlParam::Text(s) => {
@@ -806,6 +820,69 @@ mod postgres_integration {
         TenantContext::new(TenantId::new(&unique_id), TenantPermissions::full_access())
     }
 
+    #[tokio::test]
+    async fn statement_timeout_applies_to_every_pooled_connection() {
+        let pg = shared_pg().await;
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("data"))
+            .unwrap_or_else(|| PathBuf::from("data"));
+
+        const POOL_SIZE: usize = 10;
+        const TIMEOUT_MS: u64 = 250;
+
+        let config = PostgresConfig {
+            host: pg.host.clone(),
+            port: pg.port,
+            dbname: "postgres".to_string(),
+            user: "postgres".to_string(),
+            password: Some("postgres".to_string()),
+            max_connections: POOL_SIZE,
+            statement_timeout_ms: TIMEOUT_MS,
+            data_dir: Some(data_dir),
+            ..Default::default()
+        };
+        let backend =
+            std::sync::Arc::new(PostgresBackend::new(config).await.expect("create backend"));
+
+        // Hold POOL_SIZE clients across a barrier so the pool is forced to open
+        // every physical connection before any is released. deadpool creates
+        // connections lazily, so a serial check could pass while exercising only
+        // one connection. The regression this guards (#285): the pre-fix code ran
+        // `SET statement_timeout` on the single connection borrowed inside
+        // `PostgresBackend::new`, so every connection created lazily afterwards
+        // inherited the server default (usually 0 = uncapped). Shipping the GUC
+        // in the connection startup packet makes every connection carry it, which
+        // is what each task asserts below.
+        let barrier = std::sync::Arc::new(tokio::sync::Barrier::new(POOL_SIZE));
+        let mut handles = Vec::with_capacity(POOL_SIZE);
+        for _ in 0..POOL_SIZE {
+            let backend = backend.clone();
+            let barrier = barrier.clone();
+            handles.push(tokio::spawn(async move {
+                let client = backend.get_client().await.expect("get_client");
+                barrier.wait().await;
+                let row = client
+                    .query_one("SELECT current_setting('statement_timeout')", &[])
+                    .await
+                    .expect("current_setting");
+                let value: String = row.get(0);
+                value
+            }));
+        }
+
+        for (i, h) in handles.into_iter().enumerate() {
+            let value = h.await.expect("task panicked");
+            assert_eq!(
+                value,
+                format!("{TIMEOUT_MS}ms"),
+                "pooled connection #{i} reported statement_timeout={value:?}, \
+                 expected {TIMEOUT_MS}ms — the GUC did not reach every connection"
+            );
+        }
+    }
+
     // ========================================================================
     // CRUD Tests
     // ========================================================================
@@ -998,6 +1075,197 @@ mod postgres_integration {
 
         assert!(!was_created2);
         assert_eq!(resource2.content()["name"][0]["family"], "Second");
+    }
+
+    /// A `PUT` onto a deleted id restores the resource instead of failing.
+    ///
+    /// FHIR permits a deleted resource to be brought back by a subsequent
+    /// update (http.html#delete). The restore continues the existing version
+    /// chain — v1 create, v2 delete, v3 restore — rather than resetting to
+    /// "1", and the resource is readable and searchable again afterwards.
+    /// This mirrors `crud::delete_tests::test_delete_is_soft_delete`, which
+    /// covers the same path on SQLite.
+    #[tokio::test]
+    async fn postgres_integration_create_or_update_restores_deleted() {
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        let created = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType": "Patient", "name": [{"family": "Original"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let id = created.id().to_string();
+        assert_eq!(created.version_id(), "1");
+
+        backend.delete(&tenant, "Patient", &id).await.unwrap();
+
+        let (restored, _created_new) = backend
+            .create_or_update(
+                &tenant,
+                "Patient",
+                &id,
+                json!({"resourceType": "Patient", "name": [{"family": "Restored"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(restored.content()["name"][0]["family"], "Restored");
+        assert_eq!(
+            restored.version_id(),
+            "3",
+            "restore should continue the version chain (v1 create, v2 delete, v3 restore)"
+        );
+        assert!(!restored.is_deleted());
+
+        // The resource is live again: readable, and the restore is the current
+        // version.
+        let read = backend
+            .read(&tenant, "Patient", &id)
+            .await
+            .unwrap()
+            .expect("restored resource must be readable");
+        assert_eq!(read.version_id(), "3");
+        assert_eq!(read.content()["name"][0]["family"], "Restored");
+        assert!(backend.exists(&tenant, "Patient", &id).await.unwrap());
+
+        // History keeps every version, including the deletion — which is only
+        // returned when `include_deleted` is set (deleted versions are filtered out
+        // by default on every backend).
+        let history = backend
+            .history_instance(
+                &tenant,
+                "Patient",
+                &id,
+                &HistoryParams::new().include_deleted(true),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            history.items.len(),
+            3,
+            "history should hold create, delete and restore"
+        );
+        assert_eq!(history.items[0].resource.version_id(), "3");
+        assert!(!history.items[0].resource.is_deleted());
+        assert!(
+            history.items[1].resource.is_deleted(),
+            "the middle version is the deletion"
+        );
+    }
+
+    /// Restoring a deleted resource requires update permission.
+    #[tokio::test]
+    async fn postgres_integration_restore_deleted_requires_permission() {
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        let created = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType": "Patient"}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let id = created.id().to_string();
+        backend.delete(&tenant, "Patient", &id).await.unwrap();
+
+        // Same tenant, read-only permissions.
+        let read_only =
+            TenantContext::new(tenant.tenant_id().clone(), TenantPermissions::read_only());
+        let result = backend
+            .create_or_update(
+                &read_only,
+                "Patient",
+                &id,
+                json!({"resourceType": "Patient"}),
+                FhirVersion::default(),
+            )
+            .await;
+        assert!(
+            matches!(&result, Err(StorageError::Tenant(_))),
+            "restore without update permission must be refused, got {:?}",
+            result.as_ref().map(|(r, _)| r.version_id())
+        );
+    }
+
+    /// A restored SearchParameter re-enters the tenant's registry overlay.
+    ///
+    /// Deleting a custom SearchParameter unregisters it; bringing it back with
+    /// a PUT has to reload the stored-parameter cache the way a create does,
+    /// or the parameter stays invisible to search until the process restarts.
+    #[tokio::test]
+    async fn postgres_integration_restored_search_parameter_reenters_registry() {
+        use helios_persistence::core::SearchProvider;
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        let search_param = json!({
+            "resourceType": "SearchParameter",
+            "id": "pg-restore-sp",
+            "url": "http://example.org/fhir/SearchParameter/pg-restore-sp",
+            "name": "pgrestoresp",
+            "status": "active",
+            "code": "pgrestoresp",
+            "base": ["Observation"],
+            "type": "token",
+            "expression": "Observation.code"
+        });
+
+        backend
+            .create_or_update(
+                &tenant,
+                "SearchParameter",
+                "pg-restore-sp",
+                search_param.clone(),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        {
+            let reg = backend.search_param_registry(&tenant);
+            let registry = reg.read();
+            assert!(registry.get_param("Observation", "pgrestoresp").is_some());
+        }
+
+        backend
+            .delete(&tenant, "SearchParameter", "pg-restore-sp")
+            .await
+            .unwrap();
+        {
+            let reg = backend.search_param_registry(&tenant);
+            let registry = reg.read();
+            assert!(
+                registry.get_param("Observation", "pgrestoresp").is_none(),
+                "deleted SearchParameter should be unregistered"
+            );
+        }
+
+        backend
+            .create_or_update(
+                &tenant,
+                "SearchParameter",
+                "pg-restore-sp",
+                search_param,
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        let reg = backend.search_param_registry(&tenant);
+        let registry = reg.read();
+        assert!(
+            registry.get_param("Observation", "pgrestoresp").is_some(),
+            "restored SearchParameter should be registered again"
+        );
     }
 
     #[tokio::test]
@@ -1281,6 +1549,54 @@ mod postgres_integration {
         assert_eq!(today_row.count, 2);
     }
 
+    /// The history-backed delta rule on real Postgres: create `+1`, update `0`,
+    /// delete `-1`, on epoch-aligned buckets. Mirrors the SQLite unit test, so the
+    /// two backends are held to the same bucketing contract.
+    #[tokio::test]
+    async fn postgres_integration_count_deltas_by_bucket() {
+        let backend = create_backend().await;
+        let tenant = create_tenant("console-count-deltas");
+
+        let first = backend
+            .create(&tenant, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        backend
+            .create(&tenant, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        backend
+            .update(&tenant, &first, json!({"active": true}))
+            .await
+            .unwrap();
+
+        let since = chrono::Utc::now() - chrono::Duration::minutes(5);
+        let rows = backend
+            .count_deltas_by_bucket(&tenant, "Patient", since, 60)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            rows.iter().map(|r| r.delta).sum::<i64>(),
+            2,
+            "two creates and one update net to +2"
+        );
+        assert!(
+            rows.iter().all(|r| r.bucket_start.timestamp() % 60 == 0),
+            "buckets are epoch-aligned to their width"
+        );
+
+        backend
+            .delete(&tenant, "Patient", first.id())
+            .await
+            .unwrap();
+        let rows = backend
+            .count_deltas_by_bucket(&tenant, "Patient", since, 60)
+            .await
+            .unwrap();
+        assert_eq!(rows.iter().map(|r| r.delta).sum::<i64>(), 1);
+    }
+
     #[tokio::test]
     async fn postgres_integration_activity_histogram() {
         let backend = create_backend().await;
@@ -1355,6 +1671,129 @@ mod postgres_integration {
     async fn postgres_integration_is_cluster_shared() {
         let backend = create_backend().await;
         assert!(backend.is_cluster_shared());
+    }
+
+    // ========================================================================
+    // Tenant Registry Tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn postgres_integration_tenant_registry_crud() {
+        let backend = create_backend().await;
+        assert!(backend.supports_tenant_registry());
+
+        // Unique ids isolate this test from others sharing the database. The
+        // shared uuid base plus "-a"/"-b" suffixes make the id ASC tie-break
+        // deterministic when both rows land in the same created_at second.
+        let base = uuid::Uuid::new_v4().simple().to_string();
+        let id_a = format!("registry-{}-a", base);
+        let id_b = format!("registry-{}-b", base);
+
+        assert!(backend.get_tenant(&id_a).await.unwrap().is_none());
+
+        // Register two tenants, one with a display name.
+        let acme = backend
+            .register_tenant(&id_a, Some("Acme Corp"))
+            .await
+            .unwrap();
+        assert_eq!(acme.id, id_a);
+        assert_eq!(acme.display_name.as_deref(), Some("Acme Corp"));
+        assert!(!acme.created_at.is_empty());
+
+        let beta = backend.register_tenant(&id_b, None).await.unwrap();
+        assert_eq!(beta.id, id_b);
+        assert_eq!(beta.display_name, None);
+
+        // get_tenant round-trips the registered records.
+        assert_eq!(backend.get_tenant(&id_a).await.unwrap(), Some(acme));
+        assert_eq!(backend.get_tenant(&id_b).await.unwrap(), Some(beta));
+
+        // The database is shared across tests, so only assert on our own rows:
+        // both are present, ordered a before b (created_at ASC, id ASC).
+        let all = backend.list_tenants().await.unwrap();
+        let pos_a = all.iter().position(|t| t.id == id_a);
+        let pos_b = all.iter().position(|t| t.id == id_b);
+        assert!(pos_a.is_some(), "registered tenant {} not listed", id_a);
+        assert!(pos_b.is_some(), "registered tenant {} not listed", id_b);
+        assert!(pos_a < pos_b, "expected {} to sort before {}", id_a, id_b);
+
+        // Duplicate registration is an error (handler pre-checks for 409).
+        assert!(backend.register_tenant(&id_a, None).await.is_err());
+
+        // Deregister removes the row; repeat and unknown ids report nothing
+        // removed.
+        assert!(backend.deregister_tenant(&id_a).await.unwrap());
+        assert!(backend.get_tenant(&id_a).await.unwrap().is_none());
+        assert!(!backend.deregister_tenant(&id_a).await.unwrap());
+        assert!(
+            !backend
+                .deregister_tenant(&format!("never-registered-{}", base))
+                .await
+                .unwrap()
+        );
+
+        let remaining = backend.list_tenants().await.unwrap();
+        assert!(!remaining.iter().any(|t| t.id == id_a));
+        assert!(remaining.iter().any(|t| t.id == id_b));
+
+        backend.deregister_tenant(&id_b).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_purge_tenant_data() {
+        let backend = create_backend().await;
+        let tenant_a = create_tenant("purge-tenant-a");
+        let tenant_b = create_tenant("purge-tenant-b");
+
+        let mut a_ids = Vec::new();
+        for i in 0..3 {
+            let patient = json!({
+                "resourceType": "Patient",
+                "name": [{"family": format!("Purge{}", i)}]
+            });
+            let created = backend
+                .create(&tenant_a, "Patient", patient, FhirVersion::default())
+                .await
+                .unwrap();
+            a_ids.push(created.id().to_string());
+        }
+        let b_created = backend
+            .create(
+                &tenant_b,
+                "Patient",
+                json!({"resourceType": "Patient", "name": [{"family": "Kept"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        // Purge removes tenant-a's data only, reporting its current-row count.
+        let removed = backend
+            .purge_tenant_data(tenant_a.tenant_id().as_str())
+            .await
+            .unwrap();
+        assert_eq!(removed, 3);
+
+        assert_eq!(backend.count(&tenant_a, Some("Patient")).await.unwrap(), 0);
+        for id in &a_ids {
+            assert!(
+                backend
+                    .read(&tenant_a, "Patient", id)
+                    .await
+                    .unwrap()
+                    .is_none()
+            );
+        }
+
+        // tenant-b's data is intact.
+        assert_eq!(backend.count(&tenant_b, Some("Patient")).await.unwrap(), 1);
+        assert!(
+            backend
+                .read(&tenant_b, "Patient", b_created.id())
+                .await
+                .unwrap()
+                .is_some()
+        );
     }
 
     // ========================================================================
@@ -1977,6 +2416,244 @@ mod postgres_integration {
         assert!(result.resources.items.is_empty(), "code mismatch → no hit");
     }
 
+    /// A composite must match only when every component is satisfied *within the
+    /// same* `composite_group`.
+    ///
+    /// `Observation.component` yields one composite group per component entry, so
+    /// a blood-pressure panel indexes systolic (8480-6, 120) as group 0 and
+    /// diastolic (8462-4, 80) as group 1 — each with its own code row and value
+    /// row. A query for "diastolic > 100" must NOT match: the resource has a code
+    /// row for 8462-4 (group 1) and a value row > 100 (group 0, the systolic 120),
+    /// but never both in one group.
+    ///
+    /// Any rewrite that pushes the component predicates into the WHERE clause
+    /// without correlating on `composite_group` returns this resource — a silent
+    /// false positive that ships as a 100x speedup and returns the wrong patients.
+    /// The single-group fixture in the test above cannot detect that class of bug.
+    #[tokio::test]
+    async fn postgres_integration_composite_components_must_share_a_group() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            CompositeSearchComponent, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Blood-pressure panel: systolic 120, diastolic 80 — two composite groups.
+        let observation = json!({
+            "resourceType": "Observation",
+            "id": "obs-bp-panel",
+            "status": "final",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "85354-9" }] },
+            "component": [
+                {
+                    "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6" }] },
+                    "valueQuantity": { "value": 120, "unit": "mm[Hg]", "system": "http://unitsofmeasure.org" }
+                },
+                {
+                    "code": { "coding": [{ "system": "http://loinc.org", "code": "8462-4" }] },
+                    "valueQuantity": { "value": 80, "unit": "mm[Hg]", "system": "http://unitsofmeasure.org" }
+                }
+            ]
+        });
+        backend
+            .create(&tenant, "Observation", observation, FhirVersion::default())
+            .await
+            .unwrap();
+
+        let query = |value: &str| {
+            SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "component-code-value-quantity".to_string(),
+                param_type: SearchParamType::Composite,
+                modifier: None,
+                values: vec![SearchValue::eq(value)],
+                chain: vec![],
+                components: vec![
+                    CompositeSearchComponent {
+                        param_type: SearchParamType::Token,
+                        param_name: "component-code".to_string(),
+                    },
+                    CompositeSearchComponent {
+                        param_type: SearchParamType::Quantity,
+                        param_name: "component-value-quantity".to_string(),
+                    },
+                ],
+            })
+        };
+
+        // The cross-group false positive: diastolic's code (group 1) + systolic's
+        // value (group 0). Must NOT match.
+        let result = backend
+            .search(&tenant, &query("8462-4$gt100"))
+            .await
+            .unwrap();
+        assert!(
+            result.resources.items.is_empty(),
+            "diastolic is 80, not >100 — a match here means component predicates \
+             leaked across composite groups (systolic's 120 satisfied the value \
+             while diastolic satisfied the code)"
+        );
+
+        // Both components satisfied within group 0 (systolic 120 > 100) → match.
+        let result = backend
+            .search(&tenant, &query("8480-6$gt100"))
+            .await
+            .unwrap();
+        assert_eq!(
+            result.resources.items.len(),
+            1,
+            "systolic 8480-6 = 120 > 100, both components in group 0 → 1 hit"
+        );
+        assert_eq!(result.resources.items[0].id(), "obs-bp-panel");
+
+        // Both components satisfied within group 1 (diastolic 80 < 100) → match.
+        let result = backend
+            .search(&tenant, &query("8462-4$lt100"))
+            .await
+            .unwrap();
+        assert_eq!(
+            result.resources.items.len(),
+            1,
+            "diastolic 8462-4 = 80 < 100, both components in group 1 → 1 hit"
+        );
+    }
+
+    /// Each value of a composite OR-list must be satisfied on its own; components
+    /// must not pair up *across* values.
+    ///
+    /// The fixture's only component is (8480-6, 250). For
+    /// `8480-6$lt60,8462-4$gt200`: value 1 needs code 8480-6 AND value < 60 (it is
+    /// 250 — no); value 2 needs code 8462-4 (absent — no). Collapsing both values
+    /// into one subquery with a merged HAVING lets value 1's code satisfy the token
+    /// leg while value 2's `>200` is satisfied by the same row's 250 → false positive.
+    #[tokio::test]
+    async fn postgres_integration_composite_or_list_values_are_isolated() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            CompositeSearchComponent, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        let observation = json!({
+            "resourceType": "Observation",
+            "id": "obs-single-high",
+            "status": "final",
+            "code": { "coding": [{ "system": "http://loinc.org", "code": "85354-9" }] },
+            "component": [{
+                "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6" }] },
+                "valueQuantity": { "value": 250, "unit": "mm[Hg]", "system": "http://unitsofmeasure.org" }
+            }]
+        });
+        backend
+            .create(&tenant, "Observation", observation, FhirVersion::default())
+            .await
+            .unwrap();
+
+        let multi_value = SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: "component-code-value-quantity".to_string(),
+            param_type: SearchParamType::Composite,
+            modifier: None,
+            values: vec![
+                SearchValue::eq("8480-6$lt60"),
+                SearchValue::eq("8462-4$gt200"),
+            ],
+            chain: vec![],
+            components: vec![
+                CompositeSearchComponent {
+                    param_type: SearchParamType::Token,
+                    param_name: "component-code".to_string(),
+                },
+                CompositeSearchComponent {
+                    param_type: SearchParamType::Quantity,
+                    param_name: "component-value-quantity".to_string(),
+                },
+            ],
+        });
+
+        let result = backend.search(&tenant, &multi_value).await.unwrap();
+        assert!(
+            result.resources.items.is_empty(),
+            "neither OR-value is satisfied on its own (8480-6 is 250 not <60; there \
+             is no 8462-4) — a match means components paired across OR-values"
+        );
+    }
+
+    /// String search must still match rows whose `value_string_folded` is NULL.
+    ///
+    /// That column arrived in schema v10 and is populated **only on write** — the
+    /// migration never backfilled it (there is no `UPDATE search_index` anywhere),
+    /// so every row indexed before the upgrade has NULL there. The search predicate
+    /// therefore falls back to the raw `value_string`, and that fallback must stay
+    /// case-insensitive.
+    ///
+    /// This is a tripwire, not a feature test: it is green today and must stay
+    /// green. It fails the moment someone "optimizes" the predicate to
+    /// `value_string_folded LIKE $n` (NULL never matches → patients silently vanish
+    /// from results) or to `COALESCE(value_string_folded, value_string) LIKE $n`
+    /// (the raw branch loses its case-folding → `name=smith` stops finding "Smith").
+    /// Both are silent wrong-results bugs, not errors.
+    #[tokio::test]
+    async fn postgres_integration_string_search_matches_unbackfilled_rows() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("unbackfilled");
+        // `create_tenant` suffixes a UUID for isolation, so the effective tenant id
+        // must be read back off the context — the literal passed in is only a prefix.
+        // Seeding `search_index` with the bare literal violates the FK to `resources`.
+        let tenant_id = tenant.tenant_id().as_str();
+
+        // No `name` element, so the writer indexes no `name` row for this Patient —
+        // leaving the field clear for the hand-written legacy row below.
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({ "id": "legacy-p1", "gender": "female" }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        // A pre-v10 row: raw value only, `value_string_folded` left NULL.
+        insert_search_index(
+            tenant_id,
+            "Patient",
+            "legacy-p1",
+            "name",
+            "value_string",
+            "Smith",
+        )
+        .await;
+
+        let query = SearchQuery::new("Patient").with_parameter(SearchParameter {
+            name: "name".to_string(),
+            param_type: SearchParamType::String,
+            modifier: None,
+            // Lowercase query against a capitalized stored value: only the
+            // case-insensitive fallback can match this.
+            values: vec![SearchValue::eq("smith")],
+            chain: vec![],
+            components: vec![],
+        });
+
+        let result = backend.search(&tenant, &query).await.unwrap();
+        assert_eq!(
+            result.resources.items.len(),
+            1,
+            "a row with value_string='Smith' and value_string_folded=NULL (i.e. \
+             written before the v10 migration) must still match name=smith — the \
+             COALESCE fallback and its case-folding are load-bearing"
+        );
+        assert_eq!(result.resources.items[0].id(), "legacy-p1");
+    }
+
     // ========================================================================
     // Backend Health Check Tests
     // ========================================================================
@@ -1987,6 +2664,15 @@ mod postgres_integration {
 
         let result = backend.health_check().await;
         assert!(result.is_ok(), "Health check failed: {:?}", result.err());
+
+        // The `/_readiness` probe delegates to `Backend::health_check` via the
+        // `ResourceStorage::readiness_check` override; a live pg must report ready.
+        let readiness = ResourceStorage::readiness_check(&backend).await;
+        assert!(
+            readiness.is_ok(),
+            "readiness_check failed on a live postgres: {:?}",
+            readiness.err()
+        );
     }
 
     #[tokio::test]
@@ -1997,6 +2683,16 @@ mod postgres_integration {
         assert_eq!(backend.name(), "postgres");
     }
 
+    /// Instance-level tenancy + delegation contract for PostgreSQL (#369).
+    ///
+    /// `tests/backend_capability_contract.rs` pins the constructor-free
+    /// `PostgresBackend::declared_capabilities()`. This is the other half — that
+    /// the *instance* answers the same thing through `supports()`. The #369
+    /// defect lived in a hand-rolled `matches!` ladder inside `supports()`, so a
+    /// declaration test alone would not have caught it. PostgreSQL is the one
+    /// backend whose instance assertions need a live database, and it always has
+    /// one: `create_backend()` panics rather than skipping, and CI makes
+    /// `DOCKER_HOST` mandatory.
     #[tokio::test]
     async fn postgres_integration_capabilities() {
         let backend = create_backend().await;
@@ -2011,6 +2707,30 @@ mod postgres_integration {
         assert!(backend.supports(BackendCapability::BulkSubmitRestWorker));
         assert!(backend.supports(BackendCapability::Include));
         assert!(backend.supports(BackendCapability::Revinclude));
+
+        // The #369 regression, asserted on the live instance rather than the
+        // declaration: PostgreSQL is shared-schema only.
+        assert!(backend.supports(BackendCapability::SharedSchema));
+        assert!(
+            !backend.supports(BackendCapability::SchemaPerTenant),
+            "PostgreSQL has no SET search_path / CREATE SCHEMA path; declaring schema-per-tenant \
+             overstates isolation. See #369."
+        );
+        assert!(
+            !backend.supports(BackendCapability::DatabasePerTenant),
+            "PostgreSQL has no CREATE DATABASE / per-tenant pool; declaring database-per-tenant \
+             overstates isolation. See #369."
+        );
+
+        // supports() must agree with capabilities() for every declared
+        // capability — the delegation the #369 fix relies on, checked live.
+        for capability in backend.capabilities() {
+            assert!(
+                backend.supports(capability),
+                "postgres capabilities() lists {capability:?} but supports() denies it — the two \
+                 have drifted apart (#369)."
+            );
+        }
     }
 
     // ========================================================================
@@ -3343,7 +4063,7 @@ mod postgres_integration {
 
     #[tokio::test]
     async fn postgres_integration_reindex_list_types() {
-        use helios_persistence::search::ReindexableStorage;
+        use helios_persistence::search::ReindexSource;
 
         let backend = create_backend().await;
         let tenant = create_tenant("test-tenant");
@@ -3386,7 +4106,7 @@ mod postgres_integration {
 
     #[tokio::test]
     async fn postgres_integration_reindex_count() {
-        use helios_persistence::search::ReindexableStorage;
+        use helios_persistence::search::ReindexSource;
 
         let backend = create_backend().await;
         let tenant = create_tenant("test-tenant");
@@ -3418,7 +4138,7 @@ mod postgres_integration {
 
     #[tokio::test]
     async fn postgres_integration_reindex_fetch_page() {
-        use helios_persistence::search::ReindexableStorage;
+        use helios_persistence::search::ReindexSource;
 
         let backend = create_backend().await;
         let tenant = create_tenant("test-tenant");
@@ -3860,6 +4580,28 @@ mod postgres_integration {
         format!("{}|{}", prefix, uuid::Uuid::new_v4().simple())
     }
 
+    /// `delete_settings` removes the row and reports whether one existed —
+    /// the primitive the #270 legacy-key migration uses to move a document
+    /// rather than leave a duplicate copy behind.
+    #[tokio::test]
+    async fn postgres_integration_settings_delete_is_idempotent() {
+        let backend = create_backend().await;
+        let user = unique_user_key("delete");
+
+        // Absent is not an error, and reports "nothing removed".
+        assert!(!backend.delete_settings(&user).await.unwrap());
+
+        backend
+            .put_settings(&user, json!({"theme": "dark"}), None)
+            .await
+            .unwrap();
+        assert!(backend.get_settings(&user).await.unwrap().is_some());
+
+        assert!(backend.delete_settings(&user).await.unwrap());
+        assert!(backend.get_settings(&user).await.unwrap().is_none());
+        assert!(!backend.delete_settings(&user).await.unwrap());
+    }
+
     #[tokio::test]
     async fn postgres_integration_settings_get_missing_is_none() {
         let backend = create_backend().await;
@@ -4086,4 +4828,292 @@ mod postgres_integration {
         let backend = create_backend().await;
         assert!(backend.supports_contained_search());
     }
+
+    // ========================================================================
+    // Backend error handling — a reachable but misconfigured store
+    // ========================================================================
+    //
+    // `tests/backend_error_handling.rs` covers every backend's *unreachable*
+    // case with no server at all. PostgreSQL has a gap that cannot be closed
+    // there: `PostgresBackend::new` eagerly verifies connectivity, so an
+    // unreachable server fails at construction and the caller never obtains a
+    // backend to drive. That leaves every per-operation error arm in
+    // `postgres/storage.rs` — the `internal_error(..)` mapping behind `read`,
+    // `count`, `create` and friends — completely unexercised, which is exactly
+    // the class of uncovered code that motivated this work.
+    //
+    // Reaching those arms needs a server that answers but cannot serve the
+    // query, so this test lives here, with the shared container. It mirrors the
+    // SQLite `unmigrated_store_surfaces_backend_error` test: connect to a
+    // database whose schema was never created (`new()` runs no DDL —
+    // `init_schema()` is a separate, opt-in call) and drive the core operations.
+    // Every one of them hits `relation "resources" does not exist`.
+
+    /// Operations against a reachable database with no schema must surface a
+    /// backend error — never a misleading success.
+    #[tokio::test]
+    async fn postgres_integration_unmigrated_store_surfaces_backend_error() {
+        let pg = shared_pg().await;
+
+        // A database of our own, so we can leave it unmigrated without disturbing
+        // the schema the rest of this suite shares.
+        let dbname = format!("unmigrated_{}", uuid::Uuid::new_v4().simple());
+        let admin_conn = format!(
+            "host={} port={} user=postgres password=postgres dbname=postgres",
+            pg.host, pg.port,
+        );
+        let (admin, connection) = tokio_postgres::connect(&admin_conn, tokio_postgres::NoTls)
+            .await
+            .expect("connect to shared pg");
+        tokio::spawn(async move {
+            let _ = connection.await;
+        });
+        // `batch_execute` uses the simple query protocol. `execute` would use the
+        // extended one, which wraps the statement in an implicit transaction —
+        // and CREATE DATABASE cannot run inside a transaction block.
+        admin
+            .batch_execute(&format!("CREATE DATABASE {dbname}"))
+            .await
+            .expect("create an empty database");
+
+        let backend = PostgresBackend::new(PostgresConfig {
+            host: pg.host.clone(),
+            port: pg.port,
+            dbname,
+            user: "postgres".to_string(),
+            password: Some("postgres".to_string()),
+            max_connections: 2,
+            ..Default::default()
+        })
+        .await
+        .expect("the server is reachable, so construction must succeed");
+
+        // init_schema() is deliberately NOT called.
+
+        let tenant = create_tenant("unmigrated");
+
+        let read = backend.read(&tenant, "Patient", "does-not-exist").await;
+        assert!(
+            !matches!(read, Ok(None)),
+            "read against an unmigrated database returned Ok(None) — a store we \
+             could not query must not be indistinguishable from one where the \
+             resource is genuinely absent"
+        );
+        assert!(
+            matches!(read, Err(StorageError::Backend(_))),
+            "expected a backend error from an unmigrated database, got {read:?}"
+        );
+
+        let count = backend.count(&tenant, Some("Patient")).await;
+        assert!(
+            !matches!(count, Ok(0)),
+            "count against an unmigrated database returned Ok(0) — 'zero resources' \
+             is a claim about data we never successfully queried"
+        );
+        assert!(
+            matches!(count, Err(StorageError::Backend(_))),
+            "expected a backend error from an unmigrated database, got {count:?}"
+        );
+
+        let create = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({ "resourceType": "Patient" }),
+                FhirVersion::default(),
+            )
+            .await;
+        assert!(
+            matches!(create, Err(StorageError::Backend(_))),
+            "expected a backend error from an unmigrated database, got {create:?}"
+        );
+    }
+    /// The `import` / `metadata` kickoff directives must survive the PostgreSQL
+    /// round-trip and reach the worker, and `merge` must actually merge.
+    ///
+    /// This is the Postgres half of the coverage in
+    /// `core::bulk_submit_worker::tests` (which runs on SQLite): the plumbing is
+    /// shared but the SQL is not, so a typo in the new columns would otherwise
+    /// only surface in production.
+    #[tokio::test]
+    async fn postgres_bulk_submit_import_directives_round_trip() {
+        use helios_persistence::core::{
+            BulkProcessingOptions, BulkSubmitProvider, IMPORT_MODE_PARAMETER_URL, ImportMode,
+            ManifestFetchParams, NdjsonEntry, SubmissionId, SubmitClaimStrategy,
+            SubmitWorkerStorage,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("bulk_submit_import");
+        let sub_id = SubmissionId::generate("pg-import-test");
+        backend
+            .create_submission(&tenant, &sub_id, None)
+            .await
+            .unwrap();
+        let manifest = backend
+            .add_manifest(&tenant, &sub_id, Some("https://provider/m.json"), None)
+            .await
+            .unwrap();
+
+        let directives = vec![(IMPORT_MODE_PARAMETER_URL.to_string(), "merge".to_string())];
+        let metadata = vec![("https://ex/context".to_string(), "batch-7".to_string())];
+        backend
+            .set_manifest_fetch_params(
+                &tenant,
+                &sub_id,
+                &manifest.manifest_id,
+                ManifestFetchParams {
+                    fhir_base_url: Some("https://provider/fhir"),
+                    import_directives: &directives,
+                    metadata: &metadata,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        // Claim the manifest the way the worker does, then read its view back.
+        let lease = backend
+            .claim_next_manifest(
+                &helios_persistence::core::WorkerId::new("pg-import-worker"),
+                std::time::Duration::from_secs(60),
+            )
+            .await
+            .unwrap()
+            .expect("claimable manifest");
+        let view = backend.get_manifest_for_worker(&lease).await.unwrap();
+        assert_eq!(view.import_directives, directives);
+        assert_eq!(view.metadata, metadata);
+        assert_eq!(
+            ImportMode::from_directives(&view.import_directives),
+            ImportMode::Merge
+        );
+
+        // And the resolved mode changes what ingestion writes.
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": "pg-merge-1",
+                    "gender": "female",
+                    "name": [{"family": "Stale"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let entry = NdjsonEntry::new(
+            1,
+            "Patient",
+            json!({"resourceType": "Patient", "id": "pg-merge-1", "name": [{"family": "New"}]}),
+        );
+        let results = backend
+            .process_entries(
+                &tenant,
+                &sub_id,
+                &manifest.manifest_id,
+                vec![entry],
+                &BulkProcessingOptions::new().with_import_mode(ImportMode::Merge),
+            )
+            .await
+            .unwrap();
+        assert!(results[0].is_success());
+
+        let stored = backend
+            .read(&tenant, "Patient", "pg-merge-1")
+            .await
+            .unwrap()
+            .expect("patient still stored");
+        assert_eq!(stored.content()["name"], json!([{"family": "New"}]));
+        assert_eq!(
+            stored.content()["gender"],
+            json!("female"),
+            "merge must retain elements the submission omitted"
+        );
+    }
+
+    // ========================================================================
+    // Issue #311 — `ifMatch` on bundle entries, on a real PostgreSQL instance
+    //
+    // PostgreSQL carried both #311 defects (batch arm ignored `ifMatch`; the
+    // field was compared as one opaque string), and its batch and transaction
+    // arms are separate code paths from SQLite's. Running the *shared* suite
+    // here is what makes "the backends agree" a checked claim rather than an
+    // assumption — the assertions are literally the same function bodies.
+    //
+    // Each test gets its own tenant, since the whole binary shares one
+    // container database and the scenarios reuse fixed resource ids.
+    // ========================================================================
+
+    /// Expands to a `#[tokio::test]` running one shared scenario against the
+    /// shared PostgreSQL container under an isolated tenant.
+    macro_rules! pg_if_match_test {
+        ($test_name:ident, $scenario:ident) => {
+            #[tokio::test]
+            async fn $test_name() {
+                let backend = create_backend().await;
+                let tenant = create_tenant(concat!("if_match_", stringify!($scenario)));
+                super::if_match_suite::$scenario(&backend, &tenant).await;
+            }
+        };
+    }
+
+    pg_if_match_test!(
+        postgres_integration_batch_put_honors_stale_if_match,
+        batch_put_honors_stale_if_match
+    );
+    pg_if_match_test!(
+        postgres_integration_batch_put_accepts_matching_if_match,
+        batch_put_accepts_matching_if_match
+    );
+    pg_if_match_test!(
+        postgres_integration_multi_valued_if_match_matches_any_member,
+        multi_valued_if_match_matches_any_member
+    );
+    pg_if_match_test!(
+        postgres_integration_multi_valued_if_match_fails_when_no_member_matches,
+        multi_valued_if_match_fails_when_no_member_matches
+    );
+    pg_if_match_test!(
+        postgres_integration_strong_form_if_match_matches_weak_etag,
+        strong_form_if_match_matches_weak_etag
+    );
+    pg_if_match_test!(
+        postgres_integration_if_match_on_absent_resource_fails_instead_of_creating,
+        if_match_on_absent_resource_fails_instead_of_creating
+    );
+    pg_if_match_test!(
+        postgres_integration_star_if_match_requires_an_existing_resource,
+        star_if_match_requires_an_existing_resource
+    );
+    pg_if_match_test!(
+        postgres_integration_malformed_if_match_fails_closed,
+        malformed_if_match_fails_closed
+    );
+    pg_if_match_test!(
+        postgres_integration_batch_put_if_match_on_deleted_resource_fails,
+        batch_put_if_match_on_deleted_resource_fails
+    );
+    pg_if_match_test!(
+        postgres_integration_batch_delete_if_match_on_deleted_resource_fails,
+        batch_delete_if_match_on_deleted_resource_fails
+    );
+    pg_if_match_test!(
+        postgres_integration_batch_delete_honors_stale_if_match,
+        batch_delete_honors_stale_if_match
+    );
+    pg_if_match_test!(
+        postgres_integration_batch_delete_accepts_matching_if_match,
+        batch_delete_accepts_matching_if_match
+    );
+    pg_if_match_test!(
+        postgres_integration_transaction_delete_honors_stale_if_match,
+        transaction_delete_honors_stale_if_match
+    );
+    pg_if_match_test!(
+        postgres_integration_transaction_delete_accepts_matching_if_match,
+        transaction_delete_accepts_matching_if_match
+    );
 }

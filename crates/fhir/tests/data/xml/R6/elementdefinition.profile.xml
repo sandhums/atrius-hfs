@@ -1515,7 +1515,7 @@
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAWCAYAAAABxvaqAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzIs1vtcMQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQI12P4//8/AxMDAwNdCABMPwMo2ctnoQAAAABJRU5ErkJggg==" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzI3XJ6V3QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAANklEQVQ4y+2RsQ0AIAzDav7/2VzQwoCY4iWbZSmo1QGoUgNMghvWaIejPQW/CrrNCylIwcOCDYfLNRcNer4SAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAadEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My41LjEwMPRyoQAAAFxJREFUOE/NjEEOACEIA/0o/38GGw+agoXYeNnDJDCUDnd/gkoFKhWozJiZI3gLwY6rAgxhsPKTPUzycTl8lAryMyMsVQG6TFi6cHULyz8KOjC7OIQKlQpU3uPjAwhX2CCcGsgOAAAAAElFTkSuQmCC" alt="." style="background-color: #F7F7F7; background-color: inherit" title="Reference to another Resource" class="hierarchy"/> 
-            <a href="elementdefinition-definitions.html#ElementDefinition.valueAlternatives" title="ElementDefinition.valueAlternatives : Specifies a list of extensions that can appear in place of a primitive value.">valueAlternatives</a>
+            <a href="elementdefinition-definitions.html#ElementDefinition.valueAlternatives" title="ElementDefinition.valueAlternatives : Specifies a list of extensions that can appear in place of a value (for primitive types) or non-extension child elements (for complex types and backbone elements).">valueAlternatives</a>
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
             <a style="padding-left: 3px; padding-right: 3px; color: black; null; padding-left: 3px; padding-right: 3px; color: black; null" href="elementdefinition-definitions.html#ElementDefinition.isSummary" title="This element is included in summaries">Σ</a>
@@ -1526,7 +1526,7 @@
             <a href="datatypes.html#canonical">canonical</a>(
             <a href="structuredefinition.html">StructureDefinition</a>)
           </td>
-          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Extensions that are allowed to replace a primitive value
+          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Extensions that are allowed to replace the value or content
             <br/>
             <br/>
           </td>
@@ -2008,7 +2008,7 @@
   <name value="ElementDefinition"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -5340,9 +5340,9 @@
     </element>
     <element id="ElementDefinition.valueAlternatives">
       <path value="ElementDefinition.valueAlternatives"/>
-      <short value="Extensions that are allowed to replace a primitive value"/>
-      <definition value="Specifies a list of extensions that can appear in place of a primitive value."/>
-      <comment value="If mustHaveValue is true, then this element should not be present, since no extensions are allowed in place of the value. Note that this element has no impact if the value is present. When valueAlternatives is present, it means that if the element is present, it SHALL have either a value or at least one of the listed extensions. This element is only permitted on elements with primitive types."/>
+      <short value="Extensions that are allowed to replace the value or content"/>
+      <definition value="Specifies a list of extensions that can appear in place of a value (for primitive types) or non-extension child elements (for complex types and backbone elements)."/>
+      <comment value="If mustHaveValue is true, then this element should not be present, since no extensions are allowed in place of the value. Note that this element has no impact if the value is present. When valueAlternatives is present, it means that if the element is present, it SHALL have at least one of the listed extensions, a value (if primitive), or a non-extension child element (if a complex type or backbone element). valueAlternatives applies only to the elements it is declared on.  It does not propagate to child elements."/>
       <min value="0"/>
       <max value="*"/>
       <base>
@@ -8386,9 +8386,9 @@
     </element>
     <element id="ElementDefinition.valueAlternatives">
       <path value="ElementDefinition.valueAlternatives"/>
-      <short value="Extensions that are allowed to replace a primitive value"/>
-      <definition value="Specifies a list of extensions that can appear in place of a primitive value."/>
-      <comment value="If mustHaveValue is true, then this element should not be present, since no extensions are allowed in place of the value. Note that this element has no impact if the value is present. When valueAlternatives is present, it means that if the element is present, it SHALL have either a value or at least one of the listed extensions. This element is only permitted on elements with primitive types."/>
+      <short value="Extensions that are allowed to replace the value or content"/>
+      <definition value="Specifies a list of extensions that can appear in place of a value (for primitive types) or non-extension child elements (for complex types and backbone elements)."/>
+      <comment value="If mustHaveValue is true, then this element should not be present, since no extensions are allowed in place of the value. Note that this element has no impact if the value is present. When valueAlternatives is present, it means that if the element is present, it SHALL have at least one of the listed extensions, a value (if primitive), or a non-extension child element (if a complex type or backbone element). valueAlternatives applies only to the elements it is declared on.  It does not propagate to child elements."/>
       <min value="0"/>
       <max value="*"/>
       <type>

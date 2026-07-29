@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="QuestionnaireResponse"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -306,7 +306,7 @@
             <span style="font-style: italic" title="qrs-1">+ Rule: Item cannot contain both item and answer</span>
             <br/>
             <span style="font-style: italic" title="qrs-2">+ Rule: Repeated answers are combined in the answers array of a single item</span>
-            <br/>
+            <br/>This repeating element order: The order of the items is the order in which the questions were presented to the user when completing the Questionnaire.
             <br/>
           </td>
         </tr>
@@ -702,7 +702,7 @@
   <name value="QuestionnaireResponse"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -1501,6 +1501,7 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order of the items is the order in which the questions were presented to the user when completing the Questionnaire."/>
       <constraint>
         <key value="ele-1"/>
         <severity value="error"/>
@@ -2342,6 +2343,7 @@
       <type>
         <code value="BackboneElement"/>
       </type>
+      <orderMeaning value="The order of the items is the order in which the questions were presented to the user when completing the Questionnaire."/>
       <constraint>
         <key value="qrs-2"/>
         <severity value="error"/>

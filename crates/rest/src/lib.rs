@@ -150,25 +150,28 @@ pub mod bulk_export_auth;
 pub mod bulk_submit_fetcher;
 pub mod bulk_submit_oauth;
 pub mod config;
+mod dashboard;
 pub mod error;
 pub mod export;
 pub mod extractors;
 pub mod fhir_types;
 pub mod handlers;
+pub mod jwe;
 pub mod middleware;
 pub mod profile_validation;
+pub(crate) mod rate_limit;
 pub mod responses;
 pub mod routing;
 pub mod state;
 pub mod tenant;
 pub mod terminology;
+pub mod validation;
 
 // Re-export commonly used types
 pub use config::{
     MultitenancyConfig, ProfileValidationMode, ServerConfig, StorageBackendMode, TenantRoutingMode,
 };
 pub use error::{RestError, RestResult};
-pub use handlers::{PersistenceReindexController, ReindexController, try_auto_reindex_controller};
 pub use middleware::auth::AuthMiddlewareState;
 pub use profile_validation::ProfileValidationService;
 pub use state::AppState;
@@ -191,6 +194,8 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing::info;
+#[cfg(feature = "subscriptions")]
+use tracing::warn;
 
 /// Creates the Axum application with default configuration.
 ///
@@ -293,6 +298,25 @@ pub struct BulkExportBundle {
     pub file_auth: Arc<dyn bulk_export_auth::ExportFileAuth>,
 }
 
+/// The persistence-layer operations (`$purge`, `$reindex`) a deployment can
+/// serve, wired into [`AppState`] by [`create_app_with_auth_bulk_settings_and_ops`].
+///
+/// Both are `Option` because not every deployment can serve both: `s3`
+/// standalone has no search index, so it has nothing to reindex. Absent
+/// capabilities make the corresponding endpoint report 501 rather than
+/// pretending to have done the work.
+///
+/// On a composite deployment, `purge` MUST be the *composite* storage rather
+/// than the primary, so the purge reaches the search secondary — see
+/// [`AppState::with_purge`].
+#[derive(Default)]
+pub struct OperationsBundle {
+    /// Target for `$purge`.
+    pub purge: Option<Arc<dyn helios_persistence::core::PurgableStorage>>,
+    /// Driver for `$reindex`.
+    pub reindex: Option<Arc<helios_persistence::search::ReindexOperation>>,
+}
+
 /// The bulk-submit job store, input fetcher, output store, and download
 /// authorizer, wired into [`AppState`] by [`create_app_with_auth_and_bulk_export`].
 pub struct BulkSubmitBundle {
@@ -346,7 +370,7 @@ where
         None,
         None,
         None,
-        None,
+        OperationsBundle::default(),
     )
 }
 
@@ -386,7 +410,7 @@ where
         Some(bulk_export),
         None,
         None,
-        None,
+        OperationsBundle::default(),
     )
 }
 
@@ -429,18 +453,14 @@ where
         bulk_export,
         bulk_submit,
         None,
-        None,
+        OperationsBundle::default(),
     )
 }
 
 /// Like [`create_app_with_auth_and_bulk`], but also wires the per-user settings
 /// store (used by the `/_user/settings` endpoints). `bulk_export` and
 /// `bulk_submit` are each optional, so this single entry point covers every
-/// combination for a settings-capable backend (SQLite, PostgreSQL).
-///
-/// `reindex_controller` is for composite backends whose primary supports
-/// `$reindex` (SQLite/Postgres). Standalone SQLite/Postgres auto-wire when
-/// `HFS_REINDEX_ENABLED=true`; pass `None` in that case.
+/// combination for a settings-capable backend (SQLite, PostgreSQL, MongoDB, S3).
 #[allow(clippy::too_many_arguments)]
 pub fn create_app_with_auth_bulk_and_settings<S>(
     storage: Arc<S>,
@@ -451,7 +471,6 @@ pub fn create_app_with_auth_bulk_and_settings<S>(
     bulk_export: Option<BulkExportBundle>,
     bulk_submit: Option<BulkSubmitBundle>,
     settings_store: Option<Arc<dyn helios_persistence::core::SettingsStore>>,
-    reindex_controller: Option<Arc<dyn ReindexController>>,
 ) -> Router
 where
     S: ResourceStorage
@@ -479,7 +498,54 @@ where
         bulk_export,
         bulk_submit,
         settings_store,
-        reindex_controller,
+        OperationsBundle::default(),
+    )
+}
+
+/// Like [`create_app_with_auth_bulk_and_settings`], but also wires the
+/// persistence-layer operations (`$purge`, `$reindex`).
+///
+/// Every deployment can serve `$purge`; only deployments with a search index
+/// can serve `$reindex`. See [`OperationsBundle`].
+#[allow(clippy::too_many_arguments)]
+pub fn create_app_with_auth_bulk_settings_and_ops<S>(
+    storage: Arc<S>,
+    config: ServerConfig,
+    auth_config: helios_auth::AuthConfig,
+    auth_state: Option<Arc<middleware::auth::AuthMiddlewareState>>,
+    audit_state: Option<Arc<helios_audit::AuditMiddlewareState>>,
+    bulk_export: Option<BulkExportBundle>,
+    bulk_submit: Option<BulkSubmitBundle>,
+    settings_store: Option<Arc<dyn helios_persistence::core::SettingsStore>>,
+    ops: OperationsBundle,
+) -> Router
+where
+    S: ResourceStorage
+        + ConditionalStorage
+        + SearchProvider
+        + IncludeProvider
+        + RevincludeProvider
+        + InstanceHistoryProvider
+        + TypeHistoryProvider
+        + SystemHistoryProvider
+        + BundleProvider
+        + helios_persistence::core::ExportDataProvider
+        + helios_persistence::core::PatientExportProvider
+        + helios_persistence::core::GroupExportProvider
+        + Send
+        + Sync
+        + 'static,
+{
+    build_app(
+        storage,
+        config,
+        auth_config,
+        auth_state,
+        audit_state,
+        bulk_export,
+        bulk_submit,
+        settings_store,
+        ops,
     )
 }
 
@@ -496,7 +562,7 @@ fn build_app<S>(
     bulk_export: Option<BulkExportBundle>,
     bulk_submit: Option<BulkSubmitBundle>,
     settings_store: Option<Arc<dyn helios_persistence::core::SettingsStore>>,
-    reindex_controller: Option<Arc<dyn ReindexController>>,
+    ops: OperationsBundle,
 ) -> Router
 where
     S: ResourceStorage
@@ -526,6 +592,14 @@ where
     // Storage arrives pre-wrapped in an Arc so we can share it with the SofRunner.
     let storage_arc = storage;
 
+    // Register the process-global dashboard data provider so the web UI can
+    // render real per-type resource counts (default tenant) without depending on
+    // the persistence layer. Storage-agnostic consumers read it via
+    // `helios_observability::dashboard::snapshot()`.
+    helios_observability::dashboard::set_provider(Arc::new(
+        dashboard::StorageDashboardProvider::new(Arc::clone(&storage_arc), &config),
+    ));
+
     let (app_audit_sink, app_audit_source_observer) = audit_state
         .as_ref()
         .map(|audit| {
@@ -550,6 +624,16 @@ where
         app_audit_sink,
         app_audit_source_observer,
     );
+
+    // Persistence-layer operations. Absent capabilities leave the handler to
+    // report 501 rather than the route to 404 — the endpoint exists on every
+    // deployment, it just cannot always be served.
+    if let Some(purge) = ops.purge {
+        state = state.with_purge(purge);
+    }
+    if let Some(reindex) = ops.reindex {
+        state = state.with_reindex(reindex);
+    }
 
     // Wire SQL-on-FHIR runner and export controller. The SOF runtime path is
     // in-DB SQL only — backends without a SOF runner can't serve
@@ -676,30 +760,10 @@ where
     };
 
     // Wire the per-user settings store if provided.
-    let mut state = match settings_store {
+    let state = match settings_store {
         Some(store) => state.with_settings_store(store),
         None => state,
     };
-
-    // Wire `$reindex` when enabled. Standalone SQLite/Postgres auto-detect;
-    // composites pass an explicit controller built from the primary.
-    if config.reindex_enabled {
-        let controller = reindex_controller.or_else(|| try_auto_reindex_controller(&storage_arc));
-        match controller {
-            Some(ctrl) => {
-                info!("$reindex enabled");
-                state = state.with_reindex_controller(ctrl);
-            }
-            None => {
-                tracing::warn!(
-                    backend = storage_arc.backend_name(),
-                    "HFS_REINDEX_ENABLED=true but this storage backend does not support \
-                     $reindex (use sqlite, postgres, or pass a primary-backed controller \
-                     for composites)"
-                );
-            }
-        }
-    }
 
     // NDHM/ABDM profile validation from HFS_PROFILE_MANIFEST.
     let state = match ProfileValidationService::try_from_config(&config) {
@@ -778,7 +842,9 @@ where
                 outbound_auth_provider,
             );
             info!("Subscriptions engine ENABLED");
-            state.with_subscription_engine(Arc::new(engine))
+            let engine = Arc::new(engine);
+            spawn_subscription_rehydration(Arc::clone(&engine), Arc::clone(&storage_arc), &config);
+            state.with_subscription_engine(engine)
         } else {
             state
         }
@@ -790,6 +856,7 @@ where
     let console_public_state = state.clone();
     let console_protected_state = state.clone();
     let console_admin_state = state.clone();
+    let admin_tenants_state = state.clone();
 
     // Build the router with all FHIR routes
     let router = routing::fhir_routes::create_routes(state);
@@ -857,7 +924,10 @@ where
     // ordinary user-/patient-context tokens (even wildcard ones) with `403`. As
     // with the other tiers, when auth is disabled server-wide there is no
     // Principal and the middleware passes through, keeping dev-mode behaviour.
-    let admin_console = routing::console_metrics::admin_routes(console_admin_state);
+    // Tenant-maintenance API (`/admin/tenants`) rides the same cross-tenant admin
+    // tier as `console/metrics/tenants`: system-context scope + authentication.
+    let admin_console = routing::console_metrics::admin_routes(console_admin_state)
+        .merge(routing::admin_tenants::routes(admin_tenants_state));
     let admin_console = if let Some(ref auth) = auth_state {
         admin_console
             .layer(axum::middleware::from_fn_with_state(
@@ -925,6 +995,97 @@ where
 
     // Apply remaining middleware
     router.layer(service_builder)
+}
+
+/// Spawns the startup rehydration of the subscription engine (issue #305).
+///
+/// The engine's registries are in-memory and were previously populated *only*
+/// by live write handlers, so every restart silently stopped delivery for
+/// already-stored subscriptions. This replays stored `SubscriptionTopic`,
+/// R4-backport `Basic`, and `Subscription` resources back into the engine.
+///
+/// Wired here, in `build_app`, rather than in `crates/hfs/src/main.rs` (as the
+/// issue suggested) because this is the single funnel every backend start path
+/// goes through — SQLite, PostgreSQL, MongoDB, S3, and each Elasticsearch
+/// composite — and it is the only place that holds both the engine and the
+/// storage handle. Wiring it in `main.rs` would need eight call sites and could
+/// not reach the engine, which is constructed and moved into `AppState` here.
+///
+/// It runs in the background rather than blocking startup: registration is
+/// fast, but activating `requested` subscriptions performs handshakes with
+/// retry and backoff against endpoints that may be unreachable, which could
+/// otherwise delay serving by minutes. The trade-off is a brief window after
+/// boot in which a just-restarted server has not yet re-registered every
+/// subscription; the completion summary is logged.
+#[cfg(feature = "subscriptions")]
+fn spawn_subscription_rehydration<S>(
+    engine: Arc<helios_subscriptions::SubscriptionEngine>,
+    storage: Arc<S>,
+    config: &ServerConfig,
+) where
+    S: ResourceStorage + helios_persistence::core::ExportDataProvider + Send + Sync + 'static,
+{
+    let rehydrate_config = build_rehydration_config_from_env();
+    if !rehydrate_config.enabled {
+        info!("Subscription rehydration is DISABLED (HFS_SUBSCRIPTION_REHYDRATE=false)");
+        return;
+    }
+
+    // `build_app` is synchronous and is also called from non-async contexts
+    // (embedders, doc examples). `tokio::spawn` panics outside a runtime, so
+    // degrade to a warning instead of taking the process down.
+    if tokio::runtime::Handle::try_current().is_err() {
+        warn!(
+            "No Tokio runtime available at app construction; skipping subscription \
+             rehydration. Stored subscriptions will not deliver until re-written."
+        );
+        return;
+    }
+
+    let default_tenant = config.default_tenant.clone();
+    let default_version = config.default_fhir_version;
+    tokio::spawn(async move {
+        engine
+            .rehydrate(
+                storage.as_ref(),
+                &default_tenant,
+                default_version,
+                &rehydrate_config,
+            )
+            .await;
+    });
+}
+
+/// Builds the rehydration tuning from `HFS_SUBSCRIPTION_REHYDRATE*`.
+#[cfg(feature = "subscriptions")]
+fn build_rehydration_config_from_env() -> helios_subscriptions::RehydrationConfig {
+    let defaults = helios_subscriptions::RehydrationConfig::default();
+    helios_subscriptions::RehydrationConfig {
+        enabled: subscription_bool_from_env("HFS_SUBSCRIPTION_REHYDRATE", defaults.enabled),
+        batch_size: subscription_u32_from_env(
+            "HFS_SUBSCRIPTION_REHYDRATE_BATCH_SIZE",
+            defaults.batch_size,
+        )
+        .max(1),
+        handshake_requested: subscription_bool_from_env(
+            "HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE",
+            defaults.handshake_requested,
+        ),
+        max_concurrent_handshakes: subscription_u32_from_env(
+            "HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE_CONCURRENCY",
+            defaults.max_concurrent_handshakes as u32,
+        )
+        .max(1) as usize,
+    }
+}
+
+/// Parses a boolean env var, treating `false`/`0` (case-insensitive) as false
+/// and any other set value as true. Mirrors `HFS_SUBSCRIPTIONS_ENABLED`.
+#[cfg(feature = "subscriptions")]
+fn subscription_bool_from_env(name: &str, default: bool) -> bool {
+    std::env::var(name)
+        .map(|v| !matches!(v.trim().to_ascii_lowercase().as_str(), "false" | "0"))
+        .unwrap_or(default)
 }
 
 #[cfg(feature = "subscriptions")]
@@ -1145,29 +1306,6 @@ mod builder_tests {
             None,
             None,
             Some(settings),
-            None,
-        );
-    }
-
-    #[tokio::test]
-    async fn wires_reindex_controller_when_enabled() {
-        let mut config = config();
-        config.reindex_enabled = true;
-        let backend = backend();
-        assert!(
-            try_auto_reindex_controller(&backend).is_some(),
-            "sqlite should auto-wire $reindex"
-        );
-        let _app: Router = create_app_with_auth_bulk_and_settings(
-            backend,
-            config,
-            helios_auth::AuthConfig::default(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
         );
     }
 }

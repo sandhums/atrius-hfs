@@ -33,13 +33,6 @@ pub enum AuthError {
         kid: String,
     },
 
-    /// Token with this JTI has already been used.
-    #[error("JTI replay detected: {jti}")]
-    ReplayDetected {
-        /// The replayed JWT ID.
-        jti: String,
-    },
-
     /// Access token was revoked (e.g. user logged out).
     #[error("Token revoked: {jti}")]
     TokenRevoked {

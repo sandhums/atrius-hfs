@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="ImplementationGuide"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -633,7 +633,7 @@
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAWCAYAAAABxvaqAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzIs1vtcMQAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAE0lEQVQI12P4//8/AxMDAwNdCABMPwMo2ctnoQAAAABJRU5ErkJggg==" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzI3XJ6V3QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAANklEQVQ4y+2RsQ0AIAzDav7/2VzQwoCY4iWbZSmo1QGoUgNMghvWaIejPQW/CrrNCylIwcOCDYfLNRcNer4SAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,R0lGODlhEAAQAPQfAOvGUf7ztuvPMf/78/fkl/Pbg+u8Rvjqteu2Pf3zxPz36Pz0z+vTmPzurPvuw/npofbjquvNefHVduuyN+uuMu3Oafbgjfnqvf/3zv/3xevPi+vRjP/20/bmsP///wD/ACH5BAEKAB8ALAAAAAAQABAAAAVl4CeOZGme5qCqqDg8jyVJaz1876DsmAQAgqDgltspMEhMJoMZ4iy6I1AooFCIv+wKybziALVAoAEjYLwDgGIpJhMslgxaLR4/3rMAWoBp32V5exg8Shl1ckRUQVaMVkQ2kCstKCEAOw==" alt="." style="background-color: white; background-color: inherit" title="Element" class="hierarchy"/> 
-            <span title="ImplementationGuide.global : A set of profiles that all resources covered by this implementation guide must conform to.">global</span>
+            <span title="ImplementationGuide.global : A set of profiles that all resources covered by this implementation guide must conform to. If there is more than one profile for a type, then resources SHALL conform to one of them.">global</span>
             <a name="ImplementationGuide.global"> </a>
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
@@ -643,7 +643,7 @@
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
             <a href="types.html#BackBoneElement">BackboneElement</a>
           </td>
-          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Profiles that apply globally
+          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Set of profiles that apply globally
             <br/>
             <br/>
           </td>
@@ -655,7 +655,7 @@
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzMPbYccAgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAMElEQVQ4y+3OQREAIBDDwAv+PQcFFN5MIyCzqHMKUGVCpMFLK97heq+gggoq+EiwAVjvMhFGmlEUAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzI3XJ6V3QAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAANklEQVQ4y+2RsQ0AIAzDav7/2VzQwoCY4iWbZSmo1QGoUgNMghvWaIejPQW/CrrNCylIwcOCDYfLNRcNer4SAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAARklEQVQ4y2P8//8/AyWAhYFCMAgMuHjx4n+KXaCv+I0szW8WpCG8kFO1lGFKW/SIjAUYgxz/MzAwMDC+nqhDUTQyjuYFBgCNmhP4OvTRgwAAAABJRU5ErkJggg==" alt="." style="background-color: #F7F7F7; background-color: inherit" title="Primitive Data Type" class="hierarchy"/> 
-            <span title="ImplementationGuide.global.type : The type of resource that all instances must conform to. This must be a resource, or a type with a [[[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics]]] of [[[http://hl7.org/fhir/type-characteristics-code#can-be-target]]].">type</span>
+            <span title="ImplementationGuide.global.type : The type of resource for the profile that instances must conform to. This must be a resource, or a type with a [[[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics]]] of [[[http://hl7.org/fhir/type-characteristics-code#can-be-target]]].">type</span>
             <a name="ImplementationGuide.global.type"> </a>
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: #F7F7F7; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
@@ -679,7 +679,7 @@
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzMPbYccAgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAMElEQVQ4y+3OQREAIBDDwAv+PQcFFN5MIyCzqHMKUGVCpMFLK97heq+gggoq+EiwAVjvMhFGmlEUAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAWCAYAAADJqhx8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3wYeFzME+lXFigAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAANklEQVQ4y+3OsRUAIAjEUOL+O8cJABttJM11/x1qZAGqRBEVcNIqdWj1efDqQbb3HwwwwEfABmQUHSPM9dtDAAAAAElFTkSuQmCC" alt="." style="background-color: inherit" class="hierarchy"/>
             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAadEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My41LjEwMPRyoQAAAFxJREFUOE/NjEEOACEIA/0o/38GGw+agoXYeNnDJDCUDnd/gkoFKhWozJiZI3gLwY6rAgxhsPKTPUzycTl8lAryMyMsVQG6TFi6cHULyz8KOjC7OIQKlQpU3uPjAwhX2CCcGsgOAAAAAElFTkSuQmCC" alt="." style="background-color: white; background-color: inherit" title="Reference to another Resource" class="hierarchy"/> 
-            <span title="ImplementationGuide.global.profile : A reference to the profile that all instances must conform to.">profile</span>
+            <span title="ImplementationGuide.global.profile : A reference to the profile that instances must conform to.">profile</span>
             <a name="ImplementationGuide.global.profile"> </a>
           </td>
           <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">
@@ -690,7 +690,7 @@
             <a href="datatypes.html#canonical">canonical</a>(
             <a href="structuredefinition.html">StructureDefinition</a>)
           </td>
-          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">Profile that all resources must conform to
+          <td style="vertical-align: top; text-align : var(--ig-left,left); background-color: white; border: 0px #F0F0F0 solid; padding:0px 4px 0px 4px" class="hierarchy">A profile that all resources must conform to
             <br/>
           </td>
         </tr>
@@ -1580,7 +1580,7 @@
   <name value="ImplementationGuide"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -2808,8 +2808,8 @@
     </element>
     <element id="ImplementationGuide.global">
       <path value="ImplementationGuide.global"/>
-      <short value="Profiles that apply globally"/>
-      <definition value="A set of profiles that all resources covered by this implementation guide must conform to."/>
+      <short value="Set of profiles that apply globally"/>
+      <definition value="A set of profiles that all resources covered by this implementation guide must conform to. If there is more than one profile for a type, then resources SHALL conform to one of them."/>
       <comment value="See [Default Profiles](implementationguide.html#default) for a discussion of which resources are 'covered' by an implementation guide."/>
       <min value="0"/>
       <max value="*"/>
@@ -2943,7 +2943,7 @@
     <element id="ImplementationGuide.global.type">
       <path value="ImplementationGuide.global.type"/>
       <short value="Type this profile applies to"/>
-      <definition value="The type of resource that all instances must conform to. This must be a resource, or a type with a [Structure Type Characterstics (Constraint Control)](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-type-characteristics.html) of [can-be-target (Can Be Target)](https://build.fhir.org/ig/HL7/fhir-extensions/CodeSystem-type-characteristics-code.html#type-characteristics-code-can-be-target)."/>
+      <definition value="The type of resource for the profile that instances must conform to. This must be a resource, or a type with a [Structure Type Characterstics (Constraint Control)](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-type-characteristics.html) of [can-be-target (Can Be Target)](https://build.fhir.org/ig/HL7/fhir-extensions/CodeSystem-type-characteristics-code.html#type-characteristics-code-can-be-target)."/>
       <comment value="The type must match that of the profile that is referred to but is made explicit here as a denormalization so that a system processing the implementation guide resource knows which resources the profile applies to even if the profile itself is not available."/>
       <min value="1"/>
       <max value="1"/>
@@ -2976,8 +2976,8 @@
     </element>
     <element id="ImplementationGuide.global.profile">
       <path value="ImplementationGuide.global.profile"/>
-      <short value="Profile that all resources must conform to"/>
-      <definition value="A reference to the profile that all instances must conform to."/>
+      <short value="A profile that all resources must conform to"/>
+      <definition value="A reference to the profile that instances must conform to."/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -5529,8 +5529,8 @@
     </element>
     <element id="ImplementationGuide.global">
       <path value="ImplementationGuide.global"/>
-      <short value="Profiles that apply globally"/>
-      <definition value="A set of profiles that all resources covered by this implementation guide must conform to."/>
+      <short value="Set of profiles that apply globally"/>
+      <definition value="A set of profiles that all resources covered by this implementation guide must conform to. If there is more than one profile for a type, then resources SHALL conform to one of them."/>
       <comment value="See [Default Profiles](implementationguide.html#default) for a discussion of which resources are 'covered' by an implementation guide."/>
       <min value="0"/>
       <max value="*"/>
@@ -5544,7 +5544,7 @@
     <element id="ImplementationGuide.global.type">
       <path value="ImplementationGuide.global.type"/>
       <short value="Type this profile applies to"/>
-      <definition value="The type of resource that all instances must conform to. This must be a resource, or a type with a [Structure Type Characterstics (Constraint Control)](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-type-characteristics.html) of [can-be-target (Can Be Target)](https://build.fhir.org/ig/HL7/fhir-extensions/CodeSystem-type-characteristics-code.html#type-characteristics-code-can-be-target)."/>
+      <definition value="The type of resource for the profile that instances must conform to. This must be a resource, or a type with a [Structure Type Characterstics (Constraint Control)](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-type-characteristics.html) of [can-be-target (Can Be Target)](https://build.fhir.org/ig/HL7/fhir-extensions/CodeSystem-type-characteristics-code.html#type-characteristics-code-can-be-target)."/>
       <comment value="The type must match that of the profile that is referred to but is made explicit here as a denormalization so that a system processing the implementation guide resource knows which resources the profile applies to even if the profile itself is not available."/>
       <min value="1"/>
       <max value="1"/>
@@ -5565,8 +5565,8 @@
     </element>
     <element id="ImplementationGuide.global.profile">
       <path value="ImplementationGuide.global.profile"/>
-      <short value="Profile that all resources must conform to"/>
-      <definition value="A reference to the profile that all instances must conform to."/>
+      <short value="A profile that all resources must conform to"/>
+      <definition value="A reference to the profile that instances must conform to."/>
       <min value="1"/>
       <max value="1"/>
       <type>

@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="CanonicalResource"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -475,7 +475,7 @@
   <name value="CanonicalResource"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -1146,7 +1146,7 @@
       <path value="CanonicalResource.publisher"/>
       <short value="Name of the publisher/steward (organization or individual)"/>
       <definition value="The name of the organization or individual responsible for the release and ongoing maintenance of the {{title}}."/>
-      <comment value="Usually an organization but may be an individual. The publisher (or steward) of the {{title}} is the organization or individual primarily responsible for the maintenance and upkeep of the {{title}}. This is not necessarily the same individual or organization that developed and initially authored the content. The publisher is the primary point of contact for questions or issues with the {{title}}. This item SHOULD be populated unless the information is available from context."/>
+      <comment value="Usually an organization but may be an individual. The publisher (or steward) of the {{title}} is the organization or individual primarily responsible for the maintenance and upkeep of the {{title}}. This is not necessarily the same individual or organization that developed and initially authored the content. The publisher is the primary point of contact for questions or issues with the {{title}}. This item SHOULD be populated unless the information is available from context. The publisher is not necessarily an entity that is involved in developing the content of the resource."/>
       <requirements value="Helps establish the &quot;authority/credibility&quot; of the {{title}}.  May also allow for contact."/>
       <min value="0"/>
       <max value="1"/>
@@ -1599,7 +1599,7 @@
       <path value="CanonicalResource.publisher"/>
       <short value="Name of the publisher/steward (organization or individual)"/>
       <definition value="The name of the organization or individual responsible for the release and ongoing maintenance of the {{title}}."/>
-      <comment value="Usually an organization but may be an individual. The publisher (or steward) of the {{title}} is the organization or individual primarily responsible for the maintenance and upkeep of the {{title}}. This is not necessarily the same individual or organization that developed and initially authored the content. The publisher is the primary point of contact for questions or issues with the {{title}}. This item SHOULD be populated unless the information is available from context."/>
+      <comment value="Usually an organization but may be an individual. The publisher (or steward) of the {{title}} is the organization or individual primarily responsible for the maintenance and upkeep of the {{title}}. This is not necessarily the same individual or organization that developed and initially authored the content. The publisher is the primary point of contact for questions or issues with the {{title}}. This item SHOULD be populated unless the information is available from context. The publisher is not necessarily an entity that is involved in developing the content of the resource."/>
       <requirements value="Helps establish the &quot;authority/credibility&quot; of the {{title}}.  May also allow for contact."/>
       <min value="0"/>
       <max value="1"/>

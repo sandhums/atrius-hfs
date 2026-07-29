@@ -241,6 +241,9 @@ where
                 .put(handlers::put_user_settings::<S>)
                 .patch(handlers::patch_user_settings::<S>),
         )
+        // Natural-language search translation (#255): returns a generated
+        // query for the client to review and run via the normal search path.
+        .route("/$nl-search", post(handlers::nl_search_handler::<S>))
         .route("/", post(handlers::batch_handler::<S>))
         // Bulk Data Export ($export) — operation routes precede the catch-all.
         .route(
@@ -266,13 +269,6 @@ where
             "/export-file/{job_id}/{part}",
             get(handlers::export_download_handler::<S>),
         )
-        // Search reindex ($reindex) — after custom SearchParameters are loaded.
-        .route("/$reindex", post(handlers::reindex_kickoff_handler::<S>))
-        .route(
-            "/$reindex-status/{job_id}",
-            get(handlers::reindex_status_handler::<S>)
-                .delete(handlers::reindex_cancel_handler::<S>),
-        )
         // Bulk Data Submit ($bulk-submit) — operation routes precede the catch-all.
         .route(
             "/$bulk-submit",
@@ -291,6 +287,25 @@ where
             "/bulk-submit-file/{poll_token}/{part}",
             get(handlers::bulk_submit_file_handler::<S>),
         )
+        // $reindex — system level. Registered before the type-level routes so
+        // `/$reindex` is not swallowed by `/{resource_type}`.
+        .route("/$reindex", post(handlers::reindex_system_handler::<S>))
+        .route(
+            "/$reindex-status/{job_id}",
+            get(handlers::reindex_status_handler::<S>)
+                .delete(handlers::reindex_cancel_handler::<S>),
+        )
+        // Resource validation ($validate) — operation routes precede the
+        // catch-all (matchit gives static segments priority over {id}).
+        .route(
+            "/{resource_type}/$validate",
+            post(handlers::validate_type_handler::<S>),
+        )
+        .route(
+            "/{resource_type}/{id}/$validate",
+            get(handlers::validate_instance_get_handler::<S>)
+                .post(handlers::validate_instance_post_handler::<S>),
+        )
         // Type-level routes
         .route("/{resource_type}", get(handlers::search_get_handler::<S>))
         .route("/{resource_type}", post(handlers::create_handler::<S>))
@@ -305,10 +320,6 @@ where
             delete(handlers::conditional_delete_handler::<S>),
         )
         .route(
-            "/{resource_type}/$validate",
-            post(handlers::validate::type_validate_handler::<S>),
-        )
-        .route(
             "/{resource_type}/_search",
             post(handlers::search_post_handler::<S>),
         )
@@ -316,16 +327,27 @@ where
             "/{resource_type}/_history",
             get(handlers::history_type_handler::<S>),
         )
+        // $purge / $reindex — type- and instance-scoped. Both must be registered
+        // before the `/{resource_type}/{id}` catch-all below, or `$purge` would
+        // be routed as a read of a resource whose id is literally "$purge".
+        .route(
+            "/{resource_type}/$reindex",
+            post(handlers::reindex_type_handler::<S>),
+        )
+        .route(
+            "/{resource_type}/$purge",
+            post(handlers::purge_type_handler::<S>),
+        )
+        .route(
+            "/{resource_type}/{id}/$purge",
+            delete(handlers::purge_instance_handler::<S>),
+        )
         // Instance-level routes
         .route("/{resource_type}/{id}", get(handlers::read_handler::<S>))
         // HEAD for read - returns headers without body
         .route(
             "/{resource_type}/{id}",
             head(handlers::head_read_handler::<S>),
-        )
-        .route(
-            "/{resource_type}/{id}/$validate",
-            post(handlers::validate::instance_validate_handler::<S>),
         )
         .route("/{resource_type}/{id}", put(handlers::update_handler::<S>))
         .route("/{resource_type}/{id}", patch(handlers::patch_handler::<S>))

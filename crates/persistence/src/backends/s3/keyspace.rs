@@ -75,6 +75,61 @@ impl S3Keyspace {
         self.join(&["resources", resource_type, "/"])
     }
 
+    /// Key for a tenant's registry record — one JSON object per registered
+    /// tenant. The registry spans tenants, so this is only meaningful on an
+    /// un-tenanted keyspace (no `with_tenant_prefix`).
+    ///
+    /// The id is escaped with [`registry_object_id`], **not** [`sanitize`]: this
+    /// key establishes tenant identity and ownership, so a lossy mapping here
+    /// would let two tenants share one record (see that function's docs).
+    pub fn tenant_registry_key(&self, tenant_id: &str) -> String {
+        self.join(&[
+            "tenants",
+            &format!("{}.json", registry_object_id(tenant_id)),
+        ])
+    }
+
+    /// The pre-fix key shape for a registry record, which escaped `/`, `\`, and
+    /// space to `_` via [`sanitize`] and so collided for ids differing only in
+    /// those characters.
+    ///
+    /// Read-only, for falling back to records written before the escaping fix so
+    /// an upgrade does not orphan them. Never write through this. Once existing
+    /// deployments have re-registered (or a backfill has run) this and its call
+    /// sites in `list_tenants`/`get_tenant`/`deregister_tenant` can be deleted.
+    pub fn legacy_tenant_registry_key(&self, tenant_id: &str) -> String {
+        self.join(&["tenants", &format!("{}.json", sanitize(tenant_id))])
+    }
+
+    /// Prefix covering all tenant registry records.
+    ///
+    /// # Why tenant data cannot be mistaken for a registry record
+    ///
+    /// The guarantee is **structural, not lexical**, mirroring
+    /// [`user_settings_key`](Self::user_settings_key). A registry record sits
+    /// *directly* under this segment as a `{escaped-id}.json` leaf, whereas every
+    /// tenant-scoped key lives under a `resources/`, `history/`, or `bulk/`
+    /// **sub**-prefix of its tenant segment. So a tenant named `tenants` writes
+    /// `tenants/resources/…`, never a `tenants/{leaf}.json`.
+    ///
+    /// That invariant is only worth anything if the reader enforces it: S3
+    /// listings are recursive, so `list_tenants` must keep **direct children
+    /// only**. Before that filter existed a tenant named `tenants` injected
+    /// phantom rows into the registry and, once it accumulated a history event,
+    /// made `list_tenants` fail permanently (issue #271).
+    ///
+    /// Do **not** weaken this to "no tenant may be named `tenants`". The admin
+    /// API does reserve that name, but the JWT tenant extractor validates
+    /// nothing, so the safety of this namespace must not depend on it.
+    pub fn tenant_registry_prefix(&self) -> String {
+        self.join(&["tenants/"])
+    }
+
+    /// Prefix covering all history index events (type- and system-level).
+    pub fn history_root_prefix(&self) -> String {
+        self.join(&["history/"])
+    }
+
     /// Key for a type-level history index event.
     ///
     /// The filename encodes the event timestamp in milliseconds, resource ID,
@@ -225,6 +280,42 @@ impl S3Keyspace {
         self.join(&["bulk", "submit/"])
     }
 
+    /// Key for a single user's per-user settings object.
+    ///
+    /// `object_id` **must** be an opaque, injective digest of the user key (see
+    /// `settings_object_id` in the `user_settings` module), never the raw key.
+    /// The raw key is derived from JWT claims the server does not constrain: it
+    /// can contain `/`, `..`, or be empty, and `sanitize` below is *lossy*, so
+    /// embedding it here would let two distinct users collide on one object — a
+    /// cross-user settings leak.
+    ///
+    /// This key is deliberately built from the *base* keyspace, without
+    /// [`with_tenant_prefix`](Self::with_tenant_prefix): settings are user-global,
+    /// not per-tenant (see [`crate::core::user_settings`]).
+    ///
+    /// # Why a tenant cannot reach these objects
+    ///
+    /// The guarantee is **structural, not lexical**. A settings object sits
+    /// *directly* under the `_system.user-settings/` segment as `{digest}.json`,
+    /// whereas every tenant-scoped key lives under a `resources/`, `history/`, or
+    /// `bulk/` **sub**-prefix of its tenant segment. So even a tenant somehow
+    /// named `_system.user-settings` would write to
+    /// `_system.user-settings/resources/…`, which can never equal a
+    /// `{digest}.json` leaf — and `purge_tenant_data` sweeps only those
+    /// sub-prefixes, so it cannot delete a settings object either.
+    ///
+    /// Do **not** weaken this to "tenant IDs cannot contain `.`". That is true of
+    /// the routing validators (`is_valid_tenant_id`), but *not* of
+    /// `admin_tenants::validate_tenant_id`, which permits `.` and `/`, nor of the
+    /// JWT tenant extractor, which validates nothing. The name is dotted to keep
+    /// it unroutable, but the safety of this namespace must not depend on that.
+    /// In particular, a future change that widened a tenant purge to sweep the
+    /// whole tenant prefix would break the structural argument above and must
+    /// exclude this namespace explicitly.
+    pub fn user_settings_key(&self, object_id: &str) -> String {
+        self.join(&["_system.user-settings", &format!("{object_id}.json")])
+    }
+
     /// Joins `parts` with `/`, prepending the base prefix when set.
     ///
     /// Trailing slashes are preserved only when the final part itself ends with
@@ -256,6 +347,14 @@ impl S3Keyspace {
 /// Slashes, backslashes, and spaces are replaced with underscores so that
 /// resource IDs and type names can be embedded in key paths without
 /// accidentally splitting path segments.
+///
+/// This mapping is **lossy and therefore not injective** — `"a/b"` and `"a_b"`
+/// both collapse to `"a_b"`. It is only sound for the history *index* keys here,
+/// where the filename also carries a timestamp, version, and random suffix and a
+/// collision merely duplicates an index entry. Never use it to derive a key that
+/// establishes *identity* or *ownership*: two principals colliding on one key is
+/// a cross-user data leak. See `S3Keyspace::user_settings_key`, which hashes
+/// instead.
 fn sanitize(value: &str) -> String {
     value
         .chars()
@@ -264,4 +363,175 @@ fn sanitize(value: &str) -> String {
             _ => c,
         })
         .collect()
+}
+
+/// Escapes a tenant id into a single, injective S3 key segment.
+///
+/// Unlike [`sanitize`], distinct ids always produce distinct segments, so this
+/// is safe for a key that establishes identity. `%` is escaped first so the
+/// mapping stays reversible and no other escape can be forged; `/`, `\`, and
+/// space — the characters `sanitize` collapses — follow.
+///
+/// Percent-encoding rather than a hash (as `settings_object_id` uses) because a
+/// tenant id is validated and non-secret, and keeping the bucket greppable by
+/// tenant is worth more here than fixed-length keys. Ids reaching this point are
+/// length-capped upstream, so S3's 1024-byte key limit is not a concern.
+///
+/// Only `/` is reachable through the admin API's charset — `\` and space are
+/// already rejected there — so in practice this changes the key of exactly the
+/// hierarchical ids that were previously colliding.
+fn registry_object_id(tenant_id: &str) -> String {
+    let mut out = String::with_capacity(tenant_id.len());
+    for c in tenant_id.chars() {
+        match c {
+            '%' => out.push_str("%25"),
+            '/' => out.push_str("%2F"),
+            '\\' => out.push_str("%5C"),
+            ' ' => out.push_str("%20"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The registry key establishes tenant identity: ids that a lossy sanitiser
+    /// would collapse together must map to distinct objects. A collision here
+    /// lets one tenant read, overwrite, and deregister another's record.
+    #[test]
+    fn tenant_registry_key_is_injective_for_ids_a_sanitiser_would_collide() {
+        let ks = S3Keyspace::new(None);
+        // `sanitize()` maps '/', '\\', and ' ' all to '_', so these four collided.
+        let keys = [
+            ks.tenant_registry_key("a/b"),
+            ks.tenant_registry_key("a_b"),
+            ks.tenant_registry_key("a\\b"),
+            ks.tenant_registry_key("a b"),
+        ];
+        for (i, a) in keys.iter().enumerate() {
+            for b in keys.iter().skip(i + 1) {
+                assert_ne!(a, b, "registry keys must be injective");
+            }
+        }
+        // The escape itself must not be forgeable: a literal '%2F' cannot be
+        // made to collide with an encoded '/'.
+        assert_ne!(
+            ks.tenant_registry_key("a/b"),
+            ks.tenant_registry_key("a%2Fb")
+        );
+    }
+
+    /// Every registry record is a direct child of the registry prefix. This is
+    /// the invariant `list_tenants` relies on to tell records apart from the
+    /// data of a tenant that happens to be named `tenants` (issue #271).
+    #[test]
+    fn tenant_registry_keys_are_direct_children_of_the_registry_prefix() {
+        for base in [None, Some("hfs".to_string())] {
+            let ks = S3Keyspace::new(base);
+            let prefix = ks.tenant_registry_prefix();
+            for id in ["acme", "a/b", "tenants", "resources", "__system__", ".."] {
+                let key = ks.tenant_registry_key(id);
+                let rest = key
+                    .strip_prefix(&prefix)
+                    .expect("registry key must sit under the registry prefix");
+                assert!(
+                    !rest.contains('/'),
+                    "registry key for {id:?} must be a direct child, got {rest:?}"
+                );
+            }
+        }
+    }
+
+    /// A tenant whose id names the registry segment still writes its data one
+    /// or more segments deeper, so no key it can produce is mistaken for a
+    /// registry record. This is the structural half of the #271 fix — it holds
+    /// regardless of whether tenant-id validation ran.
+    #[test]
+    fn a_tenant_named_tenants_cannot_forge_a_registry_record() {
+        let base = S3Keyspace::new(None);
+        let prefix = base.tenant_registry_prefix();
+        let hostile = base.with_tenant_prefix("tenants");
+
+        let data_keys = [
+            hostile.current_resource_key("Patient", "p1"),
+            hostile.history_version_key("Patient", "p1", "1"),
+            hostile.history_system_prefix(),
+            hostile.resources_prefix(),
+            hostile.history_root_prefix(),
+        ];
+        for key in data_keys {
+            assert!(
+                key.starts_with(&prefix),
+                "precondition: hostile tenant data shares the registry prefix"
+            );
+            let rest = &key[prefix.len()..];
+            assert!(
+                rest.contains('/'),
+                "tenant data must be nested deeper than a registry record, got {rest:?}"
+            );
+        }
+    }
+
+    /// Traversal in a tenant id cannot walk the registry key out of its
+    /// namespace.
+    ///
+    /// What makes this safe is that `/` is escaped, so the id can never
+    /// contribute a separator and the key always stays a single leaf under
+    /// `tenants/`. A `..` surviving *within* that leaf is harmless: the leaf
+    /// always has `.json` appended, so no path segment is ever exactly `.` or
+    /// `..`, and S3 keys carry no path semantics anyway. Assert the property
+    /// that actually holds — one leaf, no separator — rather than the absence of
+    /// the characters.
+    #[test]
+    fn registry_key_cannot_be_escaped_by_traversal() {
+        let ks = S3Keyspace::new(None);
+        for id in ["..", ".", "../..", "a/../../b", "../../../etc/passwd"] {
+            let key = ks.tenant_registry_key(id);
+            let leaf = key
+                .strip_prefix("tenants/")
+                .unwrap_or_else(|| panic!("{id:?} escaped the registry namespace: {key}"));
+            assert!(
+                !leaf.contains('/'),
+                "{id:?} injected a separator into the key: {key}"
+            );
+            // No path segment is ever a bare traversal token.
+            for segment in key.split('/') {
+                assert!(
+                    segment != ".." && segment != ".",
+                    "{id:?} produced a traversal segment: {key}"
+                );
+            }
+        }
+    }
+
+    /// The legacy key shape is what pre-fix records were written under, and is
+    /// read as a fallback. It must agree with the new shape for every id that
+    /// `sanitize` did not rewrite, so the fallback is a no-op for them.
+    #[test]
+    fn legacy_registry_key_differs_only_for_ids_sanitize_rewrote() {
+        let ks = S3Keyspace::new(None);
+        for id in [
+            "acme",
+            "acme-research",
+            "tenant_123",
+            "acme.org",
+            "__system__",
+        ] {
+            assert_eq!(
+                ks.tenant_registry_key(id),
+                ks.legacy_tenant_registry_key(id),
+                "unaffected id {id:?} must keep its existing key"
+            );
+        }
+        for id in ["a/b", "a\\b", "a b"] {
+            assert_ne!(
+                ks.tenant_registry_key(id),
+                ks.legacy_tenant_registry_key(id),
+                "previously-colliding id {id:?} must move to a new key"
+            );
+        }
+    }
 }

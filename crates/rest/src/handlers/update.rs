@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use helios_persistence::core::{ConditionalStorage, ResourceStorage};
+use helios_persistence::error::{ResourceError, StorageError};
 use tracing::debug;
 
 use crate::error::{RestError, RestResult};
@@ -76,7 +77,7 @@ where
     }
 
     // Determine FHIR version from header or use server default
-    let fhir_version = version.storage_version();
+    let fhir_version = version.storage_version_or(state.config().default_fhir_version);
 
     // Negotiate response format from Accept header
     let negotiated = negotiate_format(&req_headers, None);
@@ -86,7 +87,7 @@ where
         id = %id,
         tenant = %tenant.tenant_id(),
         fhir_version = %fhir_version,
-        if_match = ?conditional.if_match(),
+        if_match = ?conditional.if_match_tags(),
         "Processing update request"
     );
 
@@ -121,42 +122,61 @@ where
     }
 
     // Check if If-Match is required
-    if state.require_if_match() && conditional.if_match().is_none() {
+    if state.require_if_match() && !conditional.has_if_match() {
         return Err(RestError::PreconditionFailed {
             message: "If-Match header is required for updates".to_string(),
         });
     }
 
-    // Try to read existing resource for version check
-    let existing = state
-        .storage()
-        .read(tenant.context(), &resource_type, &id)
+    // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
+    state
+        .validation()
+        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
         .await?;
 
-    // Handle If-Match precondition
-    if let Some(if_match) = conditional.if_match() {
-        match &existing {
-            Some(stored) => {
-                let current_etag = format!("W/\"{}\"", stored.version_id());
-                if if_match != current_etag && if_match != "*" {
-                    return Err(RestError::PreconditionFailed {
-                        message: format!(
-                            "ETag mismatch: expected {}, got {}",
-                            if_match, current_etag
-                        ),
-                    });
-                }
-            }
-            None => {
-                // If-Match with no existing resource is a precondition failure
-                // (unless If-Match: * which means "any version")
-                if if_match != "*" {
-                    return Err(RestError::PreconditionFailed {
-                        message: "Resource does not exist".to_string(),
-                    });
-                }
-            }
-        }
+    // Try to read existing resource for version check.
+    //
+    // A deleted resource is brought back to life by a subsequent update
+    // (https://hl7.org/fhir/http.html#delete), so `Gone` here is not an error:
+    // it means there is no current version to match `If-Match` against, and the
+    // storage layer restores the resource on write.
+    let existing = match state
+        .storage()
+        .read(tenant.context(), &resource_type, &id)
+        .await
+    {
+        Ok(existing) => existing,
+        Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
+        Err(e) => return Err(e.into()),
+    };
+
+    // Handle the If-Match precondition (RFC 9110 §13.1.1).
+    //
+    // `If-Match` is a comma-separated list and is satisfied when ANY listed tag
+    // matches; comparing the field value as one string made every multi-valued
+    // header a permanent 412 (issue #311). A malformed value is a *failed*
+    // precondition, not an absent one — degrading it to "no precondition" would
+    // turn a guarded update into an unconditional overwrite.
+    //
+    // `*` asserts that a current representation exists, so it does NOT license
+    // an update-as-create: with no existing resource (or a deleted one, which
+    // has no current representation) it fails like any other tag.
+    let if_match = conditional
+        .if_match_tags()
+        .map_err(|e| RestError::PreconditionFailed {
+            message: format!("Malformed If-Match header: {e}"),
+        })?;
+
+    let current_version = existing.as_ref().map(|stored| stored.version_id());
+    if !if_match.if_match_satisfied(current_version) {
+        let message = match current_version {
+            Some(current) => format!(
+                "If-Match precondition failed: no supplied entity-tag matches the current version W/\"{current}\""
+            ),
+            None => "If-Match precondition failed: the resource has no current version to match"
+                .to_string(),
+        };
+        return Err(RestError::PreconditionFailed { message });
     }
 
     // Perform the update (or create)
@@ -170,6 +190,15 @@ where
             fhir_version,
         )
         .await?;
+
+    // Stored StructureDefinitions feed the tenant's profile registry.
+    if resource_type == "StructureDefinition" {
+        state.validation().upsert_stored_profile(
+            tenant.tenant_id(),
+            fhir_version,
+            stored.content(),
+        );
+    }
 
     let headers = ResourceHeaders::from_stored(&stored, &state);
     let status = if created {
@@ -246,7 +275,7 @@ where
     S: ResourceStorage + ConditionalStorage + Send + Sync,
 {
     // Determine FHIR version from header or use server default
-    let fhir_version = version.storage_version();
+    let fhir_version = version.storage_version_or(state.config().default_fhir_version);
 
     // Negotiate response format from Accept header
     let negotiated = negotiate_format(&req_headers, None);
@@ -277,6 +306,12 @@ where
             });
         }
     }
+
+    // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
+    state
+        .validation()
+        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+        .await?;
 
     let result = state
         .storage()

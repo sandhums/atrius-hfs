@@ -15,6 +15,7 @@
 //! - [`versions`] - Get supported FHIR versions ($versions operation)
 //! - [`health`] - Health check endpoint
 
+pub mod admin_tenants;
 pub mod batch;
 pub mod bulk_common;
 pub mod bulk_export;
@@ -26,7 +27,9 @@ pub mod create;
 pub mod delete;
 pub mod health;
 pub mod history;
+pub mod nl_search;
 pub mod patch;
+pub mod purge;
 pub mod read;
 pub mod reindex;
 pub mod search;
@@ -77,14 +80,18 @@ pub use history::{
     delete_instance_history_handler, delete_version_handler, history_instance_handler,
     history_system_handler, history_type_handler,
 };
+pub use nl_search::nl_search_handler;
 pub use patch::patch_handler;
+pub use purge::{purge_instance_handler, purge_type_handler};
 pub use read::{head_read_handler, read_handler};
 pub use reindex::{
-    PersistenceReindexController, ReindexController, reindex_cancel_handler,
-    reindex_kickoff_handler, reindex_status_handler, try_auto_reindex_controller,
+    reindex_cancel_handler, reindex_status_handler, reindex_system_handler, reindex_type_handler,
 };
 pub use search::{search_get_handler, search_post_handler};
 pub use update::{conditional_update_handler, update_handler};
 pub use user_settings::{get_user_settings, patch_user_settings, put_user_settings};
+pub use validate::{
+    validate_instance_get_handler, validate_instance_post_handler, validate_type_handler,
+};
 pub use versions::versions_handler;
 pub use vread::vread_handler;

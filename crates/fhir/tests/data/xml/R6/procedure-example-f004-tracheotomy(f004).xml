@@ -46,13 +46,6 @@
       <text value="ensure breathing during surgery"/>
     </concept>
   </reason>
-  <bodySite>
-    <coding>
-      <system value="http://snomed.info/sct"/>
-      <code value="83030008"/>
-      <display value="Retropharyngeal area"/>
-    </coding>
-  </bodySite>
   <outcome>
     <concept>
       <text value="removal of the retropharyngeal abscess"/>

@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="SearchParameter"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -58,6 +58,8 @@
             <span style="font-style: italic" title="spd-4">+ Rule: Search parameter codes SHALL NOT contain '.', '$', '|', or whitespace characters</span>
             <br/>
             <span style="font-style: italic" title="spd-5">+ Rule: Search parameter aliases SHALL NOT contain '.', '$', '|', or whitespace characters</span>
+            <br/>
+            <span style="font-style: italic" title="spd-6">+ Warning: Values for multipleOr and multipleAnd should be provided for clarity</span>
             <br/>
             <br/>Elements defined in Ancestors: 
             <a href="resource.html#Resource" title="The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes.">id</a>, 
@@ -850,7 +852,7 @@
   <name value="SearchParameter"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -945,6 +947,13 @@
         <severity value="error"/>
         <human value="Search parameter aliases SHALL NOT contain '.', '$', '|', or whitespace characters"/>
         <expression value="aliasCode.empty() or aliasCode.all(matches('^[^.\\$\\|\\s]+$')).allTrue()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/SearchParameter"/>
+      </constraint>
+      <constraint>
+        <key value="spd-6"/>
+        <severity value="warning"/>
+        <human value="Values for multipleOr and multipleAnd should be provided for clarity"/>
+        <expression value="multipleOr.exists() and multipleAnd.exists()"/>
         <source value="http://hl7.org/fhir/StructureDefinition/SearchParameter"/>
       </constraint>
       <mustSupport value="false"/>
@@ -1900,6 +1909,7 @@
       <path value="SearchParameter.type"/>
       <short value="number | date | string | token | reference | composite | quantity | uri | special | resource"/>
       <definition value="The type of value that a search parameter may contain, and how the content is interpreted."/>
+      <comment value="If pre-adopting a new type from a future FHIR version, use the 'special' code and communicate the alternate type as an extension."/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -2437,6 +2447,13 @@
         <expression value="aliasCode.empty() or aliasCode.all(matches('^[^.\\$\\|\\s]+$')).allTrue()"/>
         <source value="http://hl7.org/fhir/StructureDefinition/SearchParameter"/>
       </constraint>
+      <constraint>
+        <key value="spd-6"/>
+        <severity value="warning"/>
+        <human value="Values for multipleOr and multipleAnd should be provided for clarity"/>
+        <expression value="multipleOr.exists() and multipleAnd.exists()"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/SearchParameter"/>
+      </constraint>
       <mustSupport value="false"/>
       <isModifier value="false"/>
       <mapping>
@@ -2874,6 +2891,7 @@
       <path value="SearchParameter.type"/>
       <short value="number | date | string | token | reference | composite | quantity | uri | special | resource"/>
       <definition value="The type of value that a search parameter may contain, and how the content is interpreted."/>
+      <comment value="If pre-adopting a new type from a future FHIR version, use the 'special' code and communicate the alternate type as an extension."/>
       <min value="1"/>
       <max value="1"/>
       <type>

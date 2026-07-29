@@ -18,7 +18,7 @@
           <code>xml</code>, 
           <code>json</code>
         </li>
-        <li>Published on: 2026-07-04T18:53:58Z </li>
+        <li>Published on: 2026-07-17T03:44:13Z </li>
         <li>Published by: HL7 International / FHIR Infrastructure </li>
       </ul>
       <blockquote class="impl-note">
@@ -401,15 +401,6 @@
                       <b>SHALL</b>
                     </td>
                     <td>$snapshot</td>
-                    <td>
-                      <div/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <b>SHALL</b>
-                    </td>
-                    <td>$transform</td>
                     <td>
                       <div/>
                     </td>
@@ -1103,6 +1094,7 @@
                 <code>Group.member</code>, 
                 <code>ImagingStudy.performer</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MedicationDispense.performer</code>, 
@@ -1407,13 +1399,14 @@
               <td class="text-center">y</td>
               <td class="text-center">y</td>
               <td class="text-center">y</td>
-              <td>evidence-detail, severity, identifier, onset-info, recorded-date, code, evidence, subject, verification-status, clinical-status, encounter, onset-date, abatement-date, asserter, stage, abatement-string, patient, abatement-age, onset-age, body-site, category</td>
+              <td>evidence-detail, severity, identifier, onset-info, recorded-date, code, evidence, subject, body-structure-code, verification-status, clinical-status, encounter, onset-date, abatement-date, asserter, stage, abatement-string, patient, abatement-age, body-structure-reference, onset-age, category</td>
               <td>
                 <code>Condition.evidence-detail</code>, 
                 <code>Condition.subject</code>, 
                 <code>Condition.encounter</code>, 
                 <code>Condition.asserter</code>, 
-                <code>Condition.patient</code>
+                <code>Condition.patient</code>, 
+                <code>Condition.body-structure-reference</code>
               </td>
               <td>
                 <code>Goal.addresses</code>, 
@@ -1645,6 +1638,7 @@
                 <code>ImagingStudy.subject</code>, 
                 <code>ImagingStudy.patient</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MedicationDispense.performer</code>, 
@@ -2346,6 +2340,7 @@
                 <code>Library.subject-canonical</code>, 
                 <code>Library.subject-reference</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>Measure.subject-canonical</code>, 
                 <code>Measure.subject-reference</code>, 
                 <code>MeasureReport.patient</code>, 
@@ -2413,10 +2408,11 @@
               <td class="text-center">y</td>
               <td class="text-center">y</td>
               <td class="text-center">y</td>
-              <td>identifier, request, patient, subject, status</td>
+              <td>date, identifier, request, patient, subject, module-reference, topic, module-uri, module-code, status</td>
               <td>
                 <code>GuidanceResponse.patient</code>, 
-                <code>GuidanceResponse.subject</code>
+                <code>GuidanceResponse.subject</code>, 
+                <code>GuidanceResponse.module-reference</code>
               </td>
               <td/>
               <td/>
@@ -2684,13 +2680,15 @@
               <td class="text-center">y</td>
               <td class="text-center">y</td>
               <td class="text-center">y</td>
-              <td>date, identifier, empty-reason, item, code, notes, patient, subject, encounter, source, title, status</td>
+              <td>date, identifier, editor, empty-reason, item, code, notes, subject, encounter, source, title, contributor, patient, status</td>
               <td>
+                <code>List.editor</code>, 
                 <code>List.item</code>, 
-                <code>List.patient</code>, 
                 <code>List.subject</code>, 
                 <code>List.encounter</code>, 
-                <code>List.source</code>
+                <code>List.source</code>, 
+                <code>List.contributor</code>, 
+                <code>List.patient</code>
               </td>
               <td/>
               <td/>
@@ -3452,6 +3450,7 @@
                 <code>ImagingStudy.performer</code>, 
                 <code>Immunization.performer</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>Location.organization</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
@@ -3701,6 +3700,7 @@
                 <code>Immunization.performer</code>, 
                 <code>Immunization.patient</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MedicationAdministration.subject</code>, 
@@ -3980,6 +3980,7 @@
                 <code>ImagingStudy.referrer</code>, 
                 <code>Immunization.performer</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MeasureReport.reporter</code>, 
@@ -4117,6 +4118,7 @@
                 <code>ImagingStudy.referrer</code>, 
                 <code>Immunization.performer</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MeasureReport.reporter</code>, 
@@ -4172,7 +4174,7 @@
               <td class="text-center">y</td>
               <td class="text-center">y</td>
               <td class="text-center">y</td>
-              <td>date, identifier, code, performer, subject, part-of, encounter, reason-code, based-on, patient, reason-reference, report, location, category, status</td>
+              <td>date, identifier, code, performer, subject, body-structure-code, part-of, encounter, reason-code, based-on, patient, reason-reference, report, body-structure-reference, location, category, status</td>
               <td>
                 <code>Procedure.performer</code>, 
                 <code>Procedure.subject</code>, 
@@ -4182,6 +4184,7 @@
                 <code>Procedure.patient</code>, 
                 <code>Procedure.reason-reference</code>, 
                 <code>Procedure.report</code>, 
+                <code>Procedure.body-structure-reference</code>, 
                 <code>Procedure.location</code>
               </td>
               <td>
@@ -4388,6 +4391,7 @@
                 <code>ImagingStudy.performer</code>, 
                 <code>Immunization.performer</code>, 
                 <code>List.source</code>, 
+                <code>List.contributor</code>, 
                 <code>MeasureReport.patient</code>, 
                 <code>MeasureReport.subject</code>, 
                 <code>MedicationDispense.performer</code>, 
@@ -4799,27 +4803,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#StructureMap1-111">StructureMap</a>
-              </td>
-              <td>
-                <a href="structuremap.html">http://hl7.org/fhir/StructureDefinition/StructureMap</a>
-              </td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td class="text-center">y</td>
-              <td>date, identifier, context-type-value, jurisdiction, description, context-type, experimental, source, title, version, url, target, produced, context-quantity, context, name, publisher, queried, context-type-quantity, status</td>
-              <td/>
-              <td/>
-              <td/>
-            </tr>
-            <tr>
-              <td>
-                <a href="#Subscription1-112">Subscription</a>
+                <a href="#Subscription1-111">Subscription</a>
               </td>
               <td>
                 <a href="subscription.html">http://hl7.org/fhir/StructureDefinition/Subscription</a>
@@ -4841,7 +4825,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#SubscriptionStatus1-113">SubscriptionStatus</a>
+                <a href="#SubscriptionStatus1-112">SubscriptionStatus</a>
               </td>
               <td>
                 <a href="subscriptionstatus.html">http://hl7.org/fhir/StructureDefinition/SubscriptionStatus</a>
@@ -4861,7 +4845,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#SubscriptionTopic1-114">SubscriptionTopic</a>
+                <a href="#SubscriptionTopic1-113">SubscriptionTopic</a>
               </td>
               <td>
                 <a href="subscriptiontopic.html">http://hl7.org/fhir/StructureDefinition/SubscriptionTopic</a>
@@ -4881,7 +4865,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#Substance1-115">Substance</a>
+                <a href="#Substance1-114">Substance</a>
               </td>
               <td>
                 <a href="substance.html">http://hl7.org/fhir/StructureDefinition/Substance</a>
@@ -4921,7 +4905,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#SubstanceDefinition1-116">SubstanceDefinition</a>
+                <a href="#SubstanceDefinition1-115">SubstanceDefinition</a>
               </td>
               <td>
                 <a href="substancedefinition.html">http://hl7.org/fhir/StructureDefinition/SubstanceDefinition</a>
@@ -4951,7 +4935,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#Task1-117">Task</a>
+                <a href="#Task1-116">Task</a>
               </td>
               <td>
                 <a href="task.html">http://hl7.org/fhir/StructureDefinition/Task</a>
@@ -4991,7 +4975,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#TerminologyCapabilities1-118">TerminologyCapabilities</a>
+                <a href="#TerminologyCapabilities1-117">TerminologyCapabilities</a>
               </td>
               <td>
                 <a href="terminologycapabilities.html">http://hl7.org/fhir/StructureDefinition/TerminologyCapabilities</a>
@@ -5011,7 +4995,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#ValueSet1-119">ValueSet</a>
+                <a href="#ValueSet1-118">ValueSet</a>
               </td>
               <td>
                 <a href="valueset.html">http://hl7.org/fhir/StructureDefinition/ValueSet</a>
@@ -5038,7 +5022,7 @@
             </tr>
             <tr>
               <td>
-                <a href="#VisionPrescription1-120">VisionPrescription</a>
+                <a href="#VisionPrescription1-119">VisionPrescription</a>
               </td>
               <td>
                 <a href="visionprescription.html">http://hl7.org/fhir/StructureDefinition/VisionPrescription</a>
@@ -5051,7 +5035,7 @@
               <td class="text-center">y</td>
               <td class="text-center">y</td>
               <td class="text-center">y</td>
-              <td>prescriber, identifier, product, patient, datewritten, encounter, status</td>
+              <td>prescriber, identifier, product, patient, datewritten, encounter, intent, status</td>
               <td>
                 <code>VisionPrescription.prescriber</code>, 
                 <code>VisionPrescription.patient</code>, 
@@ -14634,6 +14618,23 @@
                         <b>SHALL</b>
                       </td>
                       <td>
+                        <a href="condition-search.html#Condition-body-structure-code">body-structure-code</a>
+                      </td>
+                      <td>
+                        <code>token</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Anatomical location, if relevant (coded)</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
                         <a href="condition-search.html#Condition-verification-status">verification-status</a>
                       </td>
                       <td>
@@ -14804,14 +14805,14 @@
                         <b>SHALL</b>
                       </td>
                       <td>
-                        <a href="condition-search.html#Condition-onset-age">onset-age</a>
+                        <a href="condition-search.html#Condition-body-structure-reference">body-structure-reference</a>
                       </td>
                       <td>
-                        <code>quantity</code>
+                        <code>reference</code>
                       </td>
                       <td>
                         <div>
-                          <p>Onsets as age or age range</p>
+                          <p>Anatomical location, if relevant (reference)</p>
 
                         </div>
                       </td>
@@ -14821,14 +14822,14 @@
                         <b>SHALL</b>
                       </td>
                       <td>
-                        <a href="condition-search.html#Condition-body-site">body-site</a>
+                        <a href="condition-search.html#Condition-onset-age">onset-age</a>
                       </td>
                       <td>
-                        <code>token</code>
+                        <code>quantity</code>
                       </td>
                       <td>
                         <div>
-                          <p>Anatomical location, if relevant</p>
+                          <p>Onsets as age or age range</p>
 
                         </div>
                       </td>
@@ -23934,6 +23935,23 @@
                         <b>SHALL</b>
                       </td>
                       <td>
+                        <a href="guidanceresponse-search.html#GuidanceResponse-date">date</a>
+                      </td>
+                      <td>
+                        <code>date</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>The date on which the guidance was provided</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
                         <a href="account-search.html#clinical-identifier">identifier</a>
                       </td>
                       <td>
@@ -23993,6 +24011,74 @@
                       <td>
                         <div>
                           <p>The subject that the guidance response is about</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="guidanceresponse-search.html#GuidanceResponse-module-reference">module-reference</a>
+                      </td>
+                      <td>
+                        <code>reference</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>The module from which the guidance was provided</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="guidanceresponse-search.html#GuidanceResponse-topic">topic</a>
+                      </td>
+                      <td>
+                        <code>token</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Topics associated with the guidance</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="guidanceresponse-search.html#GuidanceResponse-module-uri">module-uri</a>
+                      </td>
+                      <td>
+                        <code>uri</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>The module from which the guidance was provided</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="guidanceresponse-search.html#GuidanceResponse-module-code">module-code</a>
+                      </td>
+                      <td>
+                        <code>token</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>The module from which the guidance was provided</p>
 
                         </div>
                       </td>
@@ -27097,6 +27183,23 @@
                         <b>SHALL</b>
                       </td>
                       <td>
+                        <a href="list-search.html#List-editor">editor</a>
+                      </td>
+                      <td>
+                        <code>reference</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Source(/Author) or Contributor</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
                         <a href="list-search.html#List-empty-reason">empty-reason</a>
                       </td>
                       <td>
@@ -27165,23 +27268,6 @@
                         <b>SHALL</b>
                       </td>
                       <td>
-                        <a href="account-search.html#clinical-patient">patient</a>
-                      </td>
-                      <td>
-                        <code>reference</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>If all resources have the same subject</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
                         <a href="list-search.html#List-subject">subject</a>
                       </td>
                       <td>
@@ -27241,6 +27327,40 @@
                       <td>
                         <div>
                           <p>Descriptive name for the list</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="list-search.html#List-contributor">contributor</a>
+                      </td>
+                      <td>
+                        <code>reference</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Who and/or what contributed the list contents</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="account-search.html#clinical-patient">patient</a>
+                      </td>
+                      <td>
+                        <code>reference</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>If all resources have the same subject</p>
 
                         </div>
                       </td>
@@ -38702,6 +38822,23 @@
                         <b>SHALL</b>
                       </td>
                       <td>
+                        <a href="procedure-search.html#Procedure-body-structure-code">body-structure-code</a>
+                      </td>
+                      <td>
+                        <code>token</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Target body sites (coded)</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
                         <a href="procedure-search.html#Procedure-part-of">part-of</a>
                       </td>
                       <td>
@@ -38812,6 +38949,23 @@
                       <td>
                         <div>
                           <p>Any report resulting from the procedure</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
+                        <a href="procedure-search.html#Procedure-body-structure-reference">body-structure-reference</a>
+                      </td>
+                      <td>
+                        <code>reference</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>Target body sites (reference)</p>
 
                         </div>
                       </td>
@@ -45405,447 +45559,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="StructureMap1-111" class="panel-title">
-            <span style="float: right;">Resource Conformance: unspecified </span>StructureMap
-          </h4>
-        </div>
-        <div class="panel-body">
-          <div class="container">
-            <div class="row">
-              <div class="col-lg-6">
-                <span class="lead">Base System Profile</span>
-                <br/>
-                <a href="structuremap.html">StructureMap</a>
-              </div>
-              <div class="col-lg-3">
-                <span class="lead">Profile Conformance</span>
-                <br/>
-                <b>SHALL</b>
-              </div>
-              <div class="col-lg-3">
-                <span class="lead">Reference Policy</span>
-                <br/>
-                <code>literal</code>, 
-                <code>logical</code>
-              </div>
-            </div>
-            <p/>
-            <div class="row">
-              <div class="col-lg-6">
-                <span class="lead">Interaction summary</span>
-                <br/>
-                <ul>
-                  <li>Supports 
-                    <br/>
-                    <code>read</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>vread</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>update</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>delete</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>history-instance</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>history-type</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>create</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                    <code>search-type</code>
-                    <div>
-                      <p>Implemented per the specification (or Insert other doco here)</p>
-
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <p/>
-            <div class="row">
-              <div class="col-lg-7">
-                <span class="lead">Search Parameters</span>
-                <table class="table table-condensed table-hover">
-                  <thead>
-                    <tr>
-                      <th>Conformance</th>
-                      <th>Parameter</th>
-                      <th>Type</th>
-                      <th>Documentation</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-date">date</a>
-                      </td>
-                      <td>
-                        <code>date</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The structure map publication date</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-identifier">identifier</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>External identifier for the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-context-type-value">context-type-value</a>
-                      </td>
-                      <td>
-                        <code>composite</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A use context type and value assigned to the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-jurisdiction">jurisdiction</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>Jurisdiction of the authority that maintains the the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-description">description</a>
-                      </td>
-                      <td>
-                        <code>string</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The description of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-context-type">context-type</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A type of use context assigned to the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="structuremap-search.html#StructureMap-experimental">experimental</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>Whether the StructureMap is experimental</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="structuremap-search.html#StructureMap-source">source</a>
-                      </td>
-                      <td>
-                        <code>uri</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A source StructureDefinition for the map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-title">title</a>
-                      </td>
-                      <td>
-                        <code>string</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The human-friendly name of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-version">version</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The business version of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-url">url</a>
-                      </td>
-                      <td>
-                        <code>uri</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The uri that identifies the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="structuremap-search.html#StructureMap-target">target</a>
-                      </td>
-                      <td>
-                        <code>uri</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A target StructureDefinition for the map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="structuremap-search.html#StructureMap-produced">produced</a>
-                      </td>
-                      <td>
-                        <code>uri</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A produced StructureDefinition for the map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-context-quantity">context-quantity</a>
-                      </td>
-                      <td>
-                        <code>quantity</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A quantity- or range-valued use context assigned to the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-context">context</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A use context assigned to the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-name">name</a>
-                      </td>
-                      <td>
-                        <code>string</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>Computationally friendly name of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-publisher">publisher</a>
-                      </td>
-                      <td>
-                        <code>string</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>Name of the publisher of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="structuremap-search.html#StructureMap-queried">queried</a>
-                      </td>
-                      <td>
-                        <code>uri</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A queried StructureDefinition for the map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-context-type-quantity">context-type-quantity</a>
-                      </td>
-                      <td>
-                        <code>composite</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>A use context type and quantity- or range-based value assigned to the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <b>SHALL</b>
-                      </td>
-                      <td>
-                        <a href="activitydefinition-search.html#CanonicalResource-status">status</a>
-                      </td>
-                      <td>
-                        <code>token</code>
-                      </td>
-                      <td>
-                        <div>
-                          <p>The current status of the structure map</p>
-
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="col-lg-5"> </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4 id="Subscription1-112" class="panel-title">
+          <h4 id="Subscription1-111" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>Subscription
           </h4>
         </div>
@@ -46149,7 +45863,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="SubscriptionStatus1-113" class="panel-title">
+          <h4 id="SubscriptionStatus1-112" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>SubscriptionStatus
           </h4>
         </div>
@@ -46231,7 +45945,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="SubscriptionTopic1-114" class="panel-title">
+          <h4 id="SubscriptionTopic1-113" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>SubscriptionTopic
           </h4>
         </div>
@@ -46535,7 +46249,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="Substance1-115" class="panel-title">
+          <h4 id="Substance1-114" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>Substance
           </h4>
         </div>
@@ -46754,7 +46468,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="SubstanceDefinition1-116" class="panel-title">
+          <h4 id="SubstanceDefinition1-115" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>SubstanceDefinition
           </h4>
         </div>
@@ -46956,7 +46670,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="Task1-117" class="panel-title">
+          <h4 id="Task1-116" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>Task
           </h4>
         </div>
@@ -47464,7 +47178,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="TerminologyCapabilities1-118" class="panel-title">
+          <h4 id="TerminologyCapabilities1-117" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>TerminologyCapabilities
           </h4>
         </div>
@@ -47836,7 +47550,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="ValueSet1-119" class="panel-title">
+          <h4 id="ValueSet1-118" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>ValueSet
           </h4>
         </div>
@@ -48176,7 +47890,7 @@
                       </td>
                       <td>
                         <div>
-                          <p>A code system included or excluded in the value set or an imported value set</p>
+                          <p>A code system or value set referenced in the ValueSet.compose</p>
 
                         </div>
                       </td>
@@ -48327,7 +48041,7 @@
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">
-          <h4 id="VisionPrescription1-120" class="panel-title">
+          <h4 id="VisionPrescription1-119" class="panel-title">
             <span style="float: right;">Resource Conformance: unspecified </span>VisionPrescription
           </h4>
         </div>
@@ -48524,6 +48238,23 @@
                         <b>SHALL</b>
                       </td>
                       <td>
+                        <a href="visionprescription-search.html#VisionPrescription-intent">intent</a>
+                      </td>
+                      <td>
+                        <code>token</code>
+                      </td>
+                      <td>
+                        <div>
+                          <p>The intent of the vision prescription</p>
+
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <b>SHALL</b>
+                      </td>
+                      <td>
                         <a href="visionprescription-search.html#VisionPrescription-status">status</a>
                       </td>
                       <td>
@@ -48554,7 +48285,7 @@
   <name value="Base FHIR Capability Statement (Full)"/>
   <status value="draft"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -50773,6 +50504,7 @@
       <searchRevInclude value="Group.member"/>
       <searchRevInclude value="ImagingStudy.performer"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MedicationDispense.performer"/>
@@ -52335,6 +52067,7 @@
       <searchInclude value="Condition.encounter"/>
       <searchInclude value="Condition.asserter"/>
       <searchInclude value="Condition.patient"/>
+      <searchInclude value="Condition.body-structure-reference"/>
       <searchRevInclude value="Goal.addresses"/>
       <searchRevInclude value="RiskAssessment.condition"/>
       <searchParam>
@@ -52384,6 +52117,12 @@
         <definition value="http://hl7.org/fhir/SearchParameter/Condition-subject"/>
         <type value="reference"/>
         <documentation value="Who has the condition?"/>
+      </searchParam>
+      <searchParam>
+        <name value="body-structure-code"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/Condition-body-structure-code"/>
+        <type value="token"/>
+        <documentation value="Anatomical location, if relevant (coded)"/>
       </searchParam>
       <searchParam>
         <name value="verification-status"/>
@@ -52446,16 +52185,16 @@
         <documentation value="Abatement as age or age range"/>
       </searchParam>
       <searchParam>
+        <name value="body-structure-reference"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/Condition-body-structure-reference"/>
+        <type value="reference"/>
+        <documentation value="Anatomical location, if relevant (reference)"/>
+      </searchParam>
+      <searchParam>
         <name value="onset-age"/>
         <definition value="http://hl7.org/fhir/SearchParameter/Condition-onset-age"/>
         <type value="quantity"/>
         <documentation value="Onsets as age or age range"/>
-      </searchParam>
-      <searchParam>
-        <name value="body-site"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/Condition-body-site"/>
-        <type value="token"/>
-        <documentation value="Anatomical location, if relevant"/>
       </searchParam>
       <searchParam>
         <name value="category"/>
@@ -53148,6 +52887,7 @@
       <searchRevInclude value="ImagingStudy.subject"/>
       <searchRevInclude value="ImagingStudy.patient"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MedicationDispense.performer"/>
@@ -56063,6 +55803,7 @@
       <searchRevInclude value="Library.subject-canonical"/>
       <searchRevInclude value="Library.subject-reference"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="Measure.subject-canonical"/>
       <searchRevInclude value="Measure.subject-reference"/>
       <searchRevInclude value="MeasureReport.patient"/>
@@ -56257,6 +55998,13 @@
       <referencePolicy value="logical"/>
       <searchInclude value="GuidanceResponse.patient"/>
       <searchInclude value="GuidanceResponse.subject"/>
+      <searchInclude value="GuidanceResponse.module-reference"/>
+      <searchParam>
+        <name value="date"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-date"/>
+        <type value="date"/>
+        <documentation value="The date on which the guidance was provided"/>
+      </searchParam>
       <searchParam>
         <name value="identifier"/>
         <definition value="http://hl7.org/fhir/SearchParameter/clinical-identifier"/>
@@ -56280,6 +56028,30 @@
         <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-subject"/>
         <type value="reference"/>
         <documentation value="The subject that the guidance response is about"/>
+      </searchParam>
+      <searchParam>
+        <name value="module-reference"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-module-reference"/>
+        <type value="reference"/>
+        <documentation value="The module from which the guidance was provided"/>
+      </searchParam>
+      <searchParam>
+        <name value="topic"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-topic"/>
+        <type value="token"/>
+        <documentation value="Topics associated with the guidance"/>
+      </searchParam>
+      <searchParam>
+        <name value="module-uri"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-module-uri"/>
+        <type value="uri"/>
+        <documentation value="The module from which the guidance was provided"/>
+      </searchParam>
+      <searchParam>
+        <name value="module-code"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/GuidanceResponse-module-code"/>
+        <type value="token"/>
+        <documentation value="The module from which the guidance was provided"/>
       </searchParam>
       <searchParam>
         <name value="status"/>
@@ -57501,11 +57273,13 @@
       <conditionalDelete value="multiple"/>
       <referencePolicy value="literal"/>
       <referencePolicy value="logical"/>
+      <searchInclude value="List.editor"/>
       <searchInclude value="List.item"/>
-      <searchInclude value="List.patient"/>
       <searchInclude value="List.subject"/>
       <searchInclude value="List.encounter"/>
       <searchInclude value="List.source"/>
+      <searchInclude value="List.contributor"/>
+      <searchInclude value="List.patient"/>
       <searchParam>
         <name value="date"/>
         <definition value="http://hl7.org/fhir/SearchParameter/clinical-date"/>
@@ -57517,6 +57291,12 @@
         <definition value="http://hl7.org/fhir/SearchParameter/clinical-identifier"/>
         <type value="token"/>
         <documentation value="Business identifier"/>
+      </searchParam>
+      <searchParam>
+        <name value="editor"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/List-editor"/>
+        <type value="reference"/>
+        <documentation value="Source(/Author) or Contributor"/>
       </searchParam>
       <searchParam>
         <name value="empty-reason"/>
@@ -57543,12 +57323,6 @@
         <documentation value="The annotation  - text content (as markdown)"/>
       </searchParam>
       <searchParam>
-        <name value="patient"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/clinical-patient"/>
-        <type value="reference"/>
-        <documentation value="If all resources have the same subject"/>
-      </searchParam>
-      <searchParam>
         <name value="subject"/>
         <definition value="http://hl7.org/fhir/SearchParameter/List-subject"/>
         <type value="reference"/>
@@ -57571,6 +57345,18 @@
         <definition value="http://hl7.org/fhir/SearchParameter/List-title"/>
         <type value="string"/>
         <documentation value="Descriptive name for the list"/>
+      </searchParam>
+      <searchParam>
+        <name value="contributor"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/List-contributor"/>
+        <type value="reference"/>
+        <documentation value="Who and/or what contributed the list contents"/>
+      </searchParam>
+      <searchParam>
+        <name value="patient"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/clinical-patient"/>
+        <type value="reference"/>
+        <documentation value="If all resources have the same subject"/>
       </searchParam>
       <searchParam>
         <name value="status"/>
@@ -60647,6 +60433,7 @@
       <searchRevInclude value="ImagingStudy.performer"/>
       <searchRevInclude value="Immunization.performer"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="Location.organization"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
@@ -61176,6 +60963,7 @@
       <searchRevInclude value="Immunization.performer"/>
       <searchRevInclude value="Immunization.patient"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MedicationAdministration.subject"/>
@@ -62123,6 +61911,7 @@
       <searchRevInclude value="ImagingStudy.referrer"/>
       <searchRevInclude value="Immunization.performer"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MeasureReport.reporter"/>
@@ -62411,6 +62200,7 @@
       <searchRevInclude value="ImagingStudy.referrer"/>
       <searchRevInclude value="Immunization.performer"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MeasureReport.reporter"/>
@@ -62587,6 +62377,7 @@
       <searchInclude value="Procedure.patient"/>
       <searchInclude value="Procedure.reason-reference"/>
       <searchInclude value="Procedure.report"/>
+      <searchInclude value="Procedure.body-structure-reference"/>
       <searchInclude value="Procedure.location"/>
       <searchRevInclude value="DetectedIssue.subject"/>
       <searchRevInclude value="DetectedIssue.patient"/>
@@ -62635,6 +62426,12 @@
         <documentation value="Search by subject"/>
       </searchParam>
       <searchParam>
+        <name value="body-structure-code"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/Procedure-body-structure-code"/>
+        <type value="token"/>
+        <documentation value="Target body sites (coded)"/>
+      </searchParam>
+      <searchParam>
         <name value="part-of"/>
         <definition value="http://hl7.org/fhir/SearchParameter/Procedure-part-of"/>
         <type value="reference"/>
@@ -62675,6 +62472,12 @@
         <definition value="http://hl7.org/fhir/SearchParameter/Procedure-report"/>
         <type value="reference"/>
         <documentation value="Any report resulting from the procedure"/>
+      </searchParam>
+      <searchParam>
+        <name value="body-structure-reference"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/Procedure-body-structure-reference"/>
+        <type value="reference"/>
+        <documentation value="Target body sites (reference)"/>
       </searchParam>
       <searchParam>
         <name value="location"/>
@@ -63399,6 +63202,7 @@
       <searchRevInclude value="ImagingStudy.performer"/>
       <searchRevInclude value="Immunization.performer"/>
       <searchRevInclude value="List.source"/>
+      <searchRevInclude value="List.contributor"/>
       <searchRevInclude value="MeasureReport.patient"/>
       <searchRevInclude value="MeasureReport.subject"/>
       <searchRevInclude value="MedicationDispense.performer"/>
@@ -65320,167 +65124,6 @@
       </searchParam>
     </resource>
     <resource>
-      <type value="StructureMap"/>
-      <profile value="http://hl7.org/fhir/StructureDefinition/StructureMap"/>
-      <interaction>
-        <code value="read"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="vread"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="update"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="delete"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="history-instance"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="history-type"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="create"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <interaction>
-        <code value="search-type"/>
-        <documentation value="Implemented per the specification (or Insert other doco here)"/>
-      </interaction>
-      <conditionalCreate value="true"/>
-      <conditionalUpdate value="true"/>
-      <conditionalDelete value="multiple"/>
-      <referencePolicy value="literal"/>
-      <referencePolicy value="logical"/>
-      <searchParam>
-        <name value="date"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-date"/>
-        <type value="date"/>
-        <documentation value="The structure map publication date"/>
-      </searchParam>
-      <searchParam>
-        <name value="identifier"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-identifier"/>
-        <type value="token"/>
-        <documentation value="External identifier for the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="context-type-value"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-context-type-value"/>
-        <type value="composite"/>
-        <documentation value="A use context type and value assigned to the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="jurisdiction"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-jurisdiction"/>
-        <type value="token"/>
-        <documentation value="Jurisdiction of the authority that maintains the the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="description"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-description"/>
-        <type value="string"/>
-        <documentation value="The description of the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="context-type"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-context-type"/>
-        <type value="token"/>
-        <documentation value="A type of use context assigned to the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="experimental"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/StructureMap-experimental"/>
-        <type value="token"/>
-        <documentation value="Whether the StructureMap is experimental"/>
-      </searchParam>
-      <searchParam>
-        <name value="source"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/StructureMap-source"/>
-        <type value="uri"/>
-        <documentation value="A source StructureDefinition for the map"/>
-      </searchParam>
-      <searchParam>
-        <name value="title"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-title"/>
-        <type value="string"/>
-        <documentation value="The human-friendly name of the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="version"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-version"/>
-        <type value="token"/>
-        <documentation value="The business version of the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="url"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-url"/>
-        <type value="uri"/>
-        <documentation value="The uri that identifies the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="target"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/StructureMap-target"/>
-        <type value="uri"/>
-        <documentation value="A target StructureDefinition for the map"/>
-      </searchParam>
-      <searchParam>
-        <name value="produced"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/StructureMap-produced"/>
-        <type value="uri"/>
-        <documentation value="A produced StructureDefinition for the map"/>
-      </searchParam>
-      <searchParam>
-        <name value="context-quantity"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-context-quantity"/>
-        <type value="quantity"/>
-        <documentation value="A quantity- or range-valued use context assigned to the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="context"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-context"/>
-        <type value="token"/>
-        <documentation value="A use context assigned to the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="name"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-name"/>
-        <type value="string"/>
-        <documentation value="Computationally friendly name of the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="publisher"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-publisher"/>
-        <type value="string"/>
-        <documentation value="Name of the publisher of the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="queried"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/StructureMap-queried"/>
-        <type value="uri"/>
-        <documentation value="A queried StructureDefinition for the map"/>
-      </searchParam>
-      <searchParam>
-        <name value="context-type-quantity"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-context-type-quantity"/>
-        <type value="composite"/>
-        <documentation value="A use context type and quantity- or range-based value assigned to the structure map"/>
-      </searchParam>
-      <searchParam>
-        <name value="status"/>
-        <definition value="http://hl7.org/fhir/SearchParameter/CanonicalResource-status"/>
-        <type value="token"/>
-        <documentation value="The current status of the structure map"/>
-      </searchParam>
-    </resource>
-    <resource>
       <type value="Subscription"/>
       <profile value="http://hl7.org/fhir/StructureDefinition/Subscription"/>
       <interaction>
@@ -66408,7 +66051,7 @@
         <name value="reference"/>
         <definition value="http://hl7.org/fhir/SearchParameter/ValueSet-reference"/>
         <type value="uri"/>
-        <documentation value="A code system included or excluded in the value set or an imported value set"/>
+        <documentation value="A code system or value set referenced in the ValueSet.compose"/>
       </searchParam>
       <searchParam>
         <name value="context-quantity"/>
@@ -66544,6 +66187,12 @@
         <definition value="http://hl7.org/fhir/SearchParameter/clinical-encounter"/>
         <type value="reference"/>
         <documentation value="Return prescriptions with this encounter identifier"/>
+      </searchParam>
+      <searchParam>
+        <name value="intent"/>
+        <definition value="http://hl7.org/fhir/SearchParameter/VisionPrescription-intent"/>
+        <type value="token"/>
+        <documentation value="The intent of the vision prescription"/>
       </searchParam>
       <searchParam>
         <name value="status"/>
@@ -66841,10 +66490,6 @@
     <operation>
       <name value="snapshot"/>
       <definition value="http://hl7.org/fhir/OperationDefinition/structuredefinition-snapshot"/>
-    </operation>
-    <operation>
-      <name value="transform"/>
-      <definition value="http://hl7.org/fhir/OperationDefinition/structuremap-transform"/>
     </operation>
     <operation>
       <name value="events"/>

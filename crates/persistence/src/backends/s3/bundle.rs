@@ -8,13 +8,12 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use helios_fhir::FhirVersion;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::core::{
     BundleEntry, BundleEntryResult, BundleMethod, BundleProvider, BundleResult, BundleType,
-    ResourceStorage, VersionedStorage,
+    ResourceStorage, VersionedStorage, bundle_if_match_gate,
 };
 use crate::error::{BackendError, ResourceError, StorageError, TransactionError, ValidationError};
 use crate::tenant::TenantContext;
@@ -41,6 +40,7 @@ impl BundleProvider for S3Backend {
         &self,
         tenant: &TenantContext,
         entries: Vec<BundleEntry>,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> Result<BundleResult, TransactionError> {
         let mut entries = entries;
         let mut reference_map: HashMap<String, String> = HashMap::new();
@@ -91,7 +91,7 @@ impl BundleProvider for S3Backend {
         // Phase 3: Execute ALL entries concurrently.
         let futs: Vec<_> = entries
             .iter()
-            .map(|entry| self.execute_bundle_entry(tenant, entry))
+            .map(|entry| self.execute_bundle_entry(tenant, entry, fhir_version))
             .collect();
 
         let outcomes = futures::future::join_all(futs).await;
@@ -150,10 +150,11 @@ impl BundleProvider for S3Backend {
         &self,
         tenant: &TenantContext,
         entries: Vec<BundleEntry>,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> crate::error::StorageResult<BundleResult> {
         let futs: Vec<_> = entries
             .iter()
-            .map(|entry| self.process_batch_entry(tenant, entry))
+            .map(|entry| self.process_batch_entry(tenant, entry, fhir_version))
             .collect();
 
         let results = futures::future::join_all(futs).await;
@@ -173,8 +174,9 @@ impl S3Backend {
         &self,
         tenant: &TenantContext,
         entry: &BundleEntry,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> BundleEntryResult {
-        match self.execute_bundle_entry(tenant, entry).await {
+        match self.execute_bundle_entry(tenant, entry, fhir_version).await {
             Ok((result, _)) => result,
             Err(err) => Self::bundle_error_result(&err),
         }
@@ -186,6 +188,7 @@ impl S3Backend {
         &self,
         tenant: &TenantContext,
         entry: &BundleEntry,
+        fhir_version: helios_fhir::FhirVersion,
     ) -> crate::error::StorageResult<(BundleEntryResult, Option<CompensationAction>)> {
         match entry.method {
             BundleMethod::Get => {
@@ -233,12 +236,7 @@ impl S3Backend {
                     .to_string();
 
                 let created = self
-                    .create(
-                        tenant,
-                        &resource_type,
-                        resource,
-                        FhirVersion::default_enabled(),
-                    )
+                    .create(tenant, &resource_type, resource, fhir_version)
                     .await?;
 
                 Ok((
@@ -264,8 +262,22 @@ impl S3Backend {
                     Err(err) => return Err(err),
                 };
 
+                // Evaluate `ifMatch` up front so an unsatisfiable precondition
+                // fails identically whether or not the resource exists. It is a
+                // list, satisfied when any listed tag matches (issue #311), and
+                // `*` requires a current representation — so with no existing
+                // resource a supplied `ifMatch` must fail rather than create.
+                if let Some(failure) = bundle_if_match_gate(
+                    entry.if_match.as_deref(),
+                    current.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok((failure, None));
+                }
+
                 if let Some(existing) = current {
                     let updated = if let Some(if_match) = entry.if_match.as_deref() {
+                        // Re-check atomically against the object store; the gate
+                        // above only used the version we read a moment ago.
                         self.update_with_match(tenant, &resource_type, &id, if_match, resource)
                             .await?
                     } else {
@@ -278,13 +290,7 @@ impl S3Backend {
                     ))
                 } else {
                     let (stored, created) = self
-                        .create_or_update(
-                            tenant,
-                            &resource_type,
-                            &id,
-                            resource,
-                            FhirVersion::default_enabled(),
-                        )
+                        .create_or_update(tenant, &resource_type, &id, resource, fhir_version)
                         .await?;
 
                     let result = if created {
@@ -309,6 +315,18 @@ impl S3Backend {
                 let (resource_type, id) = self.parse_url(&entry.url)?;
 
                 let snapshot = self.read(tenant, &resource_type, &id).await.ok().flatten();
+
+                // Gate before dispatching. `delete_with_match` reports a missing
+                // resource as `NotFound`, which the idempotent-delete arm below
+                // turns into a *success* — so without this, `ifMatch` against an
+                // already-absent resource silently reported "deleted" instead of
+                // failing the precondition.
+                if let Some(failure) = bundle_if_match_gate(
+                    entry.if_match.as_deref(),
+                    snapshot.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok((failure, None));
+                }
 
                 let delete_result = if let Some(if_match) = entry.if_match.as_deref() {
                     self.delete_with_match(tenant, &resource_type, &id, if_match)

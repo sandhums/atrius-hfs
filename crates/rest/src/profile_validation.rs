@@ -45,8 +45,10 @@ use crate::error::RestError;
 
 /// Shared profile validation state attached to [`crate::state::AppState`].
 pub struct ProfileValidationService {
+    /// Loaded StructureDefinitions from the profile manifest.
     pub registry: Arc<ProfileRegistry>,
     validator: Validator,
+    /// Write-path enforcement policy (`off` / `warn` / `strict`).
     pub mode: ProfileValidationMode,
     terminology: Option<Arc<RemoteTerminologyService>>,
     validation_addons: bool,
@@ -115,14 +117,17 @@ impl ProfileValidationService {
         })))
     }
 
+    /// Number of profiles loaded from the manifest.
     pub fn profile_count(&self) -> usize {
         self.registry.len()
     }
 
+    /// Whether a remote terminology server is wired for binding checks.
     pub fn has_terminology_server(&self) -> bool {
         self.terminology.is_some()
     }
 
+    /// Parse raw JSON into a typed FHIR resource for the given version.
     pub fn parse_resource(
         &self,
         json: &Value,
@@ -204,6 +209,7 @@ impl ProfileValidationService {
         Self::apply_write_policy(self.mode, resource_type, &issues)
     }
 
+    /// Apply the write-path policy to a set of validation issues.
     pub fn apply_write_policy(
         mode: ProfileValidationMode,
         resource_type: &str,
@@ -251,6 +257,7 @@ impl ProfileValidationService {
         }
     }
 
+    /// Validate a resource and return the result as an OperationOutcome JSON value.
     pub fn validate_to_outcome(
         &self,
         json: &Value,

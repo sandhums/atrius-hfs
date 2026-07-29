@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="OperationDefinition"/>
   <meta>
-    <lastUpdated value="2026-07-04T18:53:58.933+00:00"/>
+    <lastUpdated value="2026-07-17T03:44:13.245+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -1202,7 +1202,7 @@
   <name value="OperationDefinition"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-07-04T18:53:58+00:00"/>
+  <date value="2026-07-17T03:44:13+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -1822,7 +1822,7 @@
       <path value="OperationDefinition.kind"/>
       <short value="operation | query"/>
       <definition value="Whether this is an operation or a named query."/>
-      <comment value="Named queries are invoked differently, and have different capabilities."/>
+      <comment value="Named queries are invoked differently, and have different capabilities. If there is a need to pre-adopt new codes from a future version, set this element to 'operation' and convey the additional concept in an extension."/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -3204,7 +3204,7 @@
       <path value="OperationDefinition.parameter.binding.valueSet"/>
       <short value="Source of value set"/>
       <definition value="Points to the value set or external definition (e.g. implicit value set) that identifies the set of codes to be used."/>
-      <comment value="For value sets with a referenceResource, the display can contain the value set description.  The reference may be version-specific or not."/>
+      <comment value="If an operation has bindings with strengths other than those listed here, they can be expressed computably in the input or output profile for the operation.  Good practice is to also include a descriptive binding here to highlight that the terminology constraint exists for readers who don't know to check the profile."/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -3846,7 +3846,7 @@
       <path value="OperationDefinition.kind"/>
       <short value="operation | query"/>
       <definition value="Whether this is an operation or a named query."/>
-      <comment value="Named queries are invoked differently, and have different capabilities."/>
+      <comment value="Named queries are invoked differently, and have different capabilities. If there is a need to pre-adopt new codes from a future version, set this element to 'operation' and convey the additional concept in an extension."/>
       <min value="1"/>
       <max value="1"/>
       <type>
@@ -4592,7 +4592,7 @@
       <path value="OperationDefinition.parameter.binding.valueSet"/>
       <short value="Source of value set"/>
       <definition value="Points to the value set or external definition (e.g. implicit value set) that identifies the set of codes to be used."/>
-      <comment value="For value sets with a referenceResource, the display can contain the value set description.  The reference may be version-specific or not."/>
+      <comment value="If an operation has bindings with strengths other than those listed here, they can be expressed computably in the input or output profile for the operation.  Good practice is to also include a descriptive binding here to highlight that the terminology constraint exists for readers who don't know to check the profile."/>
       <min value="1"/>
       <max value="1"/>
       <type>
