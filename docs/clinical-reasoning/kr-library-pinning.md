@@ -58,7 +58,7 @@ Defaults: both flags **off** (local dev). Enable in production — see `deploy/e
 | Feature | Endpoint / env | Behavior |
 |---------|----------------|----------|
 | Cache flush | `POST /v1/admin/cache/libraries/clear` | Clears compiled ELM stacks, cached KR `Library` resources, ValueSet expansion buckets |
-| Admin auth | `SIDECAR_ADMIN_TOKEN` (optional) | When set, requires `Authorization: Bearer <token>` |
+| Admin auth | `SIDECAR_ADMIN_TOKEN` + `SIDECAR_ENV` | Non-dev (`staging`/`production`) requires token at startup; Bearer on cache flush |
 
 Implementation: `SidecarLibraryCacheAdmin.kt`, `EvaluationLibraryCache.clear()`, `FhirLibraryResourceCaches.clearAll()`, `ValueSetExpansionCache.clear()`.
 
@@ -147,7 +147,7 @@ Full stack sequence (slice 2 → PlanDefinition-first → authoring): **[roadmap
 
 | Variable | Default | Production |
 |----------|---------|------------|
-| `SIDECAR_ADMIN_TOKEN` | (unset = open) | Set; pass on cache flush |
+| `SIDECAR_ADMIN_TOKEN` | (unset = open in dev) | Required when `SIDECAR_ENV` is non-dev; pass as Bearer on cache flush |
 
 ### Key source files
 

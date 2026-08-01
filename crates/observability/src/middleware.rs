@@ -201,6 +201,16 @@ pub async fn track(req: Request, next: Next) -> Response {
         String::new()
     };
 
+    let request_id = if span_on {
+        req.headers()
+            .get("x-request-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_owned()
+    } else {
+        String::new()
+    };
+
     let start = Instant::now();
     let response = if span_on {
         let span = tracing::info_span!(
@@ -208,8 +218,16 @@ pub async fn track(req: Request, next: Next) -> Response {
             http.method = %method,
             http.route = %route,
             tenant = %tenant,
+            request_id = %request_id,
             http.status_code = tracing::field::Empty,
         );
+        // Join inbound W3C traceparent (BFF → HIS → HFS → CDS) when present.
+        #[cfg(feature = "otel")]
+        {
+            use tracing_opentelemetry::OpenTelemetrySpanExt;
+            let parent = crate::propagation::extract_trace_context(req.headers());
+            let _ = span.set_parent(parent);
+        }
         let response = next.run(req).instrument(span.clone()).await;
         span.record("http.status_code", response.status().as_u16());
         response

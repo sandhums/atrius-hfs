@@ -21,16 +21,10 @@ use clap::Parser as _;
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                tracing_subscriber::EnvFilter::new(format!(
-                    "cds_server={},tower_http=info",
-                    args.log_level
-                ))
-            }),
-        )
-        .init();
+    helios_observability::uptime::init();
+    let log_level = format!("cds_server={},tower_http=info", args.log_level);
+    helios_observability::telemetry::init("cds-server", &log_level);
+    helios_observability::metrics::init("cds-server");
 
     let manifest = resolve_manifest(&args).await?;
     let library_version_policy = args.library_version_policy();
@@ -125,8 +119,36 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind(args.socket_addr()).await?;
     tracing::info!(addr = %args.socket_addr(), "cds-server listening");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    helios_observability::telemetry::shutdown();
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(e) = tokio::signal::ctrl_c().await {
+            tracing::error!(error = %e, "failed to install CTRL+C handler");
+            std::future::pending::<()>().await;
+        }
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sig) => {
+                sig.recv().await;
+            }
+            Err(e) => tracing::error!(error = %e, "failed to install SIGTERM handler"),
+        }
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => tracing::info!("received ctrl-c, shutting down"),
+        _ = terminate => tracing::info!("received SIGTERM, shutting down"),
+    }
 }
 
 async fn resolve_manifest(args: &Args) -> anyhow::Result<kr_manifest::CdsServicesManifestFile> {

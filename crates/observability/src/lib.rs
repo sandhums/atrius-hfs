@@ -9,7 +9,8 @@
 //! - [`metrics`] — global Prometheus recorder + a `GET /metrics` router.
 //! - [`middleware`] — per-request count/latency metrics and a tracing span.
 //! - [`telemetry`] — `tracing-subscriber` init, optionally bridged to OTLP
-//!   (feature `otel`).
+//!   (feature `otel`). Honors `LOG_FORMAT=json` / `HELIOS_LOG_FORMAT=json`.
+//! - [`propagation`] — W3C Trace Context inject/extract for distributed traces.
 //! - [`dashboard`] — process-global provider of storage-count snapshots for the
 //!   web UI's "FHIR resources over time" chart, registered by the server.
 //!
@@ -40,6 +41,7 @@ pub mod dashboard;
 pub mod metrics;
 pub mod middleware;
 pub mod mode;
+pub mod propagation;
 pub mod reqlog;
 pub mod telemetry;
 pub mod uptime;

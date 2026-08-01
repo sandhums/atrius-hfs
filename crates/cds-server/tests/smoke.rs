@@ -10,9 +10,18 @@ use cds_server::{
     services::{CdsEvalBackend, registry_from_manifest},
 };
 use serde_json::json;
+use std::sync::Once;
 use tower::ServiceExt;
 
+fn ensure_test_metrics() {
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        helios_observability::metrics::init("cds-server-test");
+    });
+}
+
 fn demo_state() -> AppState {
+    ensure_test_metrics();
     AppState {
         registry: registry_from_manifest(&demo_manifest(), CdsEvalBackend::Demo, None),
         kr_readiness: None,
@@ -99,6 +108,7 @@ async fn encounter_start_hook_returns_cards() {
         "expression":"E"
     }]}"#;
     let m = parse_manifest_json(json.as_bytes()).unwrap();
+    ensure_test_metrics();
     let app = build_router(
         AppState {
             registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
@@ -136,6 +146,7 @@ async fn discovery_lists_multiple_kr_manifest_services() {
         {"id":"svc-b","hook":"patient-view","description":"B","libraryId":"L2","expression":"E2"}
     ]}"#;
     let m = parse_manifest_json(json.as_bytes()).unwrap();
+    ensure_test_metrics();
     let app = build_router(
         AppState {
             registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
@@ -164,4 +175,27 @@ async fn discovery_lists_multiple_kr_manifest_services() {
         .collect();
     assert!(ids.contains(&"svc-a"));
     assert!(ids.contains(&"svc-b"));
+}
+
+#[tokio::test]
+async fn metrics_endpoint_exposes_prometheus_text() {
+    let app = build_router(demo_state(), false);
+    let res = app
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let text = String::from_utf8_lossy(&body);
+    assert!(
+        text.contains("uptime_seconds") || text.contains("#"),
+        "unexpected metrics body: {text}"
+    );
 }

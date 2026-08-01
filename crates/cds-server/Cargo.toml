@@ -17,8 +17,14 @@ path = "src/lib.rs"
 name = "cds-server"
 path = "src/main.rs"
 
+[features]
+default = ["otel"]
+# OTLP trace export via helios-observability (requires OTEL_EXPORTER_OTLP_ENDPOINT at runtime).
+otel = ["helios-observability/otel"]
+
 [dependencies]
 helios-cds-hooks = { path = "../cds-hooks" }
+helios-observability = { path = "../observability", version = "0.2.1" }
 anyhow = "1"
 chrono = { workspace = true }
 async-trait = "0.1"
@@ -29,11 +35,10 @@ reqwest = { version = "0.12", features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "signal"] }
 tower = { version = "0.5", features = ["full"] }
-tower-http = { version = "0.6", features = ["cors", "trace"] }
+tower-http = { version = "0.6", features = ["cors"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [[example]]
 name = "live_sidecar_roundtrip"

@@ -5,6 +5,9 @@
 //! with the `otel` feature **and** `OTEL_EXPORTER_OTLP_ENDPOINT` is set, it also
 //! exports spans over OTLP via `tracing-opentelemetry`. Call [`shutdown`] during
 //! graceful shutdown to flush buffered spans.
+//!
+//! Set `LOG_FORMAT=json` (or `HELIOS_LOG_FORMAT=json`) for JSON structured logs
+//! suitable for journald / log aggregators.
 
 use std::io::IsTerminal;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -54,6 +57,19 @@ fn env_filter_from(rust_log: Option<&str>, log_level: &str) -> EnvFilter {
     }
 }
 
+/// True when operators asked for JSON structured logs via `LOG_FORMAT` or
+/// `HELIOS_LOG_FORMAT` (case-insensitive `json`).
+fn log_format_json() -> bool {
+    for key in ["LOG_FORMAT", "HELIOS_LOG_FORMAT"] {
+        if let Ok(v) = std::env::var(key)
+            && v.trim().eq_ignore_ascii_case("json")
+        {
+            return true;
+        }
+    }
+    false
+}
+
 /// Initialize logging/tracing for a server process. `service_name` is used as
 /// the OTel resource service name (overridable by `OTEL_SERVICE_NAME`). Call
 /// once per process.
@@ -63,17 +79,26 @@ pub fn init(service_name: &str, log_level: &str) {
     // redirected file / journald / CloudWatch corrupts the text — and it made the
     // obs-A/B harness unable to grep the `obs_mode=` stamp out of the arm logs.
     let use_ansi = std::io::stdout().is_terminal();
+    let json = log_format_json();
 
     #[cfg(feature = "otel")]
     {
         if let Some(provider) = build_otlp_tracer(service_name) {
             use opentelemetry::trace::TracerProvider as _;
             let tracer = provider.tracer("helios");
-            tracing_subscriber::registry()
-                .with(filter)
-                .with(fmt::layer().with_ansi(use_ansi))
-                .with(tracing_opentelemetry::layer().with_tracer(tracer))
-                .init();
+            if json {
+                tracing_subscriber::registry()
+                    .with(filter)
+                    .with(fmt::layer().json().flatten_event(true))
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            } else {
+                tracing_subscriber::registry()
+                    .with(filter)
+                    .with(fmt::layer().with_ansi(use_ansi))
+                    .with(tracing_opentelemetry::layer().with_tracer(tracer))
+                    .init();
+            }
             let _ = PROVIDER.set(provider);
             // A layer now consumes the per-request span, so producing it earns
             // its keep. Everywhere else the middleware skips it.
@@ -83,10 +108,17 @@ pub fn init(service_name: &str, log_level: &str) {
         }
     }
 
-    tracing_subscriber::registry()
-        .with(filter)
-        .with(fmt::layer().with_ansi(use_ansi))
-        .init();
+    if json {
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(fmt::layer().json().flatten_event(true))
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(fmt::layer().with_ansi(use_ansi))
+            .init();
+    }
     let _ = service_name;
 }
 
@@ -104,7 +136,11 @@ pub fn shutdown() {
 #[cfg(feature = "otel")]
 fn build_otlp_tracer(service_name: &str) -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     use opentelemetry_otlp::SpanExporter;
-    use opentelemetry_sdk::{Resource, trace::SdkTracerProvider};
+    use opentelemetry_sdk::{
+        Resource,
+        propagation::TraceContextPropagator,
+        trace::SdkTracerProvider,
+    };
 
     if std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").is_err() {
         return None;
@@ -113,7 +149,8 @@ fn build_otlp_tracer(service_name: &str) -> Option<opentelemetry_sdk::trace::Sdk
     let exporter = match SpanExporter::builder().with_tonic().build() {
         Ok(exporter) => exporter,
         Err(err) => {
-            tracing::warn!(error = %err, "failed to build OTLP span exporter; tracing export disabled");
+            // Subscriber is not installed yet; eprintln so operators still see why.
+            eprintln!("helios-observability: failed to build OTLP span exporter: {err}; tracing export disabled");
             return None;
         }
     };
@@ -127,13 +164,14 @@ fn build_otlp_tracer(service_name: &str) -> Option<opentelemetry_sdk::trace::Sdk
         .with_resource(resource)
         .build();
 
+    opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
     opentelemetry::global::set_tracer_provider(provider.clone());
     Some(provider)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{EnvFilter, env_filter_from};
+    use super::{EnvFilter, env_filter_from, log_format_json};
 
     // Empty / whitespace / unset RUST_LOG must all fall back to the process
     // default level, so the startup line (and everything at that level) is
@@ -162,5 +200,28 @@ mod tests {
     fn unparseable_rust_log_falls_back_to_default_level() {
         // `@@@` is not a valid directive; fall back rather than panic.
         assert_eq!(env_filter_from(Some("@@@"), "info").to_string(), "info");
+    }
+
+    #[test]
+    fn log_format_json_reads_env() {
+        // Isolation: clear both keys, then set one.
+        // SAFETY: test-only; no concurrent readers of these keys in this binary.
+        unsafe {
+            std::env::remove_var("LOG_FORMAT");
+            std::env::remove_var("HELIOS_LOG_FORMAT");
+        }
+        assert!(!log_format_json());
+        unsafe {
+            std::env::set_var("LOG_FORMAT", "json");
+        }
+        assert!(log_format_json());
+        unsafe {
+            std::env::remove_var("LOG_FORMAT");
+            std::env::set_var("HELIOS_LOG_FORMAT", "JSON");
+        }
+        assert!(log_format_json());
+        unsafe {
+            std::env::remove_var("HELIOS_LOG_FORMAT");
+        }
     }
 }

@@ -1,16 +1,17 @@
-# Clinical Reasoning — Minimal Observability (v1)
+# Clinical Reasoning — Observability
 
-Production hardening slice: **structured logs + simple counters** — no Prometheus or OpenTelemetry in this version.
+cds-server uses Helios `helios-observability`: Prometheus `GET /metrics`, optional OTLP traces (`OTEL_EXPORTER_OTLP_ENDPOINT`), and JSON logs (`LOG_FORMAT=json`). Invoke-level structured logs (`cds_invoke_metrics`) remain for per-service latency.
+
+JVM sidecar uses Prometheus text at `GET /metrics` (JSON at `/metrics.json`). Set `SIDECAR_ENV=staging|production` and `SIDECAR_ADMIN_TOKEN` in non-dev.
 
 ## Design
 
 | Layer | Mechanism | Aggregation |
 |-------|-----------|-------------|
+| **cds-server** | Prometheus `GET /metrics` + optional OTLP | Prometheus / Tempo (see `atrius-his/deploy/observability`) |
 | **cds-server** | `tracing` target `cds_invoke_metrics` | `journalctl -u atrius-cds-server \| grep cds_invoke_metrics` |
 | **JVM sidecar** | SLF4J INFO on evaluate/apply completion | Same pattern in `atrius-cql-sidecar` logs |
-| **JVM sidecar** | `GET /metrics` JSON snapshot | Ad-hoc curl, load-balancer health scripts |
-
-Full Prometheus / Grafana dashboards are on the [hardening roadmap](#roadmap).
+| **JVM sidecar** | Prometheus `GET /metrics` (+ JSON `/metrics.json`) | Prometheus scrape (`host.docker.internal:8088`) |
 
 ## cds-server invoke logs
 
@@ -33,9 +34,18 @@ Example (journald):
 journalctl -u atrius-cds-server -f | grep cds_invoke_metrics
 ```
 
-Fields are stable for log-based metrics (count errors, p95 duration by `service_id`, etc.) without pulling in a metrics stack.
+Fields are stable for log-based metrics (count errors, p95 duration by `service_id`, etc.).
 
 Implementation: `crates/cds-server/src/invoke_metrics.rs`, wired from `crates/cds-server/src/services/mod.rs`.
+
+## Environment
+
+| Variable | Effect |
+|----------|--------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP gRPC endpoint (e.g. `http://127.0.0.1:4317`) |
+| `OTEL_SERVICE_NAME` | Override (default `cds-server`) |
+| `LOG_FORMAT=json` | JSON structured logs |
+| `HELIOS_OBS_MODE` | `default` / `full` / `no-span` / `off` |
 
 ## JVM sidecar per-request logs
 
@@ -56,32 +66,24 @@ sidecar apply completed planDefinitionId=... durationMs=... error=false|true
 
 ## JVM sidecar `GET /metrics`
 
-Process-wide cumulative counters (resets on restart):
+Default response is **Prometheus text** (scrapable). JSON remains at `/metrics.json` or with `Accept: application/json` / `?format=json`.
 
 ```bash
-curl -s http://127.0.0.1:8088/metrics | jq .
+curl -s http://127.0.0.1:8088/metrics | head
+curl -s http://127.0.0.1:8088/metrics.json | jq .
 ```
 
-```json
-{
-  "evaluateTotal": 42,
-  "evaluateErrors": 1,
-  "evaluateAvgDurationMs": 312.5,
-  "applyTotal": 3,
-  "applyAvgDurationMs": 1200.0,
-  "libraryStackCacheHits": 30,
-  "libraryStackCacheMisses": 12,
-  "krLibraryFetches": 8
-}
-```
+Prometheus series (label `service="cql-sidecar"`):
 
-| Field | Meaning |
-|-------|---------|
-| `evaluateTotal` / `evaluateErrors` | Expression evaluations |
-| `evaluateAvgDurationMs` | Mean wall time per evaluate |
-| `applyTotal` / `applyAvgDurationMs` | PlanDefinition `$apply` calls |
-| `libraryStackCacheHits` / `libraryStackCacheMisses` | Prepared CQL stack cache (FHIR-backed loads only) |
-| `krLibraryFetches` | Total KR `Library` resource fetches (process lifetime) |
+| Metric | Type | Meaning |
+|--------|------|---------|
+| `sidecar_evaluate_total` / `sidecar_evaluate_errors_total` | counter | Expression evaluations |
+| `sidecar_evaluate_duration_ms_sum` / `sidecar_evaluate_avg_duration_ms` | counter / gauge | Evaluate latency |
+| `sidecar_apply_total` / `sidecar_apply_*` | counter / gauge | PlanDefinition `$apply` |
+| `sidecar_library_stack_cache_hits_total` / `_misses_total` | counter | Prepared CQL stack cache |
+| `sidecar_kr_library_fetches_total` | counter | KR `Library` HTTP fetches |
+
+**Admin auth:** set `SIDECAR_ENV=staging` (or `production`) and `SIDECAR_ADMIN_TOKEN` — process refuses to start without the token. Unset / `development` keeps local admin open when the token is unset.
 
 Use **cache hit ratio** ≈ `hits / (hits + misses)` after warm-up to validate KR pinning and cache flush policy. See [kr-library-pinning.md](./kr-library-pinning.md).
 
@@ -91,21 +93,15 @@ Use **cache hit ratio** ≈ `hits / (hits + misses)` after warm-up to validate K
 # CDS invoke error rate (last hour, rough)
 journalctl -u atrius-cds-server --since "1 hour ago" | grep cds_invoke_metrics | grep -c 'outcome=error'
 
-# Sidecar KR fetch pressure
-curl -s http://127.0.0.1:8088/metrics | jq '.krLibraryFetches'
+# Sidecar KR fetch pressure (JSON convenience)
+curl -s http://127.0.0.1:8088/metrics.json | jq '.krLibraryFetches'
 
 # Library stack cache effectiveness
-curl -s http://127.0.0.1:8088/metrics | jq '{hits:.libraryStackCacheHits, misses:.libraryStackCacheMisses}'
+curl -s http://127.0.0.1:8088/metrics.json | jq '{hits:.libraryStackCacheHits, misses:.libraryStackCacheMisses}'
 ```
-
-## Roadmap (not in v1)
-
-- Prometheus `/metrics` text format or OTLP export
-- Per-tenant URL routing metrics
-- Dashboards (Grafana) for invoke latency, KR fetch rate, cache hit ratio
-- Alerting on `evaluateErrors` / CDS `outcome=error` thresholds
 
 ## See also
 
 - [production-deployment.md](./production-deployment.md) — systemd units and ports
 - [kr-library-pinning.md](./kr-library-pinning.md) — version pinning and cache flush
+- `atrius-his/deploy/observability/` — Prometheus scrape includes `cql-sidecar:8088`

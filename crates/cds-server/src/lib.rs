@@ -28,9 +28,10 @@ pub mod services;
 
 use axum::{
     Router,
+    middleware,
     routing::{get, post},
 };
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::cors::CorsLayer;
 
 use crate::kr_readiness::KrReadinessReport;
 use crate::services::ServiceRegistry;
@@ -52,7 +53,8 @@ pub fn build_router(state: AppState, enable_cors: bool) -> Router {
         .route("/cds-services/{id}", post(handlers::invoke_service))
         .route("/cds-services/{id}/feedback", post(handlers::feedback))
         .with_state(state)
-        .layer(TraceLayer::new_for_http());
+        .merge(helios_observability::metrics::router())
+        .layer(middleware::from_fn(helios_observability::middleware::track));
 
     if enable_cors {
         use tower_http::cors::Any;
