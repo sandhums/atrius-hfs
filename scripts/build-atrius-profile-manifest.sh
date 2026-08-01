@@ -28,7 +28,7 @@
 #   manifests/atrius-r4-profile-manifest-core.json  — atrius-in-* + HL7 extension + datatype deps
 #   manifests/atrius-r4-profile-manifest.json       — core + en/ duplicates + deps (debug/audit)
 #
-# See: crates/fhir-validation/docs/Profile_registry_and_IG_materialization.md
+# See: crates/fhir-validator/docs/packages.md and docs/validation-cutover.md
 
 set -euo pipefail
 
@@ -256,11 +256,58 @@ PY
 
 echo "IG output: ${IG_OUTPUT}"
 echo "Generating full scan manifest..."
-(
-  cd "${ROOT}"
-  cargo run -q -p fhir-validation --example build_ig_profile_manifest -- \
-    "${IG_OUTPUT}" "${TMP_FULL}" --relative
-)
+python3 - "${IG_OUTPUT}" "${TMP_FULL}" <<'PY'
+"""Scan an expanded IG tree for StructureDefinition / CodeSystem / ValueSet JSON."""
+import json
+import os
+import sys
+
+ig_root, out_path = sys.argv[1], sys.argv[2]
+base = os.path.dirname(os.path.realpath(out_path))
+
+def classify(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            v = json.load(f)
+    except Exception:
+        return set()
+    kinds = set()
+    rt = v.get("resourceType")
+    if rt in ("StructureDefinition", "CodeSystem", "ValueSet"):
+        kinds.add(rt)
+    elif rt == "Bundle":
+        for entry in v.get("entry") or []:
+            res = entry.get("resource") or {}
+            rrt = res.get("resourceType")
+            if rrt in ("StructureDefinition", "CodeSystem", "ValueSet"):
+                kinds.add(rrt)
+    return kinds
+
+sd, cs, vs = [], [], []
+for root, _dirs, files in os.walk(ig_root):
+    for name in files:
+        if not name.endswith(".json") or name in ("package.json", ".index.json"):
+            continue
+        path = os.path.join(root, name)
+        kinds = classify(path)
+        rel = os.path.relpath(path, base)
+        if "StructureDefinition" in kinds:
+            sd.append(rel)
+        if "CodeSystem" in kinds:
+            cs.append(rel)
+        if "ValueSet" in kinds:
+            vs.append(rel)
+
+manifest = {
+    "structure_definition_files": sorted(set(sd)),
+    "code_system_files": sorted(set(cs)),
+    "value_set_files": sorted(set(vs)),
+}
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(manifest, f, indent=2)
+    f.write("\n")
+print(f"Wrote {out_path} ({len(manifest['structure_definition_files'])} SDs)")
+PY
 
 # macOS / bash 3.2: empty arrays are "unbound" under `set -u`.
 set +u

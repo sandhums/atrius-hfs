@@ -4,7 +4,7 @@
 
 ## Executive summary
 
-This repo already provides a **strong FHIR platform layer**: full R4 resource types ([`crates/fhir`](../../crates/fhir)), generic REST server ([`crates/rest`](../../crates/rest)), persistence with multi-tenancy ([`crates/persistence`](../../crates/persistence)), profile validation ([`crates/fhir-validation`](../../crates/fhir-validation)), terminology ([`crates/hts`](../../crates/hts)), bulk export, optional subscriptions, and a clinical reasoning stack ([`docs/clinical-reasoning/README.md`](../clinical-reasoning/README.md)).
+This repo already provides a **strong FHIR platform layer**: full R4 resource types ([`crates/fhir`](../../crates/fhir)), generic REST server ([`crates/rest`](../../crates/rest)), persistence with multi-tenancy ([`crates/persistence`](../../crates/persistence)), profile validation ([`crates/fhir-validator`](../../crates/fhir-validator) package layers), terminology ([`crates/hts`](../../crates/hts)), bulk export, optional subscriptions, and a clinical reasoning stack ([`docs/clinical-reasoning/README.md`](../clinical-reasoning/README.md)).
 
 What it is **not yet**: a Hospital Information System. HFS stores and searches FHIR resources; it does not implement **operational semantics**—slot locking, appointment booking pipelines, ADT state machines, bed management, staff rostering, or order fulfillment workflows.
 
@@ -68,7 +68,7 @@ flowchart TB
 |------------|-----------|-------------------|
 | FHIR CRUD + search + history | HFS + helios-rest | All modules store data here |
 | Multi-tenant isolation | `TenantContext` in persistence | Hospital groups, departments |
-| Profile validation | `fhir-validation` + `HFS_PROFILE_MANIFEST` | Enforce Atrius/NDHM profiles on writes |
+| Profile validation | `helios-fhir-validator` + `HFS_FHIR_PACKAGES` | Enforce Atrius/NDHM profiles on writes |
 | Terminology | HTS | Code validation, `:in` search, CQL ValueSets |
 | Batch/transaction bundles | HFS | Atomic multi-resource writes (register patient + encounter) |
 | Bulk export | HFS `$export` | Analytics, reporting, data lake |

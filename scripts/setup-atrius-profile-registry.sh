@@ -18,7 +18,7 @@
 # Verifies the HL7 datatype pack excludes abstract base types (Element, …) — including
 # Element breaks registry load (no derivation) and silently disables write validation.
 #
-# See: crates/fhir-validation/docs/Profile_registry_and_IG_materialization.md
+# See: crates/fhir-validator/docs/packages.md and docs/validation-cutover.md
 
 set -euo pipefail
 
