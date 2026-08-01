@@ -107,8 +107,6 @@ where
         });
     }
 
-    state.enforce_profile_on_write(&resource, fhir_version, &resource_type)?;
-
     // Validate ID in body matches URL (if present)
     if let Some(body_id) = resource.get("id").and_then(|v| v.as_str()) {
         if body_id != id {

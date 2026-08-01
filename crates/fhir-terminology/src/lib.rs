@@ -2,7 +2,7 @@
 //!
 //! This crate holds the output of `fhir-valueset-gen`: per-version modules of
 //! strongly typed CodeSystem enums, ValueSet membership helpers, and a
-//! canonical-URL index used by `fhir-validation` for local (offline) binding
+//! canonical-URL index used for local (offline) binding
 //! validation. Codes that cannot be decided locally (licensed, intensional, or
 //! very large terminologies such as SNOMED CT or LOINC) return
 //! [`TerminologyValidationError::RemoteValidationRequired`], which the

@@ -1,7 +1,0 @@
-{
-  "resourceType": "Patient",
-  "active": true,
-  "gender": "male",
-  "deceasedBoolean": false
-
-}

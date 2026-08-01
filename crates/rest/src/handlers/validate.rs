@@ -198,36 +198,13 @@ where
         .validate_resource(fhir_version, &resource, inputs.profiles, Some(tenant_id))
         .await;
 
-    // Atrius profile-manifest (IG) validation, when configured via
-    // HFS_PROFILE_MANIFEST — merged into the same outcome so `$validate`
-    // reports structural and profile conformance together.
-    let profile_issues: Vec<Value> = match state.profile_validation() {
-        Some(svc) => svc
-            .validate_to_outcome(&resource, fhir_version)?
-            .get("issue")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default(),
-        None => Vec::new(),
-    };
-
     debug!(
         resource_type = %resource_type,
         issue_count = issues.len(),
-        profile_issue_count = profile_issues.len(),
         "$validate completed"
     );
 
-    let mut outcome = validation_outcome(&issues);
-    if !profile_issues.is_empty()
-        && let Some(arr) = outcome.get_mut("issue").and_then(Value::as_array_mut)
-    {
-        if issues.is_empty() {
-            // Drop the all-clear informational issue: profile validation found problems.
-            arr.clear();
-        }
-        arr.extend(profile_issues);
-    }
+    let outcome = validation_outcome(&issues);
     format_resource_response(
         StatusCode::OK,
         HeaderMap::new(),

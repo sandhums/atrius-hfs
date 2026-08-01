@@ -462,12 +462,6 @@ where
                 return create_error_result(422, &validation_failure_message(&e));
             }
 
-            // Atrius profile-manifest enforcement (HFS_PROFILE_VALIDATION_MODE).
-            if let Err(e) = state.enforce_profile_on_write(&resource, fhir_version, &resource_type)
-            {
-                return batch_validation_error_result(e);
-            }
-
             match state
                 .storage()
                 .create(tenant.context(), &resource_type, resource, fhir_version)
@@ -505,12 +499,6 @@ where
                 .await
             {
                 return create_error_result(422, &validation_failure_message(&e));
-            }
-
-            // Atrius profile-manifest enforcement (HFS_PROFILE_VALIDATION_MODE).
-            if let Err(e) = state.enforce_profile_on_write(&resource, fhir_version, &resource_type)
-            {
-                return batch_validation_error_result(e);
             }
 
             match state
@@ -784,17 +772,6 @@ fn parse_request_url(url: &str) -> Result<(String, String), String> {
             // Handle URLs like Patient/123/_history/1
             Ok((parts[0].to_string(), parts[1].to_string()))
         }
-    }
-}
-
-/// Creates an error BundleEntryResult.
-/// Map an Atrius profile-validation failure onto a per-entry result,
-/// preserving the full OperationOutcome when one is available.
-fn batch_validation_error_result(err: RestError) -> BundleEntryResult {
-    match err {
-        RestError::ValidationOutcome { outcome } => BundleEntryResult::error(422, outcome),
-        RestError::BadRequest { message } => create_error_result(400, &message),
-        other => create_error_result(500, &other.to_string()),
     }
 }
 

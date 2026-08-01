@@ -2792,39 +2792,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fhir-validation"
-version = "0.2.1"
-dependencies = [
- "async-trait",
- "fhir-terminology",
- "fhir-validation-types",
- "helios-fhir",
- "helios-fhirpath",
- "helios-fhirpath-support",
- "reqwest",
- "rust_decimal",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "fhir-validation-gen"
-version = "0.2.1"
-dependencies = [
- "fhir-validation-types",
- "helios-fhir",
- "helios-fhir-gen",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "fhir-validation-types"
-version = "0.2.1"
-
-[[package]]
 name = "filetime"
 version = "0.2.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3656,7 +3623,6 @@ dependencies = [
  "chrono",
  "clap",
  "dashmap",
- "fhir-validation",
  "flate2",
  "futures",
  "helios-audit",

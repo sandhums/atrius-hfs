@@ -88,8 +88,6 @@ where
         "Processing create request"
     );
 
-    state.enforce_profile_on_write(&resource, fhir_version, &resource_type)?;
-
     // Validate resourceType in body matches URL
     if let Some(body_type) = resource.get("resourceType").and_then(|v| v.as_str()) {
         if body_type != resource_type {

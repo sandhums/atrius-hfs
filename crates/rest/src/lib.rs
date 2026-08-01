@@ -158,7 +158,6 @@ pub mod fhir_types;
 pub mod handlers;
 pub mod jwe;
 pub mod middleware;
-pub mod profile_validation;
 pub(crate) mod rate_limit;
 pub mod responses;
 pub mod routing;
@@ -169,11 +168,10 @@ pub mod validation;
 
 // Re-export commonly used types
 pub use config::{
-    MultitenancyConfig, ProfileValidationMode, ServerConfig, StorageBackendMode, TenantRoutingMode,
+    MultitenancyConfig, ServerConfig, StorageBackendMode, TenantRoutingMode,
 };
 pub use error::{RestError, RestResult};
 pub use middleware::auth::AuthMiddlewareState;
-pub use profile_validation::ProfileValidationService;
 pub use state::AppState;
 pub use tenant::{ResolvedTenant, TenantResolver, TenantSource};
 
@@ -763,33 +761,6 @@ where
     let state = match settings_store {
         Some(store) => state.with_settings_store(store),
         None => state,
-    };
-
-    // NDHM/ABDM profile validation from HFS_PROFILE_MANIFEST.
-    let state = match ProfileValidationService::try_from_config(&config) {
-        Ok(Some(svc)) => {
-            info!(
-                profile_count = svc.profile_count(),
-                mode = ?svc.mode,
-                "ABDM/NDHM profile validation enabled"
-            );
-            state.with_profile_validation(svc)
-        }
-        Ok(None) => state,
-        Err(e) => {
-            if config.profile_validation_mode != ProfileValidationMode::Off {
-                tracing::warn!(
-                    error = %e,
-                    "Profile manifest failed to load; write validation disabled"
-                );
-            } else {
-                tracing::warn!(
-                    error = %e,
-                    "HFS_PROFILE_MANIFEST failed to load (validation disabled)"
-                );
-            }
-            state
-        }
     };
 
     // Inject subscription engine if enabled

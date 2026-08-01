@@ -9,9 +9,11 @@
 #   ATRIUS_IG_SOURCE=local ./scripts/setup-atrius-profile-registry.sh
 #   ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/setup-atrius-profile-registry.sh
 #
-# Then start clinical HFS with:
-#   HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json
-#   HFS_PROFILE_VALIDATION_MODE=strict
+# Then seed the Helios package cache and start clinical HFS with:
+#   HFS_FHIR_PACKAGE_CACHE=<cache-root>
+#   HFS_FHIR_PACKAGES=atrius.in.r4@<version>
+#   HFS_VALIDATION_MODE=enforce
+# (legacy HFS_PROFILE_MANIFEST / fhir-validation crate removed — use package layers)
 #
 # Verifies the HL7 datatype pack excludes abstract base types (Element, …) — including
 # Element breaks registry load (no derivation) and silently disables write validation.
@@ -88,5 +90,6 @@ if os.path.isfile(pkg):
 PY
 
 echo "Done. Point HFS at: manifests/atrius-r4-profile-manifest-core.json"
-echo "  HFS_PROFILE_MANIFEST=${ROOT}/manifests/atrius-r4-profile-manifest-core.json"
+echo "  # Prefer HFS_FHIR_PACKAGE_CACHE + HFS_FHIR_PACKAGES (see crates/fhir-validator/docs/packages.md)"
+echo "  # Legacy manifest still at: ${ROOT}/manifests/atrius-r4-profile-manifest-core.json"
 echo "  HFS_PROFILE_VALIDATION_MODE=strict"
