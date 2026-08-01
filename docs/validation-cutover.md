@@ -43,10 +43,11 @@ bulk-submit ingest (when the worker is given a `ValidationService`).
 
 `$validate` `mode` is enforced: `create` / `update` / `delete` / `profile`.
 
-Slice `type` / `profile` / `binding` discriminators are evaluated. Remaining
-holes (not a second engine):
+Slice `type` / `profile` / `binding` / `exists` / `extension` discriminators
+are evaluated. Remaining holes (not a second engine):
 
-- `resolve-ref` slice discriminators match nothing.
+- `resolve()` only follows References already in the instance (`contained`,
+  Bundle entries). It does not hit storage.
 - Binding discriminators do not expand a ValueSet at mark time.
 - Conditional PATCH inside a Bundle is refused.
 

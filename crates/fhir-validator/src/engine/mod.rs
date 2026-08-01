@@ -63,6 +63,9 @@ pub struct ValidationOptions {
     /// hundreds of canonical resources — useful to a profile author,
     /// noise to everyone else.
     pub check_extension_context: bool,
+    /// When true, enforce `refers` (Reference target resource-type) checks.
+    /// Off by default to preserve upstream conformance-suite parity.
+    pub enforce_refers: bool,
 }
 
 impl Default for ValidationOptions {
@@ -72,6 +75,7 @@ impl Default for ValidationOptions {
             use_meta_profiles: true,
             check_extension_context: false,
             unknown_profile: UnknownProfilePolicy::default(),
+            enforce_refers: false,
         }
     }
 }

@@ -43,15 +43,17 @@
 //!
 //! ## Current limitations (hardening backlog)
 //!
-//! - Slice matchers: `pattern`, `type`, `profile`, and `binding` are evaluated
-//!   (`engine/slicing.rs`). `resolve-ref` is not. Binding discriminators that
-//!   name a ValueSet canonical cannot expand it at mark time; they match a
-//!   coding `system` equal to that canonical, or a collected `code` equal to a
-//!   non-URL value. The converter still emits a warning when it cannot
-//!   translate a discriminator (`exists`, `resolve()`, mixed kinds).
-//! - `refers` (reference target types) is carried but not enforced.
-//! - `extensible`-strength bindings are never checked (only `required`,
-//!   per the FHIR Schema spec); a warning mode may come later.
+//! - Slice matchers: `pattern`, `type`, `profile`, `binding`, `exists`, and
+//!   `extension('url')` paths are evaluated (`engine/slicing.rs`). `resolve()`
+//!   follows References already in the instance (`contained`, Bundle entries)
+//!   and does not hit storage; an unresolved reference does not match.
+//!   Binding discriminators that name a ValueSet canonical cannot expand it
+//!   at mark time. Mixed-kind discriminator sets still warn and stay dormant.
+//! - `refers` (reference target types) is enforced when
+//!   `ValidationOptions::enforce_refers` is set (off by default for suite parity).
+//! - `extensible`-strength bindings warn when
+//!   `EffectHandlers::check_extensible_bindings` is set; only `required` is
+//!   checked by default.
 //! - Constraint evaluation resolves `%resource`/`%rootResource` to the root
 //!   resource and evaluates via `path.all(expr)`, so invariants relying on
 //!   nested-resource `%resource` semantics can misfire (helios-fhirpath

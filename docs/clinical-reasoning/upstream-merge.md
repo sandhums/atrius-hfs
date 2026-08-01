@@ -160,10 +160,12 @@ calls `IngestValidator` (`check_write`) when the worker is wired with
 required / not found), `delete` (id, existence, AuditEvent immutability; no
 referential integrity), `profile` (ignore `meta.profile`).
 
-Slice `type` / `profile` / `binding` matchers are evaluated. Remaining
-limitations (not a second engine):
+Slice `type` / `profile` / `binding` / `exists` / `extension` matchers are
+evaluated. Remaining limitations (not a second engine):
 
-- `resolve-ref` slice discriminators match nothing.
+- `resolve()` only follows References already in the instance (`contained`,
+  Bundle entries). It does not hit storage; an unresolved reference does not
+  match.
 - Binding discriminators do not expand a ValueSet at mark time.
 - Conditional PATCH inside a Bundle is refused (instance PATCH and Bundle
   instance-url PATCH are implemented).
@@ -198,7 +200,7 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 | File | Atrius change |
 |------|----------------|
 | `src/packages/resolve.rs` | Listed `HFS_FHIR_PACKAGES` only — do not walk `package.json` dependencies (that pulls `ndhm.in` and fails offline) |
-| `src/converter/slicing.rs` | Extra `Match` IR for `type` / `profile` / `binding`; engine evaluates those kinds |
+| `src/converter/slicing.rs` | Discriminator coverage: `type` / `profile` / `binding` / `exists` / `extension('url')`; `resolve()` is in-scope only (`contained` / Bundle entries). Ordered slice ordinals. |
 
 ### `crates/cds-hooks`
 

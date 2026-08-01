@@ -51,10 +51,11 @@ const CONSUMED: &[&str] = &[
     "isModifier",
     "isSummary",
     "short",
+    "maxLength",
 ];
 
 /// `fixed[x]` / `pattern[x]` are matched by prefix in `apply_value_keywords`.
-const CONSUMED_PREFIXES: &[&str] = &["fixed", "pattern"];
+const CONSUMED_PREFIXES: &[&str] = &["fixed", "pattern", "minValue", "maxValue"];
 
 /// Fields present in the corpus that the converter deliberately does not read.
 const IGNORED: &[(&str, &str)] = &[
@@ -82,15 +83,7 @@ const IGNORED: &[(&str, &str)] = &[
         "extension",
         "ED-level extensions; the two we need are read off `type[].extension`",
     ),
-    (
-        "maxLength",
-        "validation-bearing, but FHIR Schema defines no keyword for it",
-    ),
 ];
-
-/// `minValue[x]` / `maxValue[x]`, like `maxLength`, are real constraints with
-/// no FHIR Schema keyword to carry them.
-const IGNORED_PREFIXES: &[&str] = &["minValue", "maxValue"];
 
 /// Sub-object keys, per parent field: `(parent, key, consumed)`.
 const SUB_KEYS: &[(&str, &str, bool)] = &[
@@ -130,7 +123,6 @@ fn is_known(key: &str) -> bool {
         || IGNORED.iter().any(|(k, _)| *k == base)
         || CONSUMED_PREFIXES
             .iter()
-            .chain(IGNORED_PREFIXES)
             .any(|p| base.len() > p.len() && base.starts_with(p))
 }
 

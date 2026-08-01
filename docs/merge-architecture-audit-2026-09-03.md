@@ -323,9 +323,9 @@ The real remaining gaps listed below were **closed 5 Sep 2026** in-repo:
 - `$validate` `mode` now changes enforcement: `create` (duplicate id), `update`
   (id required / not found), `delete` (id, existence, AuditEvent), `profile`
   (ignore `meta.profile`).
-- Slice `type` / `profile` / `binding` matchers are evaluated in
-  `engine/slicing.rs`. `resolve-ref` is still not; binding does not expand a
-  ValueSet at mark time.
+- Slice `type` / `profile` / `binding` / `exists` / `extension` matchers are
+  evaluated in `engine/slicing.rs`. `resolve()` is in-scope only (`contained` /
+  Bundle entries, no store). Binding does not expand a ValueSet at mark time.
 
 Stale references to the removed path survive in **13 files** across `deploy/` and
 `scripts/`, including two live env files — see §3.1, which is the operational
@@ -339,8 +339,8 @@ consequence and the most urgent item in this audit. Separately,
 `docs/clinical-reasoning/upstream-merge.md` is the living keep-list: one engine,
 `HFS_FHIR_PACKAGES` overlay, `check_write` on batch/transaction POST/PUT/PATCH
 and DELETE existence, bulk-submit ingest, and `$validate` modes. Do not restore
-`fhir-validation*`. Slice `type`/`profile`/`binding` matchers are evaluated;
-`resolve-ref` is not.
+`fhir-validation*`. Slice `type`/`profile`/`binding`/`exists`/`extension`
+matchers are evaluated; `resolve()` is in-scope only.
 
 ### 3.5 The FHIR directory-layout split: durable mechanism, stale content
 
@@ -610,7 +610,7 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
     recurring conflict sources.
 11. **~~Finish or revert the half-wired~~** `type`/`profile`/`binding` **~~slice matchers~~**
   (§3.4). Done 5 Sep: `engine/slicing.rs::slice_matches` evaluates them;
-  `resolve-ref` remains unmatched. Binding does not expand a ValueSet.
+  `resolve()` is in-scope only. Binding does not expand a ValueSet.
 12. **~~Outbox dead-lettering; "processed with zero deliveries" signal; SQLite
   claim CAS; HTS per-instance system-id cache~~** (§3.7). Done 5 Sep.
 13. Cosmetic: `migrate_v36_to_v37` error strings, Postgres migration doc comments,
