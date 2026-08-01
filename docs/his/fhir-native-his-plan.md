@@ -101,8 +101,9 @@ HFS_STORAGE_BACKEND=postgres-elasticsearch
 HFS_DATABASE_URL=postgresql://...
 HFS_ELASTICSEARCH_NODES=http://...
 HFS_AUTH_ENABLED=true
-HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json
-HFS_PROFILE_VALIDATION_MODE=strict
+HFS_FHIR_PACKAGE_CACHE=/var/lib/hfs/fhir-packages
+HFS_FHIR_PACKAGES=atrius.in.r4@x.y.z
+HFS_VALIDATION_MODE=enforce
 HFS_TERMINOLOGY_SERVER=http://hts:8090
 HFS_SUBSCRIPTIONS_ENABLED=true
 ```
@@ -160,7 +161,7 @@ Extend profiles for hospital operations not yet covered:
 | **Basic** | Shift roster, bed status board (common FHIR pattern for non-clinical admin) |
 | **Composition** | Consultation note structure (Phase 5a) |
 
-Publish manifest updates consumed by HFS via `HFS_PROFILE_MANIFEST`.
+Publish IG package updates and seed them into `HFS_FHIR_PACKAGE_CACHE` (see `docs/validation-cutover.md`).
 
 ### 0.3 Terminology import
 
