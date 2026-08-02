@@ -225,6 +225,20 @@ impl Transaction for PostgresTransaction {
         self.index_resource(tenant_id, resource_type, &id, &data)
             .await?;
 
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            self.fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(data.clone()),
+            None,
+        )
+        .await?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             &id,
@@ -311,6 +325,7 @@ impl Transaction for PostgresTransaction {
         let tenant_id = self.tenant.tenant_id().as_str();
         let resource_type = current.resource_type();
         let id = current.id();
+        let previous_resource = current.content().clone();
 
         // Verify current version still matches (optimistic locking)
         let row = client
@@ -393,6 +408,20 @@ impl Transaction for PostgresTransaction {
         self.index_resource(tenant_id, resource_type, id, &data)
             .await?;
 
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(data.clone()),
+            Some(previous_resource),
+        )
+        .await?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             id,
@@ -468,6 +497,22 @@ impl Transaction for PostgresTransaction {
             )
             .await
             .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
+
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(data),
+        )
+        .await?;
 
         Ok(())
     }

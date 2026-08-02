@@ -3,7 +3,7 @@
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version.
-pub const SCHEMA_VERSION: i32 = 16;
+pub const SCHEMA_VERSION: i32 = 17;
 
 /// Advisory-lock key serializing schema migration across HFS instances sharing
 /// one database. Arbitrary but must stay stable across releases.
@@ -314,6 +314,7 @@ async fn migrate_schema(
             13 => migrate_v13_to_v14(client).await?,
             14 => migrate_v14_to_v15(client).await?,
             15 => migrate_v15_to_v16(client).await?,
+            16 => migrate_v16_to_v17(client).await?,
             _ => {
                 return Err(pg_error(format!("Unknown schema version: {}", version)));
             }
@@ -827,6 +828,47 @@ async fn migrate_v12_to_v13(client: &deadpool_postgres::Client) -> StorageResult
         )
         .await
         .map_err(|e| pg_error(format!("Migration v12->v13 failed: {}", e)))?;
+    Ok(())
+}
+
+/// v16 -> v17: durable subscription event outbox (transactional outbox foundation).
+async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    let stmts = [
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id BIGSERIAL PRIMARY KEY,
+            event_id UUID NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource JSONB,
+            previous_resource JSONB,
+            envelope JSONB NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            processed_at TIMESTAMPTZ,
+            attempts INT NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TIMESTAMPTZ
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+         ON subscription_outbox (available_at, id)
+         WHERE processed_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+         ON subscription_outbox (tenant_id, id)
+         WHERE processed_at IS NOT NULL",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("Migration v16->v17 failed: {}", e)))?;
+    }
+
     Ok(())
 }
 

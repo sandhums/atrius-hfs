@@ -79,7 +79,9 @@ pub(crate) mod schema;
 pub mod search;
 mod search_impl;
 mod storage;
+mod subscription_outbox;
 mod transaction;
 mod user_settings;
 
 pub use backend::{PostgresBackend, PostgresConfig};
+pub use subscription_outbox::PostgresSubscriptionOutbox;

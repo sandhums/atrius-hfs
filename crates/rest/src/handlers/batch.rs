@@ -18,6 +18,7 @@ use helios_persistence::core::{
     BundleEntry, BundleEntryResult, BundleMethod, BundleProvider, ResourceStorage,
 };
 use helios_persistence::error::{StorageError, TransactionError};
+use helios_persistence::tenant::TenantContext;
 use serde_json::Value;
 use tracing::{debug, error, warn};
 
@@ -331,6 +332,17 @@ where
                     None,
                     Some(&correlation_details),
                 );
+
+                #[cfg(feature = "subscriptions")]
+                if result.status < 300 {
+                    emit_transaction_subscription_event(
+                        state,
+                        tenant.context(),
+                        fhir_version,
+                        entry,
+                        result,
+                    );
+                }
             }
 
             let base_url = state.base_url();
@@ -475,6 +487,16 @@ where
                             stored.content(),
                         );
                     }
+                    #[cfg(feature = "subscriptions")]
+                    if let Some(engine) = state.subscription_engine() {
+                        super::subscription_event::emit_subscription_event(
+                            engine,
+                            tenant.context(),
+                            &stored,
+                            fhir_version,
+                            helios_subscriptions::ResourceEventType::Create,
+                        );
+                    }
                     BundleEntryResult::created(stored)
                 }
                 Err(e) => {
@@ -520,6 +542,21 @@ where
                             stored.content(),
                         );
                     }
+                    #[cfg(feature = "subscriptions")]
+                    if let Some(engine) = state.subscription_engine() {
+                        let event_type = if created {
+                            helios_subscriptions::ResourceEventType::Create
+                        } else {
+                            helios_subscriptions::ResourceEventType::Update
+                        };
+                        super::subscription_event::emit_subscription_event(
+                            engine,
+                            tenant.context(),
+                            &stored,
+                            fhir_version,
+                            event_type,
+                        );
+                    }
                     if created {
                         BundleEntryResult::created(stored)
                     } else {
@@ -542,7 +579,20 @@ where
                 .delete(tenant.context(), &resource_type, &id)
                 .await
             {
-                Ok(()) => BundleEntryResult::deleted(),
+                Ok(()) => {
+                    #[cfg(feature = "subscriptions")]
+                    if let Some(engine) = state.subscription_engine() {
+                        super::subscription_event::emit_delete_event(
+                            engine,
+                            tenant.context(),
+                            &resource_type,
+                            &id,
+                            fhir_version,
+                            None,
+                        );
+                    }
+                    BundleEntryResult::deleted()
+                }
                 Err(e) => {
                     let (status, message) = entry_error(e);
                     create_error_result(status, &message)
@@ -571,6 +621,53 @@ impl EntryAuditCorrelation {
             entry_index,
         }
     }
+}
+
+/// Emit a subscription event for a successful transaction write entry.
+#[cfg(feature = "subscriptions")]
+fn emit_transaction_subscription_event<S>(
+    state: &AppState<S>,
+    tenant: &TenantContext,
+    fhir_version: FhirVersion,
+    entry: &BundleEntry,
+    result: &BundleEntryResult,
+) where
+    S: ResourceStorage + Send + Sync,
+{
+    let Some(engine) = state.subscription_engine() else {
+        return;
+    };
+    let Ok((resource_type, mut resource_id)) = parse_request_url(&entry.url) else {
+        return;
+    };
+    if resource_id.is_empty() {
+        if let Some(id) = result
+            .resource
+            .as_ref()
+            .and_then(|r| r.get("id"))
+            .and_then(|v| v.as_str())
+        {
+            resource_id = id.to_string();
+        }
+    }
+    let method = match entry.method {
+        BundleMethod::Post => "POST",
+        BundleMethod::Put => "PUT",
+        BundleMethod::Patch => "PATCH",
+        BundleMethod::Delete => "DELETE",
+        BundleMethod::Get => return,
+    };
+    let created = result.status == 201;
+    super::subscription_event::emit_bundle_write_event(
+        engine,
+        tenant,
+        fhir_version,
+        method,
+        &resource_type,
+        &resource_id,
+        result.resource.as_ref(),
+        created,
+    );
 }
 
 /// Emits an audit event for a processed batch entry.

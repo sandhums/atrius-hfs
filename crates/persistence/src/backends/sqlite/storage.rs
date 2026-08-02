@@ -72,6 +72,15 @@ impl ResourceStorage for SqliteBackend {
         false
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        let source = std::env::var("HFS_BASE_URL").unwrap_or_else(|_| "hfs".to_string());
+        Some(std::sync::Arc::new(
+            crate::backends::sqlite::SqliteSubscriptionOutbox::new(self.pool(), source),
+        ))
+    }
+
     fn sof_runner(&self) -> Option<std::sync::Arc<dyn crate::core::sof_runner::SofRunner>> {
         use crate::sof::sqlite::SqliteInDbRunner;
         Some(std::sync::Arc::new(SqliteInDbRunner::new(self.pool())))
@@ -86,7 +95,7 @@ impl ResourceStorage for SqliteBackend {
     ) -> StorageResult<StoredResource> {
         tenant.check_permission(Operation::Create, resource_type)?;
 
-        let conn = self.get_connection()?;
+        let mut conn = self.get_connection()?;
         let tenant_id = tenant.tenant_id().as_str();
 
         // Extract or generate ID
@@ -95,22 +104,6 @@ impl ResourceStorage for SqliteBackend {
             .and_then(|v| v.as_str())
             .map(String::from)
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-
-        // Check if resource already exists
-        let exists: bool = conn
-            .query_row(
-                "SELECT 1 FROM resources WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3",
-                params![tenant_id, resource_type, id],
-                |_| Ok(true),
-            )
-            .unwrap_or(false);
-
-        if exists {
-            return Err(StorageError::Resource(ResourceError::AlreadyExists {
-                resource_type: resource_type.to_string(),
-                id: id.clone(),
-            }));
-        }
 
         // Ensure the resource has correct type and id
         let mut resource = resource;
@@ -131,36 +124,62 @@ impl ResourceStorage for SqliteBackend {
         let version_id = "1";
         let fhir_version_str = fhir_version.as_mime_param();
 
-        // Insert the resource
-        conn.execute(
+        let tx = conn
+            .transaction()
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+
+        let exists: bool = tx
+            .query_row(
+                "SELECT 1 FROM resources WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3",
+                params![tenant_id, resource_type, id],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+
+        if exists {
+            return Err(StorageError::Resource(ResourceError::AlreadyExists {
+                resource_type: resource_type.to_string(),
+                id: id.clone(),
+            }));
+        }
+
+        tx.execute(
             "INSERT INTO resources (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
             params![tenant_id, resource_type, id, version_id, data, last_updated, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert resource: {}", e)))?;
 
-        // Insert into history
-        conn.execute(
+        tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
             params![tenant_id, resource_type, id, version_id, data, last_updated, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
 
-        // Index the resource for search
-        self.index_resource(&conn, tenant_id, resource_type, &id, &resource)?;
+        self.index_resource(&tx, tenant_id, resource_type, &id, &resource)?;
 
-        // An *active* SearchParameter write changes this tenant's overlay — drop
-        // its cached registry so the next access rebuilds from storage. Draft
-        // copies (e.g. the seeded spec set) never overlay, so skip them and
-        // avoid an O(n²) rebuild storm during bulk seeding.
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(resource.clone()),
+            None,
+        )?;
+
+        tx.commit()
+            .map_err(|e| internal_error(format!("Failed to commit create: {}", e)))?;
+
         if resource_type == "SearchParameter"
             && crate::search::search_parameter_create_affects_overlay(&resource)
         {
             self.tenant_registries().invalidate(tenant_id);
         }
 
-        // Return the stored resource with updated metadata
         Ok(StoredResource::from_storage(
             resource_type,
             &id,
@@ -297,12 +316,34 @@ impl ResourceStorage for SqliteBackend {
         let resource_type = current.resource_type();
         tenant.check_permission(Operation::Update, resource_type)?;
 
-        let conn = self.get_connection()?;
+        let mut conn = self.get_connection()?;
         let tenant_id = tenant.tenant_id().as_str();
         let id = current.id();
+        let previous_resource = current.content().clone();
+        let fhir_version = current.fhir_version();
 
-        // Check that the resource still exists with the expected version
-        let actual_version: Result<String, _> = conn.query_row(
+        // Ensure the resource has correct type and id
+        let mut resource = resource;
+        if let Some(obj) = resource.as_object_mut() {
+            obj.insert(
+                "resourceType".to_string(),
+                Value::String(resource_type.to_string()),
+            );
+            obj.insert("id".to_string(), Value::String(id.to_string()));
+        }
+
+        let data = serde_json::to_vec(&resource)
+            .map_err(|e| serialization_error(format!("Failed to serialize resource: {}", e)))?;
+
+        let now = Utc::now();
+        let last_updated = now.to_rfc3339();
+        let fhir_version_str = fhir_version.as_mime_param();
+
+        let tx = conn
+            .transaction()
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+
+        let actual_version: Result<String, _> = tx.query_row(
             "SELECT version_id FROM resources
              WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
             params![tenant_id, resource_type, id],
@@ -325,7 +366,6 @@ impl ResourceStorage for SqliteBackend {
             }
         };
 
-        // Check version match
         if actual_version != current.version_id() {
             return Err(StorageError::Concurrency(
                 ConcurrencyError::VersionConflict {
@@ -337,29 +377,10 @@ impl ResourceStorage for SqliteBackend {
             ));
         }
 
-        // Calculate new version
         let new_version: u64 = actual_version.parse().unwrap_or(0) + 1;
         let new_version_str = new_version.to_string();
 
-        // Ensure the resource has correct type and id
-        let mut resource = resource;
-        if let Some(obj) = resource.as_object_mut() {
-            obj.insert(
-                "resourceType".to_string(),
-                Value::String(resource_type.to_string()),
-            );
-            obj.insert("id".to_string(), Value::String(id.to_string()));
-        }
-
-        // Serialize the resource data
-        let data = serde_json::to_vec(&resource)
-            .map_err(|e| serialization_error(format!("Failed to serialize resource: {}", e)))?;
-
-        let now = Utc::now();
-        let last_updated = now.to_rfc3339();
-
-        // Update the resource
-        conn.execute(
+        tx.execute(
             "UPDATE resources SET version_id = ?1, data = ?2, last_updated = ?3
              WHERE tenant_id = ?4 AND resource_type = ?5 AND id = ?6",
             params![
@@ -373,20 +394,31 @@ impl ResourceStorage for SqliteBackend {
         )
         .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
 
-        // Insert into history (preserve the original FHIR version)
-        let fhir_version_str = current.fhir_version().as_mime_param();
-        conn.execute(
+        tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
             params![tenant_id, resource_type, id, new_version_str, data, last_updated, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
 
-        // Re-index the resource (delete old entries, add new)
-        self.delete_search_index(&conn, tenant_id, resource_type, id)?;
-        self.index_resource(&conn, tenant_id, resource_type, id, &resource)?;
+        self.delete_search_index(&tx, tenant_id, resource_type, id)?;
+        self.index_resource(&tx, tenant_id, resource_type, id, &resource)?;
 
-        // A SearchParameter write invalidates this tenant's cached registry.
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(resource.clone()),
+            Some(previous_resource),
+        )?;
+
+        tx.commit()
+            .map_err(|e| internal_error(format!("Failed to commit update: {}", e)))?;
+
         if resource_type == "SearchParameter" {
             self.tenant_registries().invalidate(tenant_id);
         }
@@ -400,7 +432,7 @@ impl ResourceStorage for SqliteBackend {
             now,
             now,
             None,
-            current.fhir_version(),
+            fhir_version,
         ))
     }
 
@@ -412,18 +444,23 @@ impl ResourceStorage for SqliteBackend {
     ) -> StorageResult<()> {
         tenant.check_permission(Operation::Delete, resource_type)?;
 
-        let conn = self.get_connection()?;
+        let mut conn = self.get_connection()?;
         let tenant_id = tenant.tenant_id().as_str();
+        let now = Utc::now();
+        let deleted_at = now.to_rfc3339();
 
-        // Check if resource exists and get its fhir_version
-        let result: Result<(String, Vec<u8>, String), _> = conn.query_row(
+        let tx = conn
+            .transaction()
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+
+        let result: Result<(String, Vec<u8>, String), _> = tx.query_row(
             "SELECT version_id, data, fhir_version FROM resources
              WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
             params![tenant_id, resource_type, id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         );
 
-        let (current_version, data, fhir_version_str) = match result {
+        let (current_version, data_bytes, fhir_version_str) = match result {
             Ok(v) => v,
             Err(rusqlite::Error::QueryReturnedNoRows) => {
                 return Err(StorageError::Resource(ResourceError::NotFound {
@@ -436,32 +473,13 @@ impl ResourceStorage for SqliteBackend {
             }
         };
 
-        let now = Utc::now();
-        let deleted_at = now.to_rfc3339();
-
-        // Calculate new version for the deletion record
         let new_version: u64 = current_version.parse().unwrap_or(0) + 1;
         let new_version_str = new_version.to_string();
+        let previous_resource: Value = serde_json::from_slice(&data_bytes).unwrap_or(Value::Null);
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
-        // Soft delete the resource, guarded by the version we just read.
-        //
-        // The `version_id`/`is_deleted` predicates make this a compare-and-swap
-        // rather than a blind overwrite. Without them a concurrent writer that
-        // lands between the SELECT above and this UPDATE is silently clobbered,
-        // and worse: `new_version` was computed from the stale read, so the
-        // history INSERT below then collides with the row that writer already
-        // wrote and trips `PRIMARY KEY (tenant_id, resource_type, id,
-        // version_id)`. Because neither statement runs in a transaction, the
-        // UPDATE is already committed at that point — the caller gets a 500 and
-        // the current row now points at a version whose history entry holds
-        // someone else's content.
-        //
-        // MongoDB and S3 already guarded their equivalent writes (a
-        // `version_id` term in the update filter, and a conditional PUT
-        // respectively); this brings SQLite to parity. Losing the race is
-        // reported as `NotFound`, which is what a caller racing a concurrent
-        // delete would have seen anyway.
-        let updated = conn
+        let updated = tx
             .execute(
                 "UPDATE resources SET is_deleted = 1, deleted_at = ?1, version_id = ?2, last_updated = ?1
                  WHERE tenant_id = ?3 AND resource_type = ?4 AND id = ?5
@@ -484,24 +502,36 @@ impl ResourceStorage for SqliteBackend {
             }));
         }
 
-        // Insert deletion record into history (preserve fhir_version)
-        conn.execute(
+        tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7)",
-            params![tenant_id, resource_type, id, new_version_str, data, deleted_at, fhir_version_str],
+            params![tenant_id, resource_type, id, new_version_str, data_bytes, deleted_at, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
 
-        // Delete search index entries (skip when search is offloaded)
         if !self.is_search_offloaded() {
-            conn.execute(
+            tx.execute(
                 "DELETE FROM search_index WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
                 params![tenant_id, resource_type, id],
             )
             .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
         }
 
-        // A SearchParameter delete invalidates this tenant's cached registry.
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(previous_resource),
+        )?;
+
+        tx.commit()
+            .map_err(|e| internal_error(format!("Failed to commit delete: {}", e)))?;
+
         if resource_type == "SearchParameter" {
             self.tenant_registries().invalidate(tenant_id);
         }
@@ -962,7 +992,7 @@ impl SqliteBackend {
     ) -> StorageResult<StoredResource> {
         tenant.check_permission(Operation::Update, resource_type)?;
 
-        let conn = self.get_connection()?;
+        let mut conn = self.get_connection()?;
         let tenant_id = tenant.tenant_id().as_str();
 
         let row: Result<(String, String), _> = conn.query_row(
@@ -1006,8 +1036,14 @@ impl SqliteBackend {
 
         let now = Utc::now();
         let last_updated = now.to_rfc3339();
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
-        conn.execute(
+        let tx = conn
+            .transaction()
+            .map_err(|e| internal_error(format!("Failed to begin restore transaction: {}", e)))?;
+
+        tx.execute(
             "UPDATE resources
              SET version_id = ?1, data = ?2, last_updated = ?3, is_deleted = 0, deleted_at = NULL
              WHERE tenant_id = ?4 AND resource_type = ?5 AND id = ?6",
@@ -1022,7 +1058,7 @@ impl SqliteBackend {
         )
         .map_err(|e| internal_error(format!("Failed to restore resource: {}", e)))?;
 
-        conn.execute(
+        tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
             params![tenant_id, resource_type, id, new_version_str, data, last_updated, fhir_version_str],
@@ -1031,8 +1067,24 @@ impl SqliteBackend {
 
         // The delete dropped the search index entries; rebuild them for the
         // resource that is live again.
-        self.delete_search_index(&conn, tenant_id, resource_type, id)?;
-        self.index_resource(&conn, tenant_id, resource_type, id, &resource)?;
+        self.delete_search_index(&tx, tenant_id, resource_type, id)?;
+        self.index_resource(&tx, tenant_id, resource_type, id, &resource)?;
+
+        // Upsert treats restore as a create for subscribers.
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Create,
+            Some(resource.clone()),
+            None,
+        )?;
+
+        tx.commit()
+            .map_err(|e| internal_error(format!("Failed to commit restore: {}", e)))?;
 
         // A restored *active* SearchParameter re-enters this tenant's overlay.
         if resource_type == "SearchParameter"
@@ -1040,9 +1092,6 @@ impl SqliteBackend {
         {
             self.tenant_registries().invalidate(tenant_id);
         }
-
-        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
-            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
         Ok(StoredResource::from_storage(
             resource_type,

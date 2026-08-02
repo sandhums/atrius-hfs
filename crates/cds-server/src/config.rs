@@ -17,6 +17,9 @@
 //! | `CDS_FHIR_SERVER_ALLOWLIST` | Comma-separated allowed `fhirServer` hosts when SMART token is present |
 //! | `CDS_REQUIRE_LIBRARY_VERSION` | Require `libraryVersion` on every manifest evaluate service |
 //! | `CDS_VALIDATE_KR_LIBRARIES` | Probe KR for pinned libraries at startup (`GET /ready`) |
+//! | `CDS_SUBSCRIPTION_WEBHOOK_SECRET` | Optional shared secret for HFS → cds-server rest-hooks |
+//! | `CDS_FEEDBACK_FHIR_*` | Also used to POST critical-lab `Flag` resources from subscription events |
+//! | `CDS_FEEDBACK_OAUTH_*` | Client-credentials mint for feedback/Flag writes (preferred over static bearer) |
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -131,14 +134,41 @@ pub struct Args {
     #[arg(long, env = "CDS_FEEDBACK_FHIR_BASE_URL")]
     pub feedback_fhir_base_url: Option<String>,
 
-    /// Static bearer token for feedback GuidanceResponse writes (dev/smoke; feedback
-    /// requests carry no `fhirAuthorization` per the CDS Hooks spec).
+    /// Static bearer token for feedback GuidanceResponse writes (dev/smoke override).
+    /// When set, wins over `CDS_FEEDBACK_OAUTH_*`. Prefer client-credentials in long-running
+    /// processes — access tokens expire (~300s on Keycloak).
     #[arg(long, env = "CDS_FEEDBACK_FHIR_BEARER_TOKEN")]
     pub feedback_fhir_bearer_token: Option<String>,
 
     /// `X-Tenant-ID` header for feedback GuidanceResponse writes (multi-tenant HFS).
     #[arg(long, env = "CDS_FEEDBACK_FHIR_TENANT_ID")]
     pub feedback_fhir_tenant_id: Option<String>,
+
+    /// OAuth2 token endpoint for client-credentials (e.g. Keycloak
+    /// `/realms/fhir/protocol/openid-connect/token`).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_TOKEN_URL")]
+    pub feedback_oauth_token_url: Option<String>,
+
+    /// Confidential client id (e.g. `cds-backend-client`).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_CLIENT_ID")]
+    pub feedback_oauth_client_id: Option<String>,
+
+    /// Confidential client secret.
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_CLIENT_SECRET")]
+    pub feedback_oauth_client_secret: Option<String>,
+
+    /// Optional space-separated scopes for the token request.
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_SCOPE")]
+    pub feedback_oauth_scope: Option<String>,
+
+    /// Accept invalid TLS certs when calling the token URL (local Keycloak self-signed only).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_TLS_INSECURE", default_value = "false")]
+    pub feedback_oauth_tls_insecure: bool,
+
+    /// Optional shared secret for `POST /internal/cds/fhir-notifications`
+    /// (`Authorization: Bearer` or `X-Cds-Webhook-Secret`).
+    #[arg(long, env = "CDS_SUBSCRIPTION_WEBHOOK_SECRET")]
+    pub subscription_webhook_secret: Option<String>,
 }
 
 impl Args {
@@ -214,9 +244,40 @@ impl Args {
             .filter(|s| !s.is_empty())
     }
 
+    /// HTTP client for feedback/Flag FHIR calls (always verifies TLS).
+    fn feedback_http_client(&self) -> anyhow::Result<reqwest::Client> {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .context("reqwest client for feedback FHIR writes")
+    }
+
+    /// HTTP client for OAuth token mint (may skip TLS verify for local Keycloak).
+    fn feedback_oauth_http_client(&self) -> anyhow::Result<reqwest::Client> {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .danger_accept_invalid_certs(self.feedback_oauth_tls_insecure)
+            .build()
+            .context("reqwest client for feedback OAuth token")
+    }
+
+    /// Shared write-auth for GuidanceResponse + Flag POSTs.
+    pub fn feedback_write_auth(&self) -> anyhow::Result<Arc<dyn crate::fhir_write_auth::FhirWriteAuth>> {
+        let oauth_http = self.feedback_oauth_http_client()?;
+        Ok(crate::fhir_write_auth::build_fhir_write_auth(
+            oauth_http,
+            self.feedback_fhir_bearer_token.as_deref(),
+            self.feedback_oauth_token_url.as_deref(),
+            self.feedback_oauth_client_id.as_deref(),
+            self.feedback_oauth_client_secret.as_deref(),
+            self.feedback_oauth_scope.as_deref(),
+        ))
+    }
+
     /// Feedback persistence store when `CDS_FEEDBACK_FHIR_BASE_URL` is configured.
     pub fn feedback_store(
         &self,
+        auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
     ) -> anyhow::Result<Option<Arc<crate::feedback_store::FeedbackStore>>> {
         let Some(base) = self
             .feedback_fhir_base_url
@@ -226,16 +287,56 @@ impl Args {
         else {
             return Ok(None);
         };
-        let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()
-            .context("reqwest client for feedback GuidanceResponse writes")?;
+        let http = self.feedback_http_client()?;
         Ok(Some(Arc::new(crate::feedback_store::FeedbackStore::new(
             http,
             base,
-            self.feedback_fhir_bearer_token.clone(),
+            auth,
             self.feedback_fhir_tenant_id.clone(),
         ))))
+    }
+
+    /// Rest-hook receiver config (Observation fetch + optional Flag writes).
+    pub fn subscription_notify_config(
+        &self,
+        auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
+    ) -> anyhow::Result<Option<Arc<crate::subscription_notifications::SubscriptionNotifyConfig>>>
+    {
+        let fhir_base = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.hfs_base_url.trim());
+        if fhir_base.is_empty() {
+            return Ok(None);
+        }
+
+        let http = self.feedback_http_client()?;
+
+        let persist_flags = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|s| !s.is_empty());
+
+        let secret = self
+            .subscription_webhook_secret
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+
+        Ok(Some(Arc::new(
+            crate::subscription_notifications::SubscriptionNotifyConfig {
+                webhook_secret: secret,
+                fhir_http: http,
+                fhir_base_url: fhir_base.to_string(),
+                fhir_auth: auth,
+                fhir_tenant_id: self.feedback_fhir_tenant_id.clone(),
+                persist_flags,
+            },
+        )))
     }
 }
 

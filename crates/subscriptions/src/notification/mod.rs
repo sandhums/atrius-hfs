@@ -209,6 +209,7 @@ mod tests {
             events_since_start: 5,
             consecutive_failures: 0,
             tenant_id: "test-tenant".to_string(),
+            last_notification_at: chrono::Utc::now(),
         }
     }
 

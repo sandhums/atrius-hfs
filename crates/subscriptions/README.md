@@ -22,10 +22,10 @@ The `SubscriptionEngine` orchestrates all five concerns and is the main entry po
 - **Topic lifecycle parity**: topic create/update/delete now updates the in-memory registry for both native `SubscriptionTopic` and R4 backport `Basic` topic resources
 - **Status state machine**: `Requested → Active → Error → Off` with validated transitions; subscriptions activate only after a successful handshake
 - **Exponential backoff retry**: configurable initial delay, max delay, backoff factor, and max attempts before transitioning to `error` or `off`
-- **Tenant isolation**: all in-memory maps are keyed by `(tenant_id, subscription_id)` — subscriptions in different tenants never interact
+- **Tenant isolation**: subscriptions are keyed by `(tenant_id, subscription_id)` and topics by `(tenant_id, canonical_url)` — tenants never share registry entries
 - **TLS enforcement**: `full-resource` payload subscriptions over non-HTTPS endpoints are rejected at dispatch time
 - **WebSocket channel**: server-managed connection registry with short-lived binding tokens; clients connect to `/ws/subscriptions/bind`, then send `bind-with-token <token>` after calling `$get-ws-binding-token`
-- **Pluggable channels**: `ChannelDispatcher` trait allows new channel types (email, FHIR messaging) to be added without touching the engine
+- **Pluggable channels**: `ChannelDispatcher` implementations are registered on a `ChannelDispatcherRegistry` keyed by FHIR channel-type code; use `SubscriptionEngine::with_dispatcher` to add broker/custom channels without editing engine match sites
 
 ## Channel Support
 
@@ -520,8 +520,9 @@ A Kafka-backed architecture addresses most of the single-instance and performanc
 
 - FHIRPath filter criteria are not evaluated — Phase 2 uses direct JSON field matching only
 - Heartbeat delivery is not yet implemented — the `heartbeat_period` field is stored but no background task fires heartbeats
-- Batch and transaction bundle entries do not emit subscription events — only direct CRUD handlers (create, update, delete, patch) do
 - [`eventTrigger`](https://hl7.org/fhir/subscriptiontopic.html) is not supported — only `resourceTrigger` (create, update, delete) is implemented
-- The engine is in-memory only and single-instance — subscriptions and topics are not shared across cluster nodes or reloaded from storage on restart (see [Clustering](#clustering) above)
+- (Resolved) Topic registry is keyed by `(tenant_id, canonical_url)` — topics no longer collide across tenants
+- `$events` recovery is still a stub — the durable outbox retains processed rows for a future implementation
+- (Resolved) Outbox rows are written in the same SQL transaction as the resource write on Postgres/SQLite; REST only wakes the worker
 - WebSocket notifications are best-effort — if no clients are connected when an event fires the notification is silently dropped; there is no replay or queueing for late-connecting clients
-- Email and FHIR messaging channels are not yet implemented (planned for subsequent phases)
+- Subscription status transitions (`error`/`off`) are held in memory and not written back to the stored Subscription resource

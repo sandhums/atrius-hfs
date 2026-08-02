@@ -25,8 +25,10 @@ pub mod engine;
 pub mod error;
 pub mod evaluator;
 pub mod event;
+pub mod heartbeat;
 pub mod manager;
 pub mod notification;
+pub mod outbox;
 pub mod rehydrate;
 pub mod topics;
 
@@ -34,6 +36,7 @@ pub mod topics;
 pub use channels::messaging::MessagingChannel;
 pub use channels::ws_manager::WebSocketManager;
 pub use channels::ws_token::WsBindingTokenManager;
+pub use channels::{ChannelDispatcher, ChannelDispatcherRegistry, DispatchResult};
 pub use config::{MessagingSettings, SubscriptionConfig};
 pub use engine::SubscriptionEngine;
 pub use error::SubscriptionError;

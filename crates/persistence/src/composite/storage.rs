@@ -772,6 +772,13 @@ impl ResourceStorage for CompositeStorage {
         self.primary.sof_runner()
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        // Outbox lives with the primary CRUD store so durability matches writes.
+        self.primary.subscription_outbox_store()
+    }
+
     #[instrument(skip(self, tenant, resource), fields(resource_type = %resource_type))]
     async fn create(
         &self,

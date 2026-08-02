@@ -5,7 +5,7 @@ use rusqlite::Connection;
 use crate::error::StorageResult;
 
 /// Current schema version.
-pub const SCHEMA_VERSION: i32 = 14;
+pub const SCHEMA_VERSION: i32 = 15;
 
 /// Initialize the database schema.
 pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
@@ -295,6 +295,7 @@ fn migrate_schema(conn: &Connection, from_version: i32) -> StorageResult<()> {
             11 => migrate_v11_to_v12(conn)?,
             12 => migrate_v12_to_v13(conn)?,
             13 => migrate_v13_to_v14(conn)?,
+            14 => migrate_v14_to_v15(conn)?,
             _ => {
                 return Err(crate::error::StorageError::Backend(
                     crate::error::BackendError::Internal {
@@ -1256,6 +1257,40 @@ fn migrate_v12_to_v13(conn: &Connection) -> StorageResult<()> {
 /// `resources`; the registry adds the metadata that data alone cannot provide.
 fn migrate_v13_to_v14(conn: &Connection) -> StorageResult<()> {
     ensure_tenants_table(conn)
+}
+
+/// v14 -> v15: durable subscription event outbox.
+fn migrate_v14_to_v15(conn: &Connection) -> StorageResult<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource TEXT,
+            previous_resource TEXT,
+            envelope TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            available_at TEXT NOT NULL,
+            processed_at TEXT,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+            ON subscription_outbox (available_at, id)
+            WHERE processed_at IS NULL;
+        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+            ON subscription_outbox (tenant_id, id)
+            WHERE processed_at IS NOT NULL;",
+    )
+    .map_err(|e| migration_err(format!("Migration v14->v15 failed: {e}")))?;
+    Ok(())
 }
 
 fn migration_err(message: String) -> crate::error::StorageError {

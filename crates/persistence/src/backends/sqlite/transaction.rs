@@ -242,6 +242,18 @@ impl Transaction for SqliteTransaction {
         // Index the resource for search
         self.index_resource(&conn, tenant_id, resource_type, &id, &data)?;
 
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            self.fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(data.clone()),
+            None,
+        )?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             &id,
@@ -336,6 +348,7 @@ impl Transaction for SqliteTransaction {
         let tenant_id = self.tenant.tenant_id().as_str();
         let resource_type = current.resource_type();
         let id = current.id();
+        let previous_resource = current.content().clone();
 
         // Verify current version still matches (optimistic locking)
         let db_version: Result<String, _> = conn.query_row(
@@ -423,6 +436,18 @@ impl Transaction for SqliteTransaction {
         // Re-index the resource for search
         self.index_resource(&conn, tenant_id, resource_type, id, &data)?;
 
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(data.clone()),
+            Some(previous_resource),
+        )?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             id,
@@ -490,6 +515,21 @@ impl Transaction for SqliteTransaction {
             params![tenant_id, resource_type, id, new_version_str, data, deleted_at, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
+
+        let previous_resource: Value = serde_json::from_slice(&data).unwrap_or(Value::Null);
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(previous_resource),
+        )?;
 
         Ok(())
     }

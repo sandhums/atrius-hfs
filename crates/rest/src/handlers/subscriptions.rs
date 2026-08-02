@@ -2,15 +2,17 @@
 //!
 //! Implements custom FHIR operations for subscription management:
 //! - `GET /Subscription/{id}/$status` — returns the current `SubscriptionStatus`
-//! - `GET /Subscription/{id}/$events` — returns recent events (R5/R6 only)
+//! - `GET /Subscription/{id}/$events` — returns recent events from the durable outbox
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use helios_persistence::core::ResourceStorage;
+use helios_persistence::tenant::TenantId;
+use serde::Deserialize;
 use serde_json::json;
 
 use crate::error::{RestError, RestResult};
@@ -52,10 +54,19 @@ where
     Ok((StatusCode::OK, Json(status_resource)).into_response())
 }
 
+#[derive(Debug, Deserialize)]
+pub struct EventsQuery {
+    /// Exclusive outbox cursor (resume after this row id).
+    pub after: Option<i64>,
+    /// Max events to return (default 50, max 200).
+    pub count: Option<u32>,
+}
+
 /// Handler for the `$events` operation on Subscription resources.
 ///
-/// Returns recent events for the subscription. This is a simplified
-/// implementation that returns the current event count.
+/// When a durable outbox is available, returns recent processed resource-change
+/// events for the tenant as notification-style Bundle entries. Without an outbox,
+/// returns a query-status Bundle with the in-memory event counter only.
 ///
 /// # HTTP Request
 ///
@@ -63,6 +74,7 @@ where
 pub async fn subscription_events_handler<S>(
     State(state): State<AppState<S>>,
     Path((_resource_type, id)): Path<(String, String)>,
+    Query(query): Query<EventsQuery>,
     tenant: TenantExtractor,
 ) -> RestResult<Response>
 where
@@ -82,24 +94,60 @@ where
             id: id.clone(),
         })?;
 
-    // Return a Bundle with a SubscriptionStatus indicating query-status
     let bundle_type = sub.fhir_version.notification_bundle_type();
+    let mut entries = vec![json!({
+        "resource": {
+            "resourceType": "SubscriptionStatus",
+            "status": sub.status.as_fhir_str(),
+            "type": "query-event",
+            "eventsSinceSubscriptionStart": sub.events_since_start,
+            "subscription": {
+                "reference": format!("Subscription/{}", id)
+            },
+            "topic": sub.topic_url
+        }
+    })];
+
+    if let Some(outbox) = engine.outbox_store() {
+        let limit = query.count.unwrap_or(50).clamp(1, 200);
+        let tenant_id = TenantId::new(tenant.tenant_id());
+        match outbox
+            .list_processed(&tenant_id, query.after, limit)
+            .await
+        {
+            Ok(rows) => {
+                for row in rows {
+                    let focus = format!("{}/{}", row.resource_type, row.resource_id);
+                    let mut entry = json!({
+                        "fullUrl": format!("{}/{}", state.base_url(), focus),
+                        "request": {
+                            "method": match row.event_type {
+                                helios_persistence::core::OutboxEventType::Create => "POST",
+                                helios_persistence::core::OutboxEventType::Update => "PUT",
+                                helios_persistence::core::OutboxEventType::Delete => "DELETE",
+                            },
+                            "url": focus
+                        }
+                    });
+                    if let Some(resource) = row.resource {
+                        entry
+                            .as_object_mut()
+                            .expect("entry object")
+                            .insert("resource".to_string(), resource);
+                    }
+                    entries.push(entry);
+                }
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "Failed to list outbox events for $events");
+            }
+        }
+    }
 
     let bundle = json!({
         "resourceType": "Bundle",
         "type": bundle_type,
-        "entry": [{
-            "resource": {
-                "resourceType": "SubscriptionStatus",
-                "status": sub.status.as_fhir_str(),
-                "type": "query-status",
-                "eventsSinceSubscriptionStart": sub.events_since_start,
-                "subscription": {
-                    "reference": format!("Subscription/{}", id)
-                },
-                "topic": sub.topic_url
-            }
-        }]
+        "entry": entries
     });
 
     Ok((StatusCode::OK, Json(bundle)).into_response())

@@ -108,6 +108,10 @@ Local dev without SMART: omit both fields; configured `CDS_HFS_BASE_URL` (clinic
 |-----|------|
 | `CDS_REQUIRE_FHIR_AUTHORIZATION=true` | Reject invoke without `fhirAuthorization` |
 | `CDS_FHIR_SERVER_ALLOWLIST` | Comma-separated allowed `fhirServer` hosts |
+| `CDS_FEEDBACK_FHIR_BASE_URL` | Enable GuidanceResponse / Flag writes to clinical HFS |
+| `CDS_FEEDBACK_OAUTH_TOKEN_URL` / `CLIENT_ID` / `CLIENT_SECRET` | Client-credentials for those writes (preferred) |
+| `CDS_FEEDBACK_OAUTH_TLS_INSECURE=true` | Local Keycloak self-signed only |
+| `CDS_FEEDBACK_FHIR_BEARER_TOKEN` | Static bearer override (expires; smoke only) |
 
 Example invoke body:
 

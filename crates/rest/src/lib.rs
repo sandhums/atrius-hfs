@@ -786,6 +786,34 @@ where
                 supported_channel_types: supported,
                 smtp,
                 messaging,
+                max_retries: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_MAX_RETRIES",
+                    default_sub_config.max_retries,
+                ),
+                retry_initial_delay: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_INITIAL_DELAY_MS",
+                    default_sub_config.retry_initial_delay,
+                ),
+                retry_max_delay: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_MAX_DELAY_MS",
+                    default_sub_config.retry_max_delay,
+                ),
+                retry_backoff_factor: subscription_f64_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_BACKOFF_FACTOR",
+                    default_sub_config.retry_backoff_factor,
+                ),
+                heartbeat_check_interval: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_HEARTBEAT_INTERVAL_MS",
+                    default_sub_config.heartbeat_check_interval,
+                ),
+                error_threshold: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_ERROR_THRESHOLD",
+                    default_sub_config.error_threshold,
+                ),
+                off_threshold: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_OFF_THRESHOLD",
+                    default_sub_config.off_threshold,
+                ),
                 handshake_initial_delay: subscription_duration_ms_from_env(
                     "HFS_SUBSCRIPTION_HANDSHAKE_INITIAL_DELAY_MS",
                     default_sub_config.handshake_initial_delay,
@@ -803,17 +831,52 @@ where
                     "HFS_SUBSCRIPTION_HANDSHAKE_RETRY_MAX_MS",
                     default_sub_config.handshake_retry_max_delay,
                 ),
+                outbox_poll_interval: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_POLL_INTERVAL_MS",
+                    default_sub_config.outbox_poll_interval,
+                ),
+                outbox_batch_size: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_BATCH_SIZE",
+                    default_sub_config.outbox_batch_size,
+                )
+                .max(1),
+                outbox_claim_lease: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_CLAIM_LEASE_MS",
+                    default_sub_config.outbox_claim_lease,
+                ),
+                outbox_process_timeout: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_PROCESS_TIMEOUT_MS",
+                    default_sub_config.outbox_process_timeout,
+                ),
                 ..default_sub_config
             };
             // Outbound auth provider was built above (static bearer when
             // HFS_OUTBOUND_BEARER_TOKEN is set, otherwise no-op).
-            let engine = helios_subscriptions::SubscriptionEngine::with_outbound_auth(
+            let mut engine = helios_subscriptions::SubscriptionEngine::with_outbound_auth(
                 sub_config,
                 config.base_url.clone(),
                 outbound_auth_provider,
             );
+            if let Some(outbox) = storage_arc.subscription_outbox_store() {
+                engine = engine.with_outbox(outbox);
+                info!("Subscription durable outbox ENABLED");
+            } else {
+                info!(
+                    "Subscription durable outbox unavailable for backend '{}'; using in-process dispatch",
+                    storage_arc.backend_name()
+                );
+            }
             info!("Subscriptions engine ENABLED");
             let engine = Arc::new(engine);
+            if tokio::runtime::Handle::try_current().is_ok() {
+                engine.start_outbox_worker();
+                engine.start_heartbeat_worker();
+            } else {
+                warn!(
+                    "No Tokio runtime available at app construction; subscription outbox \
+                     and heartbeat workers not started"
+                );
+            }
             spawn_subscription_rehydration(Arc::clone(&engine), Arc::clone(&storage_arc), &config);
             state.with_subscription_engine(engine)
         } else {
@@ -1056,6 +1119,15 @@ fn build_rehydration_config_from_env() -> helios_subscriptions::RehydrationConfi
 fn subscription_bool_from_env(name: &str, default: bool) -> bool {
     std::env::var(name)
         .map(|v| !matches!(v.trim().to_ascii_lowercase().as_str(), "false" | "0"))
+        .unwrap_or(default)
+}
+
+#[cfg(feature = "subscriptions")]
+fn subscription_f64_from_env(name: &str, default: f64) -> f64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .filter(|v: &f64| v.is_finite() && *v > 0.0)
         .unwrap_or(default)
 }
 

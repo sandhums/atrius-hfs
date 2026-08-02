@@ -76,6 +76,15 @@ impl ResourceStorage for PostgresBackend {
         true
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        let source = std::env::var("HFS_BASE_URL").unwrap_or_else(|_| "hfs".to_string());
+        Some(std::sync::Arc::new(
+            crate::backends::postgres::PostgresSubscriptionOutbox::new(self.pool(), source),
+        ))
+    }
+
     fn sof_runner(&self) -> Option<std::sync::Arc<dyn crate::core::sof_runner::SofRunner>> {
         use crate::sof::postgres::PgInDbRunner;
         Some(std::sync::Arc::new(PgInDbRunner::new(self.pool())))
@@ -100,22 +109,6 @@ impl ResourceStorage for PostgresBackend {
             .map(String::from)
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
-        // Check if resource already exists
-        let exists = client
-            .query_opt(
-                "SELECT 1 FROM resources WHERE tenant_id = $1 AND resource_type = $2 AND id = $3",
-                &[&tenant_id, &resource_type, &id],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to check existence: {}", e)))?;
-
-        if exists.is_some() {
-            return Err(StorageError::Resource(ResourceError::AlreadyExists {
-                resource_type: resource_type.to_string(),
-                id: id.clone(),
-            }));
-        }
-
         // Ensure the resource has correct type and id
         let mut resource = resource;
         if let Some(obj) = resource.as_object_mut() {
@@ -131,54 +124,115 @@ impl ResourceStorage for PostgresBackend {
         let fhir_version_str = fhir_version.as_mime_param();
         let is_deleted = false;
 
-        // Insert the resource
         client
-            .execute(
-                "INSERT INTO resources (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                &[&tenant_id, &resource_type, &id, &version_id, &resource, &now, &is_deleted, &fhir_version_str],
-            )
+            .execute("BEGIN", &[])
             .await
-            .map_err(|e| internal_error(format!("Failed to insert resource: {}", e)))?;
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
 
-        // Insert into history
-        client
-            .execute(
-                "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                &[&tenant_id, &resource_type, &id, &version_id, &resource, &now, &is_deleted, &fhir_version_str],
+        let write_result: StorageResult<StoredResource> = async {
+            let exists = client
+                .query_opt(
+                    "SELECT 1 FROM resources WHERE tenant_id = $1 AND resource_type = $2 AND id = $3",
+                    &[&tenant_id, &resource_type, &id],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to check existence: {}", e)))?;
+
+            if exists.is_some() {
+                return Err(StorageError::Resource(ResourceError::AlreadyExists {
+                    resource_type: resource_type.to_string(),
+                    id: id.clone(),
+                }));
+            }
+
+            client
+                .execute(
+                    "INSERT INTO resources (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    &[
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                        &version_id,
+                        &resource,
+                        &now,
+                        &is_deleted,
+                        &fhir_version_str,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to insert resource: {}", e)))?;
+
+            client
+                .execute(
+                    "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    &[
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                        &version_id,
+                        &resource,
+                        &now,
+                        &is_deleted,
+                        &fhir_version_str,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
+
+            self.index_resource(&client, tenant_id, resource_type, &id, &resource)
+                .await?;
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &client,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                &id,
+                version_id,
+                crate::core::OutboxEventType::Create,
+                Some(resource.clone()),
+                None,
             )
-            .await
-            .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
-
-        // Index the resource for search
-        self.index_resource(&client, tenant_id, resource_type, &id, &resource)
             .await?;
 
-        // An *active* SearchParameter write changes a tenant's overlay: reload
-        // the stored cache and drop the per-tenant registries so they rebuild.
-        // Draft copies (the seeded spec set) never overlay, so skip them and
-        // avoid an O(n²) reload storm during bulk seeding.
-        if resource_type == "SearchParameter"
-            && crate::search::search_parameter_create_affects_overlay(&resource)
-        {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
+            Ok(StoredResource::from_storage(
+                resource_type,
+                &id,
+                version_id,
+                tenant.tenant_id().clone(),
+                resource.clone(),
+                now,
+                now,
+                None,
+                fhir_version,
+            ))
+        }
+        .await;
+
+        match write_result {
+            Ok(stored) => {
+                if let Err(e) = client.execute("COMMIT", &[]).await {
+                    let _ = client.execute("ROLLBACK", &[]).await;
+                    return Err(internal_error(format!("Failed to commit create: {}", e)));
+                }
+                if resource_type == "SearchParameter"
+                    && crate::search::search_parameter_create_affects_overlay(stored.content())
+                {
+                    if let Err(e) = self.reload_stored_cache().await {
+                        tracing::warn!("SearchParameter cache reload failed: {e}");
+                    }
+                }
+                Ok(stored)
+            }
+            Err(e) => {
+                if let Err(rb) = client.execute("ROLLBACK", &[]).await {
+                    tracing::warn!("Rollback after failed create: {rb}");
+                }
+                Err(e)
             }
         }
-
-        // Return the stored resource with updated metadata
-        Ok(StoredResource::from_storage(
-            resource_type,
-            &id,
-            version_id,
-            tenant.tenant_id().clone(),
-            resource,
-            now,
-            now,
-            None,
-            fhir_version,
-        ))
     }
 
     async fn create_or_update(
@@ -288,42 +342,7 @@ impl ResourceStorage for PostgresBackend {
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
         let id = current.id();
-
-        // Check that the resource still exists with the expected version
-        let row = client
-            .query_opt(
-                "SELECT version_id FROM resources
-                 WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE",
-                &[&tenant_id, &resource_type, &id],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to get current version: {}", e)))?;
-
-        let actual_version = match row {
-            Some(row) => row.get::<_, String>(0),
-            None => {
-                return Err(StorageError::Resource(ResourceError::NotFound {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                }));
-            }
-        };
-
-        // Check version match
-        if actual_version != current.version_id() {
-            return Err(StorageError::Concurrency(
-                ConcurrencyError::VersionConflict {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                    expected_version: current.version_id().to_string(),
-                    actual_version,
-                },
-            ));
-        }
-
-        // Calculate new version
-        let new_version: u64 = actual_version.parse().unwrap_or(0) + 1;
-        let new_version_str = new_version.to_string();
+        let previous_resource = current.content().clone();
 
         // Ensure the resource has correct type and id
         let mut resource = resource;
@@ -336,60 +355,136 @@ impl ResourceStorage for PostgresBackend {
         }
 
         let now = Utc::now();
-        let fhir_version_str = current.fhir_version().as_mime_param();
+        let fhir_version = current.fhir_version();
+        let fhir_version_str = fhir_version.as_mime_param();
         let is_deleted = false;
 
-        // Update the resource
         client
-            .execute(
-                "UPDATE resources SET version_id = $1, data = $2, last_updated = $3
-                 WHERE tenant_id = $4 AND resource_type = $5 AND id = $6",
-                &[
-                    &new_version_str,
-                    &resource,
-                    &now,
-                    &tenant_id,
-                    &resource_type,
-                    &id,
-                ],
-            )
+            .execute("BEGIN", &[])
             .await
-            .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
 
-        // Insert into history (preserve the original FHIR version)
-        client
-            .execute(
-                "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                &[&tenant_id, &resource_type, &id, &new_version_str, &resource, &now, &is_deleted, &fhir_version_str],
+        let write_result: StorageResult<StoredResource> = async {
+            let row = client
+                .query_opt(
+                    "SELECT version_id FROM resources
+                     WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE
+                     FOR UPDATE",
+                    &[&tenant_id, &resource_type, &id],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to get current version: {}", e)))?;
+
+            let actual_version = match row {
+                Some(row) => row.get::<_, String>(0),
+                None => {
+                    return Err(StorageError::Resource(ResourceError::NotFound {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                    }));
+                }
+            };
+
+            if actual_version != current.version_id() {
+                return Err(StorageError::Concurrency(
+                    ConcurrencyError::VersionConflict {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                        expected_version: current.version_id().to_string(),
+                        actual_version,
+                    },
+                ));
+            }
+
+            let new_version: u64 = actual_version.parse().unwrap_or(0) + 1;
+            let new_version_str = new_version.to_string();
+
+            client
+                .execute(
+                    "UPDATE resources SET version_id = $1, data = $2, last_updated = $3
+                     WHERE tenant_id = $4 AND resource_type = $5 AND id = $6",
+                    &[
+                        &new_version_str,
+                        &resource,
+                        &now,
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
+
+            client
+                .execute(
+                    "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    &[
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                        &new_version_str,
+                        &resource,
+                        &now,
+                        &is_deleted,
+                        &fhir_version_str,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
+
+            self.delete_search_index(&client, tenant_id, resource_type, id)
+                .await?;
+            self.index_resource(&client, tenant_id, resource_type, id, &resource)
+                .await?;
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &client,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Update,
+                Some(resource.clone()),
+                Some(previous_resource),
             )
-            .await
-            .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
-
-        // Re-index the resource (delete old entries, add new)
-        self.delete_search_index(&client, tenant_id, resource_type, id)
-            .await?;
-        self.index_resource(&client, tenant_id, resource_type, id, &resource)
             .await?;
 
-        // A SearchParameter write invalidates the tenant overlays.
-        if resource_type == "SearchParameter" {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
+            Ok(StoredResource::from_storage(
+                resource_type,
+                id,
+                new_version_str,
+                tenant.tenant_id().clone(),
+                resource.clone(),
+                now,
+                now,
+                None,
+                fhir_version,
+            ))
+        }
+        .await;
+
+        match write_result {
+            Ok(stored) => {
+                if let Err(e) = client.execute("COMMIT", &[]).await {
+                    let _ = client.execute("ROLLBACK", &[]).await;
+                    return Err(internal_error(format!("Failed to commit update: {}", e)));
+                }
+                if resource_type == "SearchParameter" {
+                    if let Err(e) = self.reload_stored_cache().await {
+                        tracing::warn!("SearchParameter cache reload failed: {e}");
+                    }
+                }
+                Ok(stored)
+            }
+            Err(e) => {
+                if let Err(rb) = client.execute("ROLLBACK", &[]).await {
+                    tracing::warn!("Rollback after failed update: {rb}");
+                }
+                Err(e)
             }
         }
-
-        Ok(StoredResource::from_storage(
-            resource_type,
-            id,
-            new_version_str,
-            tenant.tenant_id().clone(),
-            resource,
-            now,
-            now,
-            None,
-            current.fhir_version(),
-        ))
     }
 
     async fn delete(
@@ -402,110 +497,139 @@ impl ResourceStorage for PostgresBackend {
 
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
+        let now = Utc::now();
 
-        // Check if resource exists and get its fhir_version
-        let row = client
-            .query_opt(
-                "SELECT version_id, data, fhir_version FROM resources
-                 WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE",
-                &[&tenant_id, &resource_type, &id],
-            )
+        client
+            .execute("BEGIN", &[])
             .await
-            .map_err(|e| internal_error(format!("Failed to check resource: {}", e)))?;
+            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
 
-        let (current_version, data, fhir_version_str) = match row {
-            Some(row) => {
-                let v: String = row.get(0);
-                let d: Value = row.get(1);
-                let f: String = row.get(2);
-                (v, d, f)
-            }
-            None => {
+        let write_result: StorageResult<()> = async {
+            // Lock the row so version CAS and history insert are atomic with outbox.
+            let row = client
+                .query_opt(
+                    "SELECT version_id, data, fhir_version FROM resources
+                     WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE
+                     FOR UPDATE",
+                    &[&tenant_id, &resource_type, &id],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to check resource: {}", e)))?;
+
+            let (current_version, data, fhir_version_str) = match row {
+                Some(row) => {
+                    let v: String = row.get(0);
+                    let d: Value = row.get(1);
+                    let f: String = row.get(2);
+                    (v, d, f)
+                }
+                None => {
+                    return Err(StorageError::Resource(ResourceError::NotFound {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                    }));
+                }
+            };
+
+            let new_version: u64 = current_version.parse().unwrap_or(0) + 1;
+            let new_version_str = new_version.to_string();
+            let is_deleted = true;
+            let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+                .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+
+            let updated = client
+                .execute(
+                    "UPDATE resources SET is_deleted = TRUE, deleted_at = $1, version_id = $2, last_updated = $1
+                     WHERE tenant_id = $3 AND resource_type = $4 AND id = $5
+                       AND version_id = $6 AND is_deleted = FALSE",
+                    &[
+                        &now,
+                        &new_version_str,
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                        &current_version,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
+
+            if updated == 0 {
                 return Err(StorageError::Resource(ResourceError::NotFound {
                     resource_type: resource_type.to_string(),
                     id: id.to_string(),
                 }));
             }
-        };
 
-        let now = Utc::now();
-
-        // Calculate new version for the deletion record
-        let new_version: u64 = current_version.parse().unwrap_or(0) + 1;
-        let new_version_str = new_version.to_string();
-        let is_deleted = true;
-
-        // Soft delete the resource, guarded by the version we just read.
-        //
-        // The `version_id`/`is_deleted` predicates make this a compare-and-swap
-        // rather than a blind overwrite. Without them a concurrent writer that
-        // lands between the SELECT above and this UPDATE is silently clobbered,
-        // and worse: `new_version` was computed from the stale read, so the
-        // history INSERT below then collides with the row that writer already
-        // wrote and trips `PRIMARY KEY (tenant_id, resource_type, id,
-        // version_id)` (schema.rs). Because neither statement runs inside a
-        // transaction, the UPDATE is already committed at that point — the
-        // caller gets a 500 and the current row now points at a version whose
-        // history entry holds someone else's content.
-        //
-        // MongoDB and S3 already guarded their equivalent writes (a
-        // `version_id` term in the update filter, and a conditional PUT
-        // respectively); this brings PostgreSQL to parity. Losing the race is
-        // reported as `NotFound`, which is what a caller racing a concurrent
-        // delete would have seen anyway.
-        let updated = client
-            .execute(
-                "UPDATE resources SET is_deleted = TRUE, deleted_at = $1, version_id = $2, last_updated = $1
-                 WHERE tenant_id = $3 AND resource_type = $4 AND id = $5
-                   AND version_id = $6 AND is_deleted = FALSE",
-                &[
-                    &now,
-                    &new_version_str,
-                    &tenant_id,
-                    &resource_type,
-                    &id,
-                    &current_version,
-                ],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
-
-        if updated == 0 {
-            return Err(StorageError::Resource(ResourceError::NotFound {
-                resource_type: resource_type.to_string(),
-                id: id.to_string(),
-            }));
-        }
-
-        // Insert deletion record into history (preserve fhir_version)
-        client
-            .execute(
-                "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                &[&tenant_id, &resource_type, &id, &new_version_str, &data, &now, &is_deleted, &fhir_version_str],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
-
-        // Delete search index entries (skip when search is offloaded)
-        if !self.is_search_offloaded() {
             client
                 .execute(
-                    "DELETE FROM search_index WHERE tenant_id = $1 AND resource_type = $2 AND resource_id = $3",
-                    &[&tenant_id, &resource_type, &id],
+                    "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    &[
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                        &new_version_str,
+                        &data,
+                        &now,
+                        &is_deleted,
+                        &fhir_version_str,
+                    ],
                 )
                 .await
-                .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
-        }
+                .map_err(|e| {
+                    internal_error(format!("Failed to insert deletion history: {}", e))
+                })?;
 
-        // A SearchParameter delete invalidates the tenant overlays.
-        if resource_type == "SearchParameter" {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
+            if !self.is_search_offloaded() {
+                client
+                    .execute(
+                        "DELETE FROM search_index WHERE tenant_id = $1 AND resource_type = $2 AND resource_id = $3",
+                        &[&tenant_id, &resource_type, &id],
+                    )
+                    .await
+                    .map_err(|e| {
+                        internal_error(format!("Failed to delete search index: {}", e))
+                    })?;
+            }
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &client,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Delete,
+                None,
+                Some(data),
+            )
+            .await?;
+
+            Ok(())
+        }
+        .await;
+
+        match write_result {
+            Ok(()) => {
+                if let Err(e) = client.execute("COMMIT", &[]).await {
+                    let _ = client.execute("ROLLBACK", &[]).await;
+                    return Err(internal_error(format!("Failed to commit delete: {}", e)));
+                }
+                if resource_type == "SearchParameter" {
+                    if let Err(e) = self.reload_stored_cache().await {
+                        tracing::warn!("SearchParameter cache reload failed: {e}");
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => {
+                if let Err(rb) = client.execute("ROLLBACK", &[]).await {
+                    tracing::warn!("Rollback after failed delete: {rb}");
+                }
+                Err(e)
             }
         }
-
-        Ok(())
     }
 
     async fn count(
@@ -946,61 +1070,95 @@ impl PostgresBackend {
 
         let now = Utc::now();
         let is_deleted = false;
-
-        client
-            .execute(
-                "UPDATE resources
-                 SET version_id = $1, data = $2, last_updated = $3, is_deleted = FALSE, deleted_at = NULL
-                 WHERE tenant_id = $4 AND resource_type = $5 AND id = $6",
-                &[
-                    &new_version_str,
-                    &resource,
-                    &now,
-                    &tenant_id,
-                    &resource_type,
-                    &id,
-                ],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to restore resource: {}", e)))?;
-
-        client
-            .execute(
-                "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                &[&tenant_id, &resource_type, &id, &new_version_str, &resource, &now, &is_deleted, &fhir_version_str],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to insert restore history: {}", e)))?;
-
-        // The delete dropped the search index entries; rebuild them for the
-        // resource that is live again.
-        self.delete_search_index(&client, tenant_id, resource_type, id)
-            .await?;
-        self.index_resource(&client, tenant_id, resource_type, id, &resource)
-            .await?;
-
-        // A restored SearchParameter re-enters the tenant overlays.
-        if resource_type == "SearchParameter" {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
-            }
-        }
-
         let fhir_version = FhirVersion::from_storage(&fhir_version_str)
             .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
-        Ok(StoredResource::from_storage(
-            resource_type,
-            id,
-            new_version_str,
-            tenant.tenant_id().clone(),
-            resource,
-            now,
-            now,
-            None,
-            fhir_version,
-        ))
+        client
+            .execute("BEGIN", &[])
+            .await
+            .map_err(|e| internal_error(format!("Failed to begin restore transaction: {}", e)))?;
+
+        let write_result: StorageResult<StoredResource> = async {
+            client
+                .execute(
+                    "UPDATE resources
+                     SET version_id = $1, data = $2, last_updated = $3, is_deleted = FALSE, deleted_at = NULL
+                     WHERE tenant_id = $4 AND resource_type = $5 AND id = $6",
+                    &[
+                        &new_version_str,
+                        &resource,
+                        &now,
+                        &tenant_id,
+                        &resource_type,
+                        &id,
+                    ],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to restore resource: {}", e)))?;
+
+            client
+                .execute(
+                    "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    &[&tenant_id, &resource_type, &id, &new_version_str, &resource, &now, &is_deleted, &fhir_version_str],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to insert restore history: {}", e)))?;
+
+            // The delete dropped the search index entries; rebuild them for the
+            // resource that is live again.
+            self.delete_search_index(&client, tenant_id, resource_type, id)
+                .await?;
+            self.index_resource(&client, tenant_id, resource_type, id, &resource)
+                .await?;
+
+            // Upsert treats restore as a create for subscribers.
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &client,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Create,
+                Some(resource.clone()),
+                None,
+            )
+            .await?;
+
+            Ok(StoredResource::from_storage(
+                resource_type,
+                id,
+                new_version_str,
+                tenant.tenant_id().clone(),
+                resource.clone(),
+                now,
+                now,
+                None,
+                fhir_version,
+            ))
+        }
+        .await;
+
+        match write_result {
+            Ok(stored) => {
+                if let Err(e) = client.execute("COMMIT", &[]).await {
+                    let _ = client.execute("ROLLBACK", &[]).await;
+                    return Err(internal_error(format!("Failed to commit restore: {}", e)));
+                }
+                // A restored SearchParameter re-enters the tenant overlays.
+                if resource_type == "SearchParameter" {
+                    if let Err(e) = self.reload_stored_cache().await {
+                        tracing::warn!("SearchParameter cache reload failed: {e}");
+                    }
+                }
+                Ok(stored)
+            }
+            Err(e) => {
+                let _ = client.execute("ROLLBACK", &[]).await;
+                Err(e)
+            }
+        }
     }
 
     /// Index a resource for search.

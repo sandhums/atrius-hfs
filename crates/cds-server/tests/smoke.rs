@@ -25,6 +25,7 @@ fn demo_state() -> AppState {
     AppState {
         registry: registry_from_manifest(&demo_manifest(), CdsEvalBackend::Demo, None),
         kr_readiness: None,
+        subscription_notify: None,
     }
 }
 
@@ -113,6 +114,7 @@ async fn encounter_start_hook_returns_cards() {
         AppState {
             registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
             kr_readiness: None,
+            subscription_notify: None,
         },
         false,
     );
@@ -151,6 +153,7 @@ async fn discovery_lists_multiple_kr_manifest_services() {
         AppState {
             registry: registry_from_manifest(&m, CdsEvalBackend::Demo, None),
             kr_readiness: None,
+            subscription_notify: None,
         },
         false,
     );

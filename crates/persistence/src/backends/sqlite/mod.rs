@@ -74,7 +74,9 @@ mod schema;
 pub mod search;
 mod search_impl;
 mod storage;
+mod subscription_outbox;
 mod transaction;
 mod user_settings;
 
 pub use backend::{SqliteBackend, SqliteBackendConfig};
+pub use subscription_outbox::SqliteSubscriptionOutbox;

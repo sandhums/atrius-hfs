@@ -100,11 +100,38 @@ async fn main() -> anyhow::Result<()> {
         "cds-server configuration"
     );
 
-    let feedback_store = args.feedback_store()?;
+    let write_auth = args.feedback_write_auth()?;
+    tracing::info!(
+        auth_mode = write_auth.mode(),
+        "cds-server → clinical HFS write auth"
+    );
+
+    let feedback_store = args.feedback_store(write_auth.clone())?;
     if feedback_store.is_none() {
         tracing::info!(
             "CDS_FEEDBACK_FHIR_BASE_URL not set; card feedback will be acknowledged but not persisted"
         );
+    }
+
+    let subscription_notify = args.subscription_notify_config(write_auth)?;
+    match &subscription_notify {
+        Some(cfg) if cfg.webhook_secret.is_some() => {
+            tracing::info!(
+                persist_flags = cfg.persist_flags,
+                auth_mode = cfg.auth_mode(),
+                "subscription rest-hook enabled at /internal/cds/fhir-notifications (secret required)"
+            );
+        }
+        Some(cfg) => {
+            tracing::info!(
+                persist_flags = cfg.persist_flags,
+                auth_mode = cfg.auth_mode(),
+                "subscription rest-hook enabled at /internal/cds/fhir-notifications (no shared secret)"
+            );
+        }
+        None => {
+            tracing::warn!("subscription rest-hook disabled (no FHIR base URL)");
+        }
     }
 
     let registry = registry_from_manifest(&manifest, backend, feedback_store);
@@ -113,6 +140,7 @@ async fn main() -> anyhow::Result<()> {
         AppState {
             registry,
             kr_readiness,
+            subscription_notify,
         },
         args.enable_cors,
     );

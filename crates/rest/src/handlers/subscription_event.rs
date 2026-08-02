@@ -1,7 +1,7 @@
 //! Subscription event emission helper.
 //!
-//! Constructs a `ResourceEvent` from handler context and dispatches it to the
-//! subscription engine.
+//! Constructs a `ResourceEvent` from handler context and enqueues it on the
+//! subscription engine (durable outbox when available).
 
 use std::sync::Arc;
 
@@ -13,9 +13,8 @@ use tracing::debug;
 
 /// Emits a subscription event for a successful resource write.
 ///
-/// This function constructs a `ResourceEvent` from the handler context and
-/// spawns the subscription engine's `on_resource_event` asynchronously.
-/// It is a no-op if the subscription engine is not configured.
+/// Constructs a `ResourceEvent` and enqueues it on the subscription engine.
+/// No-op if the subscription engine is not configured.
 pub fn emit_subscription_event(
     engine: &Arc<SubscriptionEngine>,
     tenant: &TenantContext,
@@ -35,8 +34,6 @@ pub fn emit_subscription_event(
         timestamp: chrono::Utc::now(),
     };
 
-    let engine = Arc::clone(engine);
-
     debug!(
         resource_type = %event.resource_type,
         resource_id = %event.resource_id,
@@ -44,9 +41,62 @@ pub fn emit_subscription_event(
         "Emitting subscription event"
     );
 
-    tokio::spawn(async move {
-        engine.on_resource_event(event).await;
-    });
+    engine.enqueue_resource_event(event);
+}
+
+/// Emits a subscription event for a successful bundle write entry (batch/transaction).
+///
+/// Reconstructs enough of a [`StoredResource`] from the response payload to feed
+/// the normal emit path. Deletes use [`emit_delete_event`].
+pub fn emit_bundle_write_event(
+    engine: &Arc<SubscriptionEngine>,
+    tenant: &TenantContext,
+    fhir_version: FhirVersion,
+    method: &str,
+    resource_type: &str,
+    resource_id: &str,
+    resource: Option<&serde_json::Value>,
+    created: bool,
+) {
+    match method {
+        "POST" | "PUT" | "PATCH" => {
+            let Some(content) = resource else {
+                return;
+            };
+            let version_id = content
+                .pointer("/meta/versionId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("1");
+            let stored = helios_persistence::types::StoredResource::from_storage(
+                resource_type,
+                resource_id,
+                version_id,
+                tenant.tenant_id().clone(),
+                content.clone(),
+                chrono::Utc::now(),
+                chrono::Utc::now(),
+                None,
+                fhir_version,
+            );
+            let event_type = if method == "POST" || created {
+                ResourceEventType::Create
+            } else {
+                ResourceEventType::Update
+            };
+            emit_subscription_event(engine, tenant, &stored, fhir_version, event_type);
+        }
+        "DELETE" => {
+            emit_delete_event(
+                engine,
+                tenant,
+                resource_type,
+                resource_id,
+                fhir_version,
+                None,
+            );
+        }
+        _ => {}
+    }
 }
 
 /// Emits a subscription event for a resource delete.
@@ -72,15 +122,11 @@ pub fn emit_delete_event(
         timestamp: chrono::Utc::now(),
     };
 
-    let engine = Arc::clone(engine);
-
     debug!(
         resource_type = %event.resource_type,
         resource_id = %event.resource_id,
         "Emitting subscription delete event"
     );
 
-    tokio::spawn(async move {
-        engine.on_resource_event(event).await;
-    });
+    engine.enqueue_resource_event(event);
 }

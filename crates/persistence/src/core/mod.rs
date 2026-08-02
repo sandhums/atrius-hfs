@@ -102,6 +102,7 @@ pub mod preconditions;
 pub mod search;
 pub mod sof_runner;
 pub mod storage;
+pub mod subscription_outbox;
 pub mod transaction;
 pub mod user_settings;
 pub mod versioned;
@@ -159,6 +160,11 @@ pub use storage::{
     ActivityCell, ConditionalCreateResult, ConditionalDeleteResult, ConditionalPatchResult,
     ConditionalStorage, ConditionalUpdateResult, DailyResourceCount, PatchFormat, PurgableStorage,
     ResourceCountDelta, ResourceStorage, TenantRecord, bucket_floor,
+};
+pub use subscription_outbox::{
+    CLOUDEVENTS_SPEC_VERSION, DynSubscriptionOutboxStore, InMemorySubscriptionOutbox,
+    OUTBOX_EVENT_TYPE, OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore,
+    subscription_outbox_source, subscription_outbox_writes_enabled,
 };
 pub use transaction::{
     BundleEntry, BundleEntryResult, BundleMethod, BundleProvider, BundleResult, BundleType,

@@ -347,6 +347,17 @@ pub trait ResourceStorage: Send + Sync {
         false
     }
 
+    /// Optional durable subscription outbox backed by this store.
+    ///
+    /// SQL backends (Postgres/SQLite) return a store that shares their connection
+    /// pool. Other backends default to `None`; the subscription engine then falls
+    /// back to in-process dispatch.
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        None
+    }
+
     /// Cheap readiness probe of the underlying store, used by the `/_readiness`
     /// endpoint to decide whether this instance should receive traffic.
     ///

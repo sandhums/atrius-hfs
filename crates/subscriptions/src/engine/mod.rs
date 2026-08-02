@@ -17,34 +17,36 @@ use crate::channels::rest_hook::RestHookChannel;
 use crate::channels::websocket::WebSocketChannel;
 use crate::channels::ws_manager::WebSocketManager;
 use crate::channels::ws_token::WsBindingTokenManager;
-use crate::channels::{ChannelDispatcher, DispatchResult};
+use crate::channels::{ChannelDispatcher, ChannelDispatcherRegistry, DispatchResult};
 use crate::config::SubscriptionConfig;
 use crate::evaluator::EventEvaluator;
 use crate::event::{ResourceEvent, ResourceEventType};
-use crate::manager::{
-    ActiveSubscription, ChannelType, SubscriptionManager, SubscriptionStatusCode,
-};
+use crate::heartbeat::run_heartbeat_worker;
+use crate::manager::{ActiveSubscription, SubscriptionManager, SubscriptionStatusCode};
 use crate::notification::{self, NotificationEventData};
+use crate::outbox::run_outbox_worker;
 use crate::topics::InMemoryTopicRegistry;
 use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
+use helios_persistence::core::DynSubscriptionOutboxStore;
 
 /// The subscription engine orchestrates the entire subscription pipeline.
 ///
-/// It is designed to be invoked asynchronously after resource writes
-/// (fire-and-forget via `tokio::spawn`), mirroring the audit middleware pattern.
+/// When a durable [`SubscriptionOutboxStore`] is attached, resource writes are
+/// enqueued and processed by a background worker. Without an outbox the engine
+/// falls back to fire-and-forget `tokio::spawn` (legacy / non-SQL backends).
 pub struct SubscriptionEngine {
     topic_registry: Arc<InMemoryTopicRegistry>,
     topic_resource_index: DashMap<(String, String, String), String>,
     manager: Arc<SubscriptionManager>,
     evaluator: EventEvaluator,
-    rest_hook_channel: Arc<RestHookChannel>,
+    /// Channel dispatchers keyed by FHIR channel-type code.
+    dispatchers: ChannelDispatcherRegistry,
     ws_manager: Arc<WebSocketManager>,
-    ws_channel: Arc<WebSocketChannel>,
     ws_token_manager: Arc<WsBindingTokenManager>,
-    email_channel: Option<Arc<EmailChannel>>,
-    messaging_channel: Option<Arc<MessagingChannel>>,
     config: SubscriptionConfig,
     base_url: String,
+    outbox: Option<DynSubscriptionOutboxStore>,
+    outbox_notify: Arc<tokio::sync::Notify>,
 }
 
 fn calculate_handshake_retry_delay(
@@ -82,41 +84,147 @@ impl SubscriptionEngine {
             config.supported_channel_types.clone(),
         ));
         let evaluator = EventEvaluator::new(Arc::clone(&topic_registry), Arc::clone(&manager));
-        let rest_hook_channel = Arc::new(RestHookChannel::new());
         let ws_manager = Arc::new(WebSocketManager::new());
-        let ws_channel = Arc::new(WebSocketChannel::new(Arc::clone(&ws_manager)));
         let ws_token_manager = Arc::new(WsBindingTokenManager::new(config.ws_token_lifetime_secs));
-        let email_channel = match &config.smtp {
-            Some(settings) => match EmailChannel::new(settings.clone()) {
-                Ok(ch) => Some(Arc::new(ch)),
+
+        let mut dispatchers = ChannelDispatcherRegistry::new();
+        dispatchers.register("rest-hook", Arc::new(RestHookChannel::new()));
+        dispatchers.register(
+            "websocket",
+            Arc::new(WebSocketChannel::new(Arc::clone(&ws_manager))),
+        );
+        if let Some(settings) = &config.smtp {
+            match EmailChannel::new(settings.clone()) {
+                Ok(ch) => {
+                    dispatchers.register("email", Arc::new(ch));
+                }
                 Err(e) => {
                     warn!(error = %e, "Failed to initialize email channel; email dispatch disabled");
-                    None
                 }
-            },
-            None => None,
-        };
-        let messaging_channel = config.messaging.as_ref().map(|settings| {
-            Arc::new(
-                MessagingChannel::new(settings.source_endpoint.clone(), Arc::clone(&outbound_auth))
+            }
+        }
+        if let Some(settings) = &config.messaging {
+            dispatchers.register(
+                "message",
+                Arc::new(
+                    MessagingChannel::new(
+                        settings.source_endpoint.clone(),
+                        Arc::clone(&outbound_auth),
+                    )
                     .with_private_endpoints_allowed(settings.allow_private_endpoints),
-            )
-        });
+                ),
+            );
+        }
 
         Self {
             topic_registry,
             topic_resource_index: DashMap::new(),
             manager,
             evaluator,
-            rest_hook_channel,
+            dispatchers,
             ws_manager,
-            ws_channel,
             ws_token_manager,
-            email_channel,
-            messaging_channel,
             config,
             base_url,
+            outbox: None,
+            outbox_notify: Arc::new(tokio::sync::Notify::new()),
         }
+    }
+
+    /// Attach a durable outbox store and return a new engine handle.
+    ///
+    /// Call [`Self::start_outbox_worker`] after wrapping in `Arc`.
+    pub fn with_outbox(mut self, store: DynSubscriptionOutboxStore) -> Self {
+        self.outbox = Some(store);
+        self
+    }
+
+    /// Register (or replace) a channel dispatcher.
+    ///
+    /// Use this to plug in broker/custom channels (e.g. Kafka) without changing
+    /// the engine match sites. The channel type must also appear in
+    /// [`SubscriptionConfig::supported_channel_types`] for subscription
+    /// registration to accept it.
+    pub fn with_dispatcher(
+        mut self,
+        channel_type: impl Into<String>,
+        dispatcher: Arc<dyn ChannelDispatcher>,
+    ) -> Self {
+        self.dispatchers.register(channel_type, dispatcher);
+        self
+    }
+
+    /// Returns the channel dispatcher registry.
+    pub fn dispatchers(&self) -> &ChannelDispatcherRegistry {
+        &self.dispatchers
+    }
+
+    /// Returns the attached outbox store, if any.
+    pub fn outbox_store(&self) -> Option<&DynSubscriptionOutboxStore> {
+        self.outbox.as_ref()
+    }
+
+    /// Spawn the background outbox consumer. No-op when no outbox is attached.
+    pub fn start_outbox_worker(self: &Arc<Self>) {
+        let Some(store) = self.outbox.clone() else {
+            return;
+        };
+        let engine = Arc::clone(self);
+        let config = self.config.clone();
+        let notify = Arc::clone(&self.outbox_notify);
+        tokio::spawn(async move {
+            run_outbox_worker(engine, store, config, notify).await;
+        });
+        info!("Subscription outbox worker spawned");
+    }
+
+    /// Spawn the background heartbeat sender.
+    pub fn start_heartbeat_worker(self: &Arc<Self>) {
+        let engine = Arc::clone(self);
+        let config = self.config.clone();
+        tokio::spawn(async move {
+            run_heartbeat_worker(engine, config).await;
+        });
+        info!("Subscription heartbeat worker spawned");
+    }
+
+    /// Base URL used in notification links.
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    /// Dispatch a heartbeat notification (used by the heartbeat worker).
+    pub(crate) async fn dispatch_heartbeat(
+        &self,
+        subscription: &ActiveSubscription,
+        bundle: &serde_json::Value,
+    ) {
+        self.dispatch_with_retry(subscription, bundle, "heartbeat", None)
+            .await;
+    }
+
+    /// Wake subscription processing after a resource write.
+    ///
+    /// When a durable outbox is attached, SQL backends write the outbox row in
+    /// the **same transaction** as the resource. This method only notifies the
+    /// outbox worker (no second enqueue). Without an outbox, falls back to
+    /// in-process `tokio::spawn` of [`Self::on_resource_event`].
+    pub fn enqueue_resource_event(self: &Arc<Self>, event: ResourceEvent) {
+        if self.outbox.is_some() {
+            debug!(
+                resource_type = %event.resource_type,
+                resource_id = %event.resource_id,
+                event_type = %event.event_type,
+                "Notifying outbox worker after same-TX resource write"
+            );
+            self.outbox_notify.notify_one();
+            return;
+        }
+
+        let engine = Arc::clone(self);
+        tokio::spawn(async move {
+            engine.on_resource_event(event).await;
+        });
     }
 
     /// Returns a reference to the topic registry.
@@ -367,9 +475,11 @@ impl SubscriptionEngine {
                     return;
                 }
 
+                let tenant_id = event.tenant_id.as_str();
                 for canonical_url in candidate_urls {
-                    let removed = self.topic_registry.remove_topic(&canonical_url);
+                    let removed = self.topic_registry.remove_topic(tenant_id, &canonical_url);
                     info!(
+                        tenant = %tenant_id,
                         resource_id = %event.resource_id,
                         topic_url = %canonical_url,
                         removed,
@@ -381,19 +491,21 @@ impl SubscriptionEngine {
                 if let Some(resource) = &event.resource {
                     match InMemoryTopicRegistry::parse_topic_resource(resource) {
                         Ok(topic) => {
+                            let tenant_id = event.tenant_id.as_str();
                             let canonical_url = topic.canonical_url.clone();
                             if let Some(previous_url) = self
                                 .topic_resource_index
                                 .insert(topic_key, canonical_url.clone())
                                 .filter(|previous_url| previous_url != &canonical_url)
                             {
-                                let _ = self.topic_registry.remove_topic(&previous_url);
+                                let _ = self.topic_registry.remove_topic(tenant_id, &previous_url);
                             }
                             info!(
+                                tenant = %tenant_id,
                                 topic_url = %canonical_url,
                                 "Registered SubscriptionTopic"
                             );
-                            self.topic_registry.add_topic(topic);
+                            self.topic_registry.add_topic(tenant_id, topic);
                         }
                         Err(e) => {
                             warn!(
@@ -474,9 +586,11 @@ impl SubscriptionEngine {
                 candidate_urls.sort();
                 candidate_urls.dedup();
 
+                let tenant_id = event.tenant_id.as_str();
                 for canonical_url in candidate_urls {
-                    let removed = self.topic_registry.remove_topic(&canonical_url);
+                    let removed = self.topic_registry.remove_topic(tenant_id, &canonical_url);
                     info!(
+                        tenant = %tenant_id,
                         resource_id = %event.resource_id,
                         topic_url = %canonical_url,
                         removed,
@@ -490,19 +604,21 @@ impl SubscriptionEngine {
                 if let Some(resource) = &event.resource {
                     match InMemoryTopicRegistry::parse_r4_backport_basic_topic_resource(resource) {
                         Ok(Some(topic)) => {
+                            let tenant_id = event.tenant_id.as_str();
                             let canonical_url = topic.canonical_url.clone();
                             if let Some(previous_url) = self
                                 .topic_resource_index
                                 .insert(topic_key, canonical_url.clone())
                                 .filter(|previous_url| previous_url != &canonical_url)
                             {
-                                let _ = self.topic_registry.remove_topic(&previous_url);
+                                let _ = self.topic_registry.remove_topic(tenant_id, &previous_url);
                             }
                             info!(
+                                tenant = %tenant_id,
                                 topic_url = %canonical_url,
                                 "Registered R4 Basic SubscriptionTopic"
                             );
-                            self.topic_registry.add_topic(topic);
+                            self.topic_registry.add_topic(tenant_id, topic);
                             true
                         }
                         Ok(None) => false,
@@ -575,63 +691,28 @@ impl SubscriptionEngine {
                 "Sending subscription handshake"
             );
 
-            // Perform handshake.
-            let result = match subscription.channel.channel_type {
-                ChannelType::RestHook => {
-                    self.rest_hook_channel
-                        .handshake(subscription, &handshake_bundle)
-                        .await
-                }
-                ChannelType::Websocket => {
-                    self.ws_channel
-                        .handshake(subscription, &handshake_bundle)
-                        .await
-                }
-                ChannelType::Email => match self.email_channel.as_ref() {
-                    Some(ch) => ch.handshake(subscription, &handshake_bundle).await,
-                    None => {
-                        warn!(
-                            tenant_id,
-                            subscription_id = sub_id,
-                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                            "Email channel requested but no SMTP settings configured"
-                        );
-                        let _ = self.manager.update_status(
-                            tenant_id,
-                            sub_id,
-                            SubscriptionStatusCode::Error,
-                        );
-                        return;
-                    }
-                },
-                ChannelType::Message => match self.messaging_channel.as_ref() {
-                    Some(ch) => ch.handshake(subscription, &handshake_bundle).await,
-                    None => {
-                        warn!(
-                            tenant_id,
-                            subscription_id = sub_id,
-                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                            "Messaging channel requested but messaging settings not configured"
-                        );
-                        let _ = self.manager.update_status(
-                            tenant_id,
-                            sub_id,
-                            SubscriptionStatusCode::Error,
-                        );
-                        return;
-                    }
-                },
-                _ => {
-                    warn!(
-                        tenant_id,
-                        subscription_id = sub_id,
-                        channel_type = subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                        "Handshake not supported for channel type"
-                    );
-                    return;
-                }
+            // Perform handshake via the registered dispatcher for this channel type.
+            let Some(dispatcher) = self
+                .dispatchers
+                .get(&subscription.channel.channel_type)
+            else {
+                warn!(
+                    tenant_id,
+                    subscription_id = sub_id,
+                    channel_type = subscription.channel.channel_type.as_fhir_str(),
+                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                    "No dispatcher registered for channel type"
+                );
+                let _ = self.manager.update_status(
+                    tenant_id,
+                    sub_id,
+                    SubscriptionStatusCode::Error,
+                );
+                return;
             };
+            let result = dispatcher
+                .handshake(subscription, &handshake_bundle)
+                .await;
 
             match result {
                 Ok(DispatchResult::Success) => {
@@ -733,46 +814,19 @@ impl SubscriptionEngine {
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
 
-        let dispatcher: &dyn ChannelDispatcher = match subscription.channel.channel_type {
-            ChannelType::RestHook => self.rest_hook_channel.as_ref(),
-            ChannelType::Websocket => self.ws_channel.as_ref(),
-            ChannelType::Email => match self.email_channel.as_deref() {
-                Some(ch) => ch,
-                None => {
-                    warn!(
-                        tenant_id,
-                        subscription_id = sub_id,
-                        notification_type,
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                        "Email dispatch requested but no SMTP settings configured"
-                    );
-                    return;
-                }
-            },
-            ChannelType::Message => match self.messaging_channel.as_deref() {
-                Some(ch) => ch,
-                None => {
-                    warn!(
-                        tenant_id,
-                        subscription_id = sub_id,
-                        notification_type,
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                        "Messaging dispatch requested but messaging settings not configured"
-                    );
-                    return;
-                }
-            },
-            _ => {
-                warn!(
-                    tenant_id,
-                    subscription_id = sub_id,
-                    notification_type,
-                    channel = subscription.channel.channel_type.as_fhir_str(),
-                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                    "No dispatcher for channel type"
-                );
-                return;
-            }
+        let Some(dispatcher) = self
+            .dispatchers
+            .get(&subscription.channel.channel_type)
+        else {
+            warn!(
+                tenant_id,
+                subscription_id = sub_id,
+                notification_type,
+                channel = subscription.channel.channel_type.as_fhir_str(),
+                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                "No dispatcher registered for channel type"
+            );
+            return;
         };
 
         let mut attempt: u32 = 0;
@@ -1012,11 +1066,11 @@ mod tests {
     async fn test_topic_event_registers_topic() {
         let engine = make_engine("http://localhost:8080");
 
-        assert!(engine.topic_registry().list_topics().is_empty());
+        assert!(engine.topic_registry().list_topics("t1").is_empty());
 
         engine.on_resource_event(topic_event()).await;
 
-        let topics = engine.topic_registry().list_topics();
+        let topics = engine.topic_registry().list_topics("t1");
         assert_eq!(topics.len(), 1);
         assert!(topics.contains(&"http://example.org/topic/encounter-start".to_string()));
     }
@@ -1040,7 +1094,7 @@ mod tests {
 
         engine.on_resource_event(delete_event).await;
 
-        let topics = engine.topic_registry().list_topics();
+        let topics = engine.topic_registry().list_topics("t1");
         assert!(topics.is_empty());
     }
 
@@ -1049,11 +1103,11 @@ mod tests {
     async fn test_r4_basic_topic_event_registers_topic() {
         let engine = make_engine("http://localhost:8080");
 
-        assert!(engine.topic_registry().list_topics().is_empty());
+        assert!(engine.topic_registry().list_topics("t1").is_empty());
 
         engine.on_resource_event(r4_basic_topic_event()).await;
 
-        let topics = engine.topic_registry().list_topics();
+        let topics = engine.topic_registry().list_topics("t1");
         assert_eq!(topics.len(), 1);
         assert!(topics.contains(&"http://example.org/topic/encounter-start-basic".to_string()));
     }
@@ -1067,7 +1121,7 @@ mod tests {
             .await;
 
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Create a subscription event.
         let sub_resource = crate::manager::tests::build_subscription_json(
@@ -1114,7 +1168,7 @@ mod tests {
             ..Default::default()
         };
         let engine = SubscriptionEngine::new(config, "http://localhost:8080".to_string());
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         let sub_resource = crate::manager::tests::build_subscription_json(
             "http://example.org/topic/encounter-start",
@@ -1151,7 +1205,7 @@ mod tests {
             .await;
 
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Register and activate a subscription.
         let sub_resource = crate::manager::tests::build_subscription_json(
@@ -1184,7 +1238,7 @@ mod tests {
     #[tokio::test]
     async fn test_no_dispatch_when_no_matching_subscriptions() {
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Fire an event with no subscriptions registered.
         engine.on_resource_event(encounter_event()).await;
@@ -1201,7 +1255,7 @@ mod tests {
             .await;
 
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Register subscription for Encounter topic.
         let sub_resource = crate::manager::tests::build_subscription_json(
@@ -1264,7 +1318,7 @@ mod tests {
             ..Default::default()
         };
         let engine = SubscriptionEngine::new(config, "http://localhost:8080".to_string());
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Register subscription.
         let sub_resource = crate::manager::tests::build_subscription_json(
@@ -1298,7 +1352,7 @@ mod tests {
     #[tokio::test]
     async fn test_subscription_delete_event() {
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine.topic_registry().add_topic("t1", encounter_topic());
 
         // Register directly.
         let resource = crate::manager::tests::default_subscription_json();
@@ -1337,7 +1391,9 @@ mod tests {
             .await;
 
         let engine = make_engine("http://localhost:8080");
-        engine.topic_registry().add_topic(encounter_topic());
+        engine
+            .topic_registry()
+            .add_topic("tenant-a", encounter_topic());
 
         // Register subscription for tenant-a.
         let sub_resource = crate::manager::tests::build_subscription_json(

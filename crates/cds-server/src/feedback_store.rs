@@ -8,9 +8,13 @@
 //! Persistence failures are logged but do not fail the feedback endpoint — the CDS Hooks
 //! spec requires a 200 response to feedback regardless.
 
+use std::sync::Arc;
+
 use helios_cds_hooks::{Feedback, FeedbackOutcome, FeedbackRequest};
 use serde_json::{Value, json};
 use tracing::{debug, error};
+
+use crate::fhir_write_auth::{FhirWriteAuth, authorize_request};
 
 /// Extension carrying the structured CDS Hooks feedback payload on the GuidanceResponse.
 const FEEDBACK_EXTENSION_URL: &str = "https://atrius.in/fhir/StructureDefinition/cds-feedback";
@@ -18,27 +22,41 @@ const FEEDBACK_EXTENSION_URL: &str = "https://atrius.in/fhir/StructureDefinition
 const CARD_IDENTIFIER_SYSTEM: &str = "https://atrius.in/fhir/cds-hooks/card";
 
 /// Writes feedback GuidanceResponses to a clinical FHIR base.
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct FeedbackStore {
     http: reqwest::Client,
     fhir_base_url: String,
-    bearer_token: Option<String>,
+    auth: Arc<dyn FhirWriteAuth>,
     tenant_id: Option<String>,
+}
+
+impl std::fmt::Debug for FeedbackStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FeedbackStore")
+            .field("fhir_base_url", &self.fhir_base_url)
+            .field("auth_mode", &self.auth.mode())
+            .field("tenant_id", &self.tenant_id)
+            .finish_non_exhaustive()
+    }
 }
 
 impl FeedbackStore {
     pub fn new(
         http: reqwest::Client,
         fhir_base_url: impl Into<String>,
-        bearer_token: Option<String>,
+        auth: Arc<dyn FhirWriteAuth>,
         tenant_id: Option<String>,
     ) -> Self {
         Self {
             http,
             fhir_base_url: fhir_base_url.into(),
-            bearer_token: bearer_token.filter(|t| !t.trim().is_empty()),
+            auth,
             tenant_id: tenant_id.filter(|t| !t.trim().is_empty()),
         }
+    }
+
+    pub fn auth_mode(&self) -> &'static str {
+        self.auth.mode()
     }
 
     /// Persist every feedback entry for a service invocation. Errors are logged, not returned.
@@ -61,14 +79,23 @@ impl FeedbackStore {
             "{}/GuidanceResponse",
             self.fhir_base_url.trim_end_matches('/')
         );
-        let mut req = self
+        let req = self
             .http
             .post(&url)
             .header("Content-Type", "application/fhir+json")
             .json(&resource);
-        if let Some(ref token) = self.bearer_token {
-            req = req.bearer_auth(token);
-        }
+        let mut req = match authorize_request(self.auth.as_ref(), req).await {
+            Ok(r) => r,
+            Err(e) => {
+                error!(
+                    service_id,
+                    card,
+                    error = %e,
+                    "cds feedback auth failed before GuidanceResponse write"
+                );
+                return;
+            }
+        };
         if let Some(ref tenant) = self.tenant_id {
             req = req.header("X-Tenant-ID", tenant);
         }

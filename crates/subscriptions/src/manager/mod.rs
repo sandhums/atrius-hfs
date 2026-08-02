@@ -129,6 +129,10 @@ pub struct ActiveSubscription {
 
     /// Tenant ID that owns this subscription.
     pub tenant_id: String,
+
+    /// When the last notification (event, handshake, or heartbeat) was sent.
+    /// Used to schedule heartbeats.
+    pub last_notification_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Manages the lifecycle and in-memory indexing of active subscriptions.
@@ -172,12 +176,13 @@ impl SubscriptionManager {
         let channel = extract_channel_config(resource, fhir_version)?;
         let filter_strings = extract_filter_criteria(resource, fhir_version);
 
-        // Validate topic exists.
-        let topic = self.topic_registry.get_topic(&topic_url).ok_or_else(|| {
-            SubscriptionError::TopicNotFound {
+        // Validate topic exists for this tenant.
+        let topic = self
+            .topic_registry
+            .get_topic(tenant_id, &topic_url)
+            .ok_or_else(|| SubscriptionError::TopicNotFound {
                 url: topic_url.clone(),
-            }
-        })?;
+            })?;
 
         // Validate channel type is supported.
         if !self
@@ -239,6 +244,7 @@ impl SubscriptionManager {
             events_since_start: 0,
             consecutive_failures: 0,
             tenant_id: tenant_id.to_string(),
+            last_notification_at: chrono::Utc::now(),
         };
 
         debug!(
@@ -355,6 +361,15 @@ impl SubscriptionManager {
         let key = (tenant_id.to_string(), subscription_id.to_string());
         if let Some(mut entry) = self.subscriptions.get_mut(&key) {
             entry.consecutive_failures = 0;
+            entry.last_notification_at = chrono::Utc::now();
+        }
+    }
+
+    /// Updates the last-notification timestamp (e.g. after a heartbeat).
+    pub fn touch_last_notification(&self, tenant_id: &str, subscription_id: &str) {
+        let key = (tenant_id.to_string(), subscription_id.to_string());
+        if let Some(mut entry) = self.subscriptions.get_mut(&key) {
+            entry.last_notification_at = chrono::Utc::now();
         }
     }
 
@@ -363,6 +378,33 @@ impl SubscriptionManager {
         self.subscriptions
             .iter()
             .map(|e| e.value().clone())
+            .collect()
+    }
+
+    /// Active subscriptions whose heartbeat period has elapsed.
+    pub fn subscriptions_due_for_heartbeat(
+        &self,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<ActiveSubscription> {
+        self.subscriptions
+            .iter()
+            .filter_map(|e| {
+                let sub = e.value();
+                if sub.status != SubscriptionStatusCode::Active {
+                    return None;
+                }
+                let period = sub.channel.heartbeat_period?;
+                if period == 0 {
+                    return None;
+                }
+                let due_at = sub.last_notification_at
+                    + chrono::Duration::seconds(i64::from(period));
+                if now >= due_at {
+                    Some(sub.clone())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }
@@ -688,7 +730,7 @@ pub(crate) mod tests {
 
     fn create_test_registry() -> Arc<InMemoryTopicRegistry> {
         let registry = Arc::new(InMemoryTopicRegistry::new());
-        registry.add_topic(TopicDefinition {
+        let topic = TopicDefinition {
             canonical_url: "http://example.org/topic/encounter-start".to_string(),
             title: Some("Encounter Start".to_string()),
             resource_triggers: vec![ResourceTrigger {
@@ -703,7 +745,11 @@ pub(crate) mod tests {
                 modifiers: vec![],
             }],
             notification_shape: vec![],
-        });
+        };
+        // Seed common test tenants used across manager unit tests.
+        for tenant in ["tenant-1", "t1", "tenant-a", "tenant-b"] {
+            registry.add_topic(tenant, topic.clone());
+        }
         registry
     }
 
