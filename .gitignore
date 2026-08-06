@@ -34,6 +34,9 @@ deploy/env/*.env
 !deploy/env/*.env.example
 .env
 
+# Local audit sink dumps (runtime; may contain PHI)
+/data/audit*.ndjson
+
 # Python bytecode (e.g. audit test helpers under crates/hfs/tests/audit)
 __pycache__/
 *.pyc
