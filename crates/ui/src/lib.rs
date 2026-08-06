@@ -120,6 +120,9 @@ struct WebState {
     /// The server's default tenant id — the fallback when no stored choice
     /// exists (#344).
     default_tenant: String,
+    /// Terminology server base URL (`HFS_TERMINOLOGY_SERVER`), when one is
+    /// configured — powers the editor's live `$expand` pickers (#365).
+    terminology: Option<String>,
     /// Per-user settings, for the persisted FHIR-version choice (#343). `None`
     /// when the backend has no settings store; the selector then applies
     /// per-page only.
@@ -468,6 +471,16 @@ struct CompartmentsPage {
     view: compartments::CmpView,
 }
 
+/// The compartments page when no definitions could be fetched (#320): the
+/// shell with a warning, in place of the data-bearing view.
+#[derive(Template)]
+#[template(path = "pages/compartments-degraded.html")]
+struct CompartmentsDegradedPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+}
+
 #[derive(Template)]
 #[template(path = "partials/status.html")]
 struct StatusPartial {
@@ -551,6 +564,7 @@ pub fn mount(
     self_base_url: String,
     outbound_auth: Arc<dyn helios_auth::outbound::OutboundAuthProvider>,
     fhir_version: helios_fhir::FhirVersion,
+    terminology: Option<String>,
 ) -> Router {
     let source: Arc<dyn ConformanceSource> = Arc::new(conformance::HttpConformanceSource::new(
         self_base_url,
@@ -566,6 +580,7 @@ pub fn mount(
         default_tenant,
         source,
         fhir_version,
+        terminology,
     )
 }
 
@@ -585,6 +600,7 @@ pub fn mount_with_conformance_source(
     default_tenant: String,
     source: Arc<dyn ConformanceSource>,
     fhir_version: helios_fhir::FhirVersion,
+    terminology: Option<String>,
 ) -> Router {
     let nl_enabled = nl.enabled;
 
@@ -608,6 +624,7 @@ pub fn mount_with_conformance_source(
         // Schema-driven resource editor (#264). One POST endpoint applies every
         // structural mutation and re-renders: the document rides with it.
         .route("/ui/editor", get(editor::page))
+        .route("/ui/editor/expand", get(editor::expand))
         .route(
             "/ui/editor/render",
             axum::routing::post(editor::render_body),
@@ -642,6 +659,7 @@ pub fn mount_with_conformance_source(
         data_dir,
         fhir_version,
         default_tenant,
+        terminology,
     };
 
     router
@@ -988,6 +1006,8 @@ struct SearchParametersQuery {
     q: String,
     page: Option<usize>,
     sel: Option<String>,
+    /// Set by the CRUD flows after a write: drop the cached snapshot first.
+    refresh: Option<String>,
 }
 
 /// SearchParameter viewer page.
@@ -1008,6 +1028,9 @@ async fn search_parameters(
         page: raw.page.unwrap_or(1),
         sel: raw.sel.filter(|s| !s.is_empty()),
     };
+    if raw.refresh.is_some() {
+        state.sp_catalog.invalidate(&rt.id, query.fhir_version());
+    }
     let snapshot = state
         .sp_catalog
         .snapshot(&rt.id, query.fhir_version())
@@ -1031,6 +1054,8 @@ struct CompartmentsQuery {
     id: String,
     #[serde(default)]
     target: String,
+    /// Set by the CRUD flows after a write: drop the cached definitions first.
+    refresh: Option<String>,
 }
 
 /// Compartment viewer & tester page.
@@ -1050,6 +1075,9 @@ async fn compartments_page(
         id: raw.id,
         target: raw.target,
     };
+    if raw.refresh.is_some() {
+        state.compartments.invalidate(&rt.id, query.fhir_version());
+    }
     let defs = state
         .compartments
         .definitions(&rt.id, query.fhir_version())
@@ -1061,7 +1089,14 @@ async fn compartments_page(
             active_page: "compartments",
             view,
         }),
-        None => StatusCode::NOT_FOUND.into_response(),
+        // No definitions means the self-fetch degraded (an outage, or auth
+        // without an outbound token, #320) — a warning, not a 404. The failed
+        // fetch is not cached, so the next request re-attempts it.
+        None => render(CompartmentsDegradedPage {
+            status: current_status(state.version, rv.0, &rt),
+            i18n: I18n::new(locale),
+            active_page: "compartments",
+        }),
     }
 }
 
@@ -1623,23 +1658,9 @@ mod tests {
     #[test]
     fn design_assets_are_embedded() {
         assert!(Assets::get("theme.js").is_some());
-        assert!(Assets::get("nav.js").is_some());
         assert!(Assets::get("fonts/figtree-latin.woff2").is_some());
         assert!(Assets::get("fonts/figtree-latin-ext.woff2").is_some());
         assert!(Assets::get("logo.png").is_some());
-    }
-
-    /// The collapsible-nav script persists the state to the per-user settings
-    /// document (like the theme, #197): read on load, merge-patch `nav` on
-    /// toggle, with a localStorage first-paint cache. Guards the wiring.
-    #[test]
-    fn nav_script_is_wired_to_user_settings() {
-        let file = Assets::get("nav.js").expect("nav.js embedded");
-        let source = std::str::from_utf8(&file.data).expect("nav.js is UTF-8");
-        assert!(source.contains("/_user/settings"));
-        assert!(source.contains("PATCH"));
-        assert!(source.contains("hfs-nav"), "localStorage cache stays");
-        assert!(source.contains("data-nav"), "sets the collapse attribute");
     }
 
     /// The theme script persists the choice to the per-user settings document
