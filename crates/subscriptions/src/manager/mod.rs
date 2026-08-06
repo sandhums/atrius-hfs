@@ -234,6 +234,23 @@ impl SubscriptionManager {
             .and_then(SubscriptionStatusCode::from_fhir_str)
             .unwrap_or(SubscriptionStatusCode::Requested);
 
+        // Preserve runtime counters across re-registration. Status write-back
+        // (and client updates that do not reset delivery state) must not wipe
+        // consecutive_failures / events_since_start — otherwise a feedback
+        // outbox event after persist_status would permanently stall error/off.
+        let key = (tenant_id.to_string(), subscription_id.to_string());
+        let (events_since_start, consecutive_failures, last_notification_at) =
+            self.subscriptions.get(&key).map_or_else(
+                || (0, 0, chrono::Utc::now()),
+                |existing| {
+                    (
+                        existing.events_since_start,
+                        existing.consecutive_failures,
+                        existing.last_notification_at,
+                    )
+                },
+            );
+
         let subscription = ActiveSubscription {
             id: subscription_id.to_string(),
             topic_url,
@@ -241,10 +258,10 @@ impl SubscriptionManager {
             channel,
             filters: parsed_filters,
             fhir_version,
-            events_since_start: 0,
-            consecutive_failures: 0,
+            events_since_start,
+            consecutive_failures,
             tenant_id: tenant_id.to_string(),
-            last_notification_at: chrono::Utc::now(),
+            last_notification_at,
         };
 
         debug!(
@@ -254,7 +271,6 @@ impl SubscriptionManager {
             "Registered subscription"
         );
 
-        let key = (tenant_id.to_string(), subscription_id.to_string());
         self.subscriptions.insert(key, subscription.clone());
 
         Ok(subscription)
@@ -1161,6 +1177,34 @@ pub(crate) mod tests {
         manager.reset_failures("t1", "sub-1");
         let sub = manager.get_subscription("t1", "sub-1").unwrap();
         assert_eq!(sub.consecutive_failures, 0);
+    }
+
+    #[test]
+    fn test_reregister_preserves_runtime_counters() {
+        let registry = create_test_registry();
+        let manager = SubscriptionManager::new(registry, vec!["rest-hook".to_string()]);
+
+        let resource = default_subscription_json();
+        manager
+            .register("t1", "sub-1", &resource, FhirVersion::default())
+            .unwrap();
+        manager.increment_event_count("t1", "sub-1");
+        manager.increment_event_count("t1", "sub-1");
+        assert_eq!(manager.record_failure("t1", "sub-1"), Some(1));
+
+        // Status write-back (or client update) re-registers the same id.
+        let mut updated = resource;
+        if let Some(obj) = updated.as_object_mut() {
+            obj.insert("status".into(), serde_json::json!("active"));
+        }
+        manager
+            .register("t1", "sub-1", &updated, FhirVersion::default())
+            .unwrap();
+
+        let sub = manager.get_subscription("t1", "sub-1").unwrap();
+        assert_eq!(sub.status, SubscriptionStatusCode::Active);
+        assert_eq!(sub.events_since_start, 2);
+        assert_eq!(sub.consecutive_failures, 1);
     }
 
     #[test]

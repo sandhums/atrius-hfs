@@ -1,10 +1,15 @@
 //! Subscription topic registry.
 //!
 //! Manages `SubscriptionTopic` definitions and evaluates whether resource events
-//! match a topic's triggers.
+//! match a topic's triggers (resource type, interaction, optional FHIRPath).
+
+pub mod fhirpath_criteria;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
+
+use helios_fhir::FhirVersion;
+use serde_json::Value;
 
 use crate::error::SubscriptionError;
 use crate::event::ResourceEventType;
@@ -137,13 +142,16 @@ impl InMemoryTopicRegistry {
 
     /// Evaluates which of a tenant's topics match a resource event.
     ///
-    /// Checks that tenant's registered topics' resource triggers against the
-    /// event's resource type and interaction type.
+    /// Checks resource type, interaction, and optional `fhirPathCriteria`
+    /// (with `%previous` / `%current` when provided).
     pub fn matching_topics(
         &self,
         tenant_id: &str,
         resource_type: &str,
         event_type: ResourceEventType,
+        resource: Option<&Value>,
+        previous_resource: Option<&Value>,
+        fhir_version: FhirVersion,
     ) -> Vec<TopicMatch> {
         let topics = self.topics.read().unwrap();
         let mut matches = Vec::new();
@@ -153,16 +161,33 @@ impl InMemoryTopicRegistry {
                 continue;
             }
             for trigger in &topic.resource_triggers {
-                if trigger.resource_type == resource_type
-                    && trigger.interactions.contains(&event_type)
+                if trigger.resource_type != resource_type
+                    || !trigger.interactions.contains(&event_type)
                 {
-                    matches.push(TopicMatch {
-                        topic_url: topic.canonical_url.clone(),
-                        focus_resource_type: trigger.resource_type.clone(),
-                    });
-                    // Only match once per topic even if multiple triggers match.
-                    break;
+                    continue;
                 }
+
+                if let Some(criteria) = trigger.fhirpath_criteria.as_deref() {
+                    let Some(current) = resource else {
+                        // Delete / missing body: cannot evaluate criteria → no match.
+                        continue;
+                    };
+                    if !fhirpath_criteria::criteria_matches(
+                        criteria,
+                        current,
+                        previous_resource,
+                        fhir_version,
+                    ) {
+                        continue;
+                    }
+                }
+
+                matches.push(TopicMatch {
+                    topic_url: topic.canonical_url.clone(),
+                    focus_resource_type: trigger.resource_type.clone(),
+                });
+                // Only match once per topic even if multiple triggers match.
+                break;
             }
         }
 
@@ -611,6 +636,22 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn mt(
+        registry: &InMemoryTopicRegistry,
+        tenant: &str,
+        resource_type: &str,
+        event_type: ResourceEventType,
+    ) -> Vec<TopicMatch> {
+        registry.matching_topics(
+            tenant,
+            resource_type,
+            event_type,
+            None,
+            None,
+            FhirVersion::R4,
+        )
+    }
+
     fn sample_encounter_topic() -> TopicDefinition {
         TopicDefinition {
             canonical_url: "http://example.org/topic/encounter-start".to_string(),
@@ -715,8 +756,8 @@ mod tests {
         assert!(registry.get_topic("tenant-a", url).is_none());
         assert!(registry.get_topic("tenant-b", url).is_some());
 
-        let matches_a = registry.matching_topics("tenant-a", "Encounter", ResourceEventType::Create);
-        let matches_b = registry.matching_topics("tenant-b", "Encounter", ResourceEventType::Create);
+        let matches_a = mt(&registry, "tenant-a", "Encounter", ResourceEventType::Create);
+        let matches_b = mt(&registry, "tenant-b", "Encounter", ResourceEventType::Create);
         assert!(matches_a.is_empty());
         assert_eq!(matches_b.len(), 1);
     }
@@ -728,7 +769,7 @@ mod tests {
         registry.add_topic("t1", sample_observation_topic());
 
         // Encounter create should match encounter topic.
-        let matches = registry.matching_topics("t1", "Encounter", ResourceEventType::Create);
+        let matches = mt(&registry, "t1", "Encounter", ResourceEventType::Create);
         assert_eq!(matches.len(), 1);
         assert_eq!(
             matches[0].topic_url,
@@ -737,7 +778,7 @@ mod tests {
         assert_eq!(matches[0].focus_resource_type, "Encounter");
 
         // Observation create should match observation topic.
-        let matches = registry.matching_topics("t1", "Observation", ResourceEventType::Create);
+        let matches = mt(&registry, "t1", "Observation", ResourceEventType::Create);
         assert_eq!(matches.len(), 1);
         assert_eq!(
             matches[0].topic_url,
@@ -745,7 +786,7 @@ mod tests {
         );
 
         // Observation update should also match.
-        let matches = registry.matching_topics("t1", "Observation", ResourceEventType::Update);
+        let matches = mt(&registry, "t1", "Observation", ResourceEventType::Update);
         assert_eq!(matches.len(), 1);
     }
 
@@ -754,7 +795,7 @@ mod tests {
         let registry = InMemoryTopicRegistry::new();
         registry.add_topic("t1", sample_encounter_topic());
 
-        let matches = registry.matching_topics("t1", "Patient", ResourceEventType::Create);
+        let matches = mt(&registry, "t1", "Patient", ResourceEventType::Create);
         assert!(matches.is_empty());
     }
 
@@ -764,10 +805,10 @@ mod tests {
         registry.add_topic("t1", sample_encounter_topic());
 
         // Encounter topic only triggers on create, not update or delete.
-        let matches = registry.matching_topics("t1", "Encounter", ResourceEventType::Update);
+        let matches = mt(&registry, "t1", "Encounter", ResourceEventType::Update);
         assert!(matches.is_empty());
 
-        let matches = registry.matching_topics("t1", "Encounter", ResourceEventType::Delete);
+        let matches = mt(&registry, "t1", "Encounter", ResourceEventType::Delete);
         assert!(matches.is_empty());
     }
 
@@ -792,8 +833,74 @@ mod tests {
             },
         );
 
-        let matches = registry.matching_topics("t1", "Observation", ResourceEventType::Create);
+        let matches = mt(&registry, "t1", "Observation", ResourceEventType::Create);
         assert_eq!(matches.len(), 2);
+    }
+
+    #[cfg(feature = "R4")]
+    #[test]
+    fn test_fhirpath_criteria_filters_topic_match() {
+        let registry = InMemoryTopicRegistry::new();
+        registry.add_topic(
+            "t1",
+            TopicDefinition {
+                canonical_url: "http://example.org/topic/encounter-admit".to_string(),
+                title: Some("Admit".to_string()),
+                resource_triggers: vec![ResourceTrigger {
+                    resource_type: "Encounter".to_string(),
+                    interactions: vec![ResourceEventType::Create, ResourceEventType::Update],
+                    fhirpath_criteria: Some(
+                        "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'"
+                            .into(),
+                    ),
+                }],
+                can_filter_by: vec![],
+                notification_shape: vec![],
+            },
+        );
+
+        let admit = json!({
+            "resourceType": "Encounter",
+            "id": "e1",
+            "status": "in-progress",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
+        });
+        let planned = json!({
+            "resourceType": "Encounter",
+            "id": "e1",
+            "status": "planned",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
+        });
+
+        let matches = registry.matching_topics(
+            "t1",
+            "Encounter",
+            ResourceEventType::Create,
+            Some(&admit),
+            None,
+            FhirVersion::R4,
+        );
+        assert_eq!(matches.len(), 1);
+
+        let matches = registry.matching_topics(
+            "t1",
+            "Encounter",
+            ResourceEventType::Update,
+            Some(&admit),
+            Some(&admit),
+            FhirVersion::R4,
+        );
+        assert!(matches.is_empty());
+
+        let matches = registry.matching_topics(
+            "t1",
+            "Encounter",
+            ResourceEventType::Update,
+            Some(&admit),
+            Some(&planned),
+            FhirVersion::R4,
+        );
+        assert_eq!(matches.len(), 1);
     }
 
     #[test]

@@ -47,19 +47,17 @@
 //! | `error` | registered, no handshake | Never matches (only `Active` does), but registering keeps `$status` honest instead of reporting an unknown subscription. |
 //! | `requested` | registered **and activated** | The spec state for "server has not yet activated"; runs the same activation path the write handler runs. |
 //!
-//! Activating `requested` subscriptions is not an optional nicety. Subscription
-//! status transitions are held **in memory only** —
-//! [`crate::manager::SubscriptionManager::update_status`] never writes back to
-//! storage — so a subscription that a client POSTed as `requested` and that
-//! handshook successfully still reads `"requested"` from the database forever.
-//! Rehydrating only `active` resources would therefore miss essentially every
-//! subscription the server itself activated, and would not fix the reported
-//! symptom at all.
+//! With [`crate::status_store::SubscriptionStatusStore`] attached, successful
+//! handshakes and delivery `error`/`off` transitions are written back to the
+//! stored `Subscription`. After a restart, those rows rehydrate as `active` /
+//! `error` / `off` without another handshake. `requested` activation remains
+//! required for subscriptions that never completed handshake (or when status
+//! write-back is disabled).
 //!
-//! The cost is that a restart re-handshakes those subscriptions. That is bounded
-//! by [`RehydrationConfig::max_concurrent_handshakes`], and can be turned off
-//! with [`RehydrationConfig::handshake_requested`] by operators who would rather
-//! bring subscriptions back with no outbound traffic.
+//! Handshake concurrency is still bounded by
+//! [`RehydrationConfig::max_concurrent_handshakes`], and can be turned off with
+//! [`RehydrationConfig::handshake_requested`] when operators want no outbound
+//! traffic at boot (accepting that leftover `requested` rows stay inert).
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -107,10 +105,12 @@ pub struct RehydrationConfig {
     /// Whether stored `requested` subscriptions are activated (handshaked)
     /// during rehydration.
     ///
-    /// Defaults to `true` because status transitions are not persisted, so most
-    /// live subscriptions read back as `requested` — see the module docs. Set to
-    /// `false` to rehydrate with no outbound traffic at all, accepting that
-    /// `requested` subscriptions stay inert until they are re-written.
+    /// Defaults to `true` so subscriptions that never completed handshake (or
+    /// were written before status write-back) still activate on restart. When
+    /// status write-back is enabled, successfully activated subscriptions are
+    /// stored as `active` and skip this path. Set to `false` to rehydrate with
+    /// no outbound traffic, accepting that leftover `requested` rows stay inert
+    /// until they are re-written.
     pub handshake_requested: bool,
 
     /// Maximum handshakes in flight at once, across all tenants.

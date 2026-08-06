@@ -315,6 +315,11 @@ impl PostgresBackend {
         // (embedded + spec + custom) go into the shared base; each tenant's
         // stored overlay is read from `stored_by_tenant`, populated by
         // `reload_stored_cache` at startup / refresh / SearchParameter writes.
+        //
+        // Unlike SQLite (which must load stored params on the write connection
+        // during indexing to avoid `SQLITE_LOCKED` against an open outbox txn),
+        // this in-memory loader means `for_tenant` / indexing never opens a
+        // second DB connection, so Postgres needs no write-conn overlay path.
         let stored_by_tenant: StoredByTenant = Arc::new(RwLock::new(HashMap::new()));
         let loader_cache = stored_by_tenant.clone();
         let registries = Arc::new(TenantSearchRegistries::new(Arc::new(

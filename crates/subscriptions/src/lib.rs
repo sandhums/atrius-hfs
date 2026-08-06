@@ -30,6 +30,7 @@ pub mod manager;
 pub mod notification;
 pub mod outbox;
 pub mod rehydrate;
+pub mod status_store;
 pub mod topics;
 
 // Re-export key types for convenience.
@@ -42,3 +43,6 @@ pub use engine::SubscriptionEngine;
 pub use error::SubscriptionError;
 pub use event::{ResourceEvent, ResourceEventType};
 pub use rehydrate::{RehydrationConfig, RehydrationReport};
+pub use status_store::{
+    DynSubscriptionStatusStore, ResourceStorageStatusStore, SubscriptionStatusStore,
+};

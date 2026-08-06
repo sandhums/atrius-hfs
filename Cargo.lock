@@ -3746,6 +3746,7 @@ dependencies = [
  "futures",
  "helios-auth",
  "helios-fhir",
+ "helios-fhirpath",
  "helios-persistence",
  "lettre",
  "reqwest",

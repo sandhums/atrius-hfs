@@ -22,21 +22,24 @@ use crate::search::{
 
 use super::schema;
 
-/// Reads a tenant's stored (POSTed) active SearchParameter definitions from the
-/// database. Used as the [`TenantSearchRegistries`] loader closure — it captures
-/// only the pool + FHIR version, never the backend, so an Elasticsearch backend
-/// sharing the container resolves per-tenant params through this same query.
-fn load_tenant_stored_params(
-    pool: &Pool<SqliteConnectionManager>,
+/// Reads a tenant's stored (POSTed) active SearchParameter definitions from an
+/// open connection. Prefer this during write-path indexing so the loader does
+/// not take a second pooled connection while a write transaction is held
+/// (shared-cache in-memory SQLite returns `SQLITE_LOCKED` for that pattern,
+/// which used to cache an empty overlay and skip custom SearchParameter
+/// indexing — see [`SqliteBackend::tenant_registry_for_indexing`]).
+///
+/// Postgres does **not** need an equivalent: its
+/// [`TenantSearchRegistries`] loader reads an in-memory `stored_by_tenant`
+/// map (refreshed on SearchParameter writes), so indexing never opens a
+/// second DB connection against an open write txn.
+fn load_tenant_stored_params_on_conn(
+    conn: &rusqlite::Connection,
     fhir_version: FhirVersion,
     tenant_id: &str,
 ) -> Vec<SearchParameterDefinition> {
     use crate::search::registry::{SearchParameterSource, SearchParameterStatus};
 
-    let Ok(conn) = pool.get() else {
-        tracing::warn!("SearchParameter loader: could not get connection");
-        return Vec::new();
-    };
     let Ok(mut stmt) = conn.prepare(
         "SELECT data FROM resources WHERE resource_type = 'SearchParameter' \
          AND tenant_id = ?1 AND is_deleted = 0",
@@ -66,6 +69,22 @@ fn load_tenant_stored_params(
         }
     }
     defs
+}
+
+/// Reads a tenant's stored (POSTed) active SearchParameter definitions from the
+/// database. Used as the [`TenantSearchRegistries`] loader closure — it captures
+/// only the pool + FHIR version, never the backend, so an Elasticsearch backend
+/// sharing the container resolves per-tenant params through this same query.
+fn load_tenant_stored_params(
+    pool: &Pool<SqliteConnectionManager>,
+    fhir_version: FhirVersion,
+    tenant_id: &str,
+) -> Vec<SearchParameterDefinition> {
+    let Ok(conn) = pool.get() else {
+        tracing::warn!("SearchParameter loader: could not get connection");
+        return Vec::new();
+    };
+    load_tenant_stored_params_on_conn(&conn, fhir_version, tenant_id)
 }
 
 /// Counter for generating unique in-memory database names.
@@ -464,10 +483,40 @@ impl SqliteBackend {
         self.registries.for_tenant(tenant_id)
     }
 
+    /// Registry for indexing on `conn`: use the cache when warm, otherwise load
+    /// stored params on this same connection (safe inside an open write txn).
+    ///
+    /// Required on SQLite after subscription outbox same-TX writes: create/update
+    /// index inside the writer txn, and a pool-based overlay load can
+    /// `SQLITE_LOCKED`, return no stored params, and cache that empty overlay.
+    /// Postgres avoids this via its in-memory `stored_by_tenant` loader (no
+    /// second DB round-trip during `for_tenant`).
+    pub(crate) fn tenant_registry_for_indexing(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+    ) -> Arc<RwLock<SearchParameterRegistry>> {
+        if let Some(reg) = self.registries.get_cached(tenant_id) {
+            return reg;
+        }
+        let overlay =
+            load_tenant_stored_params_on_conn(conn, self.config.fhir_version, tenant_id);
+        self.registries.cache_from_overlay(tenant_id, overlay)
+    }
+
     /// A value extractor over a tenant's registry, for indexing that tenant's
     /// resources.
     pub(crate) fn tenant_extractor(&self, tenant_id: &str) -> SearchParameterExtractor {
         SearchParameterExtractor::new(self.tenant_registry(tenant_id))
+    }
+
+    /// Extractor for write-path indexing; see [`Self::tenant_registry_for_indexing`].
+    pub(crate) fn tenant_extractor_for_indexing(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+    ) -> SearchParameterExtractor {
+        SearchParameterExtractor::new(self.tenant_registry_for_indexing(conn, tenant_id))
     }
 
     /// Configure connection settings.

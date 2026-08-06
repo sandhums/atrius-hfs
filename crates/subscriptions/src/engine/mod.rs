@@ -25,8 +25,10 @@ use crate::heartbeat::run_heartbeat_worker;
 use crate::manager::{ActiveSubscription, SubscriptionManager, SubscriptionStatusCode};
 use crate::notification::{self, NotificationEventData};
 use crate::outbox::run_outbox_worker;
+use crate::status_store::DynSubscriptionStatusStore;
 use crate::topics::InMemoryTopicRegistry;
 use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
+use helios_fhir::FhirVersion;
 use helios_persistence::core::DynSubscriptionOutboxStore;
 
 /// The subscription engine orchestrates the entire subscription pipeline.
@@ -47,6 +49,8 @@ pub struct SubscriptionEngine {
     base_url: String,
     outbox: Option<DynSubscriptionOutboxStore>,
     outbox_notify: Arc<tokio::sync::Notify>,
+    /// Optional durable write-back for `Subscription.status` transitions.
+    status_store: Option<DynSubscriptionStatusStore>,
 }
 
 fn calculate_handshake_retry_delay(
@@ -128,6 +132,7 @@ impl SubscriptionEngine {
             base_url,
             outbox: None,
             outbox_notify: Arc::new(tokio::sync::Notify::new()),
+            status_store: None,
         }
     }
 
@@ -136,6 +141,13 @@ impl SubscriptionEngine {
     /// Call [`Self::start_outbox_worker`] after wrapping in `Arc`.
     pub fn with_outbox(mut self, store: DynSubscriptionOutboxStore) -> Self {
         self.outbox = Some(store);
+        self
+    }
+
+    /// Attach a status store so `active` / `error` / `off` transitions are
+    /// written back to the stored FHIR `Subscription` resource.
+    pub fn with_status_store(mut self, store: DynSubscriptionStatusStore) -> Self {
+        self.status_store = Some(store);
         self
     }
 
@@ -638,6 +650,58 @@ impl SubscriptionEngine {
         }
     }
 
+    /// Transition in-memory status and, when a status store is attached, patch
+    /// the stored FHIR `Subscription.status` to match.
+    async fn transition_and_persist(
+        &self,
+        tenant_id: &str,
+        subscription_id: &str,
+        new_status: SubscriptionStatusCode,
+        fhir_version: FhirVersion,
+    ) {
+        match self
+            .manager
+            .update_status(tenant_id, subscription_id, new_status)
+        {
+            Ok(old) => {
+                info!(
+                    tenant_id,
+                    subscription_id,
+                    from = %old,
+                    to = %new_status,
+                    "Subscription status transitioned"
+                );
+            }
+            Err(e) => {
+                warn!(
+                    tenant_id,
+                    subscription_id,
+                    to = %new_status,
+                    error = %e,
+                    "Failed to update in-memory subscription status"
+                );
+                return;
+            }
+        }
+
+        let Some(store) = self.status_store.as_ref() else {
+            return;
+        };
+
+        if let Err(e) = store
+            .persist_status(tenant_id, subscription_id, new_status, fhir_version)
+            .await
+        {
+            warn!(
+                tenant_id,
+                subscription_id,
+                status = %new_status,
+                error = %e,
+                "Failed to persist subscription status to storage"
+            );
+        }
+    }
+
     /// Activate a subscription by performing the handshake.
     ///
     /// `pub(crate)` so startup rehydration ([`crate::rehydrate`]) drives the
@@ -646,6 +710,7 @@ impl SubscriptionEngine {
     pub(crate) async fn activate_subscription(&self, subscription: &ActiveSubscription) {
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
+        let fhir_version = subscription.fhir_version;
         let handshake_max_attempts = self.config.handshake_max_attempts.max(1);
 
         // Build handshake notification.
@@ -660,9 +725,13 @@ impl SubscriptionEngine {
                     error = %e,
                     "Failed to build handshake"
                 );
-                let _ =
-                    self.manager
-                        .update_status(tenant_id, sub_id, SubscriptionStatusCode::Error);
+                self.transition_and_persist(
+                    tenant_id,
+                    sub_id,
+                    SubscriptionStatusCode::Error,
+                    fhir_version,
+                )
+                .await;
                 return;
             }
         };
@@ -703,11 +772,13 @@ impl SubscriptionEngine {
                     endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
                     "No dispatcher registered for channel type"
                 );
-                let _ = self.manager.update_status(
+                self.transition_and_persist(
                     tenant_id,
                     sub_id,
                     SubscriptionStatusCode::Error,
-                );
+                    fhir_version,
+                )
+                .await;
                 return;
             };
             let result = dispatcher
@@ -724,11 +795,13 @@ impl SubscriptionEngine {
                         attempt,
                         "Handshake successful, activating subscription"
                     );
-                    let _ = self.manager.update_status(
+                    self.transition_and_persist(
                         tenant_id,
                         sub_id,
                         SubscriptionStatusCode::Active,
-                    );
+                        fhir_version,
+                    )
+                    .await;
                     return;
                 }
                 Ok(DispatchResult::PermanentError(msg)) => {
@@ -741,11 +814,13 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Handshake failed with permanent error"
                     );
-                    let _ = self.manager.update_status(
+                    self.transition_and_persist(
                         tenant_id,
                         sub_id,
                         SubscriptionStatusCode::Error,
-                    );
+                        fhir_version,
+                    )
+                    .await;
                     return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
@@ -759,11 +834,13 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Handshake retries exhausted"
                         );
-                        let _ = self.manager.update_status(
+                        self.transition_and_persist(
                             tenant_id,
                             sub_id,
                             SubscriptionStatusCode::Error,
-                        );
+                            fhir_version,
+                        )
+                        .await;
                         return;
                     }
 
@@ -792,11 +869,13 @@ impl SubscriptionEngine {
                         error = %e,
                         "Handshake error"
                     );
-                    let _ = self.manager.update_status(
+                    self.transition_and_persist(
                         tenant_id,
                         sub_id,
                         SubscriptionStatusCode::Error,
-                    );
+                        fhir_version,
+                    )
+                    .await;
                     return;
                 }
             }
@@ -856,7 +935,7 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Permanent delivery error"
                     );
-                    self.handle_delivery_failure(tenant_id, sub_id);
+                    self.handle_delivery_failure(subscription).await;
                     return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
@@ -873,7 +952,7 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Max retries exhausted"
                         );
-                        self.handle_delivery_failure(tenant_id, sub_id);
+                        self.handle_delivery_failure(subscription).await;
                         return;
                     }
 
@@ -900,7 +979,7 @@ impl SubscriptionEngine {
                         error = %e,
                         "Dispatch error"
                     );
-                    self.handle_delivery_failure(tenant_id, sub_id);
+                    self.handle_delivery_failure(subscription).await;
                     return;
                 }
             }
@@ -908,8 +987,10 @@ impl SubscriptionEngine {
     }
 
     /// Handle a delivery failure: increment failure count and potentially
-    /// transition status to error or off.
-    fn handle_delivery_failure(&self, tenant_id: &str, subscription_id: &str) {
+    /// transition status to error or off (persisting when a status store is set).
+    async fn handle_delivery_failure(&self, subscription: &ActiveSubscription) {
+        let tenant_id = &subscription.tenant_id;
+        let subscription_id = &subscription.id;
         if let Some(failure_count) = self.manager.record_failure(tenant_id, subscription_id) {
             if failure_count >= self.config.off_threshold {
                 warn!(
@@ -917,17 +998,21 @@ impl SubscriptionEngine {
                     failures = failure_count,
                     "Turning off subscription after repeated failures"
                 );
-                let _ = self.manager.update_status(
+                self.transition_and_persist(
                     tenant_id,
                     subscription_id,
                     SubscriptionStatusCode::Off,
-                );
+                    subscription.fhir_version,
+                )
+                .await;
             } else if failure_count >= self.config.error_threshold {
-                let _ = self.manager.update_status(
+                self.transition_and_persist(
                     tenant_id,
                     subscription_id,
                     SubscriptionStatusCode::Error,
-                );
+                    subscription.fhir_version,
+                )
+                .await;
             }
         }
     }

@@ -170,7 +170,7 @@ The engine's registries are in-memory, so without rehydration a restart would le
 
 This runs in the background: the server begins accepting requests immediately, and subscriptions come back online shortly after. A summary line (`Subscription engine rehydrated`) reports what was restored.
 
-Subscription **status transitions are held in memory only** — a successful handshake is not written back to the stored resource. A subscription created as `requested` therefore still reads `"requested"` from the database after it went active, so rehydration re-runs the activation handshake for `requested` subscriptions by default. Set `HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE=false` to restore them with no outbound traffic, accepting that they stay inert until re-written. Subscriptions stored as `off` are skipped (the status is terminal); `error` ones are registered but dormant.
+When a status store is attached (HFS always wires one), handshake `active` and delivery `error`/`off` transitions are written back to the stored `Subscription`. After restart those rows rehydrate without another handshake. Leftover `requested` rows (never activated, or written before write-back) still handshake when `HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE=true`. Set that flag to `false` for no outbound traffic at boot, accepting that leftover `requested` rows stay inert until re-written. Subscriptions stored as `off` are skipped (terminal); `error` ones are registered but dormant.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -518,11 +518,22 @@ A Kafka-backed architecture addresses most of the single-instance and performanc
 
 ## Current Limitations
 
-- FHIRPath filter criteria are not evaluated — Phase 2 uses direct JSON field matching only
-- Heartbeat delivery is not yet implemented — the `heartbeat_period` field is stored but no background task fires heartbeats
+- (Resolved) `resourceTrigger.fhirPathCriteria` is evaluated via `helios-fhirpath` with `%previous` / `%current` (see `topics/fhirpath_criteria.rs`). Fail-closed on parse/eval errors. Subscription **filters** remain Phase-1 JSON field matching (not FHIRPath).
+- Heartbeat delivery is implemented in code (`heartbeat.rs`); keep README in sync with runtime config.
 - [`eventTrigger`](https://hl7.org/fhir/subscriptiontopic.html) is not supported — only `resourceTrigger` (create, update, delete) is implemented
+- `queryCriteria` on resource triggers is not evaluated
 - (Resolved) Topic registry is keyed by `(tenant_id, canonical_url)` — topics no longer collide across tenants
-- `$events` recovery is still a stub — the durable outbox retains processed rows for a future implementation
+- `$events` recovery is outbox-backed for gap recovery consumers; confirm version-specific Bundle shapes in integration tests
 - (Resolved) Outbox rows are written in the same SQL transaction as the resource write on Postgres/SQLite; REST only wakes the worker
 - WebSocket notifications are best-effort — if no clients are connected when an event fires the notification is silently dropped; there is no replay or queueing for late-connecting clients
-- Subscription status transitions (`error`/`off`) are held in memory and not written back to the stored Subscription resource
+- (Resolved) Subscription status transitions (`active`/`error`/`off`) are written back to the stored Subscription when a status store is attached
+
+### FHIRPath criteria — known Helios gaps / authoring notes
+
+| Topic authoring | Helios behavior |
+|-----------------|-----------------|
+| `%previous` / `%current` | Not built-in; subscriptions sets them from the resource event |
+| Admit / discharge / lab-critical IG expressions | Verified against typed R4 context |
+| Collection `!=` (e.g. multi-location) | Prefer `.first()` or `exclude().exists()` if multi-item collections mis-compare |
+| `fhirpath-cli -v` JSON objects | CLI stores objects as **strings** — do not use CLI vars to validate `%previous` |
+| Invalid JSON for FHIR version | Fail-closed (no topic match) |

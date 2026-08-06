@@ -174,8 +174,14 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
             .await
             .map_err(|e| internal_error(format!("outbox claim begin: {e}")))?;
 
-        let lease_secs = lease.as_secs().max(1) as i64;
+        // Bind owned values: tokio-postgres rejects some borrowed/`INTERVAL`
+        // expressions at serialize time ("error serializing parameter N").
+        let worker_id = worker_id.to_string();
         let limit = limit.max(1) as i64;
+        let locked_until: DateTime<Utc> = Utc::now()
+            + chrono::Duration::from_std(lease.max(Duration::from_secs(1))).unwrap_or_else(|_| {
+                chrono::Duration::seconds(60)
+            });
 
         let rows = tx
             .query(
@@ -190,7 +196,7 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
                  )
                  UPDATE subscription_outbox AS o
                  SET locked_by = $2,
-                     locked_until = NOW() + ($3 * INTERVAL '1 second'),
+                     locked_until = $3,
                      attempts = o.attempts + 1
                  FROM candidates
                  WHERE o.id = candidates.id
@@ -198,7 +204,7 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
                            o.resource_id, o.version_id, o.event_type, o.resource,
                            o.previous_resource, o.created_at, o.available_at, o.attempts,
                            o.last_error",
-                &[&limit, &worker_id, &lease_secs],
+                &[&limit, &worker_id, &locked_until],
             )
             .await
             .map_err(|e| internal_error(format!("outbox claim: {e}")))?;

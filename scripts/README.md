@@ -3,6 +3,10 @@
 Local clinical-reasoning helpers. Prefer these over ad-hoc `cargo run` so every
 service uses the same **release binary** + `deploy/env/*.env` wiring.
 
+Hospital foundation, ADT journeys, and FHIR Subscription seeds/smokes live in
+**atrius-his** (`../atrius-his/scripts` — see that repo’s `scripts/README.md`).
+Do not duplicate patient/encounter/subscription demo seeding here.
+
 ## Start the stack (separate terminals)
 
 ```bash

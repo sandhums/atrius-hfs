@@ -568,11 +568,8 @@ async fn rehydration_is_idempotent() {
     assert_eq!(sub.status, SubscriptionStatusCode::Active);
 }
 
-/// The core reason rehydration re-handshakes: status transitions are not
-/// persisted, so a subscription the server activated in a previous lifetime
-/// still reads `requested` from storage. Rehydration must drive it back through
-/// the handshake and leave it `active` — otherwise the fix restores nothing for
-/// exactly the subscriptions that were working before the restart.
+/// Leftover `requested` rows (never activated, or written before status
+/// write-back) must still handshake on rehydrate and become `active`.
 #[tokio::test]
 async fn requested_subscriptions_are_handshaked_and_activated() {
     let server = MockServer::start().await;

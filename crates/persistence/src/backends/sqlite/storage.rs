@@ -1215,9 +1215,14 @@ impl SqliteBackend {
         resource_id: &str,
         resource: &Value,
     ) -> StorageResult<usize> {
-        // Extract values using the tenant's registry-driven extractor
+        // SQLite-only: load a missing per-tenant overlay on `conn`, not via the
+        // pool. Indexing runs inside the outbox same-TX write; a second
+        // connection can `SQLITE_LOCKED` and cache an empty overlay (breaking
+        // custom SearchParameter indexing). Postgres indexes through
+        // `tenant_extractor` + in-memory `stored_by_tenant` and does not need
+        // this path.
         let values = self
-            .tenant_extractor(tenant_id)
+            .tenant_extractor_for_indexing(conn, tenant_id)
             .extract(resource, resource_type)
             .map_err(|e| internal_error(format!("Search parameter extraction failed: {}", e)))?;
 

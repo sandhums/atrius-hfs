@@ -2400,17 +2400,23 @@ fn expand_inline_plain_fts(
     limit_hint: Option<usize>,
     warnings: &mut Vec<String>,
 ) -> Result<Vec<ExpansionContains>, HtsError> {
-    // Resolve (system_url, system_id) for each include.
+    // Resolve (system_url, system_id) for each include — honor compose.include.version
+    // so multi-edition CodeSystems (e.g. SNOMED International vs India Drug Extension)
+    // do not silently search the precedence-winning edition.
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(includes.len());
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
-        match resolve_system_id_cached(conn, system_url)? {
-            Some(id) => pairs.push((system_url.to_owned(), id)),
+        let inc_version = inc["version"].as_str();
+        match resolve_compose_system_id(conn, system_url, inc_version)? {
+            Some((id, _)) => pairs.push((system_url.to_owned(), id)),
             None => {
                 let msg = format!(
-                    "CodeSystem {system_url} was not found and has been excluded from the expansion"
+                    "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
+                    inc_version
+                        .map(|v| format!(" version '{v}'"))
+                        .unwrap_or_default()
                 );
-                tracing::warn!(%system_url, "{msg}");
+                tracing::warn!(%system_url, ?inc_version, "{msg}");
                 warnings.push(msg);
             }
         }
@@ -2579,14 +2585,18 @@ fn expand_inline_filtered(
             Some(s) if !s.is_empty() => s,
             _ => continue,
         };
+        let inc_version = inc["version"].as_str();
 
-        let system_id = match resolve_system_id_cached(conn, system_url)? {
-            Some(id) => id,
+        let system_id = match resolve_compose_system_id(conn, system_url, inc_version)? {
+            Some((id, _)) => id,
             None => {
                 let msg = format!(
-                    "CodeSystem {system_url} was not found and has been excluded from the expansion"
+                    "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
+                    inc_version
+                        .map(|v| format!(" version '{v}'"))
+                        .unwrap_or_default()
                 );
-                tracing::warn!(%system_url, "{msg}");
+                tracing::warn!(%system_url, ?inc_version, "{msg}");
                 warnings.push(msg);
                 continue;
             }
@@ -8982,17 +8992,21 @@ fn load_plain_corpus_and_cache(
         }
     }
 
-    // Resolve (system_url, system_id) pairs.
+    // Resolve (system_url, system_id) pairs — honor compose.include.version.
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(includes.len());
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
-        match resolve_system_id_cached(conn, system_url) {
-            Ok(Some(id)) => pairs.push((system_url.to_owned(), id)),
+        let inc_version = inc["version"].as_str();
+        match resolve_compose_system_id(conn, system_url, inc_version) {
+            Ok(Some((id, _))) => pairs.push((system_url.to_owned(), id)),
             Ok(None) => {
                 let msg = format!(
-                    "CodeSystem {system_url} was not found and has been excluded from the expansion"
+                    "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
+                    inc_version
+                        .map(|v| format!(" version '{v}'"))
+                        .unwrap_or_default()
                 );
-                tracing::warn!(%system_url, "{msg}");
+                tracing::warn!(%system_url, ?inc_version, "{msg}");
                 warnings.push(msg);
             }
             Err(e) => {
@@ -9854,6 +9868,49 @@ mod tests {
         assert!(codes.contains(&"B"));
         assert!(!codes.contains(&"C"), "v2.0.0 codes must not leak in");
         assert!(!codes.contains(&"D"));
+    }
+
+    #[tokio::test]
+    async fn expand_compose_version_pin_filter_does_not_leak_other_edition() {
+        // Filtered expand must resolve compose.include.version — otherwise FTS
+        // searches the precedence-winning edition (e.g. SNOMED INT over India).
+        let b = backend();
+        b.import_bundle(&ctx(), bundle_with_mv_compose().as_bytes())
+            .await
+            .unwrap();
+
+        let v1 = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://example.org/vs-pin-v1".into()),
+                    filter: Some("A v1".into()),
+                    count: Some(20),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let v1_codes: Vec<&str> = v1.contains.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(v1_codes, vec!["A"], "v1 pin + filter: {v1_codes:?}");
+
+        let v2 = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://example.org/vs-pin-v2".into()),
+                    filter: Some("A v1".into()),
+                    count: Some(20),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(
+            v2.contains.is_empty(),
+            "v2 pin must not return v1 display hits: {:?}",
+            v2.contains
+        );
     }
 
     #[tokio::test]

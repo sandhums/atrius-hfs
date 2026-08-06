@@ -38,7 +38,7 @@ impl EventEvaluator {
     /// Evaluates a resource event and returns all matching subscriptions.
     ///
     /// The flow is:
-    /// 1. Find all topics whose triggers match the event's resource type + interaction.
+    /// 1. Find all topics whose triggers match (type + interaction + optional FHIRPath).
     /// 2. For each matching topic, find all active subscriptions.
     /// 3. For each subscription, evaluate filter criteria against the resource.
     /// 4. Return subscriptions that pass all filters.
@@ -47,6 +47,9 @@ impl EventEvaluator {
             event.tenant_id.as_str(),
             &event.resource_type,
             event.event_type,
+            event.resource.as_ref(),
+            event.previous_resource.as_ref(),
+            event.fhir_version,
         );
 
         let mut results = Vec::new();
@@ -260,6 +263,140 @@ mod tests {
         event.tenant_id = TenantId::new("tenant-b");
 
         assert!(evaluator.evaluate(&event).is_empty());
+    }
+
+    #[cfg(feature = "R4")]
+    #[test]
+    fn fhirpath_criteria_gates_subscription_match_with_previous() {
+        let (registry, manager) = setup();
+        registry.add_topic(
+            "t1",
+            TopicDefinition {
+                canonical_url: "http://example.org/topic/encounter-start".to_string(),
+                title: None,
+                resource_triggers: vec![ResourceTrigger {
+                    resource_type: "Encounter".to_string(),
+                    interactions: vec![ResourceEventType::Update],
+                    fhirpath_criteria: Some(
+                        "%previous.status != 'finished' and status = 'finished'".into(),
+                    ),
+                }],
+                can_filter_by: vec![],
+                notification_shape: vec![],
+            },
+        );
+        register_active_subscription(&manager, "t1", "sub-1", vec![]);
+        let evaluator = EventEvaluator::new(registry, manager);
+
+        let finished = json!({
+            "resourceType": "Encounter",
+            "id": "123",
+            "status": "finished",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
+            "subject": { "reference": "Patient/456" }
+        });
+        let in_progress = json!({
+            "resourceType": "Encounter",
+            "id": "123",
+            "status": "in-progress",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
+            "subject": { "reference": "Patient/456" }
+        });
+
+        let mut match_event = make_event("Encounter", ResourceEventType::Update);
+        match_event.resource = Some(finished.clone());
+        match_event.previous_resource = Some(in_progress);
+        assert_eq!(evaluator.evaluate(&match_event).len(), 1);
+
+        let mut noop = make_event("Encounter", ResourceEventType::Update);
+        noop.resource = Some(finished.clone());
+        noop.previous_resource = Some(finished);
+        assert!(evaluator.evaluate(&noop).is_empty());
+    }
+
+    #[cfg(feature = "R4")]
+    #[test]
+    fn fhirpath_and_patient_filter_both_required() {
+        let (registry, manager) = setup();
+        registry.add_topic(
+            "t1",
+            TopicDefinition {
+                canonical_url: "http://example.org/topic/encounter-start".to_string(),
+                title: None,
+                resource_triggers: vec![ResourceTrigger {
+                    resource_type: "Encounter".to_string(),
+                    interactions: vec![ResourceEventType::Create],
+                    fhirpath_criteria: Some("status = 'in-progress'".into()),
+                }],
+                can_filter_by: vec![FilterDefinition {
+                    resource_type: Some("Encounter".to_string()),
+                    filter_parameter: "patient".to_string(),
+                    comparators: vec!["eq".to_string()],
+                    modifiers: vec![],
+                }],
+                notification_shape: vec![],
+            },
+        );
+
+        let resource = json!({
+            "resourceType": "Subscription",
+            "id": "sub-1",
+            "status": "requested",
+            "criteria": "http://example.org/topic/encounter-start",
+            "channel": {
+                "type": "rest-hook",
+                "endpoint": "https://example.com/webhook",
+                "payload": "application/fhir+json"
+            },
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/subscriptions-backport/StructureDefinition/backport-topic-canonical",
+                    "valueCanonical": "http://example.org/topic/encounter-start"
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/subscriptions-backport/StructureDefinition/backport-filter-criteria",
+                    "valueString": "Encounter?patient=Patient/456"
+                }
+            ]
+        });
+        manager
+            .register("t1", "sub-1", &resource, FhirVersion::R4)
+            .unwrap();
+        manager
+            .update_status("t1", "sub-1", SubscriptionStatusCode::Active)
+            .unwrap();
+
+        let evaluator = EventEvaluator::new(registry, manager);
+
+        let mut ok = make_event("Encounter", ResourceEventType::Create);
+        ok.resource = Some(json!({
+            "resourceType": "Encounter",
+            "id": "123",
+            "status": "in-progress",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
+            "subject": { "reference": "Patient/456" }
+        }));
+        assert_eq!(evaluator.evaluate(&ok).len(), 1);
+
+        let mut wrong_patient = ok.clone();
+        wrong_patient.resource = Some(json!({
+            "resourceType": "Encounter",
+            "id": "123",
+            "status": "in-progress",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
+            "subject": { "reference": "Patient/999" }
+        }));
+        assert!(evaluator.evaluate(&wrong_patient).is_empty());
+
+        let mut wrong_status = ok;
+        wrong_status.resource = Some(json!({
+            "resourceType": "Encounter",
+            "id": "123",
+            "status": "planned",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
+            "subject": { "reference": "Patient/456" }
+        }));
+        assert!(evaluator.evaluate(&wrong_status).is_empty());
     }
 
     #[test]

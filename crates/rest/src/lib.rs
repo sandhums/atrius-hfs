@@ -866,6 +866,10 @@ where
                     storage_arc.backend_name()
                 );
             }
+            engine = engine.with_status_store(Arc::new(
+                helios_subscriptions::ResourceStorageStatusStore::new(Arc::clone(&storage_arc)),
+            ));
+            info!("Subscription status write-back ENABLED");
             info!("Subscriptions engine ENABLED");
             let engine = Arc::new(engine);
             if tokio::runtime::Handle::try_current().is_ok() {

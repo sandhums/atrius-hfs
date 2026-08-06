@@ -85,25 +85,51 @@ impl TenantSearchRegistries {
         &self.base
     }
 
-    /// Returns the registry for `tenant_id`, building and caching it on first
-    /// use: a clone of the base with the tenant's stored active params overlaid.
-    pub fn for_tenant(&self, tenant_id: &str) -> Arc<RwLock<SearchParameterRegistry>> {
-        if let Some(reg) = self.per_tenant.read().get(tenant_id) {
-            return reg.clone();
+    /// Returns a cached tenant registry if one has already been built.
+    pub fn get_cached(&self, tenant_id: &str) -> Option<Arc<RwLock<SearchParameterRegistry>>> {
+        self.per_tenant.read().get(tenant_id).cloned()
+    }
+
+    /// Builds and caches a tenant registry from an already-loaded stored overlay.
+    ///
+    /// Callers that must read stored params on a specific DB connection (notably
+    /// SQLite indexing inside an open write transaction) load the overlay
+    /// themselves and pass it here, avoiding a second pooled connection that
+    /// would block / `SQLITE_LOCKED` against the writer. Postgres does not use
+    /// this helper for indexing: its loader is an in-memory `stored_by_tenant`
+    /// map, so `for_tenant` never contends with the write txn.
+    pub fn cache_from_overlay(
+        &self,
+        tenant_id: &str,
+        overlay: impl IntoIterator<Item = SearchParameterDefinition>,
+    ) -> Arc<RwLock<SearchParameterRegistry>> {
+        if let Some(reg) = self.get_cached(tenant_id) {
+            return reg;
         }
         // Build outside the map lock. A concurrent builder for the same tenant
         // is harmless — the last writer wins and both hold equivalent content.
         let mut reg = self.base.read().clone();
-        for def in (self.loader)(tenant_id) {
+        for def in overlay {
             // A stored param may legitimately shadow a base spec param; ignore
             // duplicate-url rejections (already-registered canonical URLs).
             let _ = reg.register(def);
         }
         let arc = Arc::new(RwLock::new(reg));
-        self.per_tenant
-            .write()
-            .insert(tenant_id.to_string(), arc.clone());
+        let mut map = self.per_tenant.write();
+        if let Some(existing) = map.get(tenant_id) {
+            return existing.clone();
+        }
+        map.insert(tenant_id.to_string(), arc.clone());
         arc
+    }
+
+    /// Returns the registry for `tenant_id`, building and caching it on first
+    /// use: a clone of the base with the tenant's stored active params overlaid.
+    pub fn for_tenant(&self, tenant_id: &str) -> Arc<RwLock<SearchParameterRegistry>> {
+        if let Some(reg) = self.get_cached(tenant_id) {
+            return reg;
+        }
+        self.cache_from_overlay(tenant_id, (self.loader)(tenant_id))
     }
 
     /// Drops a tenant's cached registry so the next access rebuilds it from
@@ -205,6 +231,45 @@ mod tests {
             regs.for_tenant("acme2")
                 .read()
                 .get_param("Patient", "name")
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn cache_from_overlay_avoids_the_pool_loader() {
+        // Loader would return nothing; overlay supplied by the caller wins.
+        let regs = TenantSearchRegistries::new(Arc::new(|_t: &str| Vec::new()));
+        regs.base()
+            .write()
+            .register(def(
+                "http://hl7.org/fhir/SearchParameter/Patient-name",
+                "Patient",
+                "name",
+                SearchParameterSource::Embedded,
+            ))
+            .unwrap();
+
+        let cached = regs.cache_from_overlay(
+            "acme1",
+            vec![def(
+                "http://acme.health/fhir/SearchParameter/patient-nickname",
+                "Patient",
+                "nickname",
+                SearchParameterSource::Stored,
+            )],
+        );
+        assert!(
+            cached
+                .read()
+                .get_param("Patient", "nickname")
+                .is_some()
+        );
+        assert!(regs.get_cached("acme1").is_some());
+        // Subsequent for_tenant hits the cache, not the empty loader.
+        assert!(
+            regs.for_tenant("acme1")
+                .read()
+                .get_param("Patient", "nickname")
                 .is_some()
         );
     }

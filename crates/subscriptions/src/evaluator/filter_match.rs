@@ -62,7 +62,34 @@ fn resolve_field<'a>(resource: &'a serde_json::Value, param_name: &str) -> Optio
     // types like CodeableConcept, Reference, and Identifier into token strings).
     match param_name {
         "patient" => {
-            if let Some(v) = try_resolve_reference(resource, &["subject", "patient"]) {
+            if let Some(v) = resolve_reference_param(resource, &["subject", "patient"]) {
+                return Some(v);
+            }
+        }
+        "encounter" => {
+            // Observation/Condition.encounter; older R4 sometimes uses context.
+            if let Some(v) = resolve_reference_param(resource, &["encounter", "context"]) {
+                return Some(v);
+            }
+        }
+        "owner" => {
+            if let Some(v) = resolve_reference_param(resource, &["owner"]) {
+                return Some(v);
+            }
+        }
+        "requester" => {
+            if let Some(v) = resolve_reference_param(resource, &["requester"]) {
+                return Some(v);
+            }
+        }
+        "performer" => {
+            // Observation.performer[] (Reference); Procedure.performer[].actor.
+            if let Some(v) = resolve_reference_param(resource, &["performer"]) {
+                return Some(v);
+            }
+        }
+        "location" => {
+            if let Some(v) = resolve_location(resource) {
                 return Some(v);
             }
         }
@@ -81,6 +108,16 @@ fn resolve_field<'a>(resource: &'a serde_json::Value, param_name: &str) -> Optio
                 return Some(v);
             }
         }
+        "date" => {
+            // Appointment/Immunization search param `date` → start (or datedate).
+            if let Some(s) = resource
+                .get("start")
+                .and_then(|v| v.as_str())
+                .or_else(|| resource.get("date").and_then(|v| v.as_str()))
+            {
+                return Some(FieldValue::String(s));
+            }
+        }
         _ => {}
     }
 
@@ -92,19 +129,75 @@ fn resolve_field<'a>(resource: &'a serde_json::Value, param_name: &str) -> Optio
     None
 }
 
-/// Try to resolve a reference field from multiple possible paths.
-fn try_resolve_reference<'a>(
+/// Resolve a Reference (or list of References / backbone wrappers) search param.
+///
+/// Collects `reference` strings from:
+/// - a single Reference object
+/// - an array of Reference objects
+/// - backbone elements with nested `actor` (Procedure.performer) or `location`
+///   (Encounter.location)
+fn resolve_reference_param<'a>(
     resource: &'a serde_json::Value,
     field_names: &[&str],
 ) -> Option<FieldValue<'a>> {
+    let mut refs = Vec::new();
     for name in field_names {
-        if let Some(obj) = resource.get(name) {
-            if let Some(reference) = obj.get("reference").and_then(|v| v.as_str()) {
-                return Some(FieldValue::String(reference));
+        collect_references(resource.get(name), &mut refs);
+    }
+    references_to_field_value(refs)
+}
+
+/// Encounter.location[].location, or a bare Location Reference / Reference[].
+fn resolve_location<'a>(resource: &'a serde_json::Value) -> Option<FieldValue<'a>> {
+    let mut refs = Vec::new();
+    collect_references(resource.get("location"), &mut refs);
+    references_to_field_value(refs)
+}
+
+fn collect_references(val: Option<&serde_json::Value>, out: &mut Vec<String>) {
+    let Some(val) = val else {
+        return;
+    };
+    if let Some(arr) = val.as_array() {
+        for item in arr {
+            push_reference(item, out);
+            if let Some(actor) = item.get("actor") {
+                push_reference(actor, out);
+            }
+            if let Some(loc) = item.get("location") {
+                push_reference(loc, out);
             }
         }
+    } else {
+        push_reference(val, out);
+        if let Some(actor) = val.get("actor") {
+            push_reference(actor, out);
+        }
+        if let Some(loc) = val.get("location") {
+            push_reference(loc, out);
+        }
     }
-    None
+}
+
+fn push_reference(obj: &serde_json::Value, out: &mut Vec<String>) {
+    if let Some(reference) = obj.get("reference").and_then(|v| v.as_str())
+        && !reference.is_empty()
+        && !out.iter().any(|r| r == reference)
+    {
+        out.push(reference.to_string());
+    }
+}
+
+fn references_to_field_value<'a>(refs: Vec<String>) -> Option<FieldValue<'a>> {
+    match refs.len() {
+        0 => None,
+        1 => {
+            // Leak into Tokens for a uniform owned representation; eq/in both
+            // work on Tokens. (Avoid returning String(&'static) from owned data.)
+            Some(FieldValue::Tokens(refs))
+        }
+        _ => Some(FieldValue::Tokens(refs)),
+    }
 }
 
 /// Resolve a CodeableConcept field to a set of system|code tokens.
@@ -431,5 +524,117 @@ mod tests {
         }];
         // Missing field with "ne" comparator should match.
         assert!(matches_filters(&resource, "Encounter", &filters));
+    }
+
+    #[test]
+    fn test_encounter_reference_filter() {
+        let resource = json!({
+            "resourceType": "Observation",
+            "encounter": { "reference": "Encounter/enc-1" }
+        });
+        let filters = vec![SubscriptionFilter {
+            resource_type: None,
+            filter_parameter: "encounter".to_string(),
+            comparator: "eq".to_string(),
+            value: "Encounter/enc-1".to_string(),
+        }];
+        assert!(matches_filters(&resource, "Observation", &filters));
+    }
+
+    #[test]
+    fn test_location_filter_on_encounter_backbone() {
+        let resource = json!({
+            "resourceType": "Encounter",
+            "location": [
+                { "location": { "reference": "Location/ward-A" }, "status": "active" },
+                { "location": { "reference": "Location/bed-12" }, "status": "active" }
+            ]
+        });
+        let filters = vec![SubscriptionFilter {
+            resource_type: None,
+            filter_parameter: "location".to_string(),
+            comparator: "eq".to_string(),
+            value: "Location/ward-A".to_string(),
+        }];
+        assert!(matches_filters(&resource, "Encounter", &filters));
+
+        let filters = vec![SubscriptionFilter {
+            resource_type: None,
+            filter_parameter: "location".to_string(),
+            comparator: "in".to_string(),
+            value: "Location/ward-B,Location/bed-12".to_string(),
+        }];
+        assert!(matches_filters(&resource, "Encounter", &filters));
+    }
+
+    #[test]
+    fn test_owner_and_requester_filters() {
+        let task = json!({
+            "resourceType": "Task",
+            "owner": { "reference": "Practitioner/dr-1" }
+        });
+        assert!(matches_filters(
+            &task,
+            "Task",
+            &[SubscriptionFilter {
+                resource_type: None,
+                filter_parameter: "owner".to_string(),
+                comparator: "eq".to_string(),
+                value: "Practitioner/dr-1".to_string(),
+            }]
+        ));
+
+        let order = json!({
+            "resourceType": "MedicationRequest",
+            "requester": { "reference": "Practitioner/dr-2" }
+        });
+        assert!(matches_filters(
+            &order,
+            "MedicationRequest",
+            &[SubscriptionFilter {
+                resource_type: None,
+                filter_parameter: "requester".to_string(),
+                comparator: "eq".to_string(),
+                value: "Practitioner/dr-2".to_string(),
+            }]
+        ));
+    }
+
+    #[test]
+    fn test_performer_array_and_procedure_actor() {
+        let obs = json!({
+            "resourceType": "Observation",
+            "performer": [
+                { "reference": "Practitioner/lab-tech" },
+                { "reference": "Organization/lab" }
+            ]
+        });
+        assert!(matches_filters(
+            &obs,
+            "Observation",
+            &[SubscriptionFilter {
+                resource_type: None,
+                filter_parameter: "performer".to_string(),
+                comparator: "eq".to_string(),
+                value: "Organization/lab".to_string(),
+            }]
+        ));
+
+        let procedure = json!({
+            "resourceType": "Procedure",
+            "performer": [
+                { "actor": { "reference": "Practitioner/surgeon" } }
+            ]
+        });
+        assert!(matches_filters(
+            &procedure,
+            "Procedure",
+            &[SubscriptionFilter {
+                resource_type: None,
+                filter_parameter: "performer".to_string(),
+                comparator: "eq".to_string(),
+                value: "Practitioner/surgeon".to_string(),
+            }]
+        ));
     }
 }
