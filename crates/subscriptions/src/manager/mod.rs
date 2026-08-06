@@ -818,7 +818,7 @@ pub(crate) mod tests {
             notification_shape: vec![],
         };
         // Seed common test tenants used across manager unit tests.
-        for tenant in ["tenant-1", "t1", "tenant-a", "tenant-b"] {
+        for tenant in ["tenant-1", "t1", "t2", "tenant-a", "tenant-b"] {
             registry.add_topic(tenant, topic.clone());
         }
         registry
