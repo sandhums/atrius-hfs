@@ -27,7 +27,6 @@ use crate::notification::{self, NotificationEventData};
 use crate::outbox::run_outbox_worker;
 use crate::topics::InMemoryTopicRegistry;
 use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
-use helios_fhir::FhirVersion;
 use helios_persistence::core::{DynSubscriptionOutboxStore, ResourceStorage};
 use helios_persistence::error::StorageError;
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
@@ -126,6 +125,9 @@ impl SubscriptionEngine {
             );
         }
 
+        let status_write_slots =
+            Arc::new(Semaphore::new(config.status_write_concurrency.max(1)));
+
         Self {
             topic_registry,
             topic_resource_index: DashMap::new(),
@@ -139,7 +141,7 @@ impl SubscriptionEngine {
             outbox: None,
             outbox_notify: Arc::new(tokio::sync::Notify::new()),
             status_store: None,
-            status_write_slots: Arc::new(Semaphore::new(config.status_write_concurrency.max(1))),
+            status_write_slots,
         }
     }
 
