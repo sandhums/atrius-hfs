@@ -18,7 +18,9 @@ use crate::core::{
     if_match_field_satisfied, normalize_etag,
 };
 use crate::error::TransactionError;
-use crate::error::{BackendError, ConcurrencyError, ResourceError, StorageError, StorageResult};
+use crate::error::{
+    BackendError, ConcurrencyError, QueryErrorExt, ResourceError, StorageError, StorageResult,
+};
 use crate::search::reindex::{ReindexSource, ReindexTarget, ResourcePage};
 use crate::tenant::{Operation, TenantContext};
 use crate::types::Pagination;
@@ -647,7 +649,7 @@ impl ResourceStorage for PostgresBackend {
                     &[&tenant_id, &rt],
                 )
                 .await
-                .map_err(|e| internal_error(format!("Failed to count resources: {}", e)))?;
+                .or_query_error("Failed to count resources")?;
             row.get(0)
         } else {
             let row = client
@@ -656,7 +658,7 @@ impl ResourceStorage for PostgresBackend {
                     &[&tenant_id],
                 )
                 .await
-                .map_err(|e| internal_error(format!("Failed to count resources: {}", e)))?;
+                .or_query_error("Failed to count resources")?;
             row.get(0)
         };
 
@@ -685,7 +687,7 @@ impl ResourceStorage for PostgresBackend {
                 &[&tenant_id, &resource_type, &since],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count resources by day: {}", e)))?;
+            .or_query_error("Failed to count resources by day")?;
 
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
@@ -744,7 +746,7 @@ impl ResourceStorage for PostgresBackend {
                 &[&tenant_id, &resource_type, &since_bound, &bucket_seconds],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count resource deltas: {}", e)))?;
+            .or_query_error("Failed to count resource deltas")?;
 
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
@@ -781,7 +783,7 @@ impl ResourceStorage for PostgresBackend {
                 &[&tenant_id, &since],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to compute activity histogram: {}", e)))?;
+            .or_query_error("Failed to compute activity histogram")?;
 
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
@@ -808,7 +810,7 @@ impl ResourceStorage for PostgresBackend {
                 &[&tenant_id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count all types: {}", e)))?;
+            .or_query_error("Failed to count all types")?;
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             let rt: String = row.get(0);
@@ -858,7 +860,7 @@ impl ResourceStorage for PostgresBackend {
         let rows = client
             .query(&sql, &param_refs)
             .await
-            .map_err(|e| internal_error(format!("Failed to count by types: {}", e)))?;
+            .or_query_error("Failed to count by types")?;
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             let rt: String = row.get(0);
@@ -878,7 +880,7 @@ impl ResourceStorage for PostgresBackend {
                 &[],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count by tenant: {}", e)))?;
+            .or_query_error("Failed to count by tenant")?;
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             let tid: String = row.get(0);
@@ -933,6 +935,7 @@ impl ResourceStorage for PostgresBackend {
         id: &str,
         display_name: Option<&str>,
     ) -> StorageResult<crate::core::TenantRecord> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let client = self.get_client().await?;
         // Plain INSERT so a duplicate id surfaces as a constraint error; the
         // admin handler pre-checks existence and returns 409, so reaching here
@@ -953,6 +956,7 @@ impl ResourceStorage for PostgresBackend {
     }
 
     async fn deregister_tenant(&self, id: &str) -> StorageResult<bool> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let client = self.get_client().await?;
         let changed = client
             .execute("DELETE FROM tenants WHERE id = $1", &[&id])
@@ -962,11 +966,9 @@ impl ResourceStorage for PostgresBackend {
     }
 
     async fn purge_tenant_data(&self, id: &str) -> StorageResult<u64> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let mut client = self.get_client().await?;
-        let tx = client
-            .transaction()
-            .await
-            .map_err(|e| internal_error(format!("purge begin: {e}")))?;
+        let tx = client.transaction().await.or_query_error("purge begin")?;
         // Count current-version rows first (soft-deleted included) so we can
         // report what was removed.
         let removed: i64 = tx
@@ -975,7 +977,7 @@ impl ResourceStorage for PostgresBackend {
                 &[&id],
             )
             .await
-            .map_err(|e| internal_error(format!("purge count: {e}")))?
+            .or_query_error("purge count")?
             .get(0);
         // search_index and resource_fts cascade from resources, but delete them
         // explicitly too, mirroring the purge/purge_all deletion order.
@@ -987,16 +989,14 @@ impl ResourceStorage for PostgresBackend {
         ] {
             tx.execute(sql, &[&id])
                 .await
-                .map_err(|e| internal_error(format!("purge delete: {e}")))?;
+                .or_query_error("purge delete")?;
         }
         // Per-user settings are keyed by user, not tenant, so they are not swept
         // by the deletes above — but a client stores PHI-derived query strings in
         // them, which belong to this tenant (issue #313). Same transaction, so an
         // offboarding cannot half-apply.
         let settings = PostgresBackend::purge_tenant_settings_in_txn(&tx, id).await?;
-        tx.commit()
-            .await
-            .map_err(|e| internal_error(format!("purge commit: {e}")))?;
+        tx.commit().await.or_query_error("purge commit")?;
         if settings > 0 {
             tracing::info!(
                 tenant = %id,
@@ -1651,7 +1651,7 @@ impl InstanceHistoryProvider for PostgresBackend {
         let rows = client
             .query(&sql, &param_refs)
             .await
-            .map_err(|e| internal_error(format!("Failed to query history: {}", e)))?;
+            .or_query_error("Failed to query history")?;
 
         let mut entries = Vec::new();
         let mut last_version: Option<String> = None;
@@ -1733,7 +1733,7 @@ impl InstanceHistoryProvider for PostgresBackend {
                 &[&tenant_id, &resource_type, &id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count history: {}", e)))?;
+            .or_query_error("Failed to count history")?;
 
         let count: i64 = row.get(0);
         Ok(count as u64)
@@ -1946,7 +1946,7 @@ impl TypeHistoryProvider for PostgresBackend {
         let rows = client
             .query(&sql, &param_refs)
             .await
-            .map_err(|e| internal_error(format!("Failed to query type history: {}", e)))?;
+            .or_query_error("Failed to query type history")?;
 
         let mut entries = Vec::new();
         let mut last_entry: Option<(String, String)> = None; // (last_updated, id)
@@ -2029,7 +2029,7 @@ impl TypeHistoryProvider for PostgresBackend {
                 &[&tenant_id, &resource_type],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count type history: {}", e)))?;
+            .or_query_error("Failed to count type history")?;
 
         let count: i64 = row.get(0);
         Ok(count as u64)
@@ -2117,7 +2117,7 @@ impl SystemHistoryProvider for PostgresBackend {
         let rows = client
             .query(&sql, &param_refs)
             .await
-            .map_err(|e| internal_error(format!("Failed to query system history: {}", e)))?;
+            .or_query_error("Failed to query system history")?;
 
         let mut entries = Vec::new();
         let mut last_entry: Option<(String, String, String)> = None;
@@ -2199,7 +2199,7 @@ impl SystemHistoryProvider for PostgresBackend {
                 &[&tenant_id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count system history: {}", e)))?;
+            .or_query_error("Failed to count system history")?;
 
         let count: i64 = row.get(0);
         Ok(count as u64)
@@ -2357,7 +2357,7 @@ impl PurgableStorage for PostgresBackend {
                     &[&tenant_id, &resource_type, &id],
                 )
                 .await
-                .map_err(|e| internal_error(format!("Failed to check history: {}", e)))?;
+                .or_query_error("Failed to check history")?;
 
             if history_exists.is_none() {
                 return Err(StorageError::Resource(ResourceError::NotFound {
@@ -2374,7 +2374,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type, &id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge search index: {}", e)))?;
+            .or_query_error("Failed to purge search index")?;
 
         // Delete from FTS table
         let _ = client
@@ -2391,7 +2391,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type, &id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource history: {}", e)))?;
+            .or_query_error("Failed to purge resource history")?;
 
         // Delete from resources table
         client
@@ -2400,7 +2400,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type, &id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource: {}", e)))?;
+            .or_query_error("Failed to purge resource")?;
 
         Ok(())
     }
@@ -2416,7 +2416,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to count resources: {}", e)))?;
+            .or_query_error("Failed to count resources")?;
         let count: i64 = row.get(0);
 
         // Delete from search index first (due to FK constraint)
@@ -2426,7 +2426,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge search index: {}", e)))?;
+            .or_query_error("Failed to purge search index")?;
 
         // Delete from FTS table
         let _ = client
@@ -2443,7 +2443,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource history: {}", e)))?;
+            .or_query_error("Failed to purge resource history")?;
 
         // Delete from resources table
         client
@@ -2452,7 +2452,7 @@ impl PurgableStorage for PostgresBackend {
                 &[&tenant_id, &resource_type],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resources: {}", e)))?;
+            .or_query_error("Failed to purge resources")?;
 
         Ok(count as u64)
     }
@@ -3501,7 +3501,7 @@ impl ReindexTarget for PostgresBackend {
                 &[&tenant_id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to clear search index: {}", e)))?;
+            .or_query_error("Failed to clear search index")?;
 
         // Also clear FTS entries
         let _ = client

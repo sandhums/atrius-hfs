@@ -848,6 +848,14 @@ where
                     "HFS_SUBSCRIPTION_OUTBOX_PROCESS_TIMEOUT_MS",
                     default_sub_config.outbox_process_timeout,
                 ),
+                persist_status: subscription_bool_from_env(
+                    "HFS_SUBSCRIPTION_PERSIST_STATUS",
+                    default_sub_config.persist_status,
+                ),
+                status_write_timeout: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_STATUS_WRITE_TIMEOUT_MS",
+                    default_sub_config.status_write_timeout,
+                ),
                 ..default_sub_config
             };
             // Outbound auth provider was built above (static bearer when
@@ -866,11 +874,26 @@ where
                     storage_arc.backend_name()
                 );
             }
-            engine = engine.with_status_store(Arc::new(
-                helios_subscriptions::ResourceStorageStatusStore::new(Arc::clone(&storage_arc)),
-            ));
-            info!("Subscription status write-back ENABLED");
-            info!("Subscriptions engine ENABLED");
+            // Server-driven status transitions are written back into the stored
+            // `Subscription` (issue #357), so the engine's own decisions survive
+            // a restart and `GET /Subscription/{id}` stops contradicting
+            // `$status`.
+            //
+            // This is the same `storage_arc` the whole app is served from — on a
+            // composite deployment that is the *composite*, not the primary, so
+            // the rewritten resource also reaches the Elasticsearch index and
+            // `GET /Subscription?status=active` answers from current documents.
+            engine = engine.with_status_store(
+                Arc::clone(&storage_arc) as Arc<dyn helios_persistence::core::ResourceStorage>
+            );
+            if engine.persists_status() {
+                info!("Subscriptions engine ENABLED (status write-back ON)");
+            } else {
+                info!(
+                    "Subscriptions engine ENABLED (status write-back OFF; \
+                     transitions will not survive a restart)"
+                );
+            }
             let engine = Arc::new(engine);
             if tokio::runtime::Handle::try_current().is_ok() {
                 engine.start_outbox_worker();

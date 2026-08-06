@@ -20,7 +20,8 @@ use crate::core::{
     VersionedStorage, bundle_if_match_gate, if_match_field_satisfied, normalize_etag,
 };
 use crate::error::{
-    BackendError, ConcurrencyError, ResourceError, StorageError, StorageResult, TransactionError,
+    BackendError, ConcurrencyError, QueryErrorExt, ResourceError, StorageError, StorageResult,
+    TransactionError,
 };
 use crate::search::converters::IndexValue;
 use crate::search::extractor::ExtractedValue;
@@ -1212,7 +1213,7 @@ impl ResourceStorage for MongoBackend {
         resources
             .count_documents(filter)
             .await
-            .map_err(|e| internal_error(format!("Failed to count resources: {}", e)))
+            .or_query_error("Failed to count resources")
     }
 
     async fn count_by_day(
@@ -1252,17 +1253,17 @@ impl ResourceStorage for MongoBackend {
         let mut cursor = resources
             .aggregate(pipeline)
             .await
-            .map_err(|e| internal_error(format!("Failed to aggregate count_by_day: {}", e)))?;
+            .or_query_error("Failed to aggregate count_by_day")?;
 
         let mut out = Vec::new();
         while cursor
             .advance()
             .await
-            .map_err(|e| internal_error(format!("count_by_day cursor advance: {}", e)))?
+            .or_query_error("count_by_day cursor advance")?
         {
             let doc = cursor
                 .deserialize_current()
-                .map_err(|e| internal_error(format!("count_by_day cursor deserialize: {}", e)))?;
+                .or_query_error("count_by_day cursor deserialize")?;
             let day_str = doc.get_str("_id").unwrap_or_default();
             // `$sum: 1` yields an int32 unless it overflows into int64.
             let n = doc
@@ -1330,19 +1331,20 @@ impl ResourceStorage for MongoBackend {
             doc! { "$sort": { "_id": 1 } },
         ];
 
-        let mut cursor = history.aggregate(pipeline).await.map_err(|e| {
-            internal_error(format!("Failed to aggregate count_deltas_by_bucket: {}", e))
-        })?;
+        let mut cursor = history
+            .aggregate(pipeline)
+            .await
+            .or_query_error("Failed to aggregate count_deltas_by_bucket")?;
 
         let mut out = Vec::new();
         while cursor
             .advance()
             .await
-            .map_err(|e| internal_error(format!("count_deltas cursor advance: {}", e)))?
+            .or_query_error("count_deltas cursor advance")?
         {
             let doc = cursor
                 .deserialize_current()
-                .map_err(|e| internal_error(format!("count_deltas cursor deserialize: {}", e)))?;
+                .or_query_error("count_deltas cursor deserialize")?;
             let bucket_ms_start = doc.get_i64("_id").unwrap_or_default();
             // `$sum` yields an int32 for small totals and an int64 once it overflows,
             // so accept either width rather than assuming one.
@@ -1387,19 +1389,20 @@ impl ResourceStorage for MongoBackend {
             }},
         ];
 
-        let mut cursor = history.aggregate(pipeline).await.map_err(|e| {
-            internal_error(format!("Failed to aggregate activity histogram: {}", e))
-        })?;
+        let mut cursor = history
+            .aggregate(pipeline)
+            .await
+            .or_query_error("Failed to aggregate activity histogram")?;
 
         let mut out = Vec::new();
         while cursor
             .advance()
             .await
-            .map_err(|e| internal_error(format!("activity cursor advance: {}", e)))?
+            .or_query_error("activity cursor advance")?
         {
             let doc = cursor
                 .deserialize_current()
-                .map_err(|e| internal_error(format!("activity cursor deserialize: {}", e)))?;
+                .or_query_error("activity cursor deserialize")?;
             let id = match doc.get_document("_id") {
                 Ok(id) => id,
                 Err(_) => continue,
@@ -1507,6 +1510,7 @@ impl ResourceStorage for MongoBackend {
         id: &str,
         display_name: Option<&str>,
     ) -> StorageResult<crate::core::TenantRecord> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let db = self.get_database().await?;
         let tenants = db.collection::<Document>(MongoBackend::TENANTS_COLLECTION);
         // RFC 3339 string, matching the SQLite registry's `created_at` format so
@@ -1531,6 +1535,7 @@ impl ResourceStorage for MongoBackend {
     }
 
     async fn deregister_tenant(&self, id: &str) -> StorageResult<bool> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let db = self.get_database().await?;
         let tenants = db.collection::<Document>(MongoBackend::TENANTS_COLLECTION);
         let result = tenants
@@ -1541,6 +1546,7 @@ impl ResourceStorage for MongoBackend {
     }
 
     async fn purge_tenant_data(&self, id: &str) -> StorageResult<u64> {
+        crate::tenant::ensure_mutable_tenant(id)?;
         let db = self.get_database().await?;
         // Count current-version docs first (soft-deleted included, mirroring the
         // SQLite purge) so we can report what was removed.
@@ -1548,7 +1554,7 @@ impl ResourceStorage for MongoBackend {
         let removed = resources
             .count_documents(doc! { "tenant_id": id })
             .await
-            .map_err(|e| internal_error(format!("purge count: {}", e)))?;
+            .or_query_error("purge count")?;
         for collection in [
             MongoBackend::SEARCH_INDEX_COLLECTION,
             MongoBackend::RESOURCE_HISTORY_COLLECTION,
@@ -1557,7 +1563,7 @@ impl ResourceStorage for MongoBackend {
             db.collection::<Document>(collection)
                 .delete_many(doc! { "tenant_id": id })
                 .await
-                .map_err(|e| internal_error(format!("purge delete ({}): {}", collection, e)))?;
+                .or_query_error(&format!("purge delete ({collection})"))?;
         }
         // Per-user settings are keyed by user, not tenant, so the deletes above
         // do not reach them — but a client stores PHI-derived query strings in
@@ -1601,16 +1607,16 @@ async fn grouped_string_counts(
     let mut cursor = collection
         .aggregate(pipeline)
         .await
-        .map_err(|e| internal_error(format!("Failed to aggregate grouped counts: {}", e)))?;
+        .or_query_error("Failed to aggregate grouped counts")?;
     let mut out = Vec::new();
     while cursor
         .advance()
         .await
-        .map_err(|e| internal_error(format!("grouped counts cursor advance: {}", e)))?
+        .or_query_error("grouped counts cursor advance")?
     {
         let doc = cursor
             .deserialize_current()
-            .map_err(|e| internal_error(format!("grouped counts cursor deserialize: {}", e)))?;
+            .or_query_error("grouped counts cursor deserialize")?;
         let key = doc.get_str("_id").unwrap_or_default().to_string();
         if key.is_empty() {
             continue;
@@ -2219,7 +2225,7 @@ impl VersionedStorage for MongoBackend {
                 "id": id,
             })
             .await
-            .map_err(|e| internal_error(format!("Failed to query version history: {}", e)))?;
+            .or_query_error("Failed to query version history")?;
 
         let docs = collect_documents(cursor).await?;
         let mut versions = docs
@@ -2260,7 +2266,7 @@ impl InstanceHistoryProvider for MongoBackend {
         let cursor = history
             .find(filter)
             .await
-            .map_err(|e| internal_error(format!("Failed to query instance history: {}", e)))?;
+            .or_query_error("Failed to query instance history")?;
 
         let docs = collect_documents(cursor).await?;
         let mut rows = docs
@@ -2322,7 +2328,7 @@ impl InstanceHistoryProvider for MongoBackend {
                 "id": id,
             })
             .await
-            .map_err(|e| internal_error(format!("Failed to count instance history: {}", e)))
+            .or_query_error("Failed to count instance history")
     }
 }
 
@@ -2347,7 +2353,7 @@ impl TypeHistoryProvider for MongoBackend {
         let cursor = history
             .find(filter)
             .await
-            .map_err(|e| internal_error(format!("Failed to query type history: {}", e)))?;
+            .or_query_error("Failed to query type history")?;
 
         let docs = collect_documents(cursor).await?;
         let mut rows = docs
@@ -2414,7 +2420,7 @@ impl TypeHistoryProvider for MongoBackend {
                 "resource_type": resource_type,
             })
             .await
-            .map_err(|e| internal_error(format!("Failed to count type history: {}", e)))
+            .or_query_error("Failed to count type history")
     }
 }
 
@@ -2437,7 +2443,7 @@ impl SystemHistoryProvider for MongoBackend {
         let cursor = history
             .find(filter)
             .await
-            .map_err(|e| internal_error(format!("Failed to query system history: {}", e)))?;
+            .or_query_error("Failed to query system history")?;
 
         let docs = collect_documents(cursor).await?;
         let mut rows = docs
@@ -2505,7 +2511,7 @@ impl SystemHistoryProvider for MongoBackend {
                 "tenant_id": tenant_id,
             })
             .await
-            .map_err(|e| internal_error(format!("Failed to count system history: {}", e)))
+            .or_query_error("Failed to count system history")
     }
 }
 
@@ -3617,7 +3623,7 @@ impl PurgableStorage for MongoBackend {
         let in_history = history
             .count_documents(key.clone())
             .await
-            .map_err(|e| internal_error(format!("Failed to check resource history: {e}")))?;
+            .or_query_error("Failed to check resource history")?;
         if in_resources == 0 && in_history == 0 {
             return Err(StorageError::Resource(ResourceError::NotFound {
                 resource_type: resource_type.to_string(),
@@ -3628,11 +3634,11 @@ impl PurgableStorage for MongoBackend {
         resources
             .delete_many(key.clone())
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource: {e}")))?;
+            .or_query_error("Failed to purge resource")?;
         history
             .delete_many(key)
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource history: {e}")))?;
+            .or_query_error("Failed to purge resource history")?;
 
         // The search_index collection keys the resource as `resource_id`.
         search_index
@@ -3642,7 +3648,7 @@ impl PurgableStorage for MongoBackend {
                 "resource_id": id,
             })
             .await
-            .map_err(|e| internal_error(format!("Failed to purge search index: {e}")))?;
+            .or_query_error("Failed to purge search index")?;
 
         Ok(())
     }
@@ -3663,20 +3669,20 @@ impl PurgableStorage for MongoBackend {
         let count = resources
             .count_documents(key.clone())
             .await
-            .map_err(|e| internal_error(format!("Failed to count resources: {e}")))?;
+            .or_query_error("Failed to count resources")?;
 
         resources
             .delete_many(key.clone())
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resources: {e}")))?;
+            .or_query_error("Failed to purge resources")?;
         history
             .delete_many(key)
             .await
-            .map_err(|e| internal_error(format!("Failed to purge resource history: {e}")))?;
+            .or_query_error("Failed to purge resource history")?;
         search_index
             .delete_many(doc! { "tenant_id": tenant_id, "resource_type": resource_type })
             .await
-            .map_err(|e| internal_error(format!("Failed to purge search index: {e}")))?;
+            .or_query_error("Failed to purge search index")?;
 
         Ok(count)
     }
@@ -3872,7 +3878,7 @@ impl ReindexTarget for MongoBackend {
             .collection::<Document>(MongoBackend::SEARCH_INDEX_COLLECTION)
             .delete_many(doc! { "tenant_id": tenant.tenant_id().as_str() })
             .await
-            .map_err(|e| internal_error(format!("Failed to clear search index: {e}")))?;
+            .or_query_error("Failed to clear search index")?;
 
         Ok(result.deleted_count)
     }
