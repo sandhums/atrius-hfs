@@ -35,6 +35,26 @@
       "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-ddi-check"
     },
     {
+      "id": "atrius-discharge-readiness",
+      "hook": "patient-view",
+      "title": "Discharge Readiness Advisory",
+      "description": "Non-interruptive advisory when an active inpatient has pending lab Tasks, active IV MedicationRequests, or an incomplete surgical safety checklist. Does not block discharge; billing clearance remains a separate HIS Account gate.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "tasks": "Task?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}",
+        "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusDischargeReadiness",
+      "libraryVersion": "0.1.0",
+      "expression": "Discharge Readiness Concerns",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-discharge-readiness",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-discharge-readiness"
+    },
+    {
       "id": "atrius-imaging-appropriateness",
       "hook": "order-select",
       "title": "Imaging Appropriateness (Lumbar MRI)",
@@ -51,6 +71,24 @@
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-imaging-appropriateness",
       "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-imaging-appropriateness"
+    },
+    {
+      "id": "atrius-ot-prophylaxis",
+      "hook": "encounter-start",
+      "title": "OT Antibiotic Prophylaxis",
+      "description": "At encounter-start for a surgical encounter with no active ceftriaxone/cefazolin order, propose pre-incision antibiotic prophylaxis.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusOtProphylaxis",
+      "libraryVersion": "0.1.0",
+      "expression": "OT Antibiotic Prophylaxis Needed",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-ot-prophylaxis",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-ot-prophylaxis"
     },
     {
       "id": "atrius-preventive-care",
@@ -88,6 +126,25 @@
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-renal-dosing",
       "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-renal-dosing"
+    },
+    {
+      "id": "atrius-vte-prophylaxis",
+      "hook": "encounter-start",
+      "title": "VTE Prophylaxis Reminder",
+      "description": "At encounter-start for an adult inpatient without VTE or obstetric exclusions and without an active enoxaparin/heparin order, propose pharmacologic VTE prophylaxis (enoxaparin).",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusVTE",
+      "libraryVersion": "0.1.0",
+      "expression": "VTE Prophylaxis Needed",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-vte-prophylaxis",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-vte-prophylaxis"
     },
     {
       "id": "atriusadultoutpatientencounters-qualifying-encounters",

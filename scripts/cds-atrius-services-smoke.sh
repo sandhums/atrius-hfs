@@ -10,6 +10,9 @@
 #   atrius-imaging-appropriateness  order-select   acute LBP + draft lumbar MRI; red flag is silent
 #   atrius-renal-dosing             order-sign     draft gabapentin + eGFR 25 -> adjusted dose
 #   surgical-safety-checklist-rule  encounter-start surgical encounter without checklist QR fires; completed QR is silent
+#   atrius-vte-prophylaxis          encounter-start adult inpatient without LMWH fires; with enoxaparin silent
+#   atrius-ot-prophylaxis           encounter-start surgical enc without antibiotic fires; with ceftriaxone silent
+#   atrius-discharge-readiness      patient-view    pending lab Task fires; empty blockers silent
 #
 # Prerequisites: KR (:8079), HTS (:9091), sidecar (:8088), clinical HFS (:8082),
 # cds-server (:8095) with the Atrius KR content imported
@@ -21,8 +24,20 @@
 # Usage:
 #   ./scripts/cds-atrius-services-smoke.sh
 #   CDS_SERVER_URL=http://127.0.0.1:8095 CLINICAL_HFS_URL=http://127.0.0.1:8082 ./scripts/cds-atrius-services-smoke.sh
+#
+# Auth (when clinical HFS has HFS_AUTH_ENABLED=true):
+#   Sources cds-smoke-auth.sh — client_credentials against Keycloak, then seeds
+#   Patients with Bearer + X-Tenant-ID and injects fhirAuthorization on invoke.
+#   CDS_SMOKE_SKIP_AUTH=1 to skip (auth-disabled HFS only).
+#
+# Per-service wrappers: cds-atrius-vte-prophylaxis-smoke.sh,
+# cds-atrius-ot-prophylaxis-smoke.sh, cds-atrius-discharge-readiness-smoke.sh
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=cds-smoke-auth.sh
+source "$SCRIPT_DIR/cds-smoke-auth.sh"
 
 CDS="${CDS_SERVER_URL:-http://127.0.0.1:8095}"
 CLINICAL="${CLINICAL_HFS_URL:-http://127.0.0.1:8082}"
@@ -30,6 +45,23 @@ cds="${CDS%/}"
 clinical="${CLINICAL%/}"
 PASS=0
 FAIL=0
+
+cds_smoke_auth_init || {
+  echo "FATAL: could not obtain clinical HFS OAuth token (set CDS_SMOKE_* or CDS_SMOKE_SKIP_AUTH=1)" >&2
+  exit 1
+}
+cds_smoke_preflight_search || {
+  echo "FATAL: clinical Observation search is unavailable — fix Elasticsearch before re-running." >&2
+  exit 1
+}
+
+# Empty ValueSet $expand results used to stick in the sidecar process cache and make
+# ObservationVitalSigns retrieves (sepsis SIRS) silently empty. Clear at smoke start;
+# sidecar ≥ current also refuses to cache empty expands.
+SIDECAR_URL="${SIDECAR_URL:-http://127.0.0.1:8088}"
+if curl -sS -o /dev/null -w '%{http_code}' -X POST "${SIDECAR_URL%/}/v1/admin/cache/libraries/clear" | grep -qE '200|204'; then
+  echo "cds-smoke: cleared sidecar library/expand caches" >&2
+fi
 
 patient() {
   jq -n --arg id "$1" --arg birth "${2:-1960-01-01}" '{
@@ -44,10 +76,15 @@ patient() {
 # server, not only prefetch — seed smoke patients idempotently.
 seed_patient() { # id [birthDate]
   local code
+  local -a auth=()
+  if [[ -n "${CDS_SMOKE_ACCESS_TOKEN:-}" ]]; then
+    auth=(-H "Authorization: Bearer ${CDS_SMOKE_ACCESS_TOKEN}" -H "X-Tenant-ID: ${CDS_SMOKE_TENANT_ID}")
+  fi
   code="$(patient "$1" "${2:-1960-01-01}" | curl -sS -o /dev/null -w '%{http_code}' \
-    -X PUT -H 'Content-Type: application/fhir+json' --data-binary @- "$clinical/Patient/$1")"
+    -X PUT -H 'Content-Type: application/fhir+json' "${auth[@]}" --data-binary @- "$clinical/Patient/$1")"
   if [[ "$code" != "200" && "$code" != "201" ]]; then
-    echo "warn: seeding Patient/$1 on $clinical returned HTTP $code" >&2
+    echo "FATAL: seeding Patient/$1 on $clinical returned HTTP $code (AgeInYears needs server birthDate)" >&2
+    exit 1
   fi
 }
 
@@ -63,6 +100,13 @@ lab_obs() { # id loinc display value unit ucum patient effective
     effectiveDateTime: $eff,
     valueQuantity: {value: $val, unit: $unit, system: "http://unitsofmeasure.org", code: $ucum}
   }'
+}
+
+# Sepsis CQL retrieves ObservationVitalSigns — stamp vital-signs profile/category.
+vital_obs() {
+  lab_obs "$@" | jq '
+    .meta.profile = ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation-vital-signs"]
+    | .category = [{coding: [{system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "vital-signs"}]}]'
 }
 
 condition() { # id sct display patient onset
@@ -92,6 +136,7 @@ med_request() { # sct display status patient
 invoke() { # service payload
   local svc="$1" payload="$2" tmp code
   tmp="$(mktemp)"
+  payload="$(printf '%s' "$payload" | cds_smoke_inject_fhir_auth)"
   code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST "$cds/cds-services/$svc" \
     -H 'Content-Type: application/json' -d "$payload")"
   if [[ "$code" != "200" ]]; then
@@ -106,6 +151,13 @@ invoke() { # service payload
 
 check() { # label jq-assertion response
   local label="$1" assertion="$2" response="$3"
+  # cds-server emits "{title} — active" critical cards when $apply conditions error out.
+  if echo "$response" | jq -e '[.cards[]?.summary // empty] | any(endswith(" — active"))' >/dev/null 2>&1; then
+    echo "FAIL  $label (cds-server fallback card — clinical \$apply/condition likely failed: auth, ES, or prefetch)"
+    echo "$response" | jq '[.cards[]? | {summary, indicator}]' >&2
+    FAIL=$((FAIL + 1))
+    return
+  fi
   if echo "$response" | jq -e "$assertion" >/dev/null 2>&1; then
     echo "PASS  $label"
     PASS=$((PASS + 1))
@@ -152,12 +204,14 @@ check "preventive-care: 58yo with empty chart gets screening + flu cards" \
 # --- 3. Sepsis bundle -------------------------------------------------------
 pt=sepsis-smoke
 seed_patient $pt
-temp="$(lab_obs t1 8310-5 'Body temperature' 38.9 'Cel' 'Cel' $pt "$now")"
-hr="$(lab_obs h1 8867-4 'Heart rate' 118 '/min' '/min' $pt "$now")"
+temp="$(vital_obs t1 8310-5 'Body temperature' 38.9 'Cel' 'Cel' $pt "$now")"
+# UCUM display "{beats}/min" is more reliable for FHIRHelpers quantity compare than "/min".
+hr="$(vital_obs h1 8867-4 'Heart rate' 118 '{beats}/min' '/min' $pt "$now")"
+rr="$(vital_obs r1 9279-1 'Respiratory rate' 24 '{breaths}/min' '/min' $pt "$now")"
 infection="$(condition c1 233604007 'Pneumonia' $pt "$now")"
 sepsis_payload="$(jq -n \
   --argjson patient "$(patient $pt)" \
-  --argjson obs "$(bundle "[$temp,$hr]")" \
+  --argjson obs "$(bundle "[$temp,$hr,$rr]")" \
   --argjson conds "$(bundle "[$infection]")" '{
   hook: "encounter-start", hookInstance: "sepsis-smoke",
   context: {patientId: "'$pt'", encounterId: "sepsis-smoke-enc", userId: "Practitioner/smoke"},
@@ -165,6 +219,11 @@ sepsis_payload="$(jq -n \
              observations: $obs, conditions: $conds}
 }')"
 resp="$(invoke sepsis-bundle "$sepsis_payload")"
+# One retry after cache clear — covers sidecars that still cache empty expands.
+if ! echo "$resp" | jq -e '.cards | map(.summary) | any(test("Hour-1"; "i"))' >/dev/null 2>&1; then
+  curl -sS -X POST "${SIDECAR_URL%/}/v1/admin/cache/libraries/clear" >/dev/null 2>&1 || true
+  resp="$(invoke sepsis-bundle "$sepsis_payload")"
+fi
 check "sepsis: SIRS x2 + pneumonia fires hour-1 bundle" \
   '.cards | map(.summary) | any(test("Hour-1"; "i"))' "$resp"
 
@@ -200,7 +259,10 @@ hf_payload="$(jq -n \
              conditions: $conds, observations: $empty}
 }')"
 resp="$(invoke hf-admission-protocol "$hf_payload")"
-check "hf-admission: active HF fires bundle + BNP cards" '.cards | length == 2' "$resp"
+check "hf-admission: active HF fires bundle + BNP cards" \
+  '.cards | length >= 3
+   and (map(.summary) | any(test("HF admission bundle"; "i")))
+   and (map(.summary) | any(test("natriuretic|BNP"; "i")))' "$resp"
 check "hf-admission: CarePlan shipped in response extension" \
   '.extension["https://atrius.in/fhir/extension/care-plan"].resourceType == "CarePlan"' "$resp"
 
@@ -274,6 +336,87 @@ check "surgical-safety: surgical encounter without checklist fires reminder" \
   '.cards | length == 1 and (.[0].summary | test("checklist"; "i"))' "$resp"
 resp="$(invoke surgical-safety-checklist-rule "$(mk_surg "[$checklist_qr]")")"
 check "surgical-safety: completed checklist QR is silent" '.cards | length == 0' "$resp"
+
+# --- 9. VTE prophylaxis -----------------------------------------------------
+pt=vte-smoke
+seed_patient $pt 1960-01-01
+vte_enc='{"resourceType":"Encounter","id":"vte-smoke-enc","status":"in-progress",
+  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
+  "type":[{"coding":[{"system":"http://snomed.info/sct","code":"32485007","display":"Hospital admission"}]}],
+  "subject":{"reference":"Patient/'$pt'"},
+  "period":{"start":"'"$now"'"}}'
+enox="$(med_request 372562003 Enoxaparin active $pt | jq '.id = "vte-enox"')"
+mk_vte() { # med-entries
+  jq -n --argjson patient "$(patient $pt 1960-01-01)" --argjson encs "$(bundle "[$vte_enc]")" \
+    --argjson meds "$(bundle "$1")" --argjson empty "$(bundle '[]')" '{
+    hook: "encounter-start", hookInstance: "vte-smoke",
+    context: {patientId: "'$pt'", encounterId: "vte-smoke-enc", userId: "Practitioner/smoke"},
+    prefetch: {patient: $patient, "encounter-1": $encs, encounters: $encs,
+               "condition-2": $empty, conditions: $empty,
+               "medicationrequest-3": $meds, medicationRequests: $meds}
+  }'
+}
+resp="$(invoke atrius-vte-prophylaxis "$(mk_vte '[]')")"
+check "vte-prophylaxis: adult inpatient without LMWH fires reminder" \
+  '.cards | length >= 1 and (map(.summary) | any(test("VTE|prophylaxis|enoxaparin"; "i")))' "$resp"
+resp="$(invoke atrius-vte-prophylaxis "$(mk_vte "[$enox]")")"
+check "vte-prophylaxis: active enoxaparin is silent" '.cards | length == 0' "$resp"
+
+# --- 10. OT antibiotic prophylaxis ------------------------------------------
+pt=otpx-smoke
+seed_patient $pt
+ot_enc='{"resourceType":"Encounter","id":"otpx-smoke-enc","status":"in-progress",
+  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
+  "type":[{"coding":[{"system":"http://snomed.info/sct","code":"387713003","display":"Surgical procedure"}]}],
+  "subject":{"reference":"Patient/'$pt'"}}'
+ctx="$(med_request 372670001 Ceftriaxone active $pt | jq '.id = "otpx-ctx"')"
+mk_otpx() { # med-entries
+  jq -n --argjson patient "$(patient $pt)" --argjson encs "$(bundle "[$ot_enc]")" \
+    --argjson meds "$(bundle "$1")" '{
+    hook: "encounter-start", hookInstance: "otpx-smoke",
+    context: {patientId: "'$pt'", encounterId: "otpx-smoke-enc", userId: "Practitioner/smoke"},
+    prefetch: {patient: $patient, "encounter-1": $encs, encounters: $encs,
+               "medicationrequest-2": $meds, medicationRequests: $meds}
+  }'
+}
+resp="$(invoke atrius-ot-prophylaxis "$(mk_otpx '[]')")"
+check "ot-prophylaxis: surgical encounter without antibiotic fires reminder" \
+  '.cards | length >= 1 and (map(.summary) | any(test("antibiotic|prophylaxis|ceftriaxone"; "i")))' "$resp"
+resp="$(invoke atrius-ot-prophylaxis "$(mk_otpx "[$ctx]")")"
+check "ot-prophylaxis: active ceftriaxone is silent" '.cards | length == 0' "$resp"
+
+# --- 11. Discharge readiness ------------------------------------------------
+pt=dcr-smoke
+seed_patient $pt 1960-01-01
+dcr_enc='{"resourceType":"Encounter","id":"dcr-smoke-enc","status":"in-progress",
+  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
+  "type":[{"coding":[{"system":"http://snomed.info/sct","code":"32485007","display":"Hospital admission"}]}],
+  "subject":{"reference":"Patient/'$pt'"},
+  "period":{"start":"'"$now"'"}}'
+pending_task='{"resourceType":"Task","id":"dcr-lab-task","status":"in-progress","intent":"order",
+  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-task"]},
+  "code":{"coding":[{"system":"http://hl7.org/fhir/CodeSystem/task-code","code":"fulfill"}]},
+  "for":{"reference":"Patient/'$pt'"},
+  "encounter":{"reference":"Encounter/dcr-smoke-enc"}}'
+mk_dcr() { # task-entries
+  jq -n --argjson patient "$(patient $pt 1960-01-01)" --argjson encs "$(bundle "[$dcr_enc]")" \
+    --argjson tasks "$(bundle "$1")" --argjson empty "$(bundle '[]')" '{
+    hook: "patient-view", hookInstance: "dcr-smoke",
+    context: {patientId: "'$pt'", userId: "Practitioner/smoke"},
+    prefetch: {patient: $patient, "encounter-1": $encs, encounters: $encs,
+               "task-2": $tasks, tasks: $tasks,
+               "medicationrequest-3": $empty, medicationRequests: $empty,
+               "questionnaireresponse-4": $empty, questionnaireResponses: $empty}
+  }'
+}
+resp="$(invoke atrius-discharge-readiness "$(mk_dcr "[$pending_task]")")"
+check "discharge-readiness: pending lab Task fires advisory" \
+  '.cards | length >= 1 and (map(.summary) | any(test("lab|discharge|pending"; "i")))' "$resp"
+resp="$(invoke atrius-discharge-readiness "$(mk_dcr '[]')")"
+check "discharge-readiness: no blockers is silent" '.cards | length == 0' "$resp"
 
 echo
 echo "Atrius CDS services smoke: $PASS passed, $FAIL failed"
