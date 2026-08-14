@@ -83,10 +83,7 @@ fn is_trigger_true(result: &EvaluationResult) -> bool {
     }
 }
 
-fn json_to_fhir_resource(
-    json: &Value,
-    version: FhirVersion,
-) -> Result<FhirResource, String> {
+fn json_to_fhir_resource(json: &Value, version: FhirVersion) -> Result<FhirResource, String> {
     match version {
         #[cfg(feature = "R4")]
         FhirVersion::R4 => {
@@ -138,7 +135,8 @@ mod tests {
             "status": "in-progress",
             "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
         });
-        let expr = "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
+        let expr =
+            "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
         assert!(criteria_matches(expr, &cur, None, r4()));
     }
 
@@ -157,7 +155,8 @@ mod tests {
             "status": "in-progress",
             "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
         });
-        let expr = "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
+        let expr =
+            "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
         assert!(criteria_matches(expr, &cur, Some(&prev), r4()));
     }
 
@@ -171,7 +170,8 @@ mod tests {
             "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
         });
         let cur = prev.clone();
-        let expr = "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
+        let expr =
+            "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'";
         assert!(!criteria_matches(expr, &cur, Some(&prev), r4()));
     }
 
@@ -212,7 +212,8 @@ mod tests {
             "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
             "location": [{ "location": { "reference": "Location/ot-1" } }]
         });
-        let expr = "%previous.location.exists() and location.exists() and %previous.location != location";
+        let expr =
+            "%previous.location.exists() and location.exists() and %previous.location != location";
         assert!(criteria_matches(expr, &cur, Some(&prev), r4()));
         assert!(!criteria_matches(expr, &cur, Some(&cur), r4()));
     }

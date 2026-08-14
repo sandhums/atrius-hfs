@@ -116,7 +116,9 @@ async fn process_observation_focus(
         .unwrap_or("unknown");
 
     let Some(svc) = registry.by_id(CRITICAL_LABS_SERVICE_ID) else {
-        return Err(format!("CDS service `{CRITICAL_LABS_SERVICE_ID}` not registered"));
+        return Err(format!(
+            "CDS service `{CRITICAL_LABS_SERVICE_ID}` not registered"
+        ));
     };
 
     let obs_bundle = json!({
@@ -187,7 +189,11 @@ async fn process_observation_focus(
 }
 
 async fn fetch_observation(cfg: &SubscriptionNotifyConfig, id: &str) -> Result<Value, String> {
-    let url = format!("{}/Observation/{}", cfg.fhir_base_url.trim_end_matches('/'), id);
+    let url = format!(
+        "{}/Observation/{}",
+        cfg.fhir_base_url.trim_end_matches('/'),
+        id
+    );
     let req = cfg
         .fhir_http
         .get(&url)
@@ -381,9 +387,7 @@ fn observation_focuses(bundle: &Value) -> Vec<ObservationFocus> {
 
     // Native R5-style focus on SubscriptionStatus notificationEvent.
     if let Some(status) = entries.first().and_then(|e| e.get("resource"))
-        && let Some(events) = status
-            .get("notificationEvent")
-            .and_then(Value::as_array)
+        && let Some(events) = status.get("notificationEvent").and_then(Value::as_array)
     {
         for event in events {
             if let Some(reference) = event

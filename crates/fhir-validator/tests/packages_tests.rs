@@ -179,10 +179,7 @@ fn resolve_requires_deps_in_cache() {
     seed_dep_and_root(tmp.path());
     let cache = PackageCache::new(tmp.path());
 
-    let missing = resolve_packages(
-        &cache,
-        &[PackageRef::parse("example.ig@1.0.0").unwrap()],
-    );
+    let missing = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]);
     // dep was seeded — should succeed with dep then root
     let ok = missing.unwrap();
     assert_eq!(ok.len(), 2);
@@ -205,11 +202,8 @@ fn resolve_requires_deps_in_cache() {
         )],
     );
     cache2.ensure_from_tgz(&tgz).unwrap();
-    let err = resolve_packages(
-        &cache2,
-        &[PackageRef::parse("example.ig@1.0.0").unwrap()],
-    )
-    .unwrap_err();
+    let err =
+        resolve_packages(&cache2, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap_err();
     assert!(err.to_string().contains("example.dep@1.0.0"), "{err}");
 }
 
@@ -236,11 +230,9 @@ fn package_layers_overlay_core_for_meta_profile() {
     let tmp = tempfile::tempdir().unwrap();
     seed_dep_and_root(tmp.path());
     let cache = PackageCache::new(tmp.path());
-    let layers = materialize_package_layers(
-        &cache,
-        &[PackageRef::parse("example.ig@1.0.0").unwrap()],
-    )
-    .unwrap();
+    let layers =
+        materialize_package_layers(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()])
+            .unwrap();
     // Overlay order: root then dep (dependents first).
     assert_eq!(layers[0].0.to_string(), "example.ig@1.0.0");
     assert_eq!(layers[1].0.to_string(), "example.dep@1.0.0");

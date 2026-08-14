@@ -208,7 +208,10 @@ pub fn build_fhir_write_auth(
             url,
             id,
             secret,
-            scope.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string),
+            scope
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string),
         )),
         (None, None, None) => Arc::new(NoFhirWriteAuth),
         _ => {
@@ -242,7 +245,10 @@ mod tests {
     async fn static_bearer_returns_token() {
         let auth = StaticBearerAuth::new("tok-123");
         assert_eq!(auth.mode(), "static-bearer");
-        assert_eq!(auth.bearer_token().await.unwrap().as_deref(), Some("tok-123"));
+        assert_eq!(
+            auth.bearer_token().await.unwrap().as_deref(),
+            Some("tok-123")
+        );
     }
 
     #[tokio::test]
@@ -269,9 +275,15 @@ mod tests {
             None,
         );
 
-        assert_eq!(auth.bearer_token().await.unwrap().as_deref(), Some("access-1"));
+        assert_eq!(
+            auth.bearer_token().await.unwrap().as_deref(),
+            Some("access-1")
+        );
         // Second call hits cache — mock expects only one POST.
-        assert_eq!(auth.bearer_token().await.unwrap().as_deref(), Some("access-1"));
+        assert_eq!(
+            auth.bearer_token().await.unwrap().as_deref(),
+            Some("access-1")
+        );
     }
 
     #[tokio::test]

@@ -499,8 +499,7 @@ impl SqliteBackend {
         if let Some(reg) = self.registries.get_cached(tenant_id) {
             return reg;
         }
-        let overlay =
-            load_tenant_stored_params_on_conn(conn, self.config.fhir_version, tenant_id);
+        let overlay = load_tenant_stored_params_on_conn(conn, self.config.fhir_version, tenant_id);
         self.registries.cache_from_overlay(tenant_id, overlay)
     }
 

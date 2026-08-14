@@ -35,9 +35,7 @@ pub async fn run_heartbeat_worker(engine: Arc<SubscriptionEngine>, config: Subsc
             }
             match notification::build_heartbeat(&sub, engine.base_url()) {
                 Ok(bundle) => {
-                    engine
-                        .dispatch_heartbeat(&sub, &bundle)
-                        .await;
+                    engine.dispatch_heartbeat(&sub, &bundle).await;
                 }
                 Err(e) => {
                     warn!(

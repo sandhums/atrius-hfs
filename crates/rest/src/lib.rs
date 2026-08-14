@@ -167,9 +167,7 @@ pub mod terminology;
 pub mod validation;
 
 // Re-export commonly used types
-pub use config::{
-    MultitenancyConfig, ServerConfig, StorageBackendMode, TenantRoutingMode,
-};
+pub use config::{MultitenancyConfig, ServerConfig, StorageBackendMode, TenantRoutingMode};
 pub use error::{RestError, RestResult};
 pub use middleware::auth::AuthMiddlewareState;
 pub use state::AppState;
@@ -883,9 +881,10 @@ where
             // composite deployment that is the *composite*, not the primary, so
             // the rewritten resource also reaches the Elasticsearch index and
             // `GET /Subscription?status=active` answers from current documents.
-            engine = engine.with_status_store(
-                Arc::clone(&storage_arc) as Arc<dyn helios_persistence::core::ResourceStorage>
-            );
+            engine =
+                engine
+                    .with_status_store(Arc::clone(&storage_arc)
+                        as Arc<dyn helios_persistence::core::ResourceStorage>);
             if engine.persists_status() {
                 info!("Subscriptions engine ENABLED (status write-back ON)");
             } else {

@@ -606,9 +606,7 @@ impl ValidationConfig {
             errors.push("HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS must be > 0".to_string());
         }
         if !self.packages.is_empty() && self.package_cache.is_none() {
-            errors.push(
-                "HFS_FHIR_PACKAGES is set but HFS_FHIR_PACKAGE_CACHE is unset".to_string(),
-            );
+            errors.push("HFS_FHIR_PACKAGES is set but HFS_FHIR_PACKAGE_CACHE is unset".to_string());
         }
         for pkg in &self.packages {
             if helios_fhir_validator::PackageRef::parse(pkg).is_err() {
@@ -1045,7 +1043,12 @@ pub struct ServerConfig {
     /// Accepted for backward compatibility with existing deployments
     /// (`HFS_REINDEX_ENABLED`): `$reindex` is now wired automatically for
     /// backends with a search index, so this flag no longer gates anything.
-    #[arg(long, env = "HFS_REINDEX_ENABLED", default_value = "false", hide = true)]
+    #[arg(
+        long,
+        env = "HFS_REINDEX_ENABLED",
+        default_value = "false",
+        hide = true
+    )]
     pub reindex_enabled: bool,
 
     /// Natural-language search master switch. When false the feature is

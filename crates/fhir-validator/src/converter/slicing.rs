@@ -101,9 +101,7 @@ fn build_match(
     }
 
     let kinds: Vec<&str> = discriminators.iter().map(|d| d.type_.as_str()).collect();
-    let all_pattern = kinds
-        .iter()
-        .all(|k| matches!(*k, "value" | "pattern"));
+    let all_pattern = kinds.iter().all(|k| matches!(*k, "value" | "pattern"));
     if all_pattern {
         return build_pattern_match(node, discriminators);
     }

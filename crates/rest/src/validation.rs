@@ -296,11 +296,7 @@ impl ValidationService {
 
     /// `CompositeResolver` layers: tenant overlay, package layers (dependents
     /// before deps), then the embedded core pack.
-    fn resolver_for(
-        &self,
-        version: FhirVersion,
-        tenant: Option<&str>,
-    ) -> Arc<dyn SchemaResolver> {
+    fn resolver_for(&self, version: FhirVersion, tenant: Option<&str>) -> Arc<dyn SchemaResolver> {
         let core = helios_fhir_validator::packs::core_registry(version);
         let mut layers: Vec<Arc<dyn SchemaResolver>> = Vec::new();
         if let Some(overlay) = self.tenant_overlay(tenant, version) {

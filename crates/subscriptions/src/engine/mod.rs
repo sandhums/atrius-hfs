@@ -125,8 +125,7 @@ impl SubscriptionEngine {
             );
         }
 
-        let status_write_slots =
-            Arc::new(Semaphore::new(config.status_write_concurrency.max(1)));
+        let status_write_slots = Arc::new(Semaphore::new(config.status_write_concurrency.max(1)));
 
         Self {
             topic_registry,
@@ -744,13 +743,11 @@ impl SubscriptionEngine {
             ),
             Ok(Ok(PersistOutcome::Vanished)) => debug!(
                 tenant_id,
-                subscription_id,
-                "Subscription resource is gone; nothing to persist status onto"
+                subscription_id, "Subscription resource is gone; nothing to persist status onto"
             ),
             Ok(Ok(PersistOutcome::RacedClientWrite)) => debug!(
                 tenant_id,
-                subscription_id,
-                "Dropped status write-back after client raced the version"
+                subscription_id, "Dropped status write-back after client raced the version"
             ),
             Ok(Err(e)) => error!(
                 tenant_id,
@@ -792,7 +789,7 @@ impl SubscriptionEngine {
                     "Failed to build handshake"
                 );
                 self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                .await;
+                    .await;
                 return;
             }
         };
@@ -822,10 +819,7 @@ impl SubscriptionEngine {
             );
 
             // Perform handshake via the registered dispatcher for this channel type.
-            let Some(dispatcher) = self
-                .dispatchers
-                .get(&subscription.channel.channel_type)
-            else {
+            let Some(dispatcher) = self.dispatchers.get(&subscription.channel.channel_type) else {
                 warn!(
                     tenant_id,
                     subscription_id = sub_id,
@@ -834,12 +828,10 @@ impl SubscriptionEngine {
                     "No dispatcher registered for channel type"
                 );
                 self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                .await;
+                    .await;
                 return;
             };
-            let result = dispatcher
-                .handshake(subscription, &handshake_bundle)
-                .await;
+            let result = dispatcher.handshake(subscription, &handshake_bundle).await;
 
             match result {
                 Ok(DispatchResult::Success) => {
@@ -852,7 +844,7 @@ impl SubscriptionEngine {
                         "Handshake successful, activating subscription"
                     );
                     self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Active)
-                    .await;
+                        .await;
                     return;
                 }
                 Ok(DispatchResult::PermanentError(msg)) => {
@@ -866,7 +858,7 @@ impl SubscriptionEngine {
                         "Handshake failed with permanent error"
                     );
                     self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                    .await;
+                        .await;
                     return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
@@ -881,7 +873,7 @@ impl SubscriptionEngine {
                             "Handshake retries exhausted"
                         );
                         self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                        .await;
+                            .await;
                         return;
                     }
 
@@ -911,7 +903,7 @@ impl SubscriptionEngine {
                         "Handshake error"
                     );
                     self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                    .await;
+                        .await;
                     return;
                 }
             }
@@ -929,10 +921,7 @@ impl SubscriptionEngine {
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
 
-        let Some(dispatcher) = self
-            .dispatchers
-            .get(&subscription.channel.channel_type)
-        else {
+        let Some(dispatcher) = self.dispatchers.get(&subscription.channel.channel_type) else {
             warn!(
                 tenant_id,
                 subscription_id = sub_id,
@@ -971,7 +960,8 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Permanent delivery error"
                     );
-                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id).await;
+                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
+                        .await;
                     return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
@@ -988,7 +978,8 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Max retries exhausted"
                         );
-                        self.handle_delivery_failure(&subscription.tenant_id, &subscription.id).await;
+                        self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
+                            .await;
                         return;
                     }
 
@@ -1015,7 +1006,8 @@ impl SubscriptionEngine {
                         error = %e,
                         "Dispatch error"
                     );
-                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id).await;
+                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
+                        .await;
                     return;
                 }
             }

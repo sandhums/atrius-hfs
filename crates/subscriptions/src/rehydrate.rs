@@ -76,7 +76,6 @@
 //! smaller than it used to be: with status write-back enabled, a subscription
 //! the server activated now reads back `active` and is not handshaken again.
 
-
 use std::collections::BTreeSet;
 use std::sync::Arc;
 

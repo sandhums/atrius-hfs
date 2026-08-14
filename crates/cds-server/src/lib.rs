@@ -31,8 +31,7 @@ pub mod subscription_notifications;
 use std::sync::Arc;
 
 use axum::{
-    Router,
-    middleware,
+    Router, middleware,
     routing::{get, post},
 };
 use tower_http::cors::CorsLayer;

@@ -118,8 +118,11 @@ async fn process_batch(
         // Evaluation/dispatch errors are logged inside the engine; treat panic-free
         // completion as success. Transient channel failures use in-engine retry.
         // If we want outbox-level retry for hard failures later, wrap this.
-        match tokio::time::timeout(config.outbox_process_timeout, engine.on_resource_event(event))
-            .await
+        match tokio::time::timeout(
+            config.outbox_process_timeout,
+            engine.on_resource_event(event),
+        )
+        .await
         {
             Ok(()) => {
                 if let Err(e) = store.mark_processed(id).await {
@@ -140,9 +143,7 @@ async fn process_batch(
                         delay_ms = delay.as_millis() as u64,
                         "Outbox processing timed out; scheduling retry"
                     );
-                    let _ = store
-                        .mark_retry(id, delay, "processing timed out")
-                        .await;
+                    let _ = store.mark_retry(id, delay, "processing timed out").await;
                 } else {
                     error!(outbox_id = id, "Outbox processing timed out; giving up");
                     let _ = store

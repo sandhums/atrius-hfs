@@ -9,8 +9,8 @@ use helios_fhir::FhirVersion;
 use uuid::Uuid;
 
 use crate::core::subscription_outbox::{
-    OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore,
-    subscription_outbox_source, subscription_outbox_writes_enabled,
+    OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore, subscription_outbox_source,
+    subscription_outbox_writes_enabled,
 };
 use crate::error::{BackendError, StorageError, StorageResult};
 use crate::tenant::TenantId;
@@ -119,7 +119,9 @@ impl PostgresSubscriptionOutbox {
         let tenant_id: String = row.get("tenant_id");
         let fhir_version_str: String = row.get("fhir_version");
         let fhir_version = FhirVersion::from_mime_param(&fhir_version_str).ok_or_else(|| {
-            internal_error(format!("Unknown fhir_version in outbox: {fhir_version_str}"))
+            internal_error(format!(
+                "Unknown fhir_version in outbox: {fhir_version_str}"
+            ))
         })?;
         let event_type_str: String = row.get("event_type");
         let event_type = OutboxEventType::parse(&event_type_str).ok_or_else(|| {
@@ -179,9 +181,8 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
         let worker_id = worker_id.to_string();
         let limit = limit.max(1) as i64;
         let locked_until: DateTime<Utc> = Utc::now()
-            + chrono::Duration::from_std(lease.max(Duration::from_secs(1))).unwrap_or_else(|_| {
-                chrono::Duration::seconds(60)
-            });
+            + chrono::Duration::from_std(lease.max(Duration::from_secs(1)))
+                .unwrap_or_else(|_| chrono::Duration::seconds(60));
 
         let rows = tx
             .query(

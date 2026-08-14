@@ -258,12 +258,7 @@ mod tests {
                 SearchParameterSource::Stored,
             )],
         );
-        assert!(
-            cached
-                .read()
-                .get_param("Patient", "nickname")
-                .is_some()
-        );
+        assert!(cached.read().get_param("Patient", "nickname").is_some());
         assert!(regs.get_cached("acme1").is_some());
         // Subsequent for_tenant hits the cache, not the empty loader.
         assert!(

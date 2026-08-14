@@ -494,7 +494,6 @@ impl<S: ResourceStorage> AppState<S> {
     pub fn subscription_engine(&self) -> Option<&Arc<helios_subscriptions::SubscriptionEngine>> {
         self.subscription_engine.as_ref()
     }
-
 }
 
 #[cfg(test)]

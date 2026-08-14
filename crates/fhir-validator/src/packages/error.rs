@@ -5,7 +5,10 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub enum PackageError {
     /// I/O failure while reading or writing the cache.
-    Io { path: PathBuf, source: std::io::Error },
+    Io {
+        path: PathBuf,
+        source: std::io::Error,
+    },
     /// Archive extract or JSON parse failure.
     Invalid(String),
     /// Requested package is not present in the cache.

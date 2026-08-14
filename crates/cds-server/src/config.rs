@@ -262,7 +262,9 @@ impl Args {
     }
 
     /// Shared write-auth for GuidanceResponse + Flag POSTs.
-    pub fn feedback_write_auth(&self) -> anyhow::Result<Arc<dyn crate::fhir_write_auth::FhirWriteAuth>> {
+    pub fn feedback_write_auth(
+        &self,
+    ) -> anyhow::Result<Arc<dyn crate::fhir_write_auth::FhirWriteAuth>> {
         let oauth_http = self.feedback_oauth_http_client()?;
         Ok(crate::fhir_write_auth::build_fhir_write_auth(
             oauth_http,

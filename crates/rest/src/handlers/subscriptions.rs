@@ -198,10 +198,7 @@ where
     if let Some(outbox) = engine.outbox_store() {
         let limit = query.count.unwrap_or(50).clamp(1, 200);
         let tenant_id = TenantId::new(tenant.tenant_id());
-        match outbox
-            .list_processed(&tenant_id, query.after, limit)
-            .await
-        {
+        match outbox.list_processed(&tenant_id, query.after, limit).await {
             Ok(rows) => {
                 for row in rows {
                     let focus = format!("{}/{}", row.resource_type, row.resource_id);

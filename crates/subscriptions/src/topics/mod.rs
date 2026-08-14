@@ -756,8 +756,18 @@ mod tests {
         assert!(registry.get_topic("tenant-a", url).is_none());
         assert!(registry.get_topic("tenant-b", url).is_some());
 
-        let matches_a = mt(&registry, "tenant-a", "Encounter", ResourceEventType::Create);
-        let matches_b = mt(&registry, "tenant-b", "Encounter", ResourceEventType::Create);
+        let matches_a = mt(
+            &registry,
+            "tenant-a",
+            "Encounter",
+            ResourceEventType::Create,
+        );
+        let matches_b = mt(
+            &registry,
+            "tenant-b",
+            "Encounter",
+            ResourceEventType::Create,
+        );
         assert!(matches_a.is_empty());
         assert_eq!(matches_b.len(), 1);
     }

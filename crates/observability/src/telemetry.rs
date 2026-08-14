@@ -137,9 +137,7 @@ pub fn shutdown() {
 fn build_otlp_tracer(service_name: &str) -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     use opentelemetry_otlp::SpanExporter;
     use opentelemetry_sdk::{
-        Resource,
-        propagation::TraceContextPropagator,
-        trace::SdkTracerProvider,
+        Resource, propagation::TraceContextPropagator, trace::SdkTracerProvider,
     };
 
     if std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").is_err() {
@@ -150,7 +148,9 @@ fn build_otlp_tracer(service_name: &str) -> Option<opentelemetry_sdk::trace::Sdk
         Ok(exporter) => exporter,
         Err(err) => {
             // Subscriber is not installed yet; eprintln so operators still see why.
-            eprintln!("helios-observability: failed to build OTLP span exporter: {err}; tracing export disabled");
+            eprintln!(
+                "helios-observability: failed to build OTLP span exporter: {err}; tracing export disabled"
+            );
             return None;
         }
     };

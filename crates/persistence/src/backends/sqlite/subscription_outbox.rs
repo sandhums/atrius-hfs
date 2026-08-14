@@ -9,8 +9,8 @@ use r2d2_sqlite::SqliteConnectionManager;
 use uuid::Uuid;
 
 use crate::core::subscription_outbox::{
-    OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore,
-    subscription_outbox_source, subscription_outbox_writes_enabled,
+    OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore, subscription_outbox_source,
+    subscription_outbox_writes_enabled,
 };
 use crate::error::{BackendError, StorageError, StorageResult};
 use crate::tenant::TenantId;
@@ -161,11 +161,7 @@ impl SqliteSubscriptionOutbox {
             )
         })?;
         let event_id = Uuid::parse_str(&event_id).map_err(|e| {
-            rusqlite::Error::FromSqlConversionFailure(
-                0,
-                rusqlite::types::Type::Text,
-                Box::new(e),
-            )
+            rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
         })?;
 
         let resource = match resource_json {

@@ -64,10 +64,14 @@ fn observation_lab(id: &str, status: &str, interpretation: Option<&str>) -> Valu
     o
 }
 
-fn basic_topic(id: &str, url: &str, resource_sd: &str, interactions: &[&str], fhirpath: &str) -> Value {
-    let mut trigger_ext = vec![
-        json!({ "url": "resource", "valueUri": resource_sd }),
-    ];
+fn basic_topic(
+    id: &str,
+    url: &str,
+    resource_sd: &str,
+    interactions: &[&str],
+    fhirpath: &str,
+) -> Value {
+    let mut trigger_ext = vec![json!({ "url": "resource", "valueUri": resource_sd })];
     for i in interactions {
         trigger_ext.push(json!({ "url": "supportedInteraction", "valueCode": i }));
     }
@@ -304,8 +308,7 @@ async fn admit_topic_notifies_on_create_and_planned_to_in_progress_only() {
 #[tokio::test]
 async fn critical_lab_topic_notifies_only_for_final_with_critical_interpretation() {
     let server = MockServer::start().await;
-    let engine =
-        activate_engine(&server, critical_lab_topic(), "sub-crit", TOPIC_CRITICAL).await;
+    let engine = activate_engine(&server, critical_lab_topic(), "sub-crit", TOPIC_CRITICAL).await;
 
     for code in ["H", "HH", "L", "LL", "AA"] {
         engine

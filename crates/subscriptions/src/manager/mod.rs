@@ -437,8 +437,8 @@ impl SubscriptionManager {
                 if period == 0 {
                     return None;
                 }
-                let due_at = sub.last_notification_at
-                    + chrono::Duration::seconds(i64::from(period));
+                let due_at =
+                    sub.last_notification_at + chrono::Duration::seconds(i64::from(period));
                 if now >= due_at {
                     Some(sub.clone())
                 } else {

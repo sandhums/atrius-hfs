@@ -84,8 +84,7 @@ impl ChannelDispatcherRegistry {
 
     /// Whether a dispatcher is registered for the given channel type.
     pub fn contains(&self, channel_type: &ChannelType) -> bool {
-        self.dispatchers
-            .contains_key(channel_type.as_fhir_str())
+        self.dispatchers.contains_key(channel_type.as_fhir_str())
     }
 
     /// Returns the registered FHIR channel-type codes.
@@ -108,7 +107,11 @@ mod tests {
         assert!(registry.contains(&ChannelType::RestHook));
         assert!(registry.get(&ChannelType::RestHook).is_some());
         assert!(registry.get(&ChannelType::Websocket).is_none());
-        assert!(registry.registered_types().contains(&"rest-hook".to_string()));
+        assert!(
+            registry
+                .registered_types()
+                .contains(&"rest-hook".to_string())
+        );
     }
 
     #[test]
@@ -116,6 +119,10 @@ mod tests {
         let mut registry = ChannelDispatcherRegistry::new();
         registry.register("kafka", Arc::new(RestHookChannel::new()));
         assert!(registry.contains(&ChannelType::Custom("kafka".to_string())));
-        assert!(registry.get(&ChannelType::Custom("kafka".to_string())).is_some());
+        assert!(
+            registry
+                .get(&ChannelType::Custom("kafka".to_string()))
+                .is_some()
+        );
     }
 }

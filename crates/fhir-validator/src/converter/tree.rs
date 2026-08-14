@@ -365,7 +365,7 @@ fn apply_choice(parent: &mut Node, base_name: &str, ed: &Ed, warnings: &mut Vec<
 
 /// Recursively turn a tree node into a schema, pruning empty nodes.
 pub(super) fn finalize(node: Node, warnings: &mut Vec<String>) -> Option<FhirSchema> {
-      let Node {
+    let Node {
         element_name: _,
         mut schema,
         type_profiles: _,
