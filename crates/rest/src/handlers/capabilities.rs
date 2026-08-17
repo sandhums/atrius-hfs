@@ -22,7 +22,7 @@ use axum::{
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use helios_fhir::FhirVersion;
-use helios_persistence::core::{ResourceStorage, SearchProvider};
+use helios_persistence::core::{BundleProvider, ResourceStorage, SearchProvider};
 use helios_persistence::search::SearchParameterRegistry;
 use helios_persistence::types::SearchParamType;
 use tracing::debug;
@@ -79,7 +79,7 @@ pub async fn capabilities_handler<S>(
     req_headers: HeaderMap,
 ) -> RestResult<Response>
 where
-    S: ResourceStorage + SearchProvider + Send + Sync + 'static,
+    S: ResourceStorage + SearchProvider + BundleProvider + Send + Sync + 'static,
 {
     // Determine which version to describe (from Accept header or default)
     let fhir_version = version.accept_version_or(state.config().default_fhir_version);
@@ -135,7 +135,7 @@ fn build_capability_statement<S>(
     base_url: &str,
 ) -> serde_json::Value
 where
-    S: ResourceStorage + SearchProvider + Send + Sync + 'static,
+    S: ResourceStorage + SearchProvider + BundleProvider + Send + Sync + 'static,
 {
     // Get resource types for the requested FHIR version
     let resource_types = get_resource_type_names_for_version(version);
@@ -193,6 +193,21 @@ where
         formats.push("application/fhir+xml");
     }
 
+    // Advertise `transaction` only when the storage backend can actually
+    // honour all-or-nothing semantics. This was an unconditional literal, so an
+    // s3-elasticsearch deployment published transaction support it had no way
+    // to provide — a bundle that timed out left 466 of 473 entries committed
+    // (#489). `batch` is unconditional: every bundle provider can process
+    // entries independently, which is exactly what design discussion #28
+    // prescribes for a backend without transaction support.
+    let mut system_interactions = Vec::new();
+    if state.storage().supports_atomic_transactions() {
+        system_interactions.push(serde_json::json!({ "code": "transaction" }));
+    }
+    system_interactions.push(serde_json::json!({ "code": "batch" }));
+    system_interactions.push(serde_json::json!({ "code": "history-system" }));
+    system_interactions.push(serde_json::json!({ "code": "search-system" }));
+
     // Standard operations, extended with SOF operations
     let mut operations = build_rest_operations(state);
 
@@ -207,12 +222,7 @@ where
             "description": "This server supports CORS for cross-origin requests"
         },
         "resource": resources,
-        "interaction": [
-            { "code": "transaction" },
-            { "code": "batch" },
-            { "code": "history-system" },
-            { "code": "search-system" }
-        ]
+        "interaction": system_interactions
     });
 
     // Inject the SOF extension array when present
