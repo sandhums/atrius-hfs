@@ -120,13 +120,12 @@ where
     let patched_content = apply_patch(existing.content(), &patch_format)?;
 
     // Validate that resourceType wasn't changed
-    if let Some(body_type) = patched_content.get("resourceType").and_then(|v| v.as_str()) {
-        if body_type != resource_type {
+    if let Some(body_type) = patched_content.get("resourceType").and_then(|v| v.as_str())
+        && body_type != resource_type {
             return Err(RestError::BadRequest {
                 message: "Cannot change resourceType via patch".to_string(),
             });
         }
-    }
 
     // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
     state

@@ -758,8 +758,8 @@ pub fn add_slice_element(
         // The freshly added item is the last in the array at `path.name`.
         let mut item_path: Vec<Step> = path.to_vec();
         item_path.push(Step::Field(name.to_string()));
-        if let Some(Value::Array(items)) = node_at_mut(document, &item_path) {
-            if let Some(last) = items.last_mut() {
+        if let Some(Value::Array(items)) = node_at_mut(document, &item_path)
+            && let Some(last) = items.last_mut() {
                 if last.is_null() {
                     *last = Value::Object(serde_json::Map::new());
                 }
@@ -769,7 +769,6 @@ pub fn add_slice_element(
                     }
                 }
             }
-        }
     }
     Some(added)
 }

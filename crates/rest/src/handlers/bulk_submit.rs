@@ -60,13 +60,12 @@ fn bad_request(msg: impl Into<String>) -> RestError {
 
 /// Enforces the `system/bulk-submit` operation scope when auth is enabled.
 fn check_submit_scope(principal: Option<&Principal>) -> RestResult<()> {
-    if let Some(p) = principal {
-        if !p.scopes.grants_operation(SUBMIT_SCOPE) {
+    if let Some(p) = principal
+        && !p.scopes.grants_operation(SUBMIT_SCOPE) {
             return Err(RestError::Forbidden {
                 message: "the `system/bulk-submit` scope is required".to_string(),
             });
         }
-    }
     Ok(())
 }
 
@@ -262,17 +261,15 @@ fn parse_submit_request(body: &Value) -> RestResult<SubmitRequest> {
             "submissionStatus" => {
                 // When a Coding is supplied, its system (if present) SHALL be the
                 // Bulk Data submission-status system.
-                if let Some(coding) = p.get("valueCoding") {
-                    if let Some(system) = coding.get("system").and_then(|v| v.as_str()) {
-                        if system != SUBMISSION_STATUS_SYSTEM
+                if let Some(coding) = p.get("valueCoding")
+                    && let Some(system) = coding.get("system").and_then(|v| v.as_str())
+                        && system != SUBMISSION_STATUS_SYSTEM
                             && system != LEGACY_SUBMISSION_STATUS_SYSTEM
                         {
                             return Err(bad_request(format!(
                                 "submissionStatus.system must be '{SUBMISSION_STATUS_SYSTEM}', got '{system}'"
                             )));
                         }
-                    }
-                }
                 let code = p
                     .get("valueCoding")
                     .and_then(|c| c.get("code"))
@@ -648,8 +645,8 @@ fn parse_status_request(body: &Value) -> RestResult<(String, String)> {
         }
     }
     // Only NDJSON status files are produced; reject any other requested format.
-    if let Some(fmt) = output_format.as_deref() {
-        if !matches!(
+    if let Some(fmt) = output_format.as_deref()
+        && !matches!(
             fmt,
             "application/fhir+ndjson" | "application/ndjson" | "ndjson"
         ) {
@@ -657,7 +654,6 @@ fn parse_status_request(body: &Value) -> RestResult<(String, String)> {
                 "unsupported _outputFormat '{fmt}' (only NDJSON is produced)"
             )));
         }
-    }
     let value = value.ok_or_else(|| bad_request("submitter.value is required"))?;
     let submission_id = submission_id.ok_or_else(|| bad_request("submissionId is required"))?;
     Ok((

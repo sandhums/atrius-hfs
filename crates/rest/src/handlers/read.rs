@@ -78,8 +78,8 @@ where
     match resource {
         Some(stored) => {
             // If client requested specific version, verify match
-            if let Some(requested) = version.accept_version() {
-                if stored.fhir_version() != requested {
+            if let Some(requested) = version.accept_version()
+                && stored.fhir_version() != requested {
                     return Err(RestError::NotAcceptable {
                         message: format!(
                             "Resource is FHIR {} but {} was requested",
@@ -88,7 +88,6 @@ where
                         ),
                     });
                 }
-            }
 
             // Check conditional headers (If-None-Match), then If-Modified-Since.
             //
@@ -151,12 +150,11 @@ where
                     subsetted = true;
                 }
             }
-            if let Some(ref elem_list) = elements {
-                if !elem_list.is_empty() {
+            if let Some(ref elem_list) = elements
+                && !elem_list.is_empty() {
                     content = apply_elements(&content, elem_list);
                     subsetted = true;
                 }
-            }
 
             // Flag incomplete representations with the SUBSETTED tag (FHIR spec).
             if subsetted {
@@ -235,8 +233,8 @@ where
     match resource {
         Some(stored) => {
             // If client requested specific version, verify match
-            if let Some(requested) = version.accept_version() {
-                if stored.fhir_version() != requested {
+            if let Some(requested) = version.accept_version()
+                && stored.fhir_version() != requested {
                     return Err(RestError::NotAcceptable {
                         message: format!(
                             "Resource is FHIR {} but {} was requested",
@@ -245,7 +243,6 @@ where
                         ),
                     });
                 }
-            }
 
             // Check conditional headers (If-None-Match), then If-Modified-Since.
             //

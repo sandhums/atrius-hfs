@@ -175,8 +175,8 @@ impl TerminologyClient {
         });
 
         // Add additional parameters if provided
-        if let Some(params) = params {
-            if let Some(parameters) = body.get_mut("parameter").and_then(|p| p.as_array_mut()) {
+        if let Some(params) = params
+            && let Some(parameters) = body.get_mut("parameter").and_then(|p| p.as_array_mut()) {
                 for (key, value) in params {
                     parameters.push(json!({
                         "name": key,
@@ -184,7 +184,6 @@ impl TerminologyClient {
                     }));
                 }
             }
-        }
 
         let response = self
             .client

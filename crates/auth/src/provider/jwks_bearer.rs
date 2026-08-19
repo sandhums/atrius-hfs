@@ -151,13 +151,12 @@ impl AuthProvider for JwksBearerAuthProvider {
         // 8. Reject revoked tokens (access tokens reuse jti until expiry; the BFF
         //    writes revoked JTIs on logout/refresh, so this is a deny-list check,
         //    not a replay cache)
-        if let Some(ref jti_value) = jti {
-            if self.jti_revocation.is_revoked(jti_value).await? {
+        if let Some(ref jti_value) = jti
+            && self.jti_revocation.is_revoked(jti_value).await? {
                 return Err(AuthError::TokenRevoked {
                     jti: jti_value.clone(),
                 });
             }
-        }
 
         // 9. Parse scopes — handle both string ("scope") and array ("scp") formats
         let scopes = if let Some(scope_str) = claims.get("scope").and_then(|v| v.as_str()) {

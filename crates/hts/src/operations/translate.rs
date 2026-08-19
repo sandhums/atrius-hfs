@@ -87,21 +87,19 @@ pub(crate) async fn process_translate<B: TerminologyBackend>(
 
     // The scalar pair wins when present; Coding/CodeableConcept only fill the gaps, so a
     // request mixing the spellings keeps the explicit `code`/`system` the caller named.
-    if source_code.is_none() {
-        if let Some((system, code)) = coding_pair(&params, "coding", "codeableConcept")
+    if source_code.is_none()
+        && let Some((system, code)) = coding_pair(&params, "coding", "codeableConcept")
             .or_else(|| coding_pair(&params, "sourceCoding", "sourceCodeableConcept"))
         {
             source_code = Some(code);
             source_system = source_system.or(Some(system).filter(|s| !s.is_empty()));
         }
-    }
-    if target_code.is_none() {
-        if let Some((system, code)) = coding_pair(&params, "targetCoding", "targetCodeableConcept")
+    if target_code.is_none()
+        && let Some((system, code)) = coding_pair(&params, "targetCoding", "targetCodeableConcept")
         {
             target_code = Some(code);
             target_system = target_system.or(Some(system).filter(|s| !s.is_empty()));
         }
-    }
 
     // Need at least one of source code (forward) or target code (reverse).
     // Name every accepted spelling so a client that sent a valid-but-unread
@@ -158,11 +156,10 @@ pub(crate) async fn process_translate<B: TerminologyBackend>(
         let mut concept_coding = serde_json::Map::new();
         concept_coding.insert("system".into(), json!(m.concept_system));
         concept_coding.insert("code".into(), json!(m.concept_code));
-        if let Some(disp) = m.concept_display.as_deref() {
-            if !disp.is_empty() {
+        if let Some(disp) = m.concept_display.as_deref()
+            && !disp.is_empty() {
                 concept_coding.insert("display".into(), json!(disp));
             }
-        }
         parts.push(json!({
             "name": "concept",
             "valueCoding": Value::Object(concept_coding),
@@ -186,23 +183,22 @@ pub(crate) async fn process_translate<B: TerminologyBackend>(
         // Only emitted on forward translations: the IG `translate/translate-reverse`
         // fixture omits originMap on reverse responses because the caller already
         // knows which CM was queried (they invoked it explicitly).
-        if !is_reverse {
-            if let Some(src) = m.source.as_deref() {
+        if !is_reverse
+            && let Some(src) = m.source.as_deref() {
                 let canonical = match m.map_version.as_deref() {
                     Some(v) if !v.is_empty() => format!("{src}|{v}"),
                     _ => src.to_owned(),
                 };
                 parts.push(json!({"name": "originMap", "valueCanonical": canonical}));
             }
-        }
 
         // For reverse responses include the source-side Coding of the
         // matched ConceptMap element as a `source` part — IG `translate-
         // reverse` fixture expects this so the caller can read the
         // resolved source code. Skip in forward mode: the caller already
         // knows the source code they sent.
-        if is_reverse {
-            if let (Some(sys), Some(code)) = (m.source_system.as_deref(), m.source_code.as_deref())
+        if is_reverse
+            && let (Some(sys), Some(code)) = (m.source_system.as_deref(), m.source_code.as_deref())
             {
                 parts.push(json!({
                     "name": "source",
@@ -212,7 +208,6 @@ pub(crate) async fn process_translate<B: TerminologyBackend>(
                     }
                 }));
             }
-        }
 
         parameter.push(json!({"name": "match", "part": parts}));
     }

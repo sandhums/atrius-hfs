@@ -46,11 +46,10 @@ pub fn validate_mimetypes_code(
     if !is_mimetypes_valueset_url(url) {
         return None;
     }
-    if let Some(sys) = req.system.as_deref().filter(|s| !s.is_empty()) {
-        if sys != BCP13_SYSTEM {
+    if let Some(sys) = req.system.as_deref().filter(|s| !s.is_empty())
+        && sys != BCP13_SYSTEM {
             return None;
         }
-    }
 
     let vs_qualified = if let Some(v) = req.value_set_version.as_deref().filter(|s| !s.is_empty()) {
         format!("{MIMETYPES_VS_URL}|{v}")

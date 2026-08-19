@@ -29,8 +29,8 @@ pub fn contains_function(
     _context: &EvaluationContext,
 ) -> Result<EvaluationResult, EvaluationError> {
     // Check if we're dealing with a collection and a string argument
-    if let EvaluationResult::Collection { items, .. } = invocation_base {
-        if matches!(arg, EvaluationResult::String(_, _, _)) {
+    if let EvaluationResult::Collection { items, .. } = invocation_base
+        && matches!(arg, EvaluationResult::String(_, _, _)) {
             // Check if the collection contains only strings
             let all_strings = items
                 .iter()
@@ -45,7 +45,6 @@ pub fn contains_function(
                 ));
             }
         }
-    }
 
     // Spec: X contains {} -> {}
     if arg == &EvaluationResult::Empty {

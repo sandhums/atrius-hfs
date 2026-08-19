@@ -28,16 +28,13 @@ fn main() {
     // Check if test data is recent (skip download if less than 24 hours old)
     // Use a marker file to track when we last downloaded
     let marker_path = json_resources_dir.join(".download_marker");
-    if let Ok(metadata) = fs::metadata(&marker_path) {
-        if let Ok(modified) = metadata.modified() {
-            if let Ok(duration) = modified.elapsed() {
-                if duration.as_secs() < 86400 {
+    if let Ok(metadata) = fs::metadata(&marker_path)
+        && let Ok(modified) = metadata.modified()
+            && let Ok(duration) = modified.elapsed()
+                && duration.as_secs() < 86400 {
                     println!("cargo:warning=R6 test data is recent, skipping download");
                     return;
                 }
-            }
-        }
-    }
 
     println!("cargo:warning=Downloading R6 test data from HL7 build server");
 

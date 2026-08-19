@@ -120,13 +120,11 @@ pub async fn import_mesh(
             .map(|d| {
                 let mut seen: Vec<String> = Vec::new();
                 for tn in &d.tree_numbers {
-                    if let Some(parent_tn) = parent_tree_number(tn) {
-                        if let Some(parent_ui) = tree_to_ui.get(parent_tn) {
-                            if !seen.contains(parent_ui) {
+                    if let Some(parent_tn) = parent_tree_number(tn)
+                        && let Some(parent_ui) = tree_to_ui.get(parent_tn)
+                            && !seen.contains(parent_ui) {
                                 seen.push(parent_ui.clone());
                             }
-                        }
-                    }
                 }
                 seen
             })

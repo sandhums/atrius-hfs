@@ -321,15 +321,14 @@ fn extract_operation_for_routing(
     // for reserved first segments (real FHIR resource types, `metadata`,
     // `_history`, `console`, …), so those fall through to the raw classification
     // and behave exactly as before.
-    if tenant_url_routing {
-        if let Some((_tenant, remaining)) =
+    if tenant_url_routing
+        && let Some((_tenant, remaining)) =
             extract_tenant_from_path(path, &FhirVersion::default_enabled())
         {
             // Classify against the tenant-stripped path the router will actually
             // dispatch to.
             return extract_operation(&remaining, method);
         }
-    }
 
     extract_operation(path, method)
 }
@@ -430,7 +429,7 @@ fn extract_operation(path: &str, method: &str) -> Option<(String, FhirOperation)
         "POST" => {
             if segments.len() >= 2 && segments.get(1) == Some(&"_search") {
                 FhirOperation::Search
-            } else if segments.iter().any(|s| *s == "$validate") {
+            } else if segments.contains(&"$validate") {
                 // POST /{type}/$validate and /{type}/{id}/$validate are read-only
                 // checks — require read, not create (export preflight / UI validate).
                 FhirOperation::Read

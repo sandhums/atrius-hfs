@@ -93,8 +93,8 @@ pub fn access_polymorphic_element(
                 // Check if key starts with the first part and has a type suffix
                 if key.starts_with(first_part) && key.len() > first_part.len() {
                     // Extract the type suffix (need uppercase letter after base name)
-                    if let Some(c) = key.chars().nth(first_part.len()) {
-                        if c.is_uppercase() {
+                    if let Some(c) = key.chars().nth(first_part.len())
+                        && c.is_uppercase() {
                             // This is a potential choice element with type suffix
                             if let EvaluationResult::Object {
                                 map: inner_obj,
@@ -109,20 +109,18 @@ pub fn access_polymorphic_element(
                                 }
                             }
                         }
-                    }
                 }
             }
         } else {
             // Regular path (not a choice element)
-            if let Some(value) = obj.get(first_part) {
-                if let EvaluationResult::Object {
+            if let Some(value) = obj.get(first_part)
+                && let EvaluationResult::Object {
                     map: inner_obj,
                     type_info: _,
                 } = value
                 {
                     return access_polymorphic_element(inner_obj, rest, version);
                 }
-            }
         }
 
         // No match found for the path
@@ -235,16 +233,14 @@ fn get_polymorphic_fields(
             if matches.iter().any(|(name, _)| name == field_name) {
                 continue;
             }
-            if field_name.starts_with(base_name) && field_name.len() > base_name.len() {
-                if let Some(c) = field_name.chars().nth(base_name.len()) {
-                    if c.is_uppercase() {
+            if field_name.starts_with(base_name) && field_name.len() > base_name.len()
+                && let Some(c) = field_name.chars().nth(base_name.len())
+                    && c.is_uppercase() {
                         let type_suffix = &field_name[base_name.len()..];
                         let converted_value =
                             convert_fhir_field_to_fhirpath_type(value, type_suffix);
                         matches.push((field_name.clone(), converted_value));
                     }
-                }
-            }
         }
     }
 
@@ -415,11 +411,10 @@ pub fn is_choice_element_with_context(
         for base_name in choice_elements {
             if field_name.starts_with(base_name) && field_name.len() > base_name.len() {
                 // Check if the character after the base name is uppercase
-                if let Some(c) = field_name.chars().nth(base_name.len()) {
-                    if c.is_uppercase() {
+                if let Some(c) = field_name.chars().nth(base_name.len())
+                    && c.is_uppercase() {
                         return true;
                     }
-                }
             }
         }
 
@@ -579,8 +574,7 @@ pub fn apply_polymorphic_type_operation(
 
                 // Check if this resource is an Observation with a valueQuantity field
                 if let Some(EvaluationResult::String(resource_type, _, _)) = obj.get("resourceType")
-                {
-                    if resource_type == "Observation" && obj.contains_key("valueQuantity") {
+                    && resource_type == "Observation" && obj.contains_key("valueQuantity") {
                         return if op == "is" {
                             Ok(EvaluationResult::boolean(true))
                         } else {
@@ -593,7 +587,6 @@ pub fn apply_polymorphic_type_operation(
                             }
                         };
                     }
-                }
             }
 
             // Check resource type - handle FHIR resource type checking generically
@@ -783,12 +776,10 @@ pub fn apply_polymorphic_type_operation(
                             // Check if the value field looks like a Quantity
                             if let Some(EvaluationResult::Object { map: value_obj, .. }) =
                                 obj.get("value")
-                            {
-                                if value_obj.contains_key("value") && value_obj.contains_key("unit")
+                                && value_obj.contains_key("value") && value_obj.contains_key("unit")
                                 {
                                     return Ok(EvaluationResult::boolean(true));
                                 }
-                            }
 
                             // Also check for valueQuantity
                             if obj.contains_key("valueQuantity") {
@@ -798,11 +789,10 @@ pub fn apply_polymorphic_type_operation(
 
                         // Try matching the value's type directly
                         // For native types mapped to FHIR primitive types
-                        if let Some(EvaluationResult::String(value_type, _, _)) = obj.get("type") {
-                            if value_type == type_name {
+                        if let Some(EvaluationResult::String(value_type, _, _)) = obj.get("type")
+                            && value_type == type_name {
                                 return Ok(EvaluationResult::boolean(true));
                             }
-                        }
 
                         // No match found
                         Ok(EvaluationResult::boolean(false))

@@ -88,11 +88,10 @@ where
 
     let is_post = method == Method::POST;
     let mut pairs = parse_query_pairs(raw_query);
-    if is_post {
-        if let Some(b) = body {
+    if is_post
+        && let Some(b) = body {
             pairs.extend(pairs_from_parameters(b));
         }
-    }
 
     // _outputFormat
     let output_format = first_value(&pairs, "_outputFormat")
@@ -722,11 +721,10 @@ async fn emit_export_audit<S>(
     if !resource_types.is_empty() {
         builder = builder.detail("resource-types", resource_types.join(","));
     }
-    if let Some(p) = principal {
-        if let Some(id) = p.audit_agent_identity() {
+    if let Some(p) = principal
+        && let Some(id) = p.audit_agent_identity() {
             builder = builder.agent(id, None, true).agent_issuer(p.issuer());
         }
-    }
     sink.record(builder.build()).await;
 }
 

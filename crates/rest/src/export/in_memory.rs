@@ -242,11 +242,10 @@ impl<Sink: ExportSink + 'static> ExportJobController for InMemoryController<Sink
             if matches!(
                 jobs.get(&jid).as_deref(),
                 Some(JobStatus::Cancelled { .. }) | Some(JobStatus::Failed { .. })
-            ) {
-                if let Err(e) = sink.delete_job(&jid) {
+            )
+                && let Err(e) = sink.delete_job(&jid) {
                     warn!(job_id = %jid, error = %e, "failed to delete partial export output of unfinished job");
                 }
-            }
         });
 
         job_id
@@ -289,11 +288,10 @@ impl<Sink: ExportSink + 'static> ExportJobController for InMemoryController<Sink
         // results on cancel. Drop any shards written so far. A background task
         // still draining cleans up whatever it writes after this point when it
         // observes the Cancelled state (see `submit`).
-        if now_cancelled {
-            if let Err(e) = self.sink.delete_job(job_id) {
+        if now_cancelled
+            && let Err(e) = self.sink.delete_job(job_id) {
                 warn!(%job_id, error = %e, "failed to delete partial export output on cancel");
             }
-        }
         true
     }
 
@@ -385,11 +383,10 @@ fn ext_for(format: &str) -> &'static str {
 /// status polls after a DELETE to return 404, so a background task that
 /// finishes anyway must not resurrect the job to Completed/Failed.
 fn set_status_if_running(jobs: &DashMap<String, JobStatus>, jid: &str, status: JobStatus) {
-    if let Some(mut entry) = jobs.get_mut(jid) {
-        if matches!(&*entry, JobStatus::Running { .. }) {
+    if let Some(mut entry) = jobs.get_mut(jid)
+        && matches!(&*entry, JobStatus::Running { .. }) {
             *entry = status;
         }
-    }
 }
 
 /// Records job progress, capped at 99 while running so callers don't see

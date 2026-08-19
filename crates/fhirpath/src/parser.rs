@@ -490,8 +490,8 @@ fn combine_string_code_units(codes: Vec<u32>) -> Result<String, &'static str> {
     while i < codes.len() {
         let c = codes[i];
         if (0xD800..=0xDBFF).contains(&c) {
-            if let Some(&lo) = codes.get(i + 1) {
-                if (0xDC00..=0xDFFF).contains(&lo) {
+            if let Some(&lo) = codes.get(i + 1)
+                && (0xDC00..=0xDFFF).contains(&lo) {
                     let scalar = 0x10000 + ((c - 0xD800) << 10) + (lo - 0xDC00);
                     match char::from_u32(scalar) {
                         Some(ch) => {
@@ -502,7 +502,6 @@ fn combine_string_code_units(codes: Vec<u32>) -> Result<String, &'static str> {
                         None => return Err("Invalid surrogate pair"),
                     }
                 }
-            }
             return Err("Unpaired high surrogate in \\uXXXX escape");
         }
         if (0xDC00..=0xDFFF).contains(&c) {

@@ -168,11 +168,10 @@ where
     // path. A body that supplies a different `viewResource`/`viewReference`
     // would silently change which view runs — reject that with 400 + invalid.
     // A body that supplies the *same* view as the path is allowed (no-op).
-    if let Some(b) = body_value.as_ref() {
-        if body_has_view_definition(b) {
+    if let Some(b) = body_value.as_ref()
+        && body_has_view_definition(b) {
             ensure_instance_body_matches_path(b, &id, &body_params)?;
         }
-    }
     let stored = state
         .storage()
         .read(tenant.context(), "ViewDefinition", &id)

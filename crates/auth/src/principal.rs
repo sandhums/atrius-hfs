@@ -51,11 +51,10 @@ impl Principal {
     /// Identity for audit `agent.who`: valid FHIR `fhirUser` reference, else `sub`.
     #[must_use]
     pub fn audit_agent_identity(&self) -> Option<&str> {
-        if let Some(ref fu) = self.fhir_user {
-            if is_fhir_relative_reference(fu) {
+        if let Some(ref fu) = self.fhir_user
+            && is_fhir_relative_reference(fu) {
                 return Some(fu.as_str());
             }
-        }
         if !self.subject.is_empty() {
             return Some(self.subject.as_str());
         }

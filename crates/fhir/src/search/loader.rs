@@ -118,8 +118,8 @@ impl SearchParameterLoader {
         // Handle Bundle format (expected from FHIR spec files)
         if let Some(entries) = json.get("entry").and_then(|e| e.as_array()) {
             for entry in entries {
-                if let Some(resource) = entry.get("resource") {
-                    if resource.get("resourceType").and_then(|t| t.as_str())
+                if let Some(resource) = entry.get("resource")
+                    && resource.get("resourceType").and_then(|t| t.as_str())
                         == Some("SearchParameter")
                     {
                         match self.parse_resource(resource) {
@@ -138,7 +138,6 @@ impl SearchParameterLoader {
                             }
                         }
                     }
-                }
             }
         }
 
@@ -368,13 +367,12 @@ impl SearchParameterLoader {
 
         if let Some(entries) = json.get("entry").and_then(|e| e.as_array()) {
             for entry in entries {
-                if let Some(resource) = entry.get("resource") {
-                    if resource.get("resourceType").and_then(|t| t.as_str())
+                if let Some(resource) = entry.get("resource")
+                    && resource.get("resourceType").and_then(|t| t.as_str())
                         == Some("SearchParameter")
                     {
                         params.push(self.parse_resource(resource)?);
                     }
-                }
             }
         } else if let Some(array) = json.as_array() {
             for item in array {
@@ -465,14 +463,13 @@ impl SearchParameterLoader {
             raw_expression.to_string()
         };
 
-        if expression.is_empty() && param_type != SearchParamType::Composite {
-            if !code.starts_with('_') {
+        if expression.is_empty() && param_type != SearchParamType::Composite
+            && !code.starts_with('_') {
                 return Err(LoaderError::MissingField {
                     field: "expression".to_string(),
                     url: Some(url),
                 });
             }
-        }
 
         let base: Vec<String> = resource
             .get("base")

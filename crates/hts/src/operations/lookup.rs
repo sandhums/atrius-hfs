@@ -60,10 +60,7 @@ use super::params::{
 fn build_lookup_cache_key(params: &[Value]) -> Option<String> {
     let mut frags: Vec<(String, String)> = Vec::with_capacity(params.len());
     for p in params {
-        let name = match p.get("name").and_then(|v| v.as_str()) {
-            Some(n) => n,
-            None => return None,
-        };
+        let name = p.get("name").and_then(|v| v.as_str())?;
         if p.get("resource").is_some() {
             return None;
         }

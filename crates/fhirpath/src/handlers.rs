@@ -500,8 +500,8 @@ pub async fn evaluate_fhirpath_r6(
 /// Detect FHIR version from resource
 fn detect_fhir_version(resource: &Value) -> FhirVersion {
     // Try to detect version from meta.profile or other version-specific markers
-    if let Some(meta) = resource.get("meta") {
-        if let Some(profiles) = meta.get("profile").and_then(|p| p.as_array()) {
+    if let Some(meta) = resource.get("meta")
+        && let Some(profiles) = meta.get("profile").and_then(|p| p.as_array()) {
             for profile in profiles {
                 if let Some(url) = profile.as_str() {
                     // Check for version indicators in profile URLs
@@ -524,7 +524,6 @@ fn detect_fhir_version(resource: &Value) -> FhirVersion {
                 }
             }
         }
-    }
 
     // Check for version-specific fields
     // R5+ has meta.versionId as a distinct element
@@ -598,11 +597,11 @@ fn set_variable_from_json(
 /// This is needed because FHIR deserialization loses underscore properties
 fn preserve_underscore_properties(context: &mut EvaluationContext, resource_json: &Value) {
     // Get the resource type and create a variable for it
-    if let Value::Object(obj) = resource_json {
-        if let Some(Value::String(resource_type)) = obj.get("resourceType") {
+    if let Value::Object(obj) = resource_json
+        && let Some(Value::String(resource_type)) = obj.get("resourceType") {
             // Clone the existing resource from context
-            if let Some(existing_resource) = context.this.as_ref() {
-                if let EvaluationResult::Object {
+            if let Some(existing_resource) = context.this.as_ref()
+                && let EvaluationResult::Object {
                     map: existing_map,
                     type_info,
                 } = existing_resource
@@ -629,9 +628,7 @@ fn preserve_underscore_properties(context: &mut EvaluationContext, resource_json
                     // Also set as a variable with the resource type name
                     context.set_variable_result(resource_type, enhanced_resource);
                 }
-            }
         }
-    }
 }
 
 /// Convert JSON value to EvaluationResult

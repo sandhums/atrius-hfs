@@ -1051,13 +1051,12 @@ fn emit_entry_audit<S>(
     if let Some(patient_ref) = patient_ref {
         builder = builder.patient(patient_ref);
     }
-    if let Some(principal) = principal {
-        if let Some(id) = principal.audit_agent_identity() {
+    if let Some(principal) = principal
+        && let Some(id) = principal.audit_agent_identity() {
             builder = builder
                 .agent(id, None, true)
                 .agent_issuer(principal.issuer());
         }
-    }
 
     let sink = Arc::clone(sink);
     let event = builder.build();

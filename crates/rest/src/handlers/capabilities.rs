@@ -388,13 +388,12 @@ fn build_resource_capability(
 
     // Advertise real `_revinclude` targets: "Source:code" tokens from other
     // types' reference params that point at this type.
-    if let Some(rev) = revinclude_by_target.get(resource_type) {
-        if !rev.is_empty() {
+    if let Some(rev) = revinclude_by_target.get(resource_type)
+        && !rev.is_empty() {
             entry["searchRevInclude"] = serde_json::Value::Array(
                 rev.iter().cloned().map(serde_json::Value::String).collect(),
             );
         }
-    }
     // Bulk Data Access IG: per-resource `$export` operation entries on Patient
     // and Group, in addition to the system-level `$export` advertised at
     // `rest[0].operation`.
@@ -447,8 +446,8 @@ fn build_search_params(
         // Advertise the modifiers this backend honors for the param's type.
         // R4/R5 `searchParam` has no `modifier` element, so they ride along as
         // repeating `valueCode` extensions.
-        if let Some(modifiers) = modifier_map.get(&def.param_type) {
-            if !modifiers.is_empty() {
+        if let Some(modifiers) = modifier_map.get(&def.param_type)
+            && !modifiers.is_empty() {
                 param["extension"] = serde_json::Value::Array(
                     modifiers
                         .iter()
@@ -461,7 +460,6 @@ fn build_search_params(
                         .collect(),
                 );
             }
-        }
         params.push(param);
     }
     params

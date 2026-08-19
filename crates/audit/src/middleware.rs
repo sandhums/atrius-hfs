@@ -152,11 +152,10 @@ pub async fn audit_middleware(
             .action(action)
             .outcome(outcome);
 
-        if let Some(rt) = &resource_type {
-            if let Some(rid) = &resource_id {
+        if let Some(rt) = &resource_type
+            && let Some(rid) = &resource_id {
                 builder = builder.resource(rt, rid);
             }
-        }
         if let Some(pr) = patient_ref {
             builder = builder.patient(pr);
         }

@@ -167,8 +167,8 @@ where
 /// The custom `Deserialize` impl mirrors the old `#[serde(untagged)]` behavior without buffering:
 /// - JSON scalars map to the `Primitive` variant (directly deserialized into the primitive type).
 /// - XML element structures (objects with `value`, `id`, `extension`, …) map to the `Element` variant.
-/// It avoids serde’s internal `Content` buffering while preserving semantics crucial for primitives
-/// with metadata.
+///   It avoids serde’s internal `Content` buffering while preserving semantics crucial for primitives
+///   with metadata.
 ///
 /// # Type Parameters
 /// - `P`: Primitive type (the final deserialized type, e.g. `String`, `i32`, `bool`)

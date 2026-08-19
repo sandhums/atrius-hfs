@@ -383,11 +383,10 @@ fn flatten_concepts(
         if let Some(props) = concept_val["property"].as_array() {
             for prop in props {
                 if let Some(p) = parse_property(prop) {
-                    if p.is_parent_edge {
-                        if let Some(ref pv) = p.parent_code_value {
+                    if p.is_parent_edge
+                        && let Some(ref pv) = p.parent_code_value {
                             property_parent = Some(pv.clone());
                         }
-                    }
                     properties.push(p);
                 }
             }

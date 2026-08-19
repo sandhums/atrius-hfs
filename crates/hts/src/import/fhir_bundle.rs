@@ -117,11 +117,10 @@ pub(crate) fn import_parsed_sync(
                     |r| r.get(0),
                 )
                 .unwrap_or(false);
-            if has_hierarchy {
-                if let Err(e) = schema::build_concept_closure(&conn, &sid) {
+            if has_hierarchy
+                && let Err(e) = schema::build_concept_closure(&conn, &sid) {
                     tracing::warn!(system_id = %sid, error = %e, "Failed to build concept closure after import");
                 }
-            }
         }
     }
 
@@ -389,11 +388,10 @@ fn write_code_system(
                 .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
             // Extra hierarchy edge from a "parent" property.
-            if prop.is_parent_edge {
-                if let Some(ref pv) = prop.parent_code_value {
+            if prop.is_parent_edge
+                && let Some(ref pv) = prop.parent_code_value {
                     insert_hierarchy(conn, &system_id, pv, &concept.code)?;
                 }
-            }
         }
 
         // Designations — replace for the same reason. This is what makes a

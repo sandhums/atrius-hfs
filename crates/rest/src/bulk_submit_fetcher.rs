@@ -138,14 +138,13 @@ impl HttpSubmitInputFetcher {
                 .or_else(|| c.as_str())
                 .map(str::to_string)
         });
-        if let Some(code) = &code {
-            if code != FILE_ENCRYPTION_TYPE_JWE {
+        if let Some(code) = &code
+            && code != FILE_ENCRYPTION_TYPE_JWE {
                 return Err(Self::err(format!(
                     "unsupported fileEncryptionKey.coding.code '{code}' (only \
                      '{FILE_ENCRYPTION_TYPE_JWE}' is defined)"
                 )));
             }
-        }
 
         let value = Self::key_part(key, "value")
             .and_then(|v| v.as_str())
@@ -208,25 +207,23 @@ fn interpret_cek(bytes: &[u8]) -> Option<Vec<u8>> {
         let text = text.trim();
         if text.starts_with('{') {
             // An `oct` JWK: {"kty":"oct","k":"<base64url>"}.
-            if let Ok(jwk) = serde_json::from_str::<Value>(text) {
-                if let Some(k) = jwk.get("k").and_then(|v| v.as_str()) {
+            if let Ok(jwk) = serde_json::from_str::<Value>(text)
+                && let Some(k) = jwk.get("k").and_then(|v| v.as_str()) {
                     return base64::Engine::decode(
                         &base64::engine::general_purpose::URL_SAFE_NO_PAD,
                         k.trim_end_matches('='),
                     )
                     .ok();
                 }
-            }
             return None;
         }
         if let Ok(decoded) = base64::Engine::decode(
             &base64::engine::general_purpose::URL_SAFE_NO_PAD,
             text.trim_end_matches('='),
-        ) {
-            if KEY_LENGTHS.contains(&decoded.len()) {
+        )
+            && KEY_LENGTHS.contains(&decoded.len()) {
                 return Some(decoded);
             }
-        }
     }
     // Raw bytes — only plausible for a CEK recovered from a JWE payload.
     KEY_LENGTHS.contains(&bytes.len()).then(|| bytes.to_vec())

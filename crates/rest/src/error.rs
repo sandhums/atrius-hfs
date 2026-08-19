@@ -555,8 +555,7 @@ impl IntoResponse for RestError {
             retry_after_secs: Some(secs),
             ..
         } = &self
-        {
-            if let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string()) {
+            && let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string()) {
                 return (
                     status,
                     [(axum::http::header::RETRY_AFTER, value)],
@@ -564,7 +563,6 @@ impl IntoResponse for RestError {
                 )
                     .into_response();
             }
-        }
 
         (status, Json(operation_outcome)).into_response()
     }

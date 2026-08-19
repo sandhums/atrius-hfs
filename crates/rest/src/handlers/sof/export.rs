@@ -162,13 +162,12 @@ where
     };
     let body_value = body.map(|axum::Json(v)| v);
 
-    if let Some(b) = body_value.as_ref() {
-        if let Some(resp) =
+    if let Some(b) = body_value.as_ref()
+        && let Some(resp) =
             validate_unknown_body_params(b, ALLOWED_BODY_PARAMS, "$viewdefinition-export")
         {
             return Ok(resp);
         }
-    }
     if let Some(resp) = reject_unsupported_source(&params, body_value.as_ref()) {
         return Ok(resp);
     }
@@ -297,13 +296,12 @@ where
     };
     let body_value = body.map(|axum::Json(v)| v);
 
-    if let Some(b) = body_value.as_ref() {
-        if let Some(resp) =
+    if let Some(b) = body_value.as_ref()
+        && let Some(resp) =
             validate_unknown_body_params(b, SQLQUERY_ALLOWED_BODY_PARAMS, "$sqlquery-export")
         {
             return Ok(resp);
         }
-    }
     if let Some(resp) = reject_unsupported_source(&params, body_value.as_ref()) {
         return Ok(resp);
     }
@@ -619,8 +617,8 @@ fn reject_instance_level_params(
         .as_ref()
         .and_then(|axum::Json(v)| v.get("parameter"))
         .and_then(|p| p.as_array());
-    if let Some(arr) = body_params {
-        if let Some(first) = arr.first() {
+    if let Some(arr) = body_params
+        && let Some(first) = arr.first() {
             let name = first
                 .get("name")
                 .and_then(|n| n.as_str())
@@ -644,7 +642,6 @@ fn reject_instance_level_params(
                     .into_response(),
             );
         }
-    }
     None
 }
 
@@ -1674,8 +1671,8 @@ where
 
     // Back-compat: a top-level `viewResource` is treated as a single view.
     for p in entries {
-        if p.get("name").and_then(|n| n.as_str()) == Some("viewResource") {
-            if let Some(r) = p.get("resource") {
+        if p.get("name").and_then(|n| n.as_str()) == Some("viewResource")
+            && let Some(r) = p.get("resource") {
                 let name = r
                     .get("name")
                     .and_then(|v| v.as_str())
@@ -1686,7 +1683,6 @@ where
                     view: r.clone(),
                 });
             }
-        }
     }
 
     // Spec form: every `view` parameter contributes one view, defined by its `part` list.

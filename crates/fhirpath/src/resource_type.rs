@@ -800,8 +800,8 @@ fn check_type_match(
 ) -> Result<bool, EvaluationError> {
     // Special handling for FHIR types in is() operations
     // When target is FHIR.string, FHIR string subtypes should match
-    if let (Some(value_ns), Some(target_ns)) = (value_namespace, target_namespace) {
-        if value_ns.eq_ignore_ascii_case("FHIR") && target_ns.eq_ignore_ascii_case("FHIR") {
+    if let (Some(value_ns), Some(target_ns)) = (value_namespace, target_namespace)
+        && value_ns.eq_ignore_ascii_case("FHIR") && target_ns.eq_ignore_ascii_case("FHIR") {
             // Use generated type hierarchy to check if value_type is a subtype of target_type
             #[cfg(feature = "R4")]
             if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
@@ -820,12 +820,11 @@ fn check_type_match(
                 return Ok(true);
             }
         }
-    }
 
     // Special handling for FHIR primitive types matching unqualified System types in is() operations
-    if target_namespace.is_none() {
-        if let Some(ns) = value_namespace {
-            if ns.eq_ignore_ascii_case("FHIR") {
+    if target_namespace.is_none()
+        && let Some(ns) = value_namespace
+            && ns.eq_ignore_ascii_case("FHIR") {
                 // Use generated type hierarchy for FHIR subtypes
                 #[cfg(feature = "R4")]
                 if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
@@ -874,8 +873,6 @@ fn check_type_match(
                     }
                 }
             }
-        }
-    }
 
     // For Quantity types and their subtypes, we need to allow cross-namespace matching
     // because FHIR.Age should match System.Quantity

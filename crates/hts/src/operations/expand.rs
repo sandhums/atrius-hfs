@@ -106,11 +106,9 @@ fn standards_statuses(resource: &Value) -> Vec<String> {
                 == Some(
                     "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
                 )
-            {
-                if let Some(code) = ext.get("valueCode").and_then(|v| v.as_str()) {
+                && let Some(code) = ext.get("valueCode").and_then(|v| v.as_str()) {
                     push_unique(code);
                 }
-            }
         }
     }
 
@@ -137,14 +135,11 @@ fn vs_extension_statuses(resource: &Value) -> Vec<String> {
                 == Some(
                     "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
                 )
-            {
-                if let Some(code) = ext.get("valueCode").and_then(|v| v.as_str()) {
-                    if !code.is_empty() && is_warning_status(code) && !out.iter().any(|c| c == code)
+                && let Some(code) = ext.get("valueCode").and_then(|v| v.as_str())
+                    && !code.is_empty() && is_warning_status(code) && !out.iter().any(|c| c == code)
                     {
                         out.push(code.to_string());
                     }
-                }
-            }
         }
     }
 
@@ -175,11 +170,10 @@ fn serialize_expansion_contains(
     // Only emit version when the expansion mixes multiple versions of this
     // system — for single-version CSes the version is implicit (and the IG
     // fixtures don't expect it in the contains items).
-    if multi_version_systems.contains(&c.system) {
-        if let Some(version) = &c.version {
+    if multi_version_systems.contains(&c.system)
+        && let Some(version) = &c.version {
             item.insert("version".into(), json!(version));
         }
-    }
     // FHIR expansion.contains.abstract / .inactive — only emit when true.
     if c.is_abstract == Some(true) {
         item.insert("abstract".into(), json!(true));
@@ -975,8 +969,8 @@ fn apply_concept_extension_data<'a, B: TerminologyBackend>(
                     base_entries.insert((system.clone(), code), entry);
                 }
             }
-            if !supplement_urls.is_empty() {
-                if let Ok(map) = backend
+            if !supplement_urls.is_empty()
+                && let Ok(map) = backend
                     .supplement_concept_entries(ctx, supplement_urls, codes)
                     .await
                 {
@@ -984,7 +978,6 @@ fn apply_concept_extension_data<'a, B: TerminologyBackend>(
                         supp_entries.insert((system.clone(), code), entries);
                     }
                 }
-            }
         }
 
         for c in contains.iter_mut() {
@@ -1244,8 +1237,8 @@ fn apply_display_language<'a, B: TerminologyBackend>(
                 // drop the top-level display entirely. The IG fixtures still
                 // surface the original (CS-default) display as a designation
                 // with `use=preferredForLanguage` so consumers can recover it.
-                if let Some(orig) = original_display {
-                    if !orig.is_empty() {
+                if let Some(orig) = original_display
+                    && !orig.is_empty() {
                         let already = c
                             .designations
                             .iter()
@@ -1267,7 +1260,6 @@ fn apply_display_language<'a, B: TerminologyBackend>(
                             );
                         }
                     }
-                }
                 c.display = None;
             }
 
@@ -1309,10 +1301,7 @@ fn build_expand_cache_key(params: &[Value]) -> Option<String> {
     ];
     let mut frags: Vec<(String, String)> = Vec::with_capacity(params.len());
     for p in params {
-        let name = match p.get("name").and_then(|v| v.as_str()) {
-            Some(n) => n,
-            None => return None,
-        };
+        let name = p.get("name").and_then(|v| v.as_str())?;
         // Inline resources (`valueSet`, `tx-resource`, …): bail.  Even one
         // `resource` field on any param means we can't cheaply build a stable,
         // compact key — and `tx-resource` carries fixture-specific bodies that
@@ -1750,24 +1739,21 @@ async fn process_expand_inner<B: TerminologyBackend>(
         extra_params,
     };
 
-    if let Ok(cache) = state.expand_cache.read() {
-        if let Some(cached) = cache.get(&cache_key) {
+    if let Ok(cache) = state.expand_cache.read()
+        && let Some(cached) = cache.get(&cache_key) {
             // O(1) clone — just bumps the reference count on the shared buffer.
             return Ok(cached.clone());
         }
-    }
 
     // ── Negative-cache check (URL-based 404s) ─────────────────────────────────
     // URLs that previously returned NotFound are remembered here so we can skip
     // all backend queries on repeated requests (saves 5+ SQLite round-trips per
     // hit).
-    if let Some(ref url_str) = url {
-        if let Ok(neg) = state.not_found_urls.read() {
-            if neg.contains(url_str.as_str()) {
+    if let Some(ref url_str) = url
+        && let Ok(neg) = state.not_found_urls.read()
+            && neg.contains(url_str.as_str()) {
                 return Err(HtsError::NotFound(url_str.clone()));
             }
-        }
-    }
 
     // `tx-resource` parameters provide ad-hoc terminology that the caller does
     // not want to import. Each is a full FHIR resource (typically a ValueSet)
@@ -1853,15 +1839,14 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 .iter()
                 .filter_map(|k| p.get(*k).and_then(|v| v.as_str()))
                 .next();
-            if let Some(s) = raw {
-                if let Some(pos) = s.find('|') {
+            if let Some(s) = raw
+                && let Some(pos) = s.find('|') {
                     let url = s[..pos].to_string();
                     let ver = s[pos + 1..].to_string();
                     if !url.is_empty() && !ver.is_empty() {
                         out.entry(url).or_insert(ver);
                     }
                 }
-            }
         }
         out
     }
@@ -1972,13 +1957,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
             if let Some(ref url_str) = url_for_neg_cache {
                 let msg_names_top =
                     msg.contains(&format!("'{url_str}'")) || msg.contains(&format!("'{url_str}|"));
-                if msg_names_top {
-                    if let Ok(mut neg) = state.not_found_urls.write() {
-                        if neg.len() < NOT_FOUND_CACHE_MAX {
+                if msg_names_top
+                    && let Ok(mut neg) = state.not_found_urls.write()
+                        && neg.len() < NOT_FOUND_CACHE_MAX {
                             neg.insert(url_str.clone());
                         }
-                    }
-                }
             }
             // The IG fixtures format VS-not-found errors as
             //   "A definition for the value Set 'url|version' could not be found"
@@ -2118,8 +2101,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // IG `extensions/expand-echo-bad-supplement` fixture expects a 4xx
     // OperationOutcome whose text mentions both "supplement" and the missing
     // CS canonical URL (matching `$fragments:supplement|...$`).
-    if let Some(vs) = source_vs.as_ref() {
-        if let Some(exts) = vs.get("extension").and_then(|e| e.as_array()) {
+    if let Some(vs) = source_vs.as_ref()
+        && let Some(exts) = vs.get("extension").and_then(|e| e.as_array()) {
             for ext in exts {
                 if ext.get("url").and_then(|u| u.as_str())
                     != Some("http://hl7.org/fhir/StructureDefinition/valueset-supplement")
@@ -2155,7 +2138,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 }
             }
         }
-    }
     // Rebuild bare_supplement_urls including any VS-extension additions.
     let bare_supplement_urls: Vec<String> = supplement_inputs
         .iter()
@@ -2297,8 +2279,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // extensions like `valueset-deprecated: true` and
     // `valueset-concept-definition: "..."` on the compose entry; expand needs
     // to surface those on the matching contains[] entry.
-    if let Some(vs) = source_vs.as_ref() {
-        if let Some(includes) = vs
+    if let Some(vs) = source_vs.as_ref()
+        && let Some(includes) = vs
             .get("compose")
             .and_then(|c| c.get("include"))
             .and_then(|i| i.as_array())
@@ -2451,8 +2433,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
                                     // Synthesise/override CS-level property
                                     // values from VS-compose-level extensions
                                     // (last-writer-wins by `code`).
-                                    if let Some(prop_code) = vs_compose_property_code(url) {
-                                        if let Some((value_type, value)) =
+                                    if let Some(prop_code) = vs_compose_property_code(url)
+                                        && let Some((value_type, value)) =
                                             extension_value_for_property(ext)
                                         {
                                             c.properties.retain(|p| p.code != prop_code);
@@ -2462,7 +2444,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
                                                 value,
                                             });
                                         }
-                                    }
                                 }
                             }
                             if !c.contains.is_empty() {
@@ -2474,7 +2455,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 }
             }
         }
-    }
 
     // ── Per-system CodeSystem metadata lookup (one search per distinct URL) ──
     // The CS resource is consulted by THREE downstream blocks:
@@ -2500,8 +2480,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
         // Also add systems from compose.include[] so that empty expansions
         // (e.g. count=0 or filter matched nothing) still populate cs_by_url,
         // enabling used-codesystem to carry the |version suffix.
-        if let Some(vs) = source_vs.as_ref() {
-            if let Some(includes) = vs
+        if let Some(vs) = source_vs.as_ref()
+            && let Some(includes) = vs
                 .get("compose")
                 .and_then(|c| c.get("include"))
                 .and_then(|i| i.as_array())
@@ -2515,7 +2495,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     }
                 }
             }
-        }
         systems.sort();
         // Fan out per-system CS searches concurrently so total latency is
         // O(1) round-trip instead of O(N). For VSAC's typical 5+ systems
@@ -2566,8 +2545,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 .and_then(|v| v.as_str())
                 .map(str::to_string)
         });
-    if let Some(raw) = display_language.as_deref() {
-        if let Some(spec) = parse_display_language(raw) {
+    if let Some(raw) = display_language.as_deref()
+        && let Some(spec) = parse_display_language(raw) {
             apply_display_language(
                 state.backend(),
                 &ctx,
@@ -2577,7 +2556,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
             )
             .await;
         }
-    }
 
     // ── activeOnly / compose.inactive=false filter ──────────────────────────
     // The IG fixtures drop inactive concepts when EITHER:
@@ -2870,14 +2848,12 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     .map(|s| (*k, s.to_owned()))
             })
             .next();
-        if let Some((had_key, val)) = raw {
-            if had_key != "valueUri" {
-                if let Some(obj) = ep.as_object_mut() {
+        if let Some((had_key, val)) = raw
+            && had_key != "valueUri"
+                && let Some(obj) = ep.as_object_mut() {
                     obj.remove(had_key);
                     obj.insert("valueUri".into(), json!(val));
                 }
-            }
-        }
     }
 
     // Pull additional default expansion parameters from the source ValueSet's
@@ -2907,11 +2883,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     let sub_url = sub.get("url").and_then(|u| u.as_str()).unwrap_or("");
                     if sub_url == "name" {
                         name = sub.get("valueCode").and_then(|v| v.as_str());
-                    } else if let Some(obj) = sub.as_object() {
-                        if let Some((k, v)) = obj.iter().find(|(k, _)| k.starts_with("value")) {
+                    } else if let Some(obj) = sub.as_object()
+                        && let Some((k, v)) = obj.iter().find(|(k, _)| k.starts_with("value")) {
                             value_entry = Some((k.clone(), v.clone()));
                         }
-                    }
                 }
                 if let (Some(n), Some((k, v))) = (name, value_entry) {
                     // `versionsMatch` is a tx-ecosystem-extension carried on
@@ -3032,12 +3007,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
                             .and_then(|v| v.as_str())
                             .unwrap_or("")
                             .to_string();
-                        if let Some(includes) = include_versions.get(&sys) {
-                            if !includes.contains(&ver) {
+                        if let Some(includes) = include_versions.get(&sys)
+                            && !includes.contains(&ver) {
                                 whole_system_cross_version_exclude = true;
                                 break;
                             }
-                        }
                     }
                 }
                 if whole_system_cross_version_exclude {
@@ -3499,14 +3473,13 @@ async fn process_expand_inner<B: TerminologyBackend>(
         // the contributing CodeSystem declares `content: "fragment"`. Plus an
         // `expansion.extension` pair (`valueset-unclosed` + `valueset-unclosed-
         // reason`) flagging the partial coverage.
-        if let Some(cs) = cs_by_url.get(system_url).and_then(|c| c.as_ref()) {
-            if cs.get("content").and_then(|v| v.as_str()) == Some("fragment") {
+        if let Some(cs) = cs_by_url.get(system_url).and_then(|c| c.as_ref())
+            && cs.get("content").and_then(|v| v.as_str()) == Some("fragment") {
                 emitted_params.push(json!({
                     "name": "used-fragment",
                     "valueUri": value_uri,
                 }));
             }
-        }
         // Emit `warning-<status>` only once per system URL (first pair wins).
         if warned_systems.insert(system_url.clone()) {
             let cs = cs_by_url.get(system_url).and_then(|c| c.as_ref());
@@ -3605,11 +3578,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
             };
             // Honour `default-valueset-version` pin when the ref itself
             // doesn't carry an explicit `|version` (FHIR R5 §$expand).
-            if pinned_version.is_none() {
-                if let Some(default_v) = default_value_set_versions_for_echo.get(&bare_url) {
+            if pinned_version.is_none()
+                && let Some(default_v) = default_value_set_versions_for_echo.get(&bare_url) {
                     pinned_version = Some(default_v.clone());
                 }
-            }
             // When no version pin is in effect, fetch up to 20 candidates and pick
             // the one the BACKEND would resolve.  `count: Some(1)` against the
             // search SQL (which orders by created_at) yields the earliest-
@@ -3857,9 +3829,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     },
                 )
                 .await
-                {
-                    if let Some(cs) = hits.pop() {
-                        if let Some(props) = cs.get("property").and_then(|p| p.as_array()) {
+                    && let Some(cs) = hits.pop()
+                        && let Some(props) = cs.get("property").and_then(|p| p.as_array()) {
                             for entry in props {
                                 if let (Some(code), Some(uri)) = (
                                     entry.get("code").and_then(|v| v.as_str()),
@@ -3874,8 +3845,6 @@ async fn process_expand_inner<B: TerminologyBackend>(
                                 }
                             }
                         }
-                    }
-                }
             }
             let prop_decls: Vec<Value> = emitted_codes
                 .iter()
@@ -3902,8 +3871,8 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // the canonical-resource fields. For inline ValueSet requests, the
     // caller supplied the body — copy from there.
     let mut response = json!({ "resourceType": "ValueSet" });
-    if let Some(ref vs) = source_vs {
-        if let Some(obj) = vs.as_object() {
+    if let Some(ref vs) = source_vs
+        && let Some(obj) = vs.as_object() {
             // Copy required-by-fixtures fields plus a few common optionals.
             //
             // For URL-based requests, do NOT copy `compose` / `contained` —
@@ -3988,13 +3957,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
             // from the resolved `valueSet[]` reference) — emitting the raw
             // request compose surfaces an unexpected `valueSet[]` property.
             // `contained` is still echoed because some fixtures pin it.
-            if caller_supplied_inline_vs {
-                if let Some(c) = obj.get("contained") {
+            if caller_supplied_inline_vs
+                && let Some(c) = obj.get("contained") {
                     response["contained"] = c.clone();
                 }
-            }
         }
-    }
     response["expansion"] = expansion;
 
     // ── R4 / R4B downconversion ──────────────────────────────────────────────
@@ -4035,13 +4002,12 @@ async fn process_expand_inner<B: TerminologyBackend>(
             .map_err(|e| HtsError::Internal(format!("JSON serialization failed: {e}")))?,
     );
 
-    if let Ok(mut cache) = state.expand_cache.write() {
-        if cache.len() < EXPAND_CACHE_MAX {
+    if let Ok(mut cache) = state.expand_cache.write()
+        && cache.len() < EXPAND_CACHE_MAX {
             // `Bytes::clone` is O(1); storing it here and returning the clone
             // below means both the cache and the caller share the same buffer.
             cache.insert(cache_key, bytes.clone());
         }
-    }
 
     // EX_PROBE: total wall time for the whole request including parse + post-
     // processing + serialization.
@@ -4082,14 +4048,13 @@ fn downconvert_property_to_r4_extension(response: &mut Value) {
         // Property entries always have a single `value*` key besides `code`.
         let obj = prop.as_object()?;
         for (k, v) in obj {
-            if let Some(suffix) = k.strip_prefix("value") {
-                if !suffix.is_empty() {
+            if let Some(suffix) = k.strip_prefix("value")
+                && !suffix.is_empty() {
                     let mut sub = serde_json::Map::new();
                     sub.insert("url".into(), Value::String("value".into()));
                     sub.insert(k.clone(), v.clone());
                     return Some(Value::Object(sub));
                 }
-            }
         }
         None
     }
@@ -4447,11 +4412,10 @@ pub(crate) fn inject_accept_language(headers: &HeaderMap, params: &mut Vec<Value
     let already = params
         .iter()
         .any(|p| p.get("name").and_then(|v| v.as_str()) == Some("displayLanguage"));
-    if let Some(l) = lang {
-        if !already {
+    if let Some(l) = lang
+        && !already {
             params.push(json!({"name": "displayLanguage", "valueCode": l}));
         }
-    }
 }
 
 /// Inject (or replace) the `url` parameter in a params list.

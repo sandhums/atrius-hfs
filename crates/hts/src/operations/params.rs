@@ -160,11 +160,10 @@ fn coding_value_from_parameter(param: &Value) -> Option<Value> {
     if let Some(v) = param.get("valueCoding") {
         return Some(v.clone());
     }
-    if let Some(res) = param.get("resource") {
-        if res.get("resourceType").and_then(|v| v.as_str()) == Some("Coding") {
+    if let Some(res) = param.get("resource")
+        && res.get("resourceType").and_then(|v| v.as_str()) == Some("Coding") {
             return Some(res.clone());
         }
-    }
     let parts = param.get("part")?.as_array()?;
     assemble_coding_from_parts(parts)
 }
@@ -206,19 +205,17 @@ fn codeable_concept_from_parameter(param: &Value) -> Option<Value> {
     if let Some(v) = param.get("valueCodeableConcept") {
         return Some(v.clone());
     }
-    if let Some(res) = param.get("resource") {
-        if res.get("resourceType").and_then(|v| v.as_str()) == Some("CodeableConcept") {
+    if let Some(res) = param.get("resource")
+        && res.get("resourceType").and_then(|v| v.as_str()) == Some("CodeableConcept") {
             return Some(res.clone());
         }
-    }
     let parts = param.get("part")?.as_array()?;
     let mut codings: Vec<Value> = Vec::new();
     for part in parts {
-        if part.get("name").and_then(|v| v.as_str()) == Some("coding") {
-            if let Some(c) = coding_value_from_parameter(part) {
+        if part.get("name").and_then(|v| v.as_str()) == Some("coding")
+            && let Some(c) = coding_value_from_parameter(part) {
                 codings.push(c);
             }
-        }
     }
     if !codings.is_empty() {
         return Some(json!({"coding": codings}));
@@ -299,11 +296,9 @@ pub fn find_codeable_concept_param(params: &[Value]) -> Option<Value> {
         if let Some(param) = params
             .iter()
             .find(|p| p.get("name").and_then(|v| v.as_str()) == Some(name))
-        {
-            if let Some(cc) = codeable_concept_from_parameter(param) {
+            && let Some(cc) = codeable_concept_from_parameter(param) {
                 return Some(cc);
             }
-        }
     }
     None
 }

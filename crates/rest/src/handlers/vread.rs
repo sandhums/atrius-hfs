@@ -71,8 +71,8 @@ where
     match stored {
         Some(stored) => {
             // If the client requested a specific FHIR version, verify it matches.
-            if let Some(requested) = version.accept_version() {
-                if stored.fhir_version() != requested {
+            if let Some(requested) = version.accept_version()
+                && stored.fhir_version() != requested {
                     return Err(RestError::NotAcceptable {
                         message: format!(
                             "Resource is FHIR {} but {} was requested",
@@ -81,7 +81,6 @@ where
                         ),
                     });
                 }
-            }
 
             // Negotiate response format.
             let format_param = params.get("_format").map(|s| s.as_str());

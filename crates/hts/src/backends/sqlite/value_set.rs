@@ -93,11 +93,10 @@ fn truncate_url_for_probe(u: &str) -> String {
 /// Clear the process-wide URL→system_id cache. Called by code paths that
 /// write to the `code_systems` table (CRUD + bulk import).
 pub(crate) fn invalidate_cs_id_cache() {
-    if let Some(cache) = SYSTEM_ID_CACHE.get() {
-        if let Ok(mut w) = cache.write() {
+    if let Some(cache) = SYSTEM_ID_CACHE.get()
+        && let Ok(mut w) = cache.write() {
             w.clear();
         }
-    }
 }
 
 /// Resolve `system_id` for a CodeSystem canonical URL, preferring rows that
@@ -119,11 +118,10 @@ fn resolve_system_id_with_version_cached(
     conn: &Connection,
     url: &str,
 ) -> Result<Option<(String, Option<String>)>, HtsError> {
-    if let Ok(read) = cs_id_cache().read() {
-        if let Some(rec) = read.get(url) {
+    if let Ok(read) = cs_id_cache().read()
+        && let Some(rec) = read.get(url) {
             return Ok(Some(rec.clone()));
         }
-    }
 
     // Multiple `code_systems` rows can share the same canonical URL — e.g. a
     // stub from `hl7.fhir.r4.core` (content=not-present, no concepts) plus the
@@ -158,11 +156,10 @@ fn resolve_system_id_with_version_cached(
         .optional()
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
-    if let Some(ref rec) = row {
-        if let Ok(mut w) = cs_id_cache().write() {
+    if let Some(ref rec) = row
+        && let Ok(mut w) = cs_id_cache().write() {
             w.insert(url.to_owned(), rec.clone());
         }
-    }
 
     Ok(row)
 }
@@ -244,10 +241,10 @@ impl ValueSetOperations for SqliteTerminologyBackend {
         // `http://hl7.org/fhir/test/ValueSet/version`).  Falling through to
         // `spawn_blocking` ensures `resolve_value_set_versioned` filters on
         // version correctly.
-        if req.value_set.is_none() && req.value_set_version.is_none() {
-            if let Some(url) = req.url.as_deref() {
-                if let Ok(guard) = self.implicit_index.read() {
-                    if let Some(concept_idx) = guard.get(url).cloned() {
+        if req.value_set.is_none() && req.value_set_version.is_none()
+            && let Some(url) = req.url.as_deref()
+                && let Ok(guard) = self.implicit_index.read()
+                    && let Some(concept_idx) = guard.get(url).cloned() {
                         drop(guard); // release read lock before CPU work
                         let filter_lower = req.filter.as_deref().map(|f| f.to_lowercase());
                         let sql_offset = i64::from(req.offset.unwrap_or(0));
@@ -258,9 +255,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             None
                         } else {
                             let n = count_in_memory(&concept_idx, filter_lower.as_deref());
-                            if req.count.is_none() {
-                                if let Some(cap) = req.max_expansion_size {
-                                    if u64::from(n) > u64::from(cap) {
+                            if req.count.is_none()
+                                && let Some(cap) = req.max_expansion_size
+                                    && u64::from(n) > u64::from(cap) {
                                         return Err(HtsError::TooCostly(format!(
                                             "ValueSet expansion contains {} codes which exceeds \
                                              the server limit of {} (set \
@@ -268,8 +265,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                             n, cap
                                         )));
                                     }
-                                }
-                            }
                             Some(n)
                         };
                         let page = page_in_memory(
@@ -292,9 +287,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             warnings: vec![],
                         });
                     }
-                }
-            }
-        }
 
         // ── Async hot path: inline compose in-memory index already warm ──────────
         // For unfiltered inline ValueSet requests, check the per-compose-body
@@ -304,8 +296,8 @@ impl ValueSetOperations for SqliteTerminologyBackend {
         // memory — no pool connection acquired, no thread switch.  This
         // eliminates spawn_blocking / r2d2 pool contention for hot EX06-style
         // repeated inline-compose queries.
-        if let Some(ref vs) = req.value_set {
-            if req.filter.is_none() && req.hierarchical != Some(true) {
+        if let Some(ref vs) = req.value_set
+            && req.filter.is_none() && req.hierarchical != Some(true) {
                 let compose_cache_key = {
                     let compose = &vs["compose"];
                     format!(
@@ -313,15 +305,15 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         fnv64(compose.to_string().as_bytes())
                     )
                 };
-                if let Ok(guard) = self.inline_compose_index.read() {
-                    if let Some(concept_idx) = guard.get(&compose_cache_key).cloned() {
+                if let Ok(guard) = self.inline_compose_index.read()
+                    && let Some(concept_idx) = guard.get(&compose_cache_key).cloned() {
                         drop(guard);
                         let sql_offset = i64::from(req.offset.unwrap_or(0));
                         let sql_limit = req.count.map(i64::from).unwrap_or(-1);
                         let n = count_in_memory(&concept_idx, None);
-                        if req.count.is_none() {
-                            if let Some(cap) = req.max_expansion_size {
-                                if u64::from(n) > u64::from(cap) {
+                        if req.count.is_none()
+                            && let Some(cap) = req.max_expansion_size
+                                && u64::from(n) > u64::from(cap) {
                                     return Err(HtsError::TooCostly(format!(
                                         "ValueSet expansion contains {} codes which exceeds \
                                          the server limit of {} (set \
@@ -329,8 +321,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                         n, cap
                                     )));
                                 }
-                            }
-                        }
                         let page = page_in_memory(&concept_idx, None, sql_offset, sql_limit);
                         tracing::debug!(
                             target: "hts::probe",
@@ -346,9 +336,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             warnings: vec![],
                         });
                     }
-                }
             }
-        }
 
         // ── Async hot path: property result cache warm (EX08 optimisation) ──────
         // For inline ValueSet requests with a text filter AND property= compose
@@ -356,14 +344,14 @@ impl ValueSetOperations for SqliteTerminologyBackend {
         // memory, apply the text filter in Rust without entering spawn_blocking.
         // This eliminates pool contention for repeated EX08-style combined
         // property+text queries where only the text term changes between VUs.
-        if let Some(ref vs) = req.value_set {
-            if req.filter.is_some() && req.hierarchical != Some(true) {
+        if let Some(ref vs) = req.value_set
+            && req.filter.is_some() && req.hierarchical != Some(true) {
                 let prop_key = format!(
                     "prop-result:{:016x}",
                     fnv64(vs["compose"].to_string().as_bytes())
                 );
-                if let Ok(guard) = self.property_result_cache.read() {
-                    if let Some(concept_idx) = guard.get(&prop_key).cloned() {
+                if let Ok(guard) = self.property_result_cache.read()
+                    && let Some(concept_idx) = guard.get(&prop_key).cloned() {
                         drop(guard);
                         let filter_lower = req.filter.as_deref().map(|f| f.to_lowercase());
                         let sql_offset = i64::from(req.offset.unwrap_or(0));
@@ -389,9 +377,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             warnings: vec![],
                         });
                     }
-                }
             }
-        }
 
         // ── Async hot path: plain-fts corpus cache warm (EX07 optimisation) ──────
         // For inline ValueSet requests with a text filter where every include is a
@@ -400,9 +386,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
         // memory, apply the text filter in Rust without entering spawn_blocking.
         // This eliminates pool contention for repeated EX07-style multi-system text
         // filter queries where concurrent VUs use different filter terms.
-        if let Some(ref vs) = req.value_set {
-            if req.hierarchical != Some(true) {
-                if let Some(ref filter_str) = req.filter {
+        if let Some(ref vs) = req.value_set
+            && req.hierarchical != Some(true)
+                && let Some(ref filter_str) = req.filter {
                     let filter_lower = filter_str.to_lowercase();
                     if filter_lower.len() >= 3 {
                         let compose = &vs["compose"];
@@ -418,8 +404,8 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         if all_plain {
                             let plain_key =
                                 format!("plain-fts:{:016x}", fnv64(compose.to_string().as_bytes()));
-                            if let Ok(guard) = self.plain_fts_cache.read() {
-                                if let Some(concept_idx) = guard.get(&plain_key).cloned() {
+                            if let Ok(guard) = self.plain_fts_cache.read()
+                                && let Some(concept_idx) = guard.get(&plain_key).cloned() {
                                     drop(guard);
                                     // Zero-entry sentinel = corpus too large to cache;
                                     // fall through to spawn_blocking / FTS path.
@@ -449,12 +435,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                         });
                                     }
                                 }
-                            }
                         }
                     }
                 }
-            }
-        }
 
         // EX_PROBE: every request that lands here missed all four async hot
         // paths (implicit_index / inline_compose_index / property_result_cache /
@@ -600,8 +583,8 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                     // When the cache is warm and we have a bounded request with no text
                     // filter, serve the page directly via SQL rather than loading every
                     // cached concept into memory (O(count) vs O(total_in_cache)).
-                    if exists_in_cache && req.filter.is_none() && req.hierarchical != Some(true) {
-                        if let Some(count) = req.count.filter(|&c| c > 0) {
+                    if exists_in_cache && req.filter.is_none() && req.hierarchical != Some(true)
+                        && let Some(count) = req.count.filter(|&c| c > 0) {
                             let offset = i64::from(req.offset.unwrap_or(0));
                             let total = implicit_cache_count(&conn, &cache_key, None)?;
                             let page =
@@ -613,7 +596,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                 warnings,
                             });
                         }
-                    }
 
                     // Fallback: load all cached rows for hierarchical mode, or
                     // for filter cases where we need all codes in memory.
@@ -997,8 +979,8 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             )
                             .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
-                        if !cache_populated {
-                            if let Some(count) = req.count.filter(|&c| c > 0) {
+                        if !cache_populated
+                            && let Some(count) = req.count.filter(|&c| c > 0) {
                                 let cs_pat = if let Ok(cs_url) =
                                     find_cs_for_implicit_vs(&conn, url, req.date.as_deref())
                                 {
@@ -1085,7 +1067,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                     }
                                 }
                             }
-                        }
 
                         // ── Blocking path: cache is warm, or count is None ────────────
                         ensure_implicit_cache(&conn, url, req.date.as_deref())?;
@@ -1113,9 +1094,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                 None
                             } else {
                                 let n = count_in_memory(&concept_idx, filter_lower.as_deref());
-                                if req.count.is_none() {
-                                    if let Some(cap) = req.max_expansion_size {
-                                        if u64::from(n) > u64::from(cap) {
+                                if req.count.is_none()
+                                    && let Some(cap) = req.max_expansion_size
+                                        && u64::from(n) > u64::from(cap) {
                                             return Err(HtsError::TooCostly(format!(
                                                 "ValueSet expansion contains {} codes which \
                                                  exceeds the server limit of {} (set \
@@ -1123,8 +1104,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                                 n, cap
                                             )));
                                         }
-                                    }
-                                }
                                 Some(n)
                             };
                             let page = page_in_memory(
@@ -1146,9 +1125,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             None
                         } else {
                             let n = implicit_cache_count(&conn, url, filter_lower.as_deref())?;
-                            if req.count.is_none() {
-                                if let Some(cap) = req.max_expansion_size {
-                                    if u64::from(n) > u64::from(cap) {
+                            if req.count.is_none()
+                                && let Some(cap) = req.max_expansion_size
+                                    && u64::from(n) > u64::from(cap) {
                                         return Err(HtsError::TooCostly(format!(
                                             "ValueSet expansion contains {} codes which exceeds \
                                              the server limit of {} (set \
@@ -1156,8 +1135,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                             n, cap
                                         )));
                                     }
-                                }
-                            }
                             Some(n)
                         };
 
@@ -1227,17 +1204,15 @@ impl ValueSetOperations for SqliteTerminologyBackend {
             // Enforce the expansion size cap only when no explicit count (page size) was
             // requested. When count is set, the response is already bounded and the limit
             // would only reject valid paginated requests against large code systems.
-            if req.count.is_none() {
-                if let Some(limit) = req.max_expansion_size {
-                    if u64::from(total) > u64::from(limit) {
+            if req.count.is_none()
+                && let Some(limit) = req.max_expansion_size
+                    && u64::from(total) > u64::from(limit) {
                         return Err(HtsError::TooCostly(format!(
                             "ValueSet expansion contains {} codes which exceeds the server \
                              limit of {} (set HTS_MAX_EXPANSION_SIZE to raise it)",
                             total, limit
                         )));
                     }
-                }
-            }
 
             let offset = req.offset.unwrap_or(0) as usize;
             let count = req.count.map(|c| c as usize).unwrap_or(usize::MAX);
@@ -1342,13 +1317,11 @@ impl ValueSetOperations for SqliteTerminologyBackend {
         } else {
             None
         };
-        if let Some(ref k) = cache_key {
-            if let Ok(read) = self.validate_code_response_cache().read() {
-                if let Some(arc) = read.get(k) {
+        if let Some(ref k) = cache_key
+            && let Ok(read) = self.validate_code_response_cache().read()
+                && let Some(arc) = read.get(k) {
                     return Ok((**arc).clone());
                 }
-            }
-        }
 
         let pool = self.pool().clone();
         let backend = self.clone();
@@ -1647,11 +1620,10 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                     .filter(|c| cs_is_case_insensitive(&conn, &c.system))
                     .collect();
                 if !ci_filtered.is_empty() {
-                    if let Some(c) = ci_filtered.first() {
-                        if c.code != req.code {
+                    if let Some(c) = ci_filtered.first()
+                        && c.code != req.code {
                             normalized_code = Some(c.code.clone());
                         }
-                    }
                     candidates = ci_filtered;
                 }
             }
@@ -2533,8 +2505,8 @@ fn expand_inline_filtered(
                 && inc["valueSet"].as_array().is_none_or(|a| a.is_empty())
         });
         if all_plain {
-            if let Some((plain_key, cache)) = plain_fts_cache {
-                if let Some(concept_idx) =
+            if let Some((plain_key, cache)) = plain_fts_cache
+                && let Some(concept_idx) =
                     load_plain_corpus_and_cache(conn, includes, plain_key, cache, warnings)
                 {
                     // Apply text filter via trigram index in Rust.
@@ -2542,7 +2514,6 @@ fn expand_inline_filtered(
                     // handles pagination via the filtered.skip().take() path.
                     return Ok(page_in_memory(&concept_idx, Some(&filter_lower), 0, -1));
                 }
-            }
             return expand_inline_plain_fts(conn, includes, &filter_lower, limit_hint, warnings);
         }
     }
@@ -3208,11 +3179,10 @@ fn compute_expansion_depth_inner(
                             .map(|s| s.to_owned());
                         if let Some(forced) = ctx.force_system_versions.get(&sys_url) {
                             inc["version"] = serde_json::Value::String(forced.clone());
-                        } else if explicit.is_none() {
-                            if let Some(default_v) = ctx.system_version_defaults.get(&sys_url) {
+                        } else if explicit.is_none()
+                            && let Some(default_v) = ctx.system_version_defaults.get(&sys_url) {
                                 inc["version"] = serde_json::Value::String(default_v.clone());
                             }
-                        }
                     }
                 }
             }
@@ -5576,8 +5546,8 @@ fn compose_page_fast(
 
     // Apply exclusions (purely code-based).
     let excludes = compose["exclude"].as_array();
-    if let Some(excl) = excludes {
-        if !excl.is_empty() {
+    if let Some(excl) = excludes
+        && !excl.is_empty() {
             let mut exclude_set: HashSet<(String, String)> = HashSet::new();
             for exc in excl {
                 let sys = exc["system"].as_str().unwrap_or("").to_owned();
@@ -5592,7 +5562,6 @@ fn compose_page_fast(
             all_triples
                 .retain(|(sys, code, _)| !exclude_set.contains(&(sys.clone(), code.clone())));
         }
-    }
 
     // Apply text filter against compose-embedded code and display — pure in-memory,
     // no DB required.  This makes filtered requests on large extensional ValueSets
@@ -6345,11 +6314,10 @@ fn is_concept_abstract(
     // Per-instance cache: VC01-03 hammer the same (system, code) pairs across
     // 50 VUs. Skipping the JOIN below saves three table lookups per request.
     let cache = backend.cs_concept_abstract_cache();
-    if let Ok(read) = cache.read() {
-        if let Some(&v) = read.get(&(system_url.to_string(), code.to_string())) {
+    if let Ok(read) = cache.read()
+        && let Some(&v) = read.get(&(system_url.to_string(), code.to_string())) {
             return v;
         }
-    }
 
     // Match against every local property code that maps to the FHIR
     // concept-properties#notSelectable URI in this CodeSystem. Tx-ecosystem
@@ -6402,11 +6370,10 @@ fn lookup_value_set_version(
     // Per-instance cache: stable until the next re-import. Same invalidation
     // hook as cs_id_cache (clear all on bundle write).
     let cache = backend.vs_version_for_msg_cache();
-    if let Ok(read) = cache.read() {
-        if let Some(v) = read.get(url) {
+    if let Ok(read) = cache.read()
+        && let Some(v) = read.get(url) {
             return v.clone();
         }
-    }
     // Pick the highest stored version for this URL — matches the
     // resolve_value_set_versioned default-when-no-pin behaviour, so $expand
     // and $validate-code echoes converge on the same row.
@@ -6496,11 +6463,10 @@ fn cs_version_for_msg(
     // call (just to pretty-print the message text). The result is stable
     // until a re-import, and re-imports clear the cache.
     let cache = backend.cs_version_for_msg_cache();
-    if let Ok(read) = cache.read() {
-        if let Some(v) = read.get(system_url) {
+    if let Ok(read) = cache.read()
+        && let Some(v) = read.get(system_url) {
             return v.clone();
         }
-    }
     let sql = format!(
         "SELECT version FROM code_systems WHERE url = ?1 ORDER BY {} LIMIT 1",
         crate::backends::cs_precedence_order_by("code_systems")
@@ -6528,11 +6494,10 @@ fn cs_content_for_url(
 ) -> Option<String> {
     // Per-instance cache: stable until the next re-import.
     let cache = backend.cs_content_cache();
-    if let Ok(read) = cache.read() {
-        if let Some(v) = read.get(system_url) {
+    if let Ok(read) = cache.read()
+        && let Some(v) = read.get(system_url) {
             return v.clone();
         }
-    }
     let sql = format!(
         "SELECT content FROM code_systems WHERE url = ?1 ORDER BY {} LIMIT 1",
         crate::backends::cs_precedence_order_by("code_systems")
@@ -6940,8 +6905,8 @@ fn detect_cs_version_mismatch(
     // this short-circuit, the legacy single-pin code below picks the first
     // include and emits a spurious VALUESET_VALUE_MISMATCH for callers whose
     // version matches a later include.
-    if let Some(pins) = all_include_pins.as_ref() {
-        if pins.len() > 1 {
+    if let Some(pins) = all_include_pins.as_ref()
+        && pins.len() > 1 {
             let any_match = pins.iter().any(|p| match p {
                 Some(v) if v.contains(".x") || v == "x" => version_satisfies_wildcard(req_full, v),
                 Some(v) => resolve_ver_against_candidates(&candidates, v)
@@ -6956,18 +6921,16 @@ fn detect_cs_version_mismatch(
                 return None;
             }
         }
-    }
 
     // req_ver exists in the CS. Check if the VS include pins a conflicting version.
     match include_pin {
         Some(Some(ref inc_ver)) => {
             // When inc_ver is a wildcard pattern (e.g. "1.x"), check whether
             // req_full satisfies it. If so, no mismatch — "1.0.0" matches "1.x".
-            if inc_ver.contains(".x") || inc_ver.as_str() == "x" {
-                if version_satisfies_wildcard(req_full, inc_ver.as_str()) {
+            if (inc_ver.contains(".x") || inc_ver.as_str() == "x")
+                && version_satisfies_wildcard(req_full, inc_ver.as_str()) {
                     return None;
                 }
-            }
 
             let resolved_inc = resolve_ver_against_candidates(&candidates, inc_ver);
             let inc_full = resolved_inc.as_deref().unwrap_or(inc_ver.as_str());
@@ -7031,13 +6994,12 @@ fn detect_cs_version_mismatch(
             //
             // Exception: when the VS itself carries a wildcard version (e.g. "1.x")
             // and req_full satisfies it (e.g. "1.0.0" satisfies "1.x"), no mismatch.
-            if let Some(vs_ver) = vs_version {
-                if (vs_ver.contains(".x") || vs_ver == "x")
+            if let Some(vs_ver) = vs_version
+                && (vs_ver.contains(".x") || vs_ver == "x")
                     && version_satisfies_wildcard(req_full, vs_ver)
                 {
                     return None;
                 }
-            }
             let latest = actual_ver.as_deref().unwrap_or(req_ver);
             if latest != req_full {
                 let mismatch_text = format!(
@@ -7135,11 +7097,10 @@ fn is_concept_inactive(
     code: &str,
 ) -> bool {
     let cache = backend.cs_concept_inactive_cache();
-    if let Ok(read) = cache.read() {
-        if let Some(&v) = read.get(&(system_url.to_string(), code.to_string())) {
+    if let Ok(read) = cache.read()
+        && let Some(&v) = read.get(&(system_url.to_string(), code.to_string())) {
             return v;
         }
-    }
 
     // Honour both the legacy `status` property convention (value in
     // {retired, inactive}) AND the FHIR `inactive` boolean property —
@@ -7264,8 +7225,8 @@ fn finish_validate_code_response(
             // pair), result=true, and the `UNKNOWN_CODE_IN_FRAGMENT` message-id —
             // the missing code might still be valid in a different fragment of
             // the same system.
-            if cs_is_fragment && code_unknown_in_cs {
-                if let Some(sys) = system_for_msg {
+            if cs_is_fragment && code_unknown_in_cs
+                && let Some(sys) = system_for_msg {
                     let cs_text = match cs_version_for_msg {
                         Some(v) => format!(
                             "Unknown Code '{code}' in the CodeSystem '{sys}' version '{v}' - note that the code system is labeled as a fragment, so the code may be valid in some other fragment"
@@ -7295,7 +7256,6 @@ fn finish_validate_code_response(
                         normalized_code: None,
                     });
                 }
-            }
             // The IG validator compares this text with the format
             //   "The provided code 'system#code ('Display')' was not found in the value set 'url'"
             // when the caller provided a display, otherwise without the display.
@@ -7334,8 +7294,8 @@ fn finish_validate_code_response(
             // is itself unknown — the operations layer already adds a
             // `not-found` / `not-found` issue for that case, and double-emitting
             // would inflate the issue count.
-            if code_unknown_in_cs && cs_version_for_msg.is_some() {
-                if let Some(sys) = system_for_msg {
+            if code_unknown_in_cs && cs_version_for_msg.is_some()
+                && let Some(sys) = system_for_msg {
                     let cs_text = match cs_version_for_msg {
                         Some(v) => {
                             format!("Unknown code '{code}' in the CodeSystem '{sys}' version '{v}'")
@@ -7352,7 +7312,6 @@ fn finish_validate_code_response(
                         message_id: Some("Unknown_Code_in_Version".into()),
                     });
                 }
-            }
             if is_inactive_in_underlying_cs {
                 issues.push(crate::types::ValidationIssue {
                     severity: "warning".into(),
@@ -7507,9 +7466,9 @@ fn finish_validate_code_response(
                 });
             }
             let mut display_message: Option<String> = None;
-            if let Some(expected) = expected_display {
-                if let Some(actual) = concept.display.as_deref() {
-                    if !actual.eq_ignore_ascii_case(expected) {
+            if let Some(expected) = expected_display
+                && let Some(actual) = concept.display.as_deref()
+                    && !actual.eq_ignore_ascii_case(expected) {
                         // IG canonical format (matches messages-tx.fhir.org.json):
                         //   "Wrong Display Name 'X' for system#code. Valid
                         //    display is 'Y' (en) (for the language(s) '--')"
@@ -7540,8 +7499,6 @@ fn finish_validate_code_response(
                             ),
                         });
                     }
-                }
-            }
             // Result is false iff there's at least one error-severity issue.
             // Display mismatch is a warning so it does not flip result; the
             // legacy `display_message` is preserved on `message` for the
@@ -7605,11 +7562,10 @@ fn validate_fhir_vs(
     system: Option<&str>,
 ) -> Result<Option<ExpansionContains>, HtsError> {
     // If system is provided it must match the CodeSystem URL.
-    if let Some(sys) = system {
-        if sys != cs_url {
+    if let Some(sys) = system
+        && sys != cs_url {
             return Ok(None);
         }
-    }
 
     // Multiple `code_systems` rows can share the same canonical URL — e.g. a
     // stub from `hl7.terminology` plus the real RF2 import. The cached
@@ -8801,11 +8757,10 @@ fn populate_inline_compose_index(
 ) {
     {
         // Fast read-path: already populated by a concurrent request.
-        if let Ok(guard) = index.read() {
-            if guard.contains_key(cache_key) {
+        if let Ok(guard) = index.read()
+            && guard.contains_key(cache_key) {
                 return;
             }
-        }
     }
 
     let entries: Vec<ImplicitConceptEntry> = codes
@@ -8920,11 +8875,10 @@ fn populate_property_cache(
     cache: &super::PropertyResultCache,
 ) {
     {
-        if let Ok(guard) = cache.read() {
-            if guard.contains_key(cache_key) {
+        if let Ok(guard) = cache.read()
+            && guard.contains_key(cache_key) {
                 return;
             }
-        }
     }
     let entries: Vec<ImplicitConceptEntry> = codes
         .iter()
@@ -8982,15 +8936,14 @@ fn load_plain_corpus_and_cache(
     // Fast path: another request already populated the cache.
     // A zero-entry index is a "too-large" sentinel — return None so the
     // caller falls back to the FTS query without re-counting the corpus.
-    if let Ok(guard) = cache.read() {
-        if let Some(idx) = guard.get(cache_key).cloned() {
+    if let Ok(guard) = cache.read()
+        && let Some(idx) = guard.get(cache_key).cloned() {
             return if idx.entries.is_empty() {
                 None
             } else {
                 Some(idx)
             };
         }
-    }
 
     // Resolve (system_url, system_id) pairs — honor compose.include.version.
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(includes.len());

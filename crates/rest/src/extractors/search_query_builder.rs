@@ -406,9 +406,9 @@ fn parse_search_parameter(
     // For composite parameters, resolve the component sub-parameters from the
     // registry (type + code), so the backend can match each component within
     // the same composite instance.
-    if matches!(param_type, SearchParamType::Composite) {
-        if let Some(def) = registry.get_param(resource_type, base_name) {
-            if let Some(comps) = def.component.as_ref() {
+    if matches!(param_type, SearchParamType::Composite)
+        && let Some(def) = registry.get_param(resource_type, base_name)
+            && let Some(comps) = def.component.as_ref() {
                 param.components = comps
                     .iter()
                     .filter_map(|c| {
@@ -421,8 +421,6 @@ fn parse_search_parameter(
                     })
                     .collect();
             }
-        }
-    }
 
     // Handle :missing modifier specially
     if param

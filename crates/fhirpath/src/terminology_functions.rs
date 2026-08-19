@@ -275,11 +275,10 @@ impl TerminologyFunctions {
                 // Extract the 'outcome' parameter value
                 if let Some(parameters) = value.get("parameter").and_then(|p| p.as_array()) {
                     for param in parameters {
-                        if param.get("name").and_then(|n| n.as_str()) == Some("outcome") {
-                            if let Some(code) = param.get("valueCode").and_then(|c| c.as_str()) {
+                        if param.get("name").and_then(|n| n.as_str()) == Some("outcome")
+                            && let Some(code) = param.get("valueCode").and_then(|c| c.as_str()) {
                                 return Ok(EvaluationResult::string(code.to_string()));
                             }
-                        }
                     }
                 }
                 Err(EvaluationError::InvalidOperation(
@@ -435,8 +434,8 @@ fn extract_params_map(
             if let Some(EvaluationResult::Collection { items, .. }) = map.get("parameter") {
                 // Extract parameters from Parameters resource format
                 for item in items {
-                    if let EvaluationResult::Object { map: param_map, .. } = item {
-                        if let (Some(name), Some(value)) = (
+                    if let EvaluationResult::Object { map: param_map, .. } = item
+                        && let (Some(name), Some(value)) = (
                             param_map.get("name").and_then(|n| match n {
                                 EvaluationResult::String(s, _, _) => Some(s),
                                 _ => None,
@@ -445,7 +444,6 @@ fn extract_params_map(
                         ) {
                             params_map.insert(name.clone(), value);
                         }
-                    }
                 }
             } else {
                 // Treat as simple key-value map
@@ -538,11 +536,11 @@ pub fn member_of(
     )?;
 
     // Extract the 'result' parameter from the Parameters response
-    if let EvaluationResult::Object { map, .. } = validation_result {
-        if let Some(EvaluationResult::Collection { items, .. }) = map.get("parameter") {
+    if let EvaluationResult::Object { map, .. } = validation_result
+        && let Some(EvaluationResult::Collection { items, .. }) = map.get("parameter") {
             for item in items {
-                if let EvaluationResult::Object { map: param_map, .. } = item {
-                    if param_map.get("name").and_then(|n| match n {
+                if let EvaluationResult::Object { map: param_map, .. } = item
+                    && param_map.get("name").and_then(|n| match n {
                         EvaluationResult::String(s, _, _) => Some(s.as_str()),
                         _ => None,
                     }) == Some("result")
@@ -554,10 +552,8 @@ pub fn member_of(
                             return Ok(EvaluationResult::Boolean(*result, type_info.clone(), None));
                         }
                     }
-                }
             }
         }
-    }
 
     // If we couldn't extract the result, return false
     Ok(EvaluationResult::boolean(false))

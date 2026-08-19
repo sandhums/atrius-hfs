@@ -305,17 +305,15 @@ fn equal_helper(
     }
 
     // Handler for singleton collection equality
-    if let (EvaluationResult::Collection { items, .. }, _) = (left, right) {
-        if items.len() == 1 && !right.is_collection() {
+    if let (EvaluationResult::Collection { items, .. }, _) = (left, right)
+        && items.len() == 1 && !right.is_collection() {
             return equal_helper(&items[0], right, _context);
         }
-    }
 
-    if let (_, EvaluationResult::Collection { items, .. }) = (left, right) {
-        if items.len() == 1 && !left.is_collection() {
+    if let (_, EvaluationResult::Collection { items, .. }) = (left, right)
+        && items.len() == 1 && !left.is_collection() {
             return equal_helper(left, &items[0], _context);
         }
-    }
 
     // If one is a collection (but not a singleton), they're not equal
     if left.is_collection() || right.is_collection() {

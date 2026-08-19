@@ -108,8 +108,8 @@ where
     }
 
     // Validate ID in body matches URL (if present)
-    if let Some(body_id) = resource.get("id").and_then(|v| v.as_str()) {
-        if body_id != id {
+    if let Some(body_id) = resource.get("id").and_then(|v| v.as_str())
+        && body_id != id {
             return Err(RestError::BadRequest {
                 message: format!(
                     "Resource ID in body ({}) does not match URL ({})",
@@ -117,7 +117,6 @@ where
                 ),
             });
         }
-    }
 
     // Check if If-Match is required
     if state.require_if_match() && !conditional.has_if_match() {
@@ -294,8 +293,8 @@ where
     );
 
     // Validate resourceType
-    if let Some(body_type) = resource.get("resourceType").and_then(|v| v.as_str()) {
-        if body_type != resource_type {
+    if let Some(body_type) = resource.get("resourceType").and_then(|v| v.as_str())
+        && body_type != resource_type {
             return Err(RestError::BadRequest {
                 message: format!(
                     "Resource type in body ({}) does not match URL ({})",
@@ -303,7 +302,6 @@ where
                 ),
             });
         }
-    }
 
     // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
     state
