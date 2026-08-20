@@ -21,6 +21,7 @@
 
 pub mod channels;
 pub mod config;
+pub mod delivery_stats;
 pub mod engine;
 pub mod error;
 pub mod evaluator;
@@ -38,6 +39,7 @@ pub use channels::ws_manager::WebSocketManager;
 pub use channels::ws_token::WsBindingTokenManager;
 pub use channels::{ChannelDispatcher, ChannelDispatcherRegistry, DispatchResult};
 pub use config::{MessagingSettings, SubscriptionConfig};
+pub use delivery_stats::{DeliveryStats, DeliveryWindow};
 pub use engine::SubscriptionEngine;
 pub use error::SubscriptionError;
 pub use event::{ResourceEvent, ResourceEventType};

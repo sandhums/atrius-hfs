@@ -56,6 +56,9 @@ pub struct SubscriptionEngine {
     status_store: Option<Arc<dyn ResourceStorage>>,
     /// Bounds how many status write-backs may be in flight at once.
     status_write_slots: Arc<Semaphore>,
+    /// Rolling per-subscription delivery counters (#586) — the operator page's
+    /// last-24-hours figures. In-memory, like the rest of the engine's state.
+    delivery_stats: Arc<crate::delivery_stats::DeliveryStats>,
 }
 
 fn calculate_handshake_retry_delay(
@@ -141,6 +144,7 @@ impl SubscriptionEngine {
             outbox_notify: Arc::new(tokio::sync::Notify::new()),
             status_store: None,
             status_write_slots,
+            delivery_stats: Arc::new(crate::delivery_stats::DeliveryStats::new()),
         }
     }
 
@@ -265,6 +269,12 @@ impl SubscriptionEngine {
     /// Returns a reference to the WebSocket manager.
     pub fn ws_manager(&self) -> &Arc<WebSocketManager> {
         &self.ws_manager
+    }
+
+    /// The rolling delivery counters (#586) — the operator page reads its
+    /// last-24-hours figures from here.
+    pub fn delivery_stats(&self) -> &Arc<crate::delivery_stats::DeliveryStats> {
+        &self.delivery_stats
     }
 
     /// Returns a reference to the WebSocket binding token manager.
@@ -935,8 +945,11 @@ impl SubscriptionEngine {
 
         let mut attempt: u32 = 0;
         loop {
+            let now = chrono::Utc::now().timestamp();
             match dispatcher.dispatch(subscription, bundle).await {
                 Ok(DispatchResult::Success) => {
+                    self.delivery_stats
+                        .record_success(tenant_id, sub_id, attempt == 0, now);
                     self.manager.reset_failures(tenant_id, sub_id);
                     info!(
                         tenant_id,
@@ -960,8 +973,8 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Permanent delivery error"
                     );
-                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
-                        .await;
+                    self.delivery_stats.record_failure(tenant_id, sub_id, now);
+                    self.handle_delivery_failure(tenant_id, sub_id).await;
                     return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
@@ -978,8 +991,8 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Max retries exhausted"
                         );
-                        self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
-                            .await;
+                        self.delivery_stats.record_failure(tenant_id, sub_id, now);
+                        self.handle_delivery_failure(tenant_id, sub_id).await;
                         return;
                     }
 
@@ -1006,8 +1019,8 @@ impl SubscriptionEngine {
                         error = %e,
                         "Dispatch error"
                     );
-                    self.handle_delivery_failure(&subscription.tenant_id, &subscription.id)
-                        .await;
+                    self.delivery_stats.record_failure(tenant_id, sub_id, now);
+                    self.handle_delivery_failure(tenant_id, sub_id).await;
                     return;
                 }
             }

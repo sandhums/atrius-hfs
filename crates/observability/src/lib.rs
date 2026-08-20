@@ -43,5 +43,6 @@ pub mod middleware;
 pub mod mode;
 pub mod propagation;
 pub mod reqlog;
+pub mod subscriptions;
 pub mod telemetry;
 pub mod uptime;
