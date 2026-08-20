@@ -126,8 +126,11 @@ impl CompartmentCatalog {
     }
 
     /// Every resource type of the version, from the first CompartmentDefinition
-    /// (each enumerates the full set — 145 in R4). Used by the queries page's
-    /// resource picker rail.
+    /// (each enumerates the full set — 145 in R4, 157 in R5). Used by the
+    /// resource pickers on the Search, Queries, Resources, and Bulk Export
+    /// pages, which pass the sidebar's selected version (#562). For versions
+    /// other than the server's seeded default the definitions come from the
+    /// shipped spec bundles, not storage — see [`crate::conformance`].
     pub async fn resource_type_names(&self, tenant: &str, version: FhirVersion) -> Vec<String> {
         self.definitions(tenant, version)
             .await

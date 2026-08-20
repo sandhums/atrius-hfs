@@ -5,17 +5,21 @@
 {% block breadcrumb %}{% endblock %}
 
 {% block content %}
-<header class="page-head">
-  <h1 class="page-title">{{ i18n.t("bulk-import-title") }}</h1>
+<header class="page-head page-head--row">
+  <h1 class="page-head__title">{{ i18n.t("bulk-import-title") }}</h1>
 
   {% if available %}
   <details class="addbox addbox--modal">
-    <summary class="button button--primary">
+    <summary class="btn btn--primary">
       {% include "icons/plus.svg" %}
       {{ i18n.t("bulk-import-new") }}
     </summary>
     <div class="addbox__panel">
-      <div class="addbox__title">{{ i18n.t("bulk-import-create-title") }}</div>
+      <div class="addbox__head">
+        <div class="addbox__title">{{ i18n.t("bulk-import-create-title") }}</div>
+        <button type="button" class="addbox__x" data-addbox-close
+                aria-label="{{ i18n.t("ui-close") }}">×</button>
+      </div>
       <form method="post" action="/ui/bulk-import">
         <label class="field">
           <span class="field__label">{{ i18n.t("bulk-import-field-name") }}</span>
@@ -67,7 +71,13 @@
             <input class="field__input" type="url" name="token_url" autocomplete="off">
             <span class="field__hint">{{ i18n.t("bulk-import-field-token-url-hint") }}</span>
           </label>
-          <button type="submit" class="button"
+          <p class="field__hint">
+            {{ i18n.t("bulk-import-jwks-hint") }}
+            <a href="/.well-known/bulk-submit-jwks.json" target="_blank" rel="noopener">
+              /.well-known/bulk-submit-jwks.json
+            </a>
+          </p>
+          <button type="submit" class="btn"
                   formaction="/ui/bulk-import/test-auth"
                   hx-post="/ui/bulk-import/test-auth"
                   hx-target="#test-auth-result"
@@ -78,7 +88,8 @@
         </fieldset>
 
         <div class="addbox__actions">
-          <button type="submit" class="button button--primary">
+          <button type="button" class="btn" data-addbox-close>{{ i18n.t("ui-cancel") }}</button>
+          <button type="submit" class="btn btn--primary">
             {{ i18n.t("bulk-import-create-submit") }}
           </button>
         </div>
@@ -104,7 +115,8 @@
     </h2>
   </div>
 
-  <table class="table">
+  <div class="table-wrap">
+  <table class="data-table">
     <thead>
       <tr>
         <th>{{ i18n.t("bulk-import-col-name") }}</th>
@@ -125,10 +137,11 @@
       </tr>
       {% endfor %}
       {% if rows.is_empty() %}
-      <tr><td colspan="5">{{ i18n.t("bulk-import-empty") }}</td></tr>
+      <tr class="data-table__empty"><td colspan="5">{{ i18n.t("bulk-import-empty") }}</td></tr>
       {% endif %}
     </tbody>
   </table>
+  </div>
 </section>
 {% endif %}
 {% endblock %}
