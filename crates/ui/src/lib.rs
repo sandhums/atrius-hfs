@@ -6,8 +6,8 @@
 //! via [`rust_embed`] and served by [`axum_embed`] (with precompressed
 //! negotiation), so there is no runtime CDN dependency.
 //!
-//! Handlers branch on the `HX-Request` header — read through the infallible
-//! [`axum_htmx::HxRequest`] extractor — to return an HTML *fragment* for
+//! Handlers branch on the `HX-Request` header â€” read through the infallible
+//! [`axum_htmx::HxRequest`] extractor â€” to return an HTML *fragment* for
 //! htmx-driven swaps and a *full page* for hard navigations, so the UI degrades
 //! to working full-page loads without JavaScript. [`axum_htmx::AutoVaryLayer`]
 //! adds the matching `Vary` header so a fragment is never cached for a hard
@@ -28,13 +28,15 @@
 //! [`DashboardSnapshot`] through it. When no provider is registered (e.g. the
 //! standalone example, or a build without persistence) the dashboard renders
 //! placeholder figures instead. Counts reflect the server's **default tenant**
-//! only — this is an operator view, and per-tenant counts are never exported to
+//! only â€” this is an operator view, and per-tenant counts are never exported to
 //! the public Prometheus `/metrics` endpoint.
 //!
 //! The chart is sampled over a [`DashboardWindow`], selected per request with
 //! `?window=` (`1h`, `24h`, or the default `30d`) alongside the `?type=` series
 //! selector. Both selectors are plain links, so the dashboard stays navigable
-//! without JavaScript.
+//! without JavaScript. `?all=1` is the "View all resources" toggle (#599): the
+//! picker's option list widens from the tenant's stored types to every
+//! resource type of the active FHIR version, offering the untouched ones at 0.
 
 mod bulk_export;
 mod bulk_import;
@@ -64,7 +66,7 @@ use axum_embed::ServeEmbed;
 use axum_htmx::{AutoVaryLayer, HxRequest};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use helios_observability::dashboard::{
-    DashboardPoint, DashboardSeries, DashboardSnapshot, DashboardWindow, ExportJobCounts,
+    DashboardPoint, DashboardSeries, DashboardSnapshot, DashboardWindow, ExportJobCounts, TypeCount,
 };
 use helios_persistence::core::{ResourceStorage, SettingsStore};
 use i18n::{I18n, RequestLocale};
@@ -87,14 +89,14 @@ struct Assets;
 /// The three states are deliberate: `enabled: false` makes the feature vanish
 /// (no page, no nav entry, no mention); enabled but unconfigured advertises
 /// what it does and how to switch it on; enabled and configured is the working
-/// feature. The UI never sees the API key itself — only whether one is set.
+/// feature. The UI never sees the API key itself â€” only whether one is set.
 #[derive(Clone, Debug, Default)]
 pub struct NlSearch {
-    /// `HFS_NL_SEARCH_ENABLED` — the operator's kill switch.
+    /// `HFS_NL_SEARCH_ENABLED` â€” the operator's kill switch.
     pub enabled: bool,
     /// Whether `HFS_NL_SEARCH_API_KEY` is set.
     pub configured: bool,
-    /// `HFS_NL_SEARCH_MODEL` — shown in the setup state so an operator can see
+    /// `HFS_NL_SEARCH_MODEL` â€” shown in the setup state so an operator can see
     /// what they would be billed for.
     pub model: String,
 }
@@ -122,11 +124,11 @@ struct WebState {
     data_dir: Option<PathBuf>,
     /// The server's default FHIR version, used when seeding a new tenant.
     fhir_version: helios_fhir::FhirVersion,
-    /// The server's default tenant id — the fallback when no stored choice
+    /// The server's default tenant id â€” the fallback when no stored choice
     /// exists (#344).
     default_tenant: String,
     /// Terminology server base URL (`HFS_TERMINOLOGY_SERVER`), when one is
-    /// configured — powers the editor's live `$expand` pickers (#365).
+    /// configured â€” powers the editor's live `$expand` pickers (#365).
     terminology: Option<String>,
     /// Per-user settings, for the persisted FHIR-version choice (#343). `None`
     /// when the backend has no settings store; the selector then applies
@@ -136,7 +138,7 @@ struct WebState {
 
 /// The settings keys holding the user's FHIR-version and tenant choices, and
 /// the user key the settings resolve under. The key mirrors `helios-rest`'s
-/// `UserKey` post-#270 encoding — `u2:{issuer_len}:{issuer}:{subject}` from an
+/// `UserKey` post-#270 encoding â€” `u2:{issuer_len}:{issuer}:{subject}` from an
 /// authenticated principal, `l2:` when auth is disabled (`/ui` also sits
 /// outside the auth layer today; #320 tracks the authenticated modes). Keep in
 /// step with `crates/rest/src/extractors/user.rs`.
@@ -144,7 +146,7 @@ struct WebState {
 /// These two go through [`SettingsStore`] **directly**, not through
 /// `/_user/settings`, so they bypass the per-tenant scoping that handler applies
 /// (issue #313). That is correct precisely because both are in
-/// [`GLOBAL_SETTINGS_KEYS`](helios_persistence::core::GLOBAL_SETTINGS_KEYS) —
+/// [`GLOBAL_SETTINGS_KEYS`](helios_persistence::core::GLOBAL_SETTINGS_KEYS) â€”
 /// they are user-global preferences, and `tenantId` in particular has to be
 /// readable *before* a tenant is known. Anything added here that is **not** in
 /// that list must go through the handler instead, or it will be written outside
@@ -192,7 +194,7 @@ where
 pub(crate) struct RequestTenant {
     pub(crate) id: String,
     pub(crate) display: Option<String>,
-    /// Whether this install has any tenant beyond the server default — the
+    /// Whether this install has any tenant beyond the server default â€” the
     /// sidebar tenant picker only renders when it does (#544).
     pub(crate) multi: bool,
 }
@@ -220,8 +222,8 @@ where
 }
 
 /// Middleware: stamps [`RequestVersion`] and [`RequestTenant`] from the user's
-/// stored settings — one settings read per page load, the documented cost model
-/// of that store — falling back to the server defaults. A stored tenant that is
+/// stored settings â€” one settings read per page load, the documented cost model
+/// of that store â€” falling back to the server defaults. A stored tenant that is
 /// no longer provisioned falls back too, keeping the provisioned-only model.
 async fn resolve_prefs(
     State(state): State<WebState>,
@@ -282,33 +284,71 @@ async fn resolve_prefs(
     next.run(request).await
 }
 
-/// A small, self-contained system-status snapshot — the "real read path" the
+/// A small, self-contained system-status snapshot â€” the "real read path" the
 /// POC renders. Kept deliberately simple so the crate stays dependency-light;
 /// richer read paths (terminology lookups, resource counts) plug in the same way.
 pub(crate) struct Status {
     pub(crate) version: &'static str,
     checked_at: u64,
-    /// The effective FHIR version for this request — the sidebar selector's
+    /// The effective FHIR version for this request â€” the sidebar selector's
     /// label (#343).
     fhir_version: helios_fhir::FhirVersion,
-    /// The effective tenant for this request — the tenant selector's label
+    /// The effective tenant for this request â€” the tenant selector's label
     /// (#344).
     tenant_id: String,
     tenant_display: Option<String>,
     /// Whether the sidebar renders the tenant picker (#544).
     show_tenant_picker: bool,
-    /// Whether the subscriptions engine is advertised — the sidebar entry and
+    /// Whether the subscriptions engine is advertised â€” the sidebar entry and
     /// the operator page only appear when it is (#580).
     subscriptions_enabled: bool,
+    /// The safe navigation state derived from `HFS_TERMINOLOGY_SERVER` (#611).
+    /// The raw value is never exposed to templates unless it is a valid HTTP(S)
+    /// base URL.
+    terminology: TerminologyNavigation,
+}
+
+enum TerminologyNavigation {
+    Unconfigured,
+    Invalid,
+    Valid(String),
+}
+
+impl TerminologyNavigation {
+    fn from_config(value: Option<&str>) -> Self {
+        let Some(raw) = value else {
+            return Self::Unconfigured;
+        };
+
+        if raw.is_empty() || raw.trim() != raw {
+            return Self::Invalid;
+        }
+
+        let Ok(url) = reqwest::Url::parse(raw) else {
+            return Self::Invalid;
+        };
+        let valid = matches!(url.scheme(), "http" | "https")
+            && url.host_str().is_some()
+            && url.username().is_empty()
+            && url.password().is_none()
+            && url.query().is_none()
+            && url.fragment().is_none();
+
+        if valid {
+            Self::Valid(raw.to_string())
+        } else {
+            Self::Invalid
+        }
+    }
 }
 
 impl Status {
-    /// The default FHIR version's display label (`"R4"`, `"R5"`, …).
+    /// The default FHIR version's display label (`"R4"`, `"R5"`, â€¦).
     pub(crate) fn fhir_version_label(&self) -> &'static str {
         self.fhir_version.as_str()
     }
 
-    /// Labels of every FHIR version compiled into this build, in spec order —
+    /// Labels of every FHIR version compiled into this build, in spec order â€”
     /// the sidebar selector's options. Each links the current page with
     /// `?version=`; pages without a version dimension ignore it.
     pub(crate) fn enabled_version_labels(&self) -> Vec<&'static str> {
@@ -326,6 +366,21 @@ impl Status {
     /// Whether the subscriptions engine is advertised (#580).
     pub(crate) fn subscriptions_enabled(&self) -> bool {
         self.subscriptions_enabled
+    }
+
+    /// A browser-safe terminology destination, when the configured value is a
+    /// valid absolute HTTP(S) URL (#611).
+    pub(crate) fn terminology_url(&self) -> Option<&str> {
+        match &self.terminology {
+            TerminologyNavigation::Valid(url) => Some(url),
+            TerminologyNavigation::Unconfigured | TerminologyNavigation::Invalid => None,
+        }
+    }
+
+    /// Whether the environment variable exists but cannot be used as a safe
+    /// browser destination (#611).
+    pub(crate) fn terminology_invalid(&self) -> bool {
+        matches!(self.terminology, TerminologyNavigation::Invalid)
     }
 
     /// The effective tenant id, for the `hfs-tenant` meta tag browser calls
@@ -416,7 +471,7 @@ struct ChartSeriesView {
     resource_type: String,
     /// 1-based palette slot (`--series-N` custom properties, 6 defined).
     color: usize,
-    /// `"x,y x,y …"` coordinate list for the `<polyline>`.
+    /// `"x,y x,y â€¦"` coordinate list for the `<polyline>`.
     polyline: String,
     /// Class suffix under a legend focus (#602): `" series--focused"`,
     /// `" series--receded"`, or empty when nothing is focused.
@@ -425,7 +480,7 @@ struct ChartSeriesView {
     /// itself is clickable, as a native SVG `<a>`. `None` while only one
     /// series is plotted.
     href: Option<String>,
-    /// Whether this series holds the focus — picks the link's label.
+    /// Whether this series holds the focus â€” picks the link's label.
     focused: bool,
 }
 
@@ -438,16 +493,17 @@ struct ChartTableRow {
 
 /// Server-computed SVG geometry for the "resources over time" chart.
 struct ChartView {
-    /// Whether any non-empty series was plotted (`false` → empty state).
+    /// Whether any series was plotted (`false` â†’ empty state). A plotted
+    /// series with a zero total â€” an "empty" type charted via #599 â€” still
+    /// counts: it renders as a real flat line, not the empty state.
     has_data: bool,
     series: Vec<ChartSeriesView>,
     /// Horizontal value gridlines, top (largest) to bottom (zero).
     y_ticks: Vec<AxisTick>,
     /// X-axis date labels at evenly spaced sample points.
     x_ticks: Vec<AxisTick>,
-    /// viewBox height — 300, or 520 when the card is expanded.
+    /// viewBox height (always [`CHART_HEIGHT`]).
     height: i64,
-    expanded: bool,
     /// Inert JSON the tooltip script reads (`#chart-data`): bucket labels and
     /// per-series values with their SVG coordinates, so the script does no
     /// chart math of its own.
@@ -461,7 +517,7 @@ struct ChartView {
 }
 
 /// One entry in the chart legend: a plotted series. While more than one is
-/// plotted the entry links to focusing that series — or, when it is already
+/// plotted the entry links to focusing that series â€” or, when it is already
 /// the focused one, back to the unfocused view (#602). Types leave the chart
 /// through the picker, never the legend.
 struct LegendEntry {
@@ -483,7 +539,7 @@ struct PickerEntry {
 
 /// One entry in the time-window selector (`1h` / `24h` / `30d`): a link that
 /// re-renders the page with the chart sampled over that window, keeping the
-/// charted set and expansion.
+/// charted set.
 struct WindowEntry {
     label: String,
     href: String,
@@ -499,9 +555,13 @@ struct IndexPage {
     legend: Vec<LegendEntry>,
     picker: Vec<PickerEntry>,
     windows: Vec<WindowEntry>,
-    /// The expand/collapse link (the inverse of the current state).
-    expand_href: String,
-    /// True when no provider answered and the placeholder snapshot is shown —
+    /// Whether "View all resources" (#599) is on: the picker offers every
+    /// resource type of the active FHIR version, not just the tenant's
+    /// stored ones.
+    all_types: bool,
+    /// Link that flips the "View all resources" toggle.
+    all_types_href: String,
+    /// True when no provider answered and the placeholder snapshot is shown â€”
     /// rendered with an explicit "sample data" notice, never silently (#555).
     sample_data: bool,
     i18n: I18n,
@@ -514,7 +574,7 @@ struct IndexPage {
 ///
 /// Rendered only when the feature is enabled. When it is enabled but no API
 /// key is configured, the natural-language pane renders its setup state
-/// instead of an input — the page still works, in visual-builder mode.
+/// instead of an input â€” the page still works, in visual-builder mode.
 #[derive(Template)]
 #[template(path = "pages/search.html")]
 struct SearchPage {
@@ -529,6 +589,13 @@ struct SearchPage {
     /// The saved-query controls are the Saved Queries page's job, not this
     /// page's (see `partials/search-builder.html`).
     show_save: bool,
+    /// The type rail (#541), server-rendered from `resource_types` and the
+    /// dashboard snapshot's counts.
+    rail_entries: Vec<RailEntry>,
+    /// No-JS prefill for the builder's URL input (see `ResourcesPage`'s field
+    /// of the same name); this page opens with no type context, so it is
+    /// always `None`.
+    builder_url: Option<String>,
 }
 
 /// Resources page (#282): type filter + search + edit modal, on one screen.
@@ -545,6 +612,22 @@ struct ResourcesPage {
     /// The search-builder partial's save controls are the Saved Queries page's
     /// job, not this one's.
     show_save: bool,
+    /// The type rail (#541), server-rendered from `resource_types` and the
+    /// dashboard snapshot's counts.
+    rail_entries: Vec<RailEntry>,
+    /// No-JS prefill for the builder's URL input (#605): `GET /{selected_type}`,
+    /// so the form already shows the query the client JS runs on load.
+    builder_url: Option<String>,
+}
+
+/// Explains how to configure terminology navigation, or why the configured
+/// value cannot be used (#611).
+#[derive(Template)]
+#[template(path = "pages/terminology.html")]
+struct TerminologyPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
 }
 
 /// Saved FHIR queries page (#234). The shell is server-rendered; the list is
@@ -558,9 +641,15 @@ struct QueriesPage {
     active_page: &'static str,
     /// The version's resource types for the picker rail, from the spec
     /// CompartmentDefinitions already vendored for the compartment viewer.
-    /// Counts hydrate client-side via `_summary=count`.
     resource_types: Vec<String>,
     show_save: bool,
+    /// The type rail (#541), server-rendered from `resource_types` and the
+    /// dashboard snapshot's counts.
+    rail_entries: Vec<RailEntry>,
+    /// No-JS prefill for the builder's URL input (see `ResourcesPage`'s field
+    /// of the same name); this page opens with no type context, so it is
+    /// always `None`.
+    builder_url: Option<String>,
 }
 
 /// SearchParameter viewer (#238). Read-only against the same snapshot the
@@ -617,14 +706,14 @@ struct StatusPartial {
 struct ParamOption {
     code: String,
     type_label: String,
-    /// Comma-joined target resource types (reference params only, else empty) —
+    /// Comma-joined target resource types (reference params only, else empty) â€”
     /// the builder's chaining controls read these as `data-targets`.
     targets: String,
 }
 
 /// Parameter suggestions for the search builder (`/ui/queries/params`),
 /// rendered from the same registry snapshot the SearchParameter viewer
-/// reads. An HTML fragment the page swaps per resource type — hypermedia,
+/// reads. An HTML fragment the page swaps per resource type â€” hypermedia,
 /// not a UI-facing JSON API.
 #[derive(Template)]
 #[template(path = "partials/param-options.html")]
@@ -650,14 +739,14 @@ struct HistoryPage {
 struct HistoryDiffFragment {
     i18n: I18n,
     diff: history::Diff,
-    /// The versions being compared, for the heading (`v3 → v4`).
+    /// The versions being compared, for the heading (`v3 â†’ v4`).
     from_label: String,
     to_label: String,
     show_metadata: bool,
     /// A version was deleted (an R6 destructive op): render a state banner
     /// rather than a diff against a tombstone.
     deleted: bool,
-    /// The two documents could not be parsed — the fragment says so instead of
+    /// The two documents could not be parsed â€” the fragment says so instead of
     /// rendering an empty diff.
     parse_error: bool,
 }
@@ -747,8 +836,9 @@ pub fn mount_with_conformance_source(
         .route("/ui/queries", get(queries))
         .route("/ui/queries/params", get(query_params_catalog))
         .route("/ui/search-parameters", get(search_parameters))
+        .route("/ui/terminology", get(terminology_page))
         .route("/ui/compartments", get(compartments_page))
-        // Batch/Transaction workspace (#476): upload → preflight → response.
+        // Batch/Transaction workspace (#476): upload â†’ preflight â†’ response.
         .route("/ui/batch", get(batch_page))
         .route("/ui/subscriptions", get(subscriptions::page))
         // Schema-driven resource editor (#264). One POST endpoint applies every
@@ -876,7 +966,7 @@ pub fn mount_with_conformance_source(
         .fallback_service(fhir_app)
 }
 
-/// Form body for `POST /ui/version` — the sidebar selector's submit.
+/// Form body for `POST /ui/version` â€” the sidebar selector's submit.
 #[derive(Deserialize)]
 struct VersionForm {
     version: String,
@@ -912,7 +1002,7 @@ async fn set_version(
         }
     }
 
-    // Bounce back to the submitting page — same-origin `/ui` paths only.
+    // Bounce back to the submitting page â€” same-origin `/ui` paths only.
     let back = headers
         .get(axum::http::header::REFERER)
         .and_then(|v| v.to_str().ok())
@@ -960,7 +1050,7 @@ fn initials_of(label: &str) -> String {
     }
 }
 
-/// `GET /ui/tenant/options` — the registry's provisioned tenants as selector
+/// `GET /ui/tenant/options` â€” the registry's provisioned tenants as selector
 /// options, with the effective tenant marked current.
 async fn tenant_options(State(state): State<WebState>, rt: RequestTenant) -> Response {
     let mut options = Vec::new();
@@ -995,7 +1085,7 @@ async fn tenant_options(State(state): State<WebState>, rt: RequestTenant) -> Res
     render(TenantOptionsPartial { options })
 }
 
-/// Form body for `POST /ui/tenant` — the tenant selector's submit.
+/// Form body for `POST /ui/tenant` â€” the tenant selector's submit.
 #[derive(Deserialize)]
 struct TenantForm {
     tenant: String,
@@ -1060,12 +1150,15 @@ async fn revalidate_assets(request: axum::extract::Request, next: middleware::Ne
     response
 }
 
-/// Full landing page. `?types=<A,B,…>` selects which resource types the chart
+/// Full landing page. `?types=<A,B,â€¦>` selects which resource types the chart
 /// plots (defaults to the tenant's largest stored types); unknown names are
 /// dropped by the provider, so the set is always real. The legacy `?type=`
 /// single selection still works. `?window=<1h|24h|30d>` selects the sampling
 /// window, falling back to [`DashboardWindow::default`] for anything
-/// unrecognised, and `?expand=1` renders the taller chart.
+/// unrecognised. `?all=1` is the "View all resources" toggle (#599): with it,
+/// the picker offers every resource type of the active FHIR version, not just
+/// the ones the tenant stores, and a type with no data can be charted as a
+/// flat zero line.
 async fn index(
     State(state): State<WebState>,
     locale: RequestLocale,
@@ -1086,24 +1179,66 @@ async fn index(
     let window = query_value(query.as_deref(), "window")
         .and_then(|slug| DashboardWindow::from_slug(&slug))
         .unwrap_or_default();
-    let expand = query_value(query.as_deref(), "expand").as_deref() == Some("1");
+    let all_types = query_value(query.as_deref(), "all").as_deref() == Some("1");
+    // The full type list is only fetched when offered â€” the common,
+    // flag-off case pays nothing extra for it.
+    let spec_types = if all_types {
+        state.compartments.resource_type_names(&rt.id, rv.0).await
+    } else {
+        Vec::new()
+    };
     // `?focus=Type` marks one plotted series as the legend focus (#602);
     // validation against the actually-plotted set happens in build_dashboard.
     let focus = query_value(query.as_deref(), "focus")
         .filter(|f| !f.is_empty() && f.chars().all(|c| c.is_ascii_alphanumeric()));
     render(
         build_index_page(
-            state.version,
-            locale,
-            types,
-            window,
-            expand,
-            focus,
-            rv.0,
-            &rt,
+            &state, locale, types, window, all_types, spec_types, focus, rv.0, &rt,
         )
         .await,
     )
+}
+
+/// One resource-type rail item â€” the primitive Resources, Search, and Saved
+/// Queries share for their type picker (#541): a real link the server marks
+/// current, with an optional instance count. `count` is `None` when no
+/// dashboard provider is registered; the partial then omits the whole count
+/// span rather than mixing real counts with blanks.
+struct RailEntry {
+    name: String,
+    href: String,
+    count: Option<String>,
+    current: bool,
+}
+
+/// Builds the shared type-rail entries for Resources, Search, and Saved
+/// Queries: one entry per resource type, linking back to `base` with
+/// `?type=<name>`, marked `current` against `selected`. `available` is the
+/// dashboard snapshot's per-type totals (`None` when no provider answered â€”
+/// every entry then gets `count: None`, never a fabricated zero).
+fn build_rail_entries(
+    base: &str,
+    resource_types: &[String],
+    available: Option<&[TypeCount]>,
+    selected: Option<&str>,
+) -> Vec<RailEntry> {
+    let counts: Option<std::collections::HashMap<&str, u64>> = available.map(|types| {
+        types
+            .iter()
+            .map(|t| (t.resource_type.as_str(), t.total))
+            .collect()
+    });
+    resource_types
+        .iter()
+        .map(|name| RailEntry {
+            name: name.clone(),
+            href: format!("{base}?type={name}"),
+            count: counts
+                .as_ref()
+                .map(|by_name| by_name.get(name.as_str()).copied().unwrap_or(0).to_string()),
+            current: selected == Some(name.as_str()),
+        })
+        .collect()
 }
 
 /// Search page: natural language and the visual builder over one editable query.
@@ -1112,17 +1247,37 @@ async fn search(
     locale: RequestLocale,
     rv: RequestVersion,
     rt: RequestTenant,
+    Query(query): Query<SearchQuery>,
 ) -> Response {
     let resource_types = state.compartments.resource_type_names(&rt.id, rv.0).await;
+    let live =
+        helios_observability::dashboard::snapshot(DashboardWindow::default(), &rt.id, &[], false)
+            .await;
+    let rail_entries = build_rail_entries(
+        "/ui/search",
+        &resource_types,
+        live.as_ref().map(|s| s.available.as_slice()),
+        query.resource_type.as_deref(),
+    );
     render(SearchPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "search",
         nl: (*state.nl).clone(),
         docs_url: NL_SEARCH_DOCS,
         resource_types,
         show_save: false,
+        rail_entries,
+        builder_url: None,
     })
+}
+
+/// Query string for the Search page: an optional pre-selected type, so the
+/// rail's own links round-trip through `/ui/search?type=Observation` (#541).
+#[derive(Deserialize, Default)]
+struct SearchQuery {
+    #[serde(rename = "type")]
+    resource_type: Option<String>,
 }
 
 /// Saved FHIR queries page.
@@ -1131,20 +1286,40 @@ async fn queries(
     locale: RequestLocale,
     rv: RequestVersion,
     rt: RequestTenant,
+    Query(query): Query<QueriesQuery>,
 ) -> Response {
     let resource_types = state.compartments.resource_type_names(&rt.id, rv.0).await;
+    let live =
+        helios_observability::dashboard::snapshot(DashboardWindow::default(), &rt.id, &[], false)
+            .await;
+    let rail_entries = build_rail_entries(
+        "/ui/queries",
+        &resource_types,
+        live.as_ref().map(|s| s.available.as_slice()),
+        query.resource_type.as_deref(),
+    );
     render(QueriesPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "queries",
         resource_types,
         show_save: true,
+        rail_entries,
+        builder_url: None,
     })
 }
 
+/// Query string for the Saved Queries page: an optional pre-selected type, so
+/// the rail's own links round-trip through `/ui/queries?type=Observation` (#541).
+#[derive(Deserialize, Default)]
+struct QueriesQuery {
+    #[serde(rename = "type")]
+    resource_type: Option<String>,
+}
+
 /// Resources page (#282): the primary read/write workspace. Ties together the
-/// type filter, the search (natural-language + visual builder), and — on a
-/// result click — the edit modal that reuses the schema-driven editor, with
+/// type filter, the search (natural-language + visual builder), and â€” on a
+/// result click â€” the edit modal that reuses the schema-driven editor, with
 /// save / delete / version history / diff. The pieces are the same partials the
 /// Search and Editor pages render; this page is the place they come together.
 async fn resources(
@@ -1155,16 +1330,44 @@ async fn resources(
     Query(query): Query<ResourcesQuery>,
 ) -> Response {
     let resource_types = state.compartments.resource_type_names(&rt.id, rv.0).await;
+    // The type the rail opens focused on (from the nav submenu deep link).
+    let selected_type = query.resource_type.unwrap_or_else(|| "Patient".to_string());
+    let live =
+        helios_observability::dashboard::snapshot(DashboardWindow::default(), &rt.id, &[], false)
+            .await;
+    let rail_entries = build_rail_entries(
+        "/ui/resources",
+        &resource_types,
+        live.as_ref().map(|s| s.available.as_slice()),
+        Some(selected_type.as_str()),
+    );
+    let builder_url = Some(format!("/{selected_type}"));
     render(ResourcesPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "resources",
         nl: (*state.nl).clone(),
         docs_url: NL_SEARCH_DOCS,
         resource_types,
-        // The type the rail opens focused on (from the nav submenu deep link).
-        selected_type: query.resource_type.unwrap_or_else(|| "Patient".to_string()),
+        selected_type,
         show_save: false,
+        rail_entries,
+        builder_url,
+    })
+}
+
+/// Terminology setup state (#611). The sidebar links here when the environment
+/// variable is absent or cannot be used as a safe browser destination.
+async fn terminology_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+) -> Response {
+    render(TerminologyPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: "terminology",
     })
 }
 
@@ -1251,7 +1454,7 @@ async fn search_parameters(
         .snapshot(&rt.id, query.fhir_version())
         .await;
     render(SearchParametersPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "search-parameters",
         view: search_params::build_view(&snapshot, &query),
@@ -1274,7 +1477,7 @@ struct CompartmentsQuery {
 }
 
 /// Batch/Transaction workspace page (#476). The shell is server-rendered;
-/// batch.js drives upload → preflight → execute → response entirely against
+/// batch.js drives upload â†’ preflight â†’ execute â†’ response entirely against
 /// the ordinary FHIR root, so this crate never touches storage.
 async fn batch_page(
     State(state): State<WebState>,
@@ -1283,7 +1486,7 @@ async fn batch_page(
     rt: RequestTenant,
 ) -> Response {
     render(BatchPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "batch",
     })
@@ -1315,16 +1518,16 @@ async fn compartments_page(
         .await;
     match compartments::build_view(&query, &defs) {
         Some(view) => render(CompartmentsPage {
-            status: current_status(state.version, rv.0, &rt),
+            status: current_status(&state, rv.0, &rt),
             i18n: I18n::new(locale),
             active_page: "compartments",
             view,
         }),
         // No definitions means the self-fetch degraded (an outage, or auth
-        // without an outbound token, #320) — a warning, not a 404. The failed
+        // without an outbound token, #320) â€” a warning, not a 404. The failed
         // fetch is not cached, so the next request re-attempts it.
         None => render(CompartmentsDegradedPage {
-            status: current_status(state.version, rv.0, &rt),
+            status: current_status(&state, rv.0, &rt),
             i18n: I18n::new(locale),
             active_page: "compartments",
         }),
@@ -1340,18 +1543,19 @@ async fn status(
     rt: RequestTenant,
     HxRequest(is_htmx): HxRequest,
 ) -> Response {
-    let status = current_status(state.version, rv.0, &rt);
+    let status = current_status(&state, rv.0, &rt);
     let i18n = I18n::new(locale);
     if is_htmx {
         render(StatusPartial { status, i18n })
     } else {
         render(
             build_index_page(
-                state.version,
+                &state,
                 locale,
                 Vec::new(),
                 DashboardWindow::default(),
                 false,
+                Vec::new(),
                 None,
                 rv.0,
                 &rt,
@@ -1369,7 +1573,7 @@ async fn history_page(
     rt: RequestTenant,
 ) -> Response {
     render(HistoryPage {
-        status: current_status(state.version, rv.0, &rt),
+        status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "history",
     })
@@ -1431,25 +1635,27 @@ async fn history_diff(locale: RequestLocale, axum::Form(form): axum::Form<DiffFo
 }
 
 /// Assembles the landing page from the live dashboard snapshot, or from
-/// placeholder data when no provider is registered — in which case the page
+/// placeholder data when no provider is registered â€” in which case the page
 /// says so explicitly rather than presenting invented numbers as real (#555).
 #[allow(clippy::too_many_arguments)]
 async fn build_index_page(
-    version: &'static str,
+    state: &WebState,
     locale: RequestLocale,
     types: Vec<String>,
     window: DashboardWindow,
-    expand: bool,
+    all_types: bool,
+    spec_types: Vec<String>,
     focus: Option<String>,
     fhir_version: helios_fhir::FhirVersion,
     tenant: &RequestTenant,
 ) -> IndexPage {
-    let status = current_status(version, fhir_version, tenant);
+    let status = current_status(state, fhir_version, tenant);
     let i18n = I18n::new(locale);
-    let live = helios_observability::dashboard::snapshot(window, &tenant.id, &types).await;
+    let live =
+        helios_observability::dashboard::snapshot(window, &tenant.id, &types, all_types).await;
     let sample_data = live.is_none();
     let snapshot = live.unwrap_or_else(|| sample_snapshot(window));
-    let dash = build_dashboard(&snapshot, expand, focus.as_deref());
+    let dash = build_dashboard(&snapshot, all_types, &spec_types, focus.as_deref());
     IndexPage {
         status,
         metrics: dash.metrics,
@@ -1457,7 +1663,8 @@ async fn build_index_page(
         legend: dash.legend,
         picker: dash.picker,
         windows: dash.windows,
-        expand_href: dash.expand_href,
+        all_types: dash.all_types,
+        all_types_href: dash.all_types_href,
         sample_data,
         i18n,
         active_page: "home",
@@ -1471,21 +1678,25 @@ struct DashboardView {
     legend: Vec<LegendEntry>,
     picker: Vec<PickerEntry>,
     windows: Vec<WindowEntry>,
-    expand_href: String,
+    /// Whether "View all resources" is on (#599).
+    all_types: bool,
+    /// Link that flips the "View all resources" toggle, keeping the charted
+    /// set and window.
+    all_types_href: String,
 }
 
-/// A `/ui` link carrying the whole chart state: charted set, window,
-/// expansion, and the focused series (#602). Every selector emits these so
-/// changing one control keeps the others.
+/// A `/ui` link carrying the whole chart state: charted set, window, the
+/// "View all resources" toggle (#599), and the focused series (#602). Every
+/// selector emits these so changing one control keeps the others.
 fn dash_href(
     types: &[String],
     window: DashboardWindow,
-    expand: bool,
+    all_types: bool,
     focus: Option<&str>,
 ) -> String {
     let mut href = format!("/ui?types={}&window={}", types.join(","), window.as_str());
-    if expand {
-        href.push_str("&expand=1");
+    if all_types {
+        href.push_str("&all=1");
     }
     // Focus survives a link only while the focused type is still charted.
     if let Some(f) = focus
@@ -1497,12 +1708,23 @@ fn dash_href(
 }
 
 /// Projects a [`DashboardSnapshot`] into the headline metrics, chart geometry,
-/// and the three selectors (type picker, legend, time window) the template
-/// renders. The charted set is `snapshot.series` itself — the provider already
-/// resolved the request to real stored types.
+/// and the selectors (type picker, legend, time window, "View all resources")
+/// the template renders. The charted set is `snapshot.series` itself â€” the
+/// provider already resolved the request to real (or, with `all_types`,
+/// explicitly requested) types.
+///
+/// `all_types` is the "View all resources" toggle (#599). When set,
+/// `spec_types` â€” every resource type of the active FHIR version, from
+/// [`compartments::CompartmentCatalog::resource_type_names`] â€” is unioned into
+/// the picker's option list alongside the tenant's stored types, so a type
+/// with no data can still be picked (and, once picked, charts as a flat zero
+/// line via the provider's relaxed selection guard). `spec_types` is ignored
+/// when `all_types` is `false`. `focus` names the series a legend click has
+/// asked to focus (#602); it is validated against the plotted set below.
 fn build_dashboard(
     snapshot: &DashboardSnapshot,
-    expand: bool,
+    all_types: bool,
+    spec_types: &[String],
     focus: Option<&str>,
 ) -> DashboardView {
     let charted: Vec<String> = snapshot
@@ -1515,7 +1737,7 @@ fn build_dashboard(
     // in the query renders the ordinary unfocused view.
     let focus = focus.filter(|f| charted.iter().any(|c| c == f));
 
-    let mut chart = build_chart(&snapshot.series, snapshot.window, expand, focus);
+    let mut chart = build_chart(&snapshot.series, snapshot.window, focus);
 
     // The plotted lines carry the same focus links as their legend entries
     // (#602): clicking a line focuses its series, clicking the focused one
@@ -1527,13 +1749,32 @@ fn build_dashboard(
             } else {
                 Some(s.resource_type.as_str())
             };
-            s.href = Some(dash_href(&charted, snapshot.window, expand, target));
+            s.href = Some(dash_href(&charted, snapshot.window, all_types, target));
         }
     }
 
-    // The picker offers every stored type; each option toggles membership.
-    let picker = snapshot
-        .available
+    // The picker's option list: the tenant's stored types (largest first,
+    // from the provider), plus â€” with `all_types` â€” every other type of the
+    // active FHIR version, at 0, alphabetically after (never duplicating a
+    // type the provider already listed).
+    let mut options: Vec<TypeCount> = snapshot.available.clone();
+    if all_types {
+        let stored: std::collections::HashSet<&str> =
+            options.iter().map(|t| t.resource_type.as_str()).collect();
+        let mut empties: Vec<TypeCount> = spec_types
+            .iter()
+            .filter(|name| !stored.contains(name.as_str()))
+            .map(|name| TypeCount {
+                resource_type: name.clone(),
+                total: 0,
+            })
+            .collect();
+        empties.sort_by(|a, b| a.resource_type.cmp(&b.resource_type));
+        options.extend(empties);
+    }
+
+    // Each option toggles membership.
+    let picker = options
         .iter()
         .map(|t| {
             let selected = charted.contains(&t.resource_type);
@@ -1559,14 +1800,14 @@ fn build_dashboard(
                 total: grouped(t.total),
                 // dash_href drops the focus itself if this toggle removes
                 // the focused type.
-                href: dash_href(&toggled, snapshot.window, expand, focus),
+                href: dash_href(&toggled, snapshot.window, all_types, focus),
                 selected,
             }
         })
         .collect();
 
     // The legend names each plotted series; while more than one is plotted,
-    // an entry links to focusing that series — or back out of the focus when
+    // an entry links to focusing that series â€” or back out of the focus when
     // it already holds it (#602). Removal lives in the picker.
     let legend = snapshot
         .series
@@ -1580,7 +1821,7 @@ fn build_dashboard(
                 } else {
                     Some(s.resource_type.as_str())
                 };
-                dash_href(&charted, snapshot.window, expand, target)
+                dash_href(&charted, snapshot.window, all_types, target)
             });
             LegendEntry {
                 resource_type: s.resource_type.clone(),
@@ -1596,7 +1837,7 @@ fn build_dashboard(
         .into_iter()
         .map(|w| WindowEntry {
             label: w.as_str().to_string(),
-            href: dash_href(&charted, w, expand, focus),
+            href: dash_href(&charted, w, all_types, focus),
             active: w == snapshot.window,
         })
         .collect();
@@ -1620,7 +1861,8 @@ fn build_dashboard(
         legend,
         picker,
         windows,
-        expand_href: dash_href(&charted, snapshot.window, !expand, focus),
+        all_types,
+        all_types_href: dash_href(&charted, snapshot.window, !all_types, focus),
     }
 }
 
@@ -1629,36 +1871,29 @@ fn build_dashboard(
 const PLOT_LEFT: i64 = 40;
 const PLOT_RIGHT: i64 = 1060;
 const PLOT_TOP: i64 = 10;
-/// Default and expanded viewBox heights (#555).
+/// The chart's fixed viewBox height (#555, #601).
 const CHART_HEIGHT: i64 = 300;
-const CHART_HEIGHT_EXPANDED: i64 = 520;
 /// Palette slots defined as `--series-N` custom properties in app.css.
 const SERIES_COLORS: usize = 6;
-/// Most series plotted at once — mirrors the provider's `MAX_CHARTED_TYPES`
+/// Most series plotted at once â€” mirrors the provider's `MAX_CHARTED_TYPES`
 /// (and the palette), so a picker link never asks for more than the server
 /// will chart. The default selection is smaller (the provider's three).
 const CHART_MAX_SERIES: usize = 6;
 
 /// Computes the SVG geometry for one resource type's cumulative series. `window`
-/// decides only the x-axis label format — a calendar date over daily buckets, a
+/// decides only the x-axis label format â€” a calendar date over daily buckets, a
 /// UTC clock time over intraday ones. Under a legend `focus` (#602) the y axis
 /// re-fits the focused series so a small type is legible next to a large one;
 /// the other series stay plotted at their true values, receded, and the plot
 /// clip-path cuts them where they exceed the focused scale.
-fn build_chart(
-    all: &[DashboardSeries],
-    window: DashboardWindow,
-    expand: bool,
-    focus: Option<&str>,
-) -> ChartView {
-    let height = if expand {
-        CHART_HEIGHT_EXPANDED
-    } else {
-        CHART_HEIGHT
-    };
+fn build_chart(all: &[DashboardSeries], window: DashboardWindow, focus: Option<&str>) -> ChartView {
+    let height = CHART_HEIGHT;
     let plot_bottom = height - 22;
     let plotted: Vec<&DashboardSeries> = all.iter().filter(|s| !s.points.is_empty()).collect();
-    let has_data = plotted.iter().any(|s| s.total > 0) && !plotted.is_empty();
+    // Something is charted as soon as a series is plotted, even an all-zero
+    // one (#599, "View all resources"): that renders as a real flat line at
+    // 0, not the "nothing to chart" empty state.
+    let has_data = !plotted.is_empty();
     let types_label = plotted
         .iter()
         .map(|s| s.resource_type.as_str())
@@ -1678,7 +1913,6 @@ fn build_chart(
             y_ticks: y_axis_ticks(0, height, plot_bottom),
             x_ticks: Vec::new(),
             height,
-            expanded: expand,
             tip_json: "{}".to_string(),
             table: Vec::new(),
             types_label,
@@ -1692,7 +1926,7 @@ fn build_chart(
     let points = &plotted[0].points;
     let n = points.len() as i64;
 
-    // One y scale across every plotted series, so the curves are comparable —
+    // One y scale across every plotted series, so the curves are comparable â€”
     // unless a series is focused, in which case the axis fits that series.
     let peak = plotted
         .iter()
@@ -1798,7 +2032,6 @@ fn build_chart(
         y_ticks: y_axis_ticks(axis_max, height, plot_bottom),
         x_ticks,
         height,
-        expanded: expand,
         tip_json,
         table,
         types_label,
@@ -1878,8 +2111,8 @@ fn axis_time_label(bucket_start: DateTime<Utc>, window: DashboardWindow) -> Stri
 
 /// Extracts `key=<value>` from the raw query string, if present and non-empty.
 /// Both values we read this way (a FHIR resource type, a window slug) are
-/// alphanumeric, so no percent-decoding is needed; each is validated — against
-/// the snapshot's series, or `DashboardWindow::from_slug` — before use.
+/// alphanumeric, so no percent-decoding is needed; each is validated â€” against
+/// the snapshot's series, or `DashboardWindow::from_slug` â€” before use.
 pub(crate) fn query_value(query: Option<&str>, key: &str) -> Option<String> {
     let query = query?;
     query.split('&').find_map(|pair| {
@@ -1896,7 +2129,7 @@ pub(crate) fn query_value(query: Option<&str>, key: &str) -> Option<String> {
 /// the design renders with plausible sample data (design frame: Patient growth
 /// toward ~1.2k over 30 days).
 fn sample_snapshot(window: DashboardWindow) -> DashboardSnapshot {
-    // Dense buckets for the requested window, ending now — the same shape a real
+    // Dense buckets for the requested window, ending now â€” the same shape a real
     // provider returns, so the placeholder exercises the same rendering path. The
     // per-bucket growth is scaled down for the shorter windows so the sample curve
     // stays plausible at every zoom.
@@ -1952,8 +2185,8 @@ fn sample_snapshot(window: DashboardWindow) -> DashboardSnapshot {
 }
 
 /// Floors `ts` to the start of the epoch-aligned bucket containing it. Mirrors
-/// `helios_persistence::core::bucket_floor`, which this crate cannot call — it
-/// deliberately does not depend on persistence — and is used only to shape the
+/// `helios_persistence::core::bucket_floor`, which this crate cannot call â€” it
+/// deliberately does not depend on persistence â€” and is used only to shape the
 /// placeholder series.
 fn bucket_floor_utc(ts: DateTime<Utc>, bucket_seconds: i64) -> DateTime<Utc> {
     if bucket_seconds <= 0 {
@@ -1964,18 +2197,19 @@ fn bucket_floor_utc(ts: DateTime<Utc>, bucket_seconds: i64) -> DateTime<Utc> {
 }
 
 pub(crate) fn current_status(
-    version: &'static str,
+    state: &WebState,
     fhir_version: helios_fhir::FhirVersion,
     tenant: &RequestTenant,
 ) -> Status {
     Status {
-        version,
+        version: state.version,
         checked_at: unix_timestamp_seconds(),
         fhir_version,
         tenant_id: tenant.id.clone(),
         tenant_display: tenant.display.clone(),
         show_tenant_picker: tenant.multi,
         subscriptions_enabled: helios_observability::subscriptions::enabled(),
+        terminology: TerminologyNavigation::from_config(state.terminology.as_deref()),
     }
 }
 
@@ -2007,7 +2241,12 @@ mod tests {
 
     /// Builds an `IndexPage` from the sample snapshot for template-rendering tests.
     fn sample_index_page(version: &'static str, checked_at: u64, i18n: I18n) -> IndexPage {
-        let dash = build_dashboard(&sample_snapshot(DashboardWindow::default()), false, None);
+        let dash = build_dashboard(
+            &sample_snapshot(DashboardWindow::default()),
+            false,
+            &[],
+            None,
+        );
         IndexPage {
             status: Status {
                 version,
@@ -2017,13 +2256,15 @@ mod tests {
                 tenant_display: None,
                 show_tenant_picker: true,
                 subscriptions_enabled: false,
+                terminology: TerminologyNavigation::Unconfigured,
             },
             metrics: dash.metrics,
             chart: dash.chart,
             legend: dash.legend,
             picker: dash.picker,
             windows: dash.windows,
-            expand_href: dash.expand_href,
+            all_types: dash.all_types,
+            all_types_href: dash.all_types_href,
             sample_data: true,
             i18n,
             active_page: "home",
@@ -2035,10 +2276,10 @@ mod tests {
     #[test]
     fn legend_focus_rescales_recedes_and_links_back() {
         let snapshot = sample_snapshot(DashboardWindow::default());
-        let unfocused = build_dashboard(&snapshot, false, None);
+        let unfocused = build_dashboard(&snapshot, false, &[], None);
         // Patient is the smallest sample series, so focusing it must lower
         // the axis ceiling relative to the shared (Observation-driven) scale.
-        let dash = build_dashboard(&snapshot, false, Some("Patient"));
+        let dash = build_dashboard(&snapshot, false, &[], Some("Patient"));
 
         assert_eq!(dash.chart.series.len(), unfocused.chart.series.len());
         for s in &dash.chart.series {
@@ -2082,8 +2323,23 @@ mod tests {
         assert!(line(&dash, "Observation").contains("focus=Observation"));
 
         // A focus that names an uncharted type renders the ordinary view.
-        let bogus = build_dashboard(&snapshot, false, Some("Nope"));
+        let bogus = build_dashboard(&snapshot, false, &[], Some("Nope"));
         assert!(bogus.chart.series.iter().all(|s| s.emphasis.is_empty()));
+
+        // The focus link keeps "View all resources" on too (#599 + #602
+        // interaction): a focus click while `?all=1` is active must not drop
+        // the flag.
+        let with_all_types = build_dashboard(&snapshot, true, &[], Some("Patient"));
+        let all_types_entry = with_all_types
+            .legend
+            .iter()
+            .find(|l| l.resource_type == "Observation")
+            .expect("legend entry")
+            .href
+            .clone()
+            .expect("legend link");
+        assert!(all_types_entry.contains("focus=Observation"));
+        assert!(all_types_entry.contains("all=1"));
     }
 
     #[test]
@@ -2147,6 +2403,7 @@ mod tests {
                 tenant_display: None,
                 show_tenant_picker: true,
                 subscriptions_enabled: false,
+                terminology: TerminologyNavigation::Unconfigured,
             },
             i18n: i18n("en"),
         }
@@ -2195,6 +2452,8 @@ mod tests {
 
     #[test]
     fn queries_page_renders_shell_and_marks_nav_current() {
+        let resource_types = vec!["Patient".to_string(), "Observation".to_string()];
+        let rail_entries = build_rail_entries("/ui/queries", &resource_types, None, None);
         let html = QueriesPage {
             status: Status {
                 version: "1.2.3",
@@ -2204,11 +2463,14 @@ mod tests {
                 tenant_display: None,
                 show_tenant_picker: true,
                 subscriptions_enabled: false,
+                terminology: TerminologyNavigation::Unconfigured,
             },
             i18n: i18n("en"),
             active_page: "queries",
             show_save: true,
-            resource_types: vec!["Patient".to_string(), "Observation".to_string()],
+            resource_types,
+            rail_entries,
+            builder_url: None,
         }
         .render()
         .expect("queries page renders");
@@ -2225,11 +2487,11 @@ mod tests {
         // The Recent panel closes from an explicit X as well as outside
         // click / Esc (addbox.js covers details.menu too).
         assert!(html.contains("data-addbox-close"));
-        // Resource picker rail: the version's full type list, with count
-        // slots the script hydrates via _summary=count.
-        assert!(html.contains(r#"data-rail-type="Patient""#));
-        assert!(html.contains(r#"data-rail-type="Observation""#));
-        assert!(html.contains(r#"data-count-for="Patient""#));
+        // Resource picker rail (#541): a real link per type, server-marked
+        // current; no count without a dashboard provider.
+        assert!(html.contains(r#"data-type="Patient" href="/ui/queries?type=Patient""#));
+        assert!(html.contains(r#"data-type="Observation" href="/ui/queries?type=Observation""#));
+        assert!(!html.contains(r#"class="count""#));
         // Saved Queries has no nav entry any more (#282 folded search / editor
         // / history / saved-queries into Resources); the route still renders.
         assert!(!html.contains(r#"href="/ui/queries" aria-current="page""#));
@@ -2239,6 +2501,8 @@ mod tests {
 
     #[test]
     fn queries_page_renders_in_the_negotiated_locale() {
+        let resource_types = vec!["Patient".to_string()];
+        let rail_entries = build_rail_entries("/ui/queries", &resource_types, None, None);
         let html = QueriesPage {
             status: Status {
                 version: "1.2.3",
@@ -2248,11 +2512,14 @@ mod tests {
                 tenant_display: None,
                 show_tenant_picker: true,
                 subscriptions_enabled: false,
+                terminology: TerminologyNavigation::Unconfigured,
             },
             i18n: i18n("es"),
             active_page: "queries",
             show_save: true,
-            resource_types: vec!["Patient".to_string()],
+            resource_types,
+            rail_entries,
+            builder_url: None,
         }
         .render()
         .expect("queries page renders");
@@ -2261,7 +2528,7 @@ mod tests {
     }
 
     /// The saved-queries script owns a structural read-modify-write against
-    /// the shared settings document, so — unlike theme.js — it must use the
+    /// the shared settings document, so â€” unlike theme.js â€” it must use the
     /// conditional-request cycle: capture the ETag, send If-Match, and absorb
     /// a 412 by re-reading. Guards the wiring; the endpoint semantics are
     /// covered in helios-rest's `user_settings` tests.
@@ -2329,7 +2596,12 @@ mod tests {
 
     #[test]
     fn dashboard_projects_snapshot_counts_and_chart() {
-        let dash = build_dashboard(&sample_snapshot(DashboardWindow::default()), false, None);
+        let dash = build_dashboard(
+            &sample_snapshot(DashboardWindow::default()),
+            false,
+            &[],
+            None,
+        );
 
         // Every series the snapshot carries is plotted, on one shared y scale.
         assert!(dash.chart.has_data);
@@ -2340,7 +2612,7 @@ mod tests {
 
         // The legend names each plotted series; while several are plotted each
         // entry is a focus link that keeps the whole charted set and the
-        // window (#602) — removal belongs to the picker.
+        // window (#602) â€” removal belongs to the picker.
         assert_eq!(dash.legend.len(), 4);
         let observation = dash
             .legend
@@ -2374,8 +2646,13 @@ mod tests {
     /// active, and carries the charted type across a window switch.
     #[test]
     fn window_selector_marks_the_active_window_and_keeps_the_charted_type() {
-        let windows =
-            build_dashboard(&sample_snapshot(DashboardWindow::LastHour), false, None).windows;
+        let windows = build_dashboard(
+            &sample_snapshot(DashboardWindow::LastHour),
+            false,
+            &[],
+            None,
+        )
+        .windows;
 
         assert_eq!(windows.len(), DashboardWindow::ALL.len());
         assert_eq!(windows.iter().filter(|w| w.active).count(), 1);
@@ -2395,8 +2672,13 @@ mod tests {
     /// keeps calendar dates. Same series, different axis vocabulary.
     #[test]
     fn axis_labels_follow_the_window_resolution() {
-        let hour_chart =
-            build_dashboard(&sample_snapshot(DashboardWindow::LastHour), false, None).chart;
+        let hour_chart = build_dashboard(
+            &sample_snapshot(DashboardWindow::LastHour),
+            false,
+            &[],
+            None,
+        )
+        .chart;
         assert!(
             hour_chart
                 .x_ticks
@@ -2410,8 +2692,13 @@ mod tests {
                 .collect::<Vec<_>>()
         );
 
-        let month_chart =
-            build_dashboard(&sample_snapshot(DashboardWindow::LastMonth), false, None).chart;
+        let month_chart = build_dashboard(
+            &sample_snapshot(DashboardWindow::LastMonth),
+            false,
+            &[],
+            None,
+        )
+        .chart;
         assert!(
             month_chart.x_ticks.iter().all(|t| !t.label.contains(':')),
             "30d axis should read as a calendar date, got {:?}",
@@ -2430,7 +2717,7 @@ mod tests {
     fn every_window_renders_a_bounded_chart() {
         for window in DashboardWindow::ALL {
             let snapshot = sample_snapshot(window);
-            let chart = build_dashboard(&snapshot, false, None).chart;
+            let chart = build_dashboard(&snapshot, false, &[], None).chart;
             assert!(chart.has_data, "{}", window.as_str());
             assert_eq!(snapshot.series[0].points.len(), window.points());
             assert!(
@@ -2440,29 +2727,6 @@ mod tests {
                 chart.x_ticks.len()
             );
         }
-    }
-
-    /// The expanded chart grows the viewBox and moves the date row with it;
-    /// the tooltip carrier and the tabular alternative describe the same
-    /// buckets the axis labels sample.
-    #[test]
-    fn expand_grows_the_plot_and_the_carriers_stay_consistent() {
-        let dash = build_dashboard(&sample_snapshot(DashboardWindow::default()), true, None);
-        assert!(dash.chart.expanded);
-        assert_eq!(dash.chart.height, 520);
-        assert!(dash.chart.x_ticks.iter().all(|t| t.label_y == 518));
-        // The expand link flips back to the compact view.
-        assert!(!dash.expand_href.contains("expand=1"));
-
-        let tip: serde_json::Value =
-            serde_json::from_str(&dash.chart.tip_json).expect("tip carrier is valid JSON");
-        assert_eq!(tip["series"].as_array().map(Vec::len), Some(4));
-        assert_eq!(
-            tip["labels"].as_array().map(Vec::len),
-            tip["xs"].as_array().map(Vec::len)
-        );
-        assert_eq!(dash.chart.table.len(), dash.chart.x_ticks.len());
-        assert!(dash.chart.table.iter().all(|r| r.values.len() == 4));
     }
 
     #[test]
@@ -2477,7 +2741,7 @@ mod tests {
             export_jobs: None,
             import_jobs_active: None,
         };
-        let dash = build_dashboard(&empty, false, None);
+        let dash = build_dashboard(&empty, false, &[], None);
         assert!(!dash.chart.has_data);
         assert!(dash.chart.series.is_empty());
         assert!(dash.legend.is_empty());
@@ -2485,6 +2749,129 @@ mod tests {
         assert_eq!(dash.metrics.chart_total, "0");
         // The window selector still renders, so an empty server is not a dead end.
         assert_eq!(dash.windows.len(), DashboardWindow::ALL.len());
+    }
+
+    /// `dash_href` only appends `&all=1` when the toggle is on â€” the common,
+    /// flag-off links must stay exactly as they were before #599.
+    #[test]
+    fn dash_href_carries_the_all_types_flag_only_when_on() {
+        let types = vec!["Patient".to_string()];
+        let off = dash_href(&types, DashboardWindow::LastDay, false, None);
+        let on = dash_href(&types, DashboardWindow::LastDay, true, None);
+        assert_eq!(off, "/ui?types=Patient&window=24h");
+        assert_eq!(on, "/ui?types=Patient&window=24h&all=1");
+    }
+
+    /// With "View all resources" (#599), the picker offers the tenant's stored
+    /// types (as today, largest first) plus every other type of the version at
+    /// 0, alphabetically after â€” never duplicating a type already stored, and
+    /// every option link carries `all=1` so the toggle survives a click.
+    #[test]
+    fn view_all_unions_spec_types_after_stored_ones_with_data_first() {
+        let snapshot = DashboardSnapshot {
+            fhir_version: "R4".to_string(),
+            total_resources: 5,
+            distinct_types: 1,
+            window: DashboardWindow::default(),
+            series: vec![DashboardSeries {
+                resource_type: "Patient".to_string(),
+                total: 5,
+                points: vec![point_at(1_752_451_200, 5, 5)],
+            }],
+            available: vec![helios_observability::dashboard::TypeCount {
+                resource_type: "Patient".to_string(),
+                total: 5,
+            }],
+            export_jobs: None,
+            import_jobs_active: None,
+        };
+        let spec_types = vec![
+            "Observation".to_string(),
+            "Aardvark".to_string(),
+            "Patient".to_string(), // already stored â€” must not be duplicated
+        ];
+
+        let dash = build_dashboard(&snapshot, true, &spec_types, None);
+
+        let names: Vec<&str> = dash
+            .picker
+            .iter()
+            .map(|p| p.resource_type.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["Patient", "Aardvark", "Observation"],
+            "stored types first, then the rest of the version alphabetically"
+        );
+        let observation = dash
+            .picker
+            .iter()
+            .find(|p| p.resource_type == "Observation")
+            .expect("Observation offered even though unstored");
+        assert_eq!(observation.total, "0");
+        assert!(!observation.selected);
+        assert!(
+            observation.href.contains("all=1"),
+            "toggling an option keeps the flag on: {}",
+            observation.href
+        );
+
+        // Without the flag, the union never happens â€” today's behavior.
+        let off = build_dashboard(&snapshot, false, &spec_types, None);
+        assert_eq!(off.picker.len(), 1, "only the stored type is offered");
+        assert!(!off.picker[0].href.contains("all=1"));
+    }
+
+    /// The toggle link itself flips `all_types` while keeping the charted set
+    /// and window untouched.
+    #[test]
+    fn all_types_toggle_link_flips_the_flag_and_keeps_the_rest_of_the_state() {
+        let snapshot = DashboardSnapshot {
+            window: DashboardWindow::LastDay,
+            series: vec![DashboardSeries {
+                resource_type: "Patient".to_string(),
+                total: 5,
+                points: vec![point_at(1_752_451_200, 5, 5)],
+            }],
+            ..DashboardSnapshot::default()
+        };
+
+        let off = build_dashboard(&snapshot, false, &[], None);
+        assert!(!off.all_types);
+        assert!(off.all_types_href.contains("Patient"));
+        assert!(off.all_types_href.contains("window=24h"));
+        assert!(off.all_types_href.ends_with("all=1"));
+
+        let on = build_dashboard(&snapshot, true, &[], None);
+        assert!(on.all_types);
+        assert!(!on.all_types_href.contains("all=1"), "toggles back off");
+    }
+
+    /// A charted type with no data (#599: a "View all resources" selection) is
+    /// a real flat line at 0, not the chart's empty state.
+    #[test]
+    fn charting_a_zero_total_series_renders_a_flat_line_not_the_empty_state() {
+        let empty_type = DashboardSeries {
+            resource_type: "Observation".to_string(),
+            total: 0,
+            points: vec![
+                point_at(1_752_451_200, 0, 0),
+                point_at(1_752_454_800, 0, 0),
+                point_at(1_752_458_400, 0, 0),
+            ],
+        };
+        let chart = build_chart(
+            std::slice::from_ref(&empty_type),
+            DashboardWindow::LastHour,
+            None,
+        );
+
+        assert!(chart.has_data, "a plotted series, even all-zero, has data");
+        assert_eq!(chart.series.len(), 1);
+        assert!(
+            !chart.series[0].polyline.is_empty(),
+            "the flat line is still drawn, not omitted"
+        );
     }
 
     #[test]
@@ -2554,7 +2941,6 @@ mod tests {
         let chart = build_chart(
             std::slice::from_ref(&series),
             DashboardWindow::default(),
-            false,
             None,
         );
 
@@ -2582,7 +2968,6 @@ mod tests {
         let chart = build_chart(
             std::slice::from_ref(&series),
             DashboardWindow::LastHour,
-            false,
             None,
         );
 

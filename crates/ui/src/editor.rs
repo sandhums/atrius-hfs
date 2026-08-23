@@ -191,7 +191,7 @@ pub async fn page(
     Query(query): Query<EditorQuery>,
 ) -> Response {
     render(EditorPage {
-        status: crate::current_status(state.version, rv.0, &rt),
+        status: crate::current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "editor",
         resource_type: query.resource_type.unwrap_or_else(|| "Patient".to_string()),
@@ -205,10 +205,13 @@ pub async fn page(
 pub async fn render_body(
     State(_state): State<WebState>,
     locale: RequestLocale,
+    rv: RequestVersion,
     Form(form): Form<EditorForm>,
 ) -> Response {
     let i18n = I18n::new(locale);
-    let registry = packs::core_registry(helios_fhir::FhirVersion::default());
+    // The sidebar's FHIR version picks the schema pack (#488): an R4B build
+    // edits against R4B schemas — and offers R4B's extension catalogue.
+    let registry = packs::core_registry(rv.0);
 
     let mut document: Value = match serde_json::from_str(&form.doc) {
         Ok(value) => value,
@@ -241,6 +244,7 @@ pub async fn render_body(
     render(build_body(
         i18n,
         registry,
+        rv.0,
         resource_type,
         document,
         None,
@@ -312,6 +316,7 @@ fn apply(
 fn build_body(
     i18n: I18n,
     registry: Arc<helios_fhir_validator::SchemaRegistry>,
+    version: helios_fhir::FhirVersion,
     resource_type: String,
     document: Value,
     parse_error: Option<String>,
@@ -325,13 +330,16 @@ fn build_body(
         mut errors,
         deferred,
     } = validator.validate_sync(&document, &ValidationOptions::default());
+    // The editor's issue count blocks saving, so only error-severity issues
+    // belong in it — warnings (e.g. extension context, #615) are $validate
+    // guidance, not save blockers.
+    errors.retain(|e| e.severity == helios_fhir_validator::Severity::Error);
 
     // Required-binding checks against the embedded core value sets (offline, no
     // terminology server), so an out-of-value-set code — e.g. gender
     // "masculino" — surfaces in the editor exactly as it does at `$validate`.
     errors.extend(
-        helios_fhir_validator::core_terminology(helios_fhir::FhirVersion::default())
-            .required_binding_errors(&deferred),
+        helios_fhir_validator::core_terminology(version).required_binding_errors(&deferred),
     );
 
     // Anchor each issue to its node. The validator reports `Patient.name.0.given`
@@ -560,14 +568,13 @@ fn build_rows(ctx: &RowCtx<'_>, path: &[Step], depth: usize, out: &mut Vec<Row>)
                 .as_ref()
                 .and_then(|schema| schema.type_.clone())
                 .unwrap_or_default();
-            let contexts = [
-                resource_type,
-                dotted.as_str(),
-                type_context.as_str(),
-                "Element",
-                "Resource",
-                "DomainResource",
-            ];
+            // The abstract bases come from the shared list so this stays one
+            // statement of that set rather than a third hand-copy of it.
+            let contexts: Vec<&str> = [resource_type, dotted.as_str(), type_context.as_str()]
+                .into_iter()
+                .chain(["Element"])
+                .chain(helios_fhir::search::ABSTRACT_BASE_TYPES)
+                .collect();
             registry
                 .extensions_applicable(&contexts)
                 .into_iter()
