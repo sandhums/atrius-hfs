@@ -63,6 +63,21 @@ async fn index_serves_the_full_landing_page() {
 }
 
 #[tokio::test]
+async fn legacy_expand_query_param_is_ignored_and_harmless() {
+    // `?expand=1` used to render the taller chart (#601); the affordance is
+    // gone, but old bookmarks/links carrying the param must still resolve
+    // cleanly, and the response must never echo it back into a live href.
+    let response = app()
+        .oneshot(Request::get("/ui?expand=1").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(!html.contains("expand=1"));
+}
+
+#[tokio::test]
 async fn dashboard_renders_job_cards_with_unavailable_state_when_no_provider() {
     // No DashboardProvider is registered in this test router, so build_index_page
     // falls back to sample_snapshot, whose export_jobs/import_jobs_active are
@@ -205,13 +220,37 @@ async fn search_parameters_page_serves_the_registry_view() {
     assert_eq!(response.status(), StatusCode::OK);
     let html = body_text(response).await;
     assert!(html.contains("<!doctype html>"));
+    assert!(html.contains("<title>Search Parameters — Helios FHIR Server</title>"));
+    assert!(html.contains(r#"<h1 class="page-head__title">Search Parameters</h1>"#));
+    assert!(html.contains(
+        r#"<table class="data-table" data-row-navigation aria-label="Search Parameters">"#
+    ));
+    assert!(html.contains(r#"<script src="/ui/assets/search-parameters.js" defer></script>"#));
     // The Resource Filter rail and the facet rows are server-rendered.
     assert!(html.contains(r#"id="sp-rail-list""#));
     assert!(html.contains("base=Patient"));
     // Real registry data, not placeholders: Patient supports `name`.
     assert!(html.contains("http://hl7.org/fhir/SearchParameter/Patient-name"));
+    // Each result row keeps exactly one native link for keyboard and no-JS use.
+    let table_body = html
+        .split_once("<tbody>")
+        .and_then(|(_, rest)| rest.split_once("</tbody>"))
+        .map(|(body, _)| body)
+        .expect("SearchParameter table body");
+    let row_count = table_body.matches("<tr").count();
+    assert!(row_count > 0);
+    assert_eq!(table_body.matches(r#"class="row-link""#).count(), row_count);
     // This page, not Home, carries aria-current in the sidebar.
     assert!(html.contains(r#"href="/ui/search-parameters" aria-current="page""#));
+    // The rail matches the flat Resources look (#603 follow-up): no bordered
+    // card wrapper, and a divider + "All types" heading separate the
+    // Recently used group from the general list.
+    assert!(!html.contains(r#"class="card filter-rail""#));
+    assert!(html.contains(r#"class="filter-rail""#));
+    assert!(html.contains(r#"class="filter-rail__divider""#));
+    // "All types" now renders twice: the new section heading, and the
+    // existing "clear filter" row it sits above.
+    assert_eq!(html.matches(">All types<").count(), 2);
 }
 
 #[tokio::test]
@@ -678,6 +717,28 @@ async fn resources_page_has_the_filter_search_and_create_button() {
     assert!(html.contains(r#"id="type-rail-list""#));
     assert!(html.contains(r#"id="saved-query-form""#));
     assert!(html.contains(r#"id="resource-create""#));
+    // The Create button names the selected type (#605), defaulting to
+    // Patient, and the builder's URL is pre-filled so the no-JS form already
+    // shows the query the client also runs on load.
+    assert!(html.contains("Create new Patient"));
+    assert!(html.contains(r#"value="GET /Patient""#));
+    // The client-side template for the label update on rail clicks (#605):
+    // the literal `{type}` placeholder, not the interpolated per-request value.
+    assert!(html.contains(r#"data-msg-create="Create new {type}""#));
+    // The "Recently used" group (#603) is present but hidden until
+    // resource-filter.js populates it from localStorage.
+    assert!(html.contains(r#"id="type-rail-recent""#));
+    assert!(html.contains(r#"data-recent-key="hfs-recent-types""#));
+    assert!(html.contains(r#"data-rail-list="type-rail-list""#));
+    let recent_start = html.find(r#"id="type-rail-recent""#).unwrap();
+    let recent_tag_end = html[recent_start..].find('>').unwrap() + recent_start;
+    assert!(html[recent_start..recent_tag_end].contains("hidden"));
+    assert!(html.contains(r#"src="/ui/assets/resource-filter.js" defer"#));
+    // A divider and an "All types" heading separate the Recently used group
+    // from the general list (#603 follow-up), between the recent group and
+    // the rail items.
+    assert!(html.contains(r#"class="filter-rail__divider""#));
+    assert!(html.contains(">All types<"));
     // The edit modal shell, with its Edit / History tabs.
     assert!(html.contains(r#"id="resource-modal""#));
     assert!(html.contains(r#"data-modal-tab="history""#));
@@ -700,10 +761,16 @@ async fn resources_deep_links_focus_the_selected_type() {
     assert_eq!(response.status(), StatusCode::OK);
     let html = body_text(response).await;
     // The rail marks the deep-linked type, and Create targets it. The type
-    // list is the nav panel now (part of the menu), not a card in the content.
+    // list is a flat rail in the content under the fixed page head (app-shell
+    // pattern shared with Search Parameters), not a full-height menu panel.
     assert!(html.contains(r#"data-selected-type="Observation""#));
-    assert!(html.contains(r#"nav-panel__item--on" data-rail-type="Observation""#));
-    assert!(html.contains(r#"class="nav-panel""#));
+    assert!(html.contains(
+        r#"data-type="Observation" href="/ui/resources?type=Observation" title="Observation" aria-current="true""#
+    ));
+    assert!(html.contains(r#"class="filter-rail" id="resources""#));
+    // Create and the builder prefill both follow the deep-linked type.
+    assert!(html.contains("Create new Observation"));
+    assert!(html.contains(r#"value="GET /Observation""#));
 }
 
 #[tokio::test]
@@ -742,6 +809,92 @@ fn app_with_terminology(terminology: Option<String>) -> Router {
         helios_fhir::FhirVersion::R4,
         terminology,
     )
+}
+
+#[tokio::test]
+async fn terminology_navigation_reflects_the_configuration() {
+    let response = app_with_terminology(None)
+        .oneshot(Request::get("/ui").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(r#"href="/ui/terminology""#));
+
+    let response = app_with_terminology(None)
+        .oneshot(Request::get("/ui/terminology").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(r#"id="terminology-setup""#));
+    assert!(html.contains("HFS_TERMINOLOGY_SERVER=http://localhost:8090"));
+    assert!(html.contains(r#"href="/ui/terminology" aria-current="page""#));
+
+    let valid = "https://terminology.example/fhir/";
+    let response = app_with_terminology(Some(valid.to_string()))
+        .oneshot(Request::get("/ui").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(&format!(r#"href="{valid}""#)));
+    assert!(html.contains(r#"target="_blank""#));
+    assert!(html.contains(r#"rel="noopener noreferrer""#));
+    assert!(html.contains(r#"hx-boost="false""#));
+    assert!(html.contains("opens in a new tab"));
+    assert!(!html.contains(r#"href="/ui/terminology""#));
+
+    let response = app_with_terminology(Some(valid.to_string()))
+        .oneshot(Request::get("/ui/queries").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(&format!(r#"href="{valid}""#)));
+    assert!(html.contains(r#"target="_blank""#));
+    assert!(html.contains(r#"rel="noopener noreferrer""#));
+    assert!(html.contains(r#"hx-boost="false""#));
+
+    let invalid = "javascript:alert(1)";
+    let response = app_with_terminology(Some(invalid.to_string()))
+        .oneshot(Request::get("/ui").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(r#"href="/ui/terminology""#));
+    assert!(!html.contains(invalid));
+
+    let response = app_with_terminology(Some(invalid.to_string()))
+        .oneshot(Request::get("/ui/terminology").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let html = body_text(response).await;
+    assert!(html.contains(r#"id="terminology-invalid" role="alert""#));
+    assert!(html.contains("absolute HTTP or HTTPS URL"));
+    assert!(html.contains("HFS_TERMINOLOGY_SERVER=http://localhost:8090"));
+    assert!(!html.contains(invalid));
+
+    for invalid in [
+        "",
+        " https://terminology.example/fhir",
+        "/fhir",
+        "ftp://terminology.example/fhir",
+        "https://user:secret@terminology.example/fhir",
+        "https://terminology.example/fhir?mode=test",
+        "https://terminology.example/fhir#codes",
+    ] {
+        let response = app_with_terminology(Some(invalid.to_string()))
+            .oneshot(Request::get("/ui").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{invalid}");
+        let html = body_text(response).await;
+        assert!(html.contains(r#"href="/ui/terminology""#), "{invalid}");
+        assert!(!html.contains(&format!(r#"href="{invalid}""#)), "{invalid}");
+    }
 }
 
 /// A loopback stand-in for the terminology server: one canned response for
