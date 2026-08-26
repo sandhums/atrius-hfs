@@ -48,6 +48,7 @@ fn app(store: &Arc<dyn ResourceStorage>) -> Router {
         Arc::new(helios_ui::StaticConformanceSource::empty()),
         FhirVersion::R4,
         None,
+        "http://localhost:8080".to_string(),
     )
 }
 
@@ -168,13 +169,13 @@ async fn create_rejects_invalid_id_and_conflicts() {
 
     // Invalid id → the fragment carries an error banner, not a new row.
     let (_, bad) = post_form(&router, "id=has%20space").await;
-    assert!(bad.contains("form-error"));
+    assert!(bad.contains("alert"));
 
     // Valid create, settle, then a duplicate → conflict surfaced as a banner.
     post_form(&router, "id=acme").await;
     wait_settled(&router).await;
     let (_, dup) = post_form(&router, "id=acme").await;
-    assert!(dup.contains("form-error"));
+    assert!(dup.contains("alert"));
     assert!(dup.contains("already exists"));
 }
 
@@ -218,6 +219,7 @@ async fn page_reports_registry_unavailable_without_a_store() {
         Arc::new(helios_ui::StaticConformanceSource::empty()),
         FhirVersion::R4,
         None,
+        "http://localhost:8080".to_string(),
     )
     .oneshot(Request::get("/ui/tenants").body(Body::empty()).unwrap())
     .await
@@ -260,11 +262,11 @@ async fn storage_failure_renders_the_error_banner_not_a_silent_empty_table() {
 
     let (status, body) = get(&router, "/ui/tenants/rows?q=").await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("form-error"), "rows fragment: {body}");
+    assert!(body.contains("alert"), "rows fragment: {body}");
 
     let (status, body) = post_form(&router, "id=acme&display_name=").await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("form-error"), "create fragment: {body}");
+    assert!(body.contains("alert"), "create fragment: {body}");
 
     let res = router
         .clone()
@@ -277,7 +279,7 @@ async fn storage_failure_renders_the_error_banner_not_a_silent_empty_table() {
         .unwrap();
     assert_eq!(res.status(), StatusCode::OK);
     let body = body_text(res).await;
-    assert!(body.contains("form-error"), "delete fragment: {body}");
+    assert!(body.contains("alert"), "delete fragment: {body}");
 }
 
 #[tokio::test]
@@ -300,6 +302,7 @@ async fn version_choice_persists_to_user_settings_and_redirects_back() {
         Arc::new(helios_ui::StaticConformanceSource::empty()),
         FhirVersion::R4,
         None,
+        "http://localhost:8080".to_string(),
     );
 
     // Selecting a version persists it and bounces back to the referring page.
@@ -368,6 +371,7 @@ async fn version_choice_changes_the_resource_type_lists() {
             )),
             FhirVersion::R4,
             None,
+            "http://localhost:8080".to_string(),
         )
     };
 
@@ -429,6 +433,7 @@ async fn tenant_choice_persists_and_the_selector_follows_it() {
             Arc::new(helios_ui::StaticConformanceSource::empty()),
             FhirVersion::R4,
             None,
+            "http://localhost:8080".to_string(),
         )
     };
 
@@ -532,7 +537,7 @@ async fn delete_refuses_the_reserved_system_tenant() {
     // The page reports the refusal in its error banner rather than 500-ing.
     let body = body_text(res).await;
     assert!(
-        body.contains("form-error"),
+        body.contains("alert"),
         "the refusal must surface as an error banner, got: {body}"
     );
 

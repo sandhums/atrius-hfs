@@ -84,8 +84,9 @@ error-generic = Algo salió mal. Vuelva a intentarlo.
 
 nav-section-work = Trabajo
 nav-section-batch-data = Lotes y datos
+nav-section-sql-on-fhir = SQL on FHIR
 nav-section-server = Servidor
-nav-section-conditional = Condicional
+nav-section-tools = Herramientas
 
 nav-home = Inicio
 nav-search = Buscar
@@ -95,10 +96,13 @@ nav-compartments = Compartimentos
 nav-batch-transaction = Lote / Transacción
 nav-import = Importar
 nav-export = Exportar
-nav-sql-on-fhir = SQL-on-FHIR
+nav-sql-view-definitions = Definiciones de vistas
+nav-sql-queries = Consultas SQL
+nav-sql-views = Vistas SQL
+nav-sql-export = Exportación SQL
+nav-sql-files = Archivos
 nav-capability-conformance = Capacidad y conformidad
 nav-search-parameters = Parámetros de búsqueda
-nav-admin-ops = Administración / Operaciones
 nav-subscriptions = Suscripciones
 nav-tenants = Tenants
 
@@ -145,7 +149,7 @@ fhir-version = FHIR { $version }
 fhir-version-heading = Versión FHIR
 
 card-resource-types = Tipos de recursos
-card-resource-types-sub = habilitados para { $version }
+card-resource-types-sub = usados para { $version }
 card-stored-resources = Recursos almacenados
 card-stored-resources-sub = en el tenant activo
 card-export-jobs = Trabajos de exportación
@@ -335,6 +339,7 @@ queries-recent = Recientes
 queries-recent-heading = Búsquedas recientes
 queries-recent-empty = Aún no hay búsquedas recientes — ejecuta una para registrarla aquí.
 queries-invalid-url = Escribe una búsqueda como GET /Patient?name=smith — el tipo de recurso sale de la ruta.
+queries-invalid-fhir-escape = Esta consulta contiene un escape FHIR no válido. Corrige el valor escapado antes de editarlo visualmente.
 
 queries-conditions = Condiciones
 queries-add-condition = Añadir condición
@@ -346,10 +351,12 @@ queries-or = + o
 plain-pill = En lenguaje claro
 plain-find = Buscar registros de {"{type}"}
 plain-clause = {"{path}"} {"{verb}"} {"{value}"}
+plain-clause-no-value = {"{path}"} {"{verb}"}
 plain-and = y
 plain-or = o
 plain-arrow = {" "}→
 plain-has = que tienen un {"{type}"} relacionado cuyo {"{param}"} {"{verb}"} {"{value}"}
+plain-has-no-value = que tienen un {"{type}"} relacionado cuyo {"{param}"} {"{verb}"}
 plain-include = Devolviendo también el {"{param}"} de cada {"{type}"}{"{target}"}
 plain-revinclude = Más cada {"{type}"} cuyo {"{param}"} apunta aquí
 plain-iterate = (repetidamente)
@@ -359,6 +366,8 @@ plain-verb-is = es
 plain-verb-contains = contiene
 plain-verb-exact = es exactamente
 plain-verb-missing = está presente/ausente
+plain-verb-missing-true = está ausente
+plain-verb-missing-false = está presente
 plain-verb-not = no es
 plain-verb-text = coincide con el texto
 plain-verb-in = está en el value set
@@ -492,6 +501,7 @@ editor-primitive-extension-hint = Este valor lleva extensiones propias (un herma
 
 editor-collapse-all = Colapsar todo
 editor-expand-all = Expandir todo
+json-view-toggle-fold = Alternar sección JSON
 editor-edit-raw = Editar crudo
 editor-versions = Versiones
 editor-versions-none = Sin versiones anteriores.
@@ -530,16 +540,15 @@ batch-tab-actions = Acciones
 batch-tab-json = JSON del bundle
 batch-no-body = (sin cuerpo — esta entrada solo direcciona un recurso)
 batch-cancel = Cancelar
-batch-upload-another = Subir otro
 batch-execute = Ejecutar
+batch-plan-heading = Plan de ejecución
+batch-done = Hecho
 batch-response-heading = Resultados por acción
 batch-sum-created = creados
 batch-sum-updated = actualizados
 batch-sum-other = lecturas/otros
 batch-sum-failed = fallidos
 batch-request-failed = La petición falló
-batch-back = Volver al bundle
-batch-execute-again = Ejecutar de nuevo
 
 ## Bulk Import workspace (#527)
 
@@ -548,7 +557,6 @@ bulk-import-new = Nueva submission
 bulk-import-create-title = Crear Bulk Submission
 bulk-import-field-name = Nombre de la submission
 bulk-import-field-recipient = URL base del receptor
-bulk-import-field-recipient-hint = La URL base del servidor donde se enviarán los datos.
 bulk-import-auth = Autenticación
 bulk-import-auth-hint = Cómo autenticarse ante el servidor receptor.
 bulk-import-auth-none = Ninguna
@@ -577,6 +585,7 @@ bulk-import-status-not-started = Sin iniciar
 bulk-import-status-in-progress = En curso
 bulk-import-status-stopped = Detenida
 bulk-import-status-completed = Completada
+bulk-import-status-failed = Fallido
 bulk-import-detail-recipient = Receptor de datos
 bulk-import-detail-id = ID de submission
 bulk-import-detail-submitter = Remitente
@@ -593,11 +602,15 @@ bulk-import-field-manifest-url = URL del manifest
 bulk-import-field-manifest-url-hint = URL de un Bulk Export Manifest con un conjunto de datos FHIR precoordinado.
 bulk-import-field-fhir-base = URL base FHIR
 bulk-import-field-fhir-base-hint = URL base que usará el receptor al resolver referencias relativas. Déjela vacía para usar la URL base del manifest.
-bulk-import-field-output-format = Formato de salida
+bulk-import-field-output-format = Formato
 bulk-import-field-output-format-hint = El formato de los archivos Bulk Data del manifest.
 bulk-import-field-headers = Cabeceras de petición de archivos
 bulk-import-field-headers-hint = Cabeceras HTTP que el receptor debe usar al pedir un archivo de datos, una "Nombre: valor" por línea.
 bulk-import-manifests = Manifests
+bulk-import-col-manifest-url = URL del manifiesto
+bulk-import-col-last-submitted = Último envío
+bulk-import-col-submit = Enviar
+bulk-import-col-actions = Acciones
 bulk-import-no-manifests = Aún no hay manifests. Añada uno para enviar datos.
 bulk-import-submit = Enviar
 bulk-import-submit-all = Enviar todo
@@ -701,3 +714,109 @@ bulk-export-finished-in = terminada en
 bulk-export-error = Error
 bulk-export-cancel = Cancelar
 bulk-export-retry = Reintentar
+
+# Página CapabilityStatement (#653)
+cap-title = Declaración de capacidades
+cap-lede = Lo que este servidor hace ahora mismo, para el tenant y la versión FHIR seleccionados — compuesto en vivo desde /metadata.
+cap-summary-heading = Resumen del servidor
+cap-summary-description = Descripción
+cap-summary-url = URL base
+cap-summary-fhir-version = Versión FHIR
+cap-summary-status = Estado
+cap-summary-kind = Tipo
+cap-summary-date = Fecha
+cap-summary-formats = Formatos
+cap-interactions-heading = Interacciones de sistema
+cap-transaction-note = transaction se anuncia porque el backend activo soporta transacciones atómicas; batch está siempre disponible.
+cap-operations-heading = Operaciones
+cap-col-operation = Operación
+cap-col-definition = Definición
+cap-resources-heading = Capacidades por recurso
+cap-filter-placeholder = Filtrar tipos…
+cap-col-type = Tipo
+cap-col-interactions = Interacciones
+cap-col-search-params = Parámetros de búsqueda
+cap-col-includes = Includes
+cap-col-revincludes = Revincludes
+cap-resources-empty = Ningún tipo de recurso coincide con el filtro.
+cap-raw-toggle = CapabilityStatement en bruto (JSON)
+cap-unavailable = No se pudo obtener la CapabilityStatement del servidor — la autollamada puede necesitar un token saliente cuando la autenticación está activada.
+
+## Stubs de la sección SQL on FHIR (#649)
+
+
+sql-vd-title = Definiciones de vistas
+sql-vd-lede = Crea y gestiona las ViewDefinitions con las que SQL on FHIR aplana recursos.
+
+sql-queries-title = Consultas SQL
+sql-queries-lede = Ejecuta consultas SQL on FHIR contra este servidor.
+
+sql-views-title = Vistas SQL
+sql-views-lede = Vistas SQL reutilizables construidas sobre ViewDefinitions.
+
+sql-export-title = Exportación SQL
+sql-export-lede = Trabajos de exportación SQL on FHIR de larga duración.
+
+sql-files-title = Archivos
+sql-files-lede = Manifiestos y archivos de salida producidos por las exportaciones SQL.
+
+## Espacio de definiciones de vistas (#649)
+
+vd-new = Crear nueva
+vd-new-title = Nueva definición de vista
+vd-rail-label = Definiciones de vistas
+vd-rail-heading = Definiciones de vistas
+vd-filter = Filtrar vistas
+vd-none = Aún no hay definiciones de vistas.
+vd-empty-lede = Crea tu primera ViewDefinition con «Crear nueva».
+vd-degraded = No se pudo cargar la lista de definiciones de vistas.
+vd-saved = Guardado.
+vd-run = Ejecutar
+vd-run-failed = La ejecución de la vista falló.
+vd-save = Guardar
+vd-duplicate = Duplicar
+vd-delete = Eliminar
+vd-delete-confirm = ¿Eliminar la definición de vista «{ $name }»? Esta acción no se puede deshacer.
+vd-delete-failed = No se pudo eliminar la definición de vista.
+vd-json-heading = Definición (JSON)
+vd-results-heading = Resultados
+vd-results-empty = La vista no produjo filas.
+
+## Espacios de consultas y vistas SQL (#649)
+
+sql-queries-new-title = Nueva consulta SQL
+sql-views-new-title = Nueva vista SQL
+lib-filter = Filtrar bibliotecas
+lib-none = Aún no hay bibliotecas.
+lib-empty-lede = Crea tu primera biblioteca con «Crear nueva».
+lib-degraded = No se pudo cargar la lista de bibliotecas.
+lib-sql-heading = SQL
+lib-delete-confirm = ¿Eliminar «{ $name }»? Esta acción no se puede deshacer.
+lib-delete-failed = No se pudo eliminar la biblioteca.
+
+## Páginas de exportación SQL y archivos (#649)
+
+export-start-failed = No se pudo iniciar la exportación.
+export-started = Exportación iniciada.
+export-cancelled = Cancelación solicitada.
+export-job-heading = Trabajo de exportación
+export-job-id = Id del trabajo
+export-job-state = Estado
+export-state-running = En ejecución
+export-state-done = Terminado
+export-state-unknown = Trabajo desconocido: puede haberse cancelado o purgado.
+export-refresh = Actualizar
+export-cancel = Cancelar trabajo
+export-view-files = Ver archivos
+export-new-heading = Nueva exportación
+export-no-subjects = Nada que exportar todavía: crea primero una ViewDefinition.
+export-format = Formato de salida
+export-start = Iniciar exportación
+files-job-heading = Trabajo de exportación
+files-load = Cargar manifiesto
+files-error = No se pudo cargar el manifiesto.
+files-outputs-heading = Salidas
+files-col-output = Salida
+files-col-downloads = Descargas
+files-shard = Archivo { $n }
+files-empty = El trabajo no produjo archivos de salida.

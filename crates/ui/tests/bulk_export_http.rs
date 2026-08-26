@@ -100,6 +100,7 @@ async fn serve() -> (String, MockExport) {
         )),
         FhirVersion::R4,
         None,
+        "http://localhost:8080".to_string(),
     );
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -144,7 +145,7 @@ async fn the_export_page_offers_scopes_types_and_filters() {
     assert!(html.contains("Everything"));
     assert!(html.contains(r#"name="types" value="Patient""#));
     assert!(html.contains("Narrow it down"));
-    assert!(html.contains("Start export"));
+    assert!(html.contains("Start Export"));
 }
 
 #[tokio::test]
@@ -171,6 +172,14 @@ async fn the_export_page_uses_form_panels_with_name_and_hint_up_top() {
         .find(r#"class="typegrid""#)
         .expect("types grid present");
     assert!(hint_pos < grid_pos, "hint should precede the types grid");
+}
+
+#[tokio::test]
+async fn the_active_exports_page_uses_the_shared_back_link() {
+    let (base, _) = serve().await;
+    let (status, html) = get_text(&base, "/ui/bulk-export/active").await;
+    assert_eq!(status, 200);
+    assert!(html.contains(r#"<a class="back-link" href="/ui/bulk-export">"#));
 }
 
 #[tokio::test]
