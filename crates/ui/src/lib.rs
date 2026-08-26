@@ -40,6 +40,7 @@
 
 mod bulk_export;
 mod bulk_import;
+mod capability;
 mod compartments;
 mod conformance;
 mod editor;
@@ -47,16 +48,19 @@ mod history;
 mod i18n;
 mod json_view;
 mod search_params;
+mod sql_export;
+mod sql_libraries;
+mod sql_views;
 mod subscriptions;
 mod tenants;
 
 #[doc(hidden)]
-pub use conformance::{ConformanceSource, StaticConformanceSource};
+pub use conformance::{ConformanceSource, SqlExportStatus, StaticConformanceSource};
 
 use askama::Template;
 use axum::{
-    Router,
-    extract::{Query, RawQuery, State},
+    Json, Router,
+    extract::{DefaultBodyLimit, Query, RawQuery, State},
     http::StatusCode,
     middleware,
     response::{Html, IntoResponse, Response},
@@ -113,6 +117,9 @@ struct WebState {
     /// Lazily-fetched CompartmentDefinitions per FHIR version (#237), read from
     /// the server's own `/CompartmentDefinition` endpoint.
     compartments: Arc<compartments::CompartmentCatalog>,
+    /// The raw conformance source, for reads that are not catalog-shaped —
+    /// the live CapabilityStatement fetch (`/metadata`, #653).
+    conformance: Arc<dyn ConformanceSource>,
     /// Read/write path for the tenant-maintenance page. `None` when the host did
     /// not wire storage in (e.g. the UI-only unit tests), in which case the page
     /// reports the registry as unavailable rather than crashing.
@@ -122,6 +129,10 @@ struct WebState {
     /// Server data directory (`HFS_DATA_DIR`), used to seed a newly-provisioned
     /// tenant's conformance resources from the tenant-maintenance page.
     data_dir: Option<PathBuf>,
+    /// The server's public base URL (`HFS_BASE_URL`) — what Bulk Import
+    /// submissions target as their recipient (#689). Distinct from the
+    /// loopback self-call base the conformance source uses.
+    public_base_url: String,
     /// The server's default FHIR version, used when seeding a new tenant.
     fhir_version: helios_fhir::FhirVersion,
     /// The server's default tenant id â€” the fallback when no stored choice
@@ -230,6 +241,14 @@ async fn resolve_prefs(
     mut request: axum::extract::Request,
     next: middleware::Next,
 ) -> Response {
+    // Batch JSON previews need locale negotiation, but no tenant or FHIR
+    // version preference. Avoid the settings and tenant-registry reads on this
+    // high-frequency, stateless rendering route; the locale middleware remains
+    // in the inner stack and still stamps RequestLocale before the handler.
+    if request.uri().path() == "/ui/json-view/render" {
+        return next.run(request).await;
+    }
+
     let mut version = state.fhir_version;
     let mut tenant = RequestTenant {
         id: state.default_tenant.clone(),
@@ -343,7 +362,10 @@ impl TerminologyNavigation {
 }
 
 impl Status {
-    /// The default FHIR version's display label (`"R4"`, `"R5"`, â€¦).
+    /// Display label (`"R4"`, `"R5"`, â€¦) of the request's effective FHIR
+    /// version â€” the user's stored choice when one is set, else the server
+    /// default. Rendered by the sidebar selector and the dashboard's
+    /// "Resource types" card (#553).
     pub(crate) fn fhir_version_label(&self) -> &'static str {
         self.fhir_version.as_str()
     }
@@ -415,13 +437,14 @@ impl Status {
 /// Dashboard headline metrics rendered by `pages/index.html` (design: Figma
 /// "Dashboard V1.1").
 ///
-/// `resource_types`, `stored_resources`, `fhir_version`, `export_jobs`,
-/// `import_jobs`, and `chart_total` are derived from the live
-/// [`DashboardSnapshot`] (default tenant). `uptime` is the process uptime from
-/// `helios_observability::uptime` (#540); in a cluster it describes only the
-/// node that served this request.
+/// `resource_types`, `stored_resources`, `export_jobs`, `import_jobs`, and
+/// `chart_total` are derived from the live [`DashboardSnapshot`], scoped to
+/// the request's effective tenant (#344). The card's version label is NOT
+/// here: it renders from [`Status`], the same per-request source as the
+/// sidebar selector, so the two can never disagree (#553). `uptime` is the
+/// process uptime from `helios_observability::uptime` (#540); in a cluster it
+/// describes only the node that served this request.
 struct DashboardMetrics {
-    fhir_version: String,
     resource_types: String,
     stored_resources: String,
     /// Bulk-export jobs for the tenant; `None` renders the unavailable state.
@@ -673,6 +696,16 @@ struct BatchPage {
     active_page: &'static str,
 }
 
+/// The shared highlighted JSON fragment used by Editor, Resources, and Batch.
+#[derive(Template)]
+#[template(path = "partials/json-view.html")]
+struct JsonViewFragment {
+    i18n: I18n,
+    json_lines: Vec<json_view::JsonLine>,
+    json_view_id: String,
+    json_view_paths: bool,
+}
+
 /// Compartment viewer & route tester (#237). Read-only: the base definitions
 /// are codegen'd into the binary; a tenant-scoped override layer is open
 /// question 1 on the issue.
@@ -779,6 +812,41 @@ pub fn mount(
     outbound_auth: Arc<dyn helios_auth::outbound::OutboundAuthProvider>,
     fhir_version: helios_fhir::FhirVersion,
     terminology: Option<String>,
+    public_base_url: String,
+) -> Router {
+    mount_with_body_limit(
+        fhir_app,
+        hfs_version,
+        data_dir,
+        nl,
+        tenants,
+        settings,
+        default_tenant,
+        self_base_url,
+        outbound_auth,
+        fhir_version,
+        terminology,
+        public_base_url,
+        10 * 1024 * 1024,
+    )
+}
+
+/// [`mount`] with an explicit request-body limit for UI rendering endpoints.
+#[allow(clippy::too_many_arguments)]
+pub fn mount_with_body_limit(
+    fhir_app: Router,
+    hfs_version: &'static str,
+    data_dir: Option<PathBuf>,
+    nl: NlSearch,
+    tenants: Option<Arc<dyn ResourceStorage>>,
+    settings: Option<Arc<dyn SettingsStore>>,
+    default_tenant: String,
+    self_base_url: String,
+    outbound_auth: Arc<dyn helios_auth::outbound::OutboundAuthProvider>,
+    fhir_version: helios_fhir::FhirVersion,
+    terminology: Option<String>,
+    public_base_url: String,
+    max_body_size: usize,
 ) -> Router {
     let source: Arc<dyn ConformanceSource> = Arc::new(conformance::HttpConformanceSource::new(
         self_base_url,
@@ -786,7 +854,7 @@ pub fn mount(
         fhir_version,
         data_dir.clone(),
     ));
-    mount_with_conformance_source(
+    mount_with_conformance_source_and_body_limit(
         fhir_app,
         hfs_version,
         data_dir,
@@ -797,6 +865,8 @@ pub fn mount(
         source,
         fhir_version,
         terminology,
+        public_base_url,
+        max_body_size,
     )
 }
 
@@ -817,6 +887,40 @@ pub fn mount_with_conformance_source(
     source: Arc<dyn ConformanceSource>,
     fhir_version: helios_fhir::FhirVersion,
     terminology: Option<String>,
+    public_base_url: String,
+) -> Router {
+    mount_with_conformance_source_and_body_limit(
+        fhir_app,
+        hfs_version,
+        data_dir,
+        nl,
+        tenants,
+        settings,
+        default_tenant,
+        source,
+        fhir_version,
+        terminology,
+        public_base_url,
+        10 * 1024 * 1024,
+    )
+}
+
+/// [`mount_with_conformance_source`] with an explicit UI request-body limit.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn mount_with_conformance_source_and_body_limit(
+    fhir_app: Router,
+    hfs_version: &'static str,
+    data_dir: Option<PathBuf>,
+    nl: NlSearch,
+    tenants: Option<Arc<dyn ResourceStorage>>,
+    settings: Option<Arc<dyn SettingsStore>>,
+    default_tenant: String,
+    source: Arc<dyn ConformanceSource>,
+    fhir_version: helios_fhir::FhirVersion,
+    terminology: Option<String>,
+    public_base_url: String,
+    max_body_size: usize,
 ) -> Router {
     let nl_enabled = nl.enabled;
 
@@ -838,8 +942,29 @@ pub fn mount_with_conformance_source(
         .route("/ui/search-parameters", get(search_parameters))
         .route("/ui/terminology", get(terminology_page))
         .route("/ui/compartments", get(compartments_page))
+        // Read-only live CapabilityStatement (#653).
+        .route("/ui/capability-statement", get(capability_page))
         // Batch/Transaction workspace (#476): upload â†’ preflight â†’ response.
         .route("/ui/batch", get(batch_page))
+        // SQL on FHIR workspaces (#649).
+        .route(
+            "/ui/sql/view-definitions",
+            get(sql_view_definitions_page).post(sql_view_definitions_save),
+        )
+        .route(
+            "/ui/sql/queries",
+            get(sql_queries_page).post(sql_queries_save),
+        )
+        .route("/ui/sql/views", get(sql_views_page).post(sql_views_save))
+        .route(
+            "/ui/sql/export",
+            get(sql_export_page).post(sql_export_start),
+        )
+        .route(
+            "/ui/sql/export/cancel",
+            axum::routing::post(sql_export_cancel),
+        )
+        .route("/ui/sql/files", get(sql_files_page))
         .route("/ui/subscriptions", get(subscriptions::page))
         // Schema-driven resource editor (#264). One POST endpoint applies every
         // structural mutation and re-renders: the document rides with it.
@@ -848,6 +973,10 @@ pub fn mount_with_conformance_source(
         .route(
             "/ui/editor/render",
             axum::routing::post(editor::render_body),
+        )
+        .route(
+            "/ui/json-view/render",
+            axum::routing::post(render_json_view).layer(DefaultBodyLimit::max(max_body_size)),
         )
         .route("/ui/status", get(status))
         .route("/ui/history", get(history_page))
@@ -940,7 +1069,8 @@ pub fn mount_with_conformance_source(
     let state = WebState {
         version: hfs_version,
         sp_catalog: Arc::new(search_params::SpCatalog::new(source.clone())),
-        compartments: Arc::new(compartments::CompartmentCatalog::new(source)),
+        compartments: Arc::new(compartments::CompartmentCatalog::new(source.clone())),
+        conformance: source,
         nl: Arc::new(nl),
         tenants,
         provisioning: Default::default(),
@@ -949,6 +1079,7 @@ pub fn mount_with_conformance_source(
         fhir_version,
         default_tenant,
         terminology,
+        public_base_url,
     };
 
     router
@@ -1476,6 +1607,46 @@ struct CompartmentsQuery {
     refresh: Option<String>,
 }
 
+/// Syntax-highlights arbitrary JSON without applying FHIR semantics or
+/// retaining the payload. Batch sends compact JSON and receives only HTML.
+async fn render_json_view(
+    locale: RequestLocale,
+    Json(document): Json<serde_json::Value>,
+) -> Response {
+    // A compact JSON array can turn a few KiB into thousands of HTML lines.
+    // Keep previews below 4,000 lines and a conservative 2 MiB output estimate
+    // so the configured request-body limit cannot be used for amplification.
+    const MAX_LINES: usize = 4_000;
+    const MAX_ESTIMATED_HTML_BYTES: usize = 2 * 1024 * 1024;
+
+    let json_lines = match json_view::try_lines(
+        &document,
+        json_view::RenderOptions {
+            include_paths: false,
+            budget: Some(json_view::RenderBudget {
+                max_lines: MAX_LINES,
+                max_estimated_html_bytes: MAX_ESTIMATED_HTML_BYTES,
+            }),
+        },
+    ) {
+        Ok(lines) => lines,
+        Err(_) => {
+            return (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "JSON preview exceeds the rendering budget",
+            )
+                .into_response();
+        }
+    };
+
+    render(JsonViewFragment {
+        i18n: I18n::new(locale),
+        json_lines,
+        json_view_id: String::new(),
+        json_view_paths: false,
+    })
+}
+
 /// Batch/Transaction workspace page (#476). The shell is server-rendered;
 /// batch.js drives upload â†’ preflight â†’ execute â†’ response entirely against
 /// the ordinary FHIR root, so this crate never touches storage.
@@ -1489,6 +1660,859 @@ async fn batch_page(
         status: current_status(&state, rv.0, &rt),
         i18n: I18n::new(locale),
         active_page: "batch",
+    })
+}
+
+/// The View Definitions workspace (#649, Figma `420-2`): a filter rail of the
+/// tenant's stored ViewDefinitions, the selected one as editable JSON, and a
+/// `$sql-run` preview of its output. Save and Duplicate are plain form posts
+/// (they work without JavaScript); Delete rides `conformance-crud.js` like
+/// the other conformance viewers.
+#[derive(Template)]
+#[template(path = "pages/sql-view-definitions.html")]
+struct SqlViewDefinitionsPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+    rail: Vec<sql_views::VdSummary>,
+    /// The rail's server-side name filter, echoed back into the search box.
+    filter: String,
+    /// The list fetch failed — the page says so instead of showing an empty rail.
+    degraded: Option<String>,
+    /// `?vd=` (or the first entry): id, name, and pretty JSON. `None` only
+    /// when the store holds no views and none is being created.
+    selected: Option<SelectedVd>,
+    /// `?vd=new`: the JSON below is the starter document, not a stored view.
+    is_new: bool,
+    results: Option<sql_views::RunTable>,
+    run_error: Option<String>,
+    save_error: Option<String>,
+    saved: bool,
+}
+
+struct SelectedVd {
+    id: String,
+    name: String,
+    json: String,
+}
+
+#[derive(Deserialize, Default)]
+struct SqlVdQuery {
+    vd: Option<String>,
+    filter: Option<String>,
+    run: Option<String>,
+    saved: Option<String>,
+}
+
+async fn sql_view_definitions_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<SqlVdQuery>,
+) -> Response {
+    let filter = query.filter.unwrap_or_default();
+    let (mut rail, degraded) = match state
+        .conformance
+        .fetch("ViewDefinition", rv.0, &rt.id)
+        .await
+    {
+        Ok(resources) => (resources, None),
+        Err(error) => {
+            tracing::warn!("ViewDefinition self-fetch failed: {error}");
+            (Vec::new(), Some(error))
+        }
+    };
+    let summaries = {
+        let mut s = sql_views::summarize(&rail);
+        if !filter.is_empty() {
+            let needle = filter.to_lowercase();
+            s.retain(|e| {
+                e.name.to_lowercase().contains(&needle)
+                    || e.resource.to_lowercase().contains(&needle)
+            });
+        }
+        s
+    };
+
+    let is_new = query.vd.as_deref() == Some("new");
+    let (selected, selected_value) = if is_new {
+        (
+            Some(SelectedVd {
+                id: String::new(),
+                name: String::new(),
+                json: sql_views::starter_view_definition(),
+            }),
+            None,
+        )
+    } else {
+        // ?vd=<id>, defaulting to the first rail entry. The full resource is
+        // taken from the fetch — no second round trip.
+        let wanted = query
+            .vd
+            .clone()
+            .or_else(|| summaries.first().map(|e| e.id.clone()));
+        let found = wanted.and_then(|id| {
+            rail.iter()
+                .position(|vd| vd.get("id").and_then(serde_json::Value::as_str) == Some(&id))
+        });
+        match found.map(|i| rail.swap_remove(i)) {
+            Some(vd) => {
+                let id = vd
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let name = vd
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or(&id)
+                    .to_string();
+                let json = serde_json::to_string_pretty(&vd).unwrap_or_default();
+                (Some(SelectedVd { id, name, json }), Some(vd))
+            }
+            None => (None, None),
+        }
+    };
+
+    // `?run=1` previews the selected view through $sql-run — a plain link, so
+    // it works without JavaScript. Capped: this is a preview, not an export.
+    let (results, run_error) = match (&selected_value, query.run.as_deref() == Some("1")) {
+        (Some(vd), true) => match state.conformance.sql_run(vd, 50, rv.0, &rt.id).await {
+            Ok(rows) => (Some(sql_views::build_table(vd, &rows)), None),
+            Err(error) => (None, Some(error)),
+        },
+        _ => (None, None),
+    };
+
+    render(SqlViewDefinitionsPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: "sql-view-definitions",
+        rail: summaries,
+        filter,
+        degraded,
+        selected,
+        is_new,
+        results,
+        run_error,
+        save_error: None,
+        saved: query.saved.as_deref() == Some("1"),
+    })
+}
+
+#[derive(Deserialize)]
+struct SqlVdSaveForm {
+    /// Empty for a create; the stored id for an update.
+    #[serde(default)]
+    id: String,
+    json: String,
+    /// `save` or `duplicate` — the two submit buttons of the one form.
+    #[serde(default)]
+    action: String,
+}
+
+/// Saves the editor's JSON through the server's own FHIR API and bounces back
+/// to the page with the stored view selected. A parse or server error
+/// re-renders the page with the submitted text preserved, so nothing typed is
+/// lost. Plain form semantics throughout — no JavaScript required.
+async fn sql_view_definitions_save(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    axum::Form(form): axum::Form<SqlVdSaveForm>,
+) -> Response {
+    let error_page =
+        |save_error: String, json: String, is_new: bool, id: String| SqlViewDefinitionsPage {
+            status: current_status(&state, rv.0, &rt),
+            i18n: I18n::new(locale),
+            active_page: "sql-view-definitions",
+            rail: Vec::new(),
+            filter: String::new(),
+            degraded: None,
+            selected: Some(SelectedVd {
+                name: if is_new { String::new() } else { id.clone() },
+                id,
+                json,
+            }),
+            is_new,
+            results: None,
+            run_error: None,
+            save_error: Some(save_error),
+            saved: false,
+        };
+
+    let duplicate = form.action == "duplicate";
+    let mut resource: serde_json::Value = match serde_json::from_str(form.json.trim()) {
+        Ok(value) => value,
+        Err(e) => {
+            return render(error_page(
+                format!("invalid JSON: {e}"),
+                form.json,
+                form.id.is_empty(),
+                form.id,
+            ));
+        }
+    };
+    if resource
+        .get("resourceType")
+        .and_then(serde_json::Value::as_str)
+        != Some("ViewDefinition")
+    {
+        return render(error_page(
+            "the document must have resourceType \"ViewDefinition\"".to_string(),
+            form.json,
+            form.id.is_empty(),
+            form.id,
+        ));
+    }
+
+    let id = if duplicate || form.id.is_empty() {
+        // A create must not carry a stored id; a duplicate also gets a fresh
+        // name so the two are tellable apart in the rail.
+        if let Some(map) = resource.as_object_mut() {
+            map.remove("id");
+            if duplicate && let Some(name) = map.get("name").and_then(serde_json::Value::as_str) {
+                let copy = format!("{name}_copy");
+                map.insert("name".to_string(), serde_json::Value::String(copy));
+            }
+        }
+        None
+    } else {
+        // The path id is authoritative for an update; the body must agree.
+        if let Some(map) = resource.as_object_mut() {
+            map.insert("id".to_string(), serde_json::Value::String(form.id.clone()));
+        }
+        Some(form.id.clone())
+    };
+
+    match state
+        .conformance
+        .save_resource("ViewDefinition", id.as_deref(), resource, rv.0, &rt.id)
+        .await
+    {
+        Ok(stored) => {
+            let stored_id = stored
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default();
+            axum::response::Redirect::to(&format!(
+                "/ui/sql/view-definitions?vd={stored_id}&saved=1"
+            ))
+            .into_response()
+        }
+        Err(error) => render(error_page(error, form.json, id.is_none(), form.id)),
+    }
+}
+
+/// What tells the SQL Queries workspace apart from SQL Views: both edit and
+/// run `Library` resources, differing only in the `LibraryTypesCodes` code,
+/// their route, and their labels.
+struct LibraryKind {
+    code: &'static str,
+    base_href: &'static str,
+    active_page: &'static str,
+    title_key: &'static str,
+    lede_key: &'static str,
+    new_title_key: &'static str,
+}
+
+const SQL_QUERY_KIND: LibraryKind = LibraryKind {
+    code: "sql-query",
+    base_href: "/ui/sql/queries",
+    active_page: "sql-queries",
+    title_key: "sql-queries-title",
+    lede_key: "sql-queries-lede",
+    new_title_key: "sql-queries-new-title",
+};
+
+const SQL_VIEW_KIND: LibraryKind = LibraryKind {
+    code: "sql-view",
+    base_href: "/ui/sql/views",
+    active_page: "sql-views",
+    title_key: "sql-views-title",
+    lede_key: "sql-views-lede",
+    new_title_key: "sql-views-new-title",
+};
+
+/// The SQL Queries / SQL Views workspace (#649): the same shape as View
+/// Definitions — rail, editor, `$sql-run` preview — over `Library` resources
+/// of the page's kind, with the SQL decoded out of its base64 attachment into
+/// an editor pane of its own and re-embedded on save.
+#[derive(Template)]
+#[template(path = "pages/sql-library.html")]
+struct SqlLibraryPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+    base_href: &'static str,
+    title_key: &'static str,
+    lede_key: &'static str,
+    new_title_key: &'static str,
+    rail: Vec<sql_libraries::LibSummary>,
+    filter: String,
+    degraded: Option<String>,
+    selected: Option<SelectedLib>,
+    is_new: bool,
+    results: Option<sql_views::RunTable>,
+    run_error: Option<String>,
+    save_error: Option<String>,
+    saved: bool,
+}
+
+struct SelectedLib {
+    id: String,
+    name: String,
+    json: String,
+    sql: String,
+}
+
+#[derive(Deserialize, Default)]
+struct SqlLibQuery {
+    lib: Option<String>,
+    filter: Option<String>,
+    run: Option<String>,
+    saved: Option<String>,
+}
+
+async fn sql_library_page(
+    state: WebState,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    query: SqlLibQuery,
+    kind: &LibraryKind,
+) -> Response {
+    let filter = query.filter.unwrap_or_default();
+    let (mut libraries, degraded) = match state.conformance.fetch("Library", rv.0, &rt.id).await {
+        Ok(resources) => (resources, None),
+        Err(error) => {
+            tracing::warn!("Library self-fetch failed: {error}");
+            (Vec::new(), Some(error))
+        }
+    };
+    let summaries = {
+        let mut s = sql_libraries::summarize(&libraries, kind.code);
+        if !filter.is_empty() {
+            let needle = filter.to_lowercase();
+            s.retain(|e| e.name.to_lowercase().contains(&needle));
+        }
+        s
+    };
+
+    let is_new = query.lib.as_deref() == Some("new");
+    let (selected, selected_value) = if is_new {
+        (
+            Some(SelectedLib {
+                id: String::new(),
+                name: String::new(),
+                json: sql_libraries::starter_library(kind.code),
+                sql: sql_libraries::STARTER_SQL.to_string(),
+            }),
+            None,
+        )
+    } else {
+        let wanted = query
+            .lib
+            .clone()
+            .or_else(|| summaries.first().map(|e| e.id.clone()));
+        let found = wanted.and_then(|id| {
+            libraries
+                .iter()
+                .position(|l| l.get("id").and_then(serde_json::Value::as_str) == Some(&id))
+        });
+        match found.map(|i| libraries.swap_remove(i)) {
+            Some(lib) => {
+                let id = lib
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let name = lib
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or(&id)
+                    .to_string();
+                let sql = sql_libraries::extract_sql(&lib);
+                let json = serde_json::to_string_pretty(&lib).unwrap_or_default();
+                (
+                    Some(SelectedLib {
+                        id,
+                        name,
+                        json,
+                        sql,
+                    }),
+                    Some(lib),
+                )
+            }
+            None => (None, None),
+        }
+    };
+
+    let (results, run_error) = match (&selected_value, query.run.as_deref() == Some("1")) {
+        (Some(lib), true) => match state.conformance.sql_run(lib, 50, rv.0, &rt.id).await {
+            Ok(rows) => (Some(sql_views::build_table(lib, &rows)), None),
+            Err(error) => (None, Some(error)),
+        },
+        _ => (None, None),
+    };
+
+    render(SqlLibraryPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: kind.active_page,
+        base_href: kind.base_href,
+        title_key: kind.title_key,
+        lede_key: kind.lede_key,
+        new_title_key: kind.new_title_key,
+        rail: summaries,
+        filter,
+        degraded,
+        selected,
+        is_new,
+        results,
+        run_error,
+        save_error: None,
+        saved: query.saved.as_deref() == Some("1"),
+    })
+}
+
+#[derive(Deserialize)]
+struct SqlLibSaveForm {
+    #[serde(default)]
+    id: String,
+    json: String,
+    /// The decoded SQL pane; re-embedded as the base64 attachment on save.
+    #[serde(default)]
+    sql: String,
+    #[serde(default)]
+    action: String,
+}
+
+async fn sql_library_save(
+    state: WebState,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    form: SqlLibSaveForm,
+    kind: &LibraryKind,
+) -> Response {
+    let error_page =
+        |save_error: String, json: String, sql: String, is_new: bool, id: String| SqlLibraryPage {
+            status: current_status(&state, rv.0, &rt),
+            i18n: I18n::new(locale),
+            active_page: kind.active_page,
+            base_href: kind.base_href,
+            title_key: kind.title_key,
+            lede_key: kind.lede_key,
+            new_title_key: kind.new_title_key,
+            rail: Vec::new(),
+            filter: String::new(),
+            degraded: None,
+            selected: Some(SelectedLib {
+                name: if is_new { String::new() } else { id.clone() },
+                id,
+                json,
+                sql,
+            }),
+            is_new,
+            results: None,
+            run_error: None,
+            save_error: Some(save_error),
+            saved: false,
+        };
+
+    let duplicate = form.action == "duplicate";
+    let mut resource: serde_json::Value = match serde_json::from_str(form.json.trim()) {
+        Ok(value) => value,
+        Err(e) => {
+            return render(error_page(
+                format!("invalid JSON: {e}"),
+                form.json,
+                form.sql,
+                form.id.is_empty(),
+                form.id,
+            ));
+        }
+    };
+    if resource
+        .get("resourceType")
+        .and_then(serde_json::Value::as_str)
+        != Some("Library")
+    {
+        return render(error_page(
+            "the document must have resourceType \"Library\"".to_string(),
+            form.json,
+            form.sql,
+            form.id.is_empty(),
+            form.id,
+        ));
+    }
+    sql_libraries::embed_sql(&mut resource, &form.sql);
+
+    let id = if duplicate || form.id.is_empty() {
+        if let Some(map) = resource.as_object_mut() {
+            map.remove("id");
+            if duplicate && let Some(name) = map.get("name").and_then(serde_json::Value::as_str) {
+                let copy = format!("{name}_copy");
+                map.insert("name".to_string(), serde_json::Value::String(copy));
+            }
+        }
+        None
+    } else {
+        if let Some(map) = resource.as_object_mut() {
+            map.insert("id".to_string(), serde_json::Value::String(form.id.clone()));
+        }
+        Some(form.id.clone())
+    };
+
+    match state
+        .conformance
+        .save_resource("Library", id.as_deref(), resource, rv.0, &rt.id)
+        .await
+    {
+        Ok(stored) => {
+            let stored_id = stored
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default();
+            axum::response::Redirect::to(&format!("{}?lib={stored_id}&saved=1", kind.base_href))
+                .into_response()
+        }
+        Err(error) => render(error_page(
+            error,
+            form.json,
+            form.sql,
+            id.is_none(),
+            form.id,
+        )),
+    }
+}
+
+async fn sql_queries_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<SqlLibQuery>,
+) -> Response {
+    sql_library_page(state, locale, rv, rt, query, &SQL_QUERY_KIND).await
+}
+
+async fn sql_queries_save(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    axum::Form(form): axum::Form<SqlLibSaveForm>,
+) -> Response {
+    sql_library_save(state, locale, rv, rt, form, &SQL_QUERY_KIND).await
+}
+
+async fn sql_views_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<SqlLibQuery>,
+) -> Response {
+    sql_library_page(state, locale, rv, rt, query, &SQL_VIEW_KIND).await
+}
+
+async fn sql_views_save(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    axum::Form(form): axum::Form<SqlLibSaveForm>,
+) -> Response {
+    sql_library_save(state, locale, rv, rt, form, &SQL_VIEW_KIND).await
+}
+
+/// One checkbox row of the export form: a runnable subject the store holds.
+struct ExportSubject {
+    /// `ViewDefinition/{id}` or `Library/{id}` — the `subjectReference`.
+    reference: String,
+    name: String,
+    /// "ViewDefinition", "SQL Query", or "SQL View", for the row's tag.
+    kind: &'static str,
+}
+
+/// The SQL Export page (#649): pick stored subjects, submit a `$sql-export`
+/// job, and follow it — running (with progress), finished (a link to Files),
+/// or unknown. Submission and cancel are plain forms; refresh is a plain
+/// link. Job state lives on the server per the async pattern; the page holds
+/// no state of its own beyond the `?job=` id in the URL.
+#[derive(Template)]
+#[template(path = "pages/sql-export.html")]
+struct SqlExportPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+    subjects: Vec<ExportSubject>,
+    degraded: Option<String>,
+    job: Option<String>,
+    job_status: Option<SqlExportStatus>,
+    started: bool,
+    cancelled: bool,
+    start_error: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+struct SqlExportQuery {
+    job: Option<String>,
+    started: Option<String>,
+    cancelled: Option<String>,
+}
+
+/// The stored subjects `$sql-export` can run: every ViewDefinition, and every
+/// Library carrying a SQL on FHIR kind.
+async fn export_subjects(
+    state: &WebState,
+    version: helios_fhir::FhirVersion,
+    tenant: &str,
+) -> (Vec<ExportSubject>, Option<String>) {
+    let mut subjects = Vec::new();
+    let mut degraded = None;
+    match state
+        .conformance
+        .fetch("ViewDefinition", version, tenant)
+        .await
+    {
+        Ok(vds) => {
+            for e in sql_views::summarize(&vds) {
+                subjects.push(ExportSubject {
+                    reference: format!("ViewDefinition/{}", e.id),
+                    name: e.name,
+                    kind: "ViewDefinition",
+                });
+            }
+        }
+        Err(error) => degraded = Some(error),
+    }
+    match state.conformance.fetch("Library", version, tenant).await {
+        Ok(libs) => {
+            for (code, kind) in [("sql-query", "SQL Query"), ("sql-view", "SQL View")] {
+                for e in sql_libraries::summarize(&libs, code) {
+                    subjects.push(ExportSubject {
+                        reference: format!("Library/{}", e.id),
+                        name: e.name,
+                        kind,
+                    });
+                }
+            }
+        }
+        Err(error) => degraded = degraded.or(Some(error)),
+    }
+    (subjects, degraded)
+}
+
+async fn sql_export_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<SqlExportQuery>,
+) -> Response {
+    let (subjects, degraded) = export_subjects(&state, rv.0, &rt.id).await;
+    let job_status = match &query.job {
+        Some(job) => Some(state.conformance.sql_export_status(job, &rt.id).await),
+        None => None,
+    };
+    render(SqlExportPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: "sql-export",
+        subjects,
+        degraded,
+        job: query.job,
+        job_status,
+        started: query.started.as_deref() == Some("1"),
+        cancelled: query.cancelled.as_deref() == Some("1"),
+        start_error: None,
+    })
+}
+
+/// Starts an export over the checked subjects. The form repeats `subject=`
+/// per checkbox, which `Form`-into-a-struct cannot express, so the raw body
+/// is parsed by hand.
+async fn sql_export_start(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    axum::extract::RawForm(body): axum::extract::RawForm,
+) -> Response {
+    let mut format = "ndjson".to_string();
+    let mut refs: Vec<String> = Vec::new();
+    for (k, v) in form_urlencoded::parse(&body) {
+        match k.as_ref() {
+            "subject" => refs.push(v.into_owned()),
+            "format" => format = v.into_owned(),
+            _ => {}
+        }
+    }
+    let error_page = |start_error: String| async {
+        let (subjects, degraded) = export_subjects(&state, rv.0, &rt.id).await;
+        render(SqlExportPage {
+            status: current_status(&state, rv.0, &rt),
+            i18n: I18n::new(locale),
+            active_page: "sql-export",
+            subjects,
+            degraded,
+            job: None,
+            job_status: None,
+            started: false,
+            cancelled: false,
+            start_error: Some(start_error),
+        })
+    };
+    if refs.is_empty() {
+        return error_page("select at least one subject".to_string()).await;
+    }
+    // The output name is the reference's id segment — unique within the job
+    // and recognizable in the manifest.
+    let subjects: Vec<(String, String)> = refs
+        .into_iter()
+        .map(|r| (r.rsplit('/').next().unwrap_or(&r).to_string(), r))
+        .collect();
+    match state
+        .conformance
+        .sql_export_start(&subjects, &format, &rt.id)
+        .await
+    {
+        Ok(job) => axum::response::Redirect::to(&format!("/ui/sql/export?job={job}&started=1"))
+            .into_response(),
+        Err(error) => error_page(error).await,
+    }
+}
+
+#[derive(Deserialize)]
+struct SqlExportCancelForm {
+    job: String,
+}
+
+async fn sql_export_cancel(
+    State(state): State<WebState>,
+    rt: RequestTenant,
+    axum::Form(form): axum::Form<SqlExportCancelForm>,
+) -> Response {
+    let ok = state
+        .conformance
+        .sql_export_cancel(&form.job, &rt.id)
+        .await
+        .is_ok();
+    let suffix = if ok { "&cancelled=1" } else { "" };
+    axum::response::Redirect::to(&format!("/ui/sql/export?job={}{suffix}", form.job))
+        .into_response()
+}
+
+/// The Files page (#649): a finished job's completion manifest — one row per
+/// output with its shard download links, served straight off the FHIR API's
+/// result endpoint.
+#[derive(Template)]
+#[template(path = "pages/sql-files.html")]
+struct SqlFilesPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+    job: String,
+    outputs: Option<Vec<sql_export::ManifestOutput>>,
+    format: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(Deserialize, Default)]
+struct SqlFilesQuery {
+    job: Option<String>,
+}
+
+async fn sql_files_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<SqlFilesQuery>,
+) -> Response {
+    let job = query.job.unwrap_or_default();
+    let (outputs, format, error) = if job.is_empty() {
+        (None, None, None)
+    } else {
+        match state.conformance.sql_export_manifest(&job, &rt.id).await {
+            Ok(manifest) => (
+                Some(sql_export::manifest_outputs(&manifest)),
+                sql_export::manifest_value(&manifest, "_format"),
+                None,
+            ),
+            Err(error) => (None, None, Some(error)),
+        }
+    };
+    render(SqlFilesPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: "sql-files",
+        job,
+        outputs,
+        format,
+        error,
+    })
+}
+
+/// The read-only CapabilityStatement page (#653): the live `/metadata`
+/// answer for the sidebar's tenant and FHIR version, summarized and filterable,
+/// with the raw statement one fold away.
+#[derive(Template)]
+#[template(path = "pages/capability-statement.html")]
+struct CapabilityPage {
+    status: Status,
+    i18n: I18n,
+    active_page: &'static str,
+    /// `None` when the self-fetch failed — the page degrades to a warning.
+    view: Option<capability::CapabilityView>,
+    /// Pretty-printed raw statement for the foldable block.
+    raw: String,
+    /// The server-side resource-type filter, echoed back into the form.
+    filter: String,
+}
+
+#[derive(Deserialize, Default)]
+struct CapabilityQuery {
+    filter: Option<String>,
+}
+
+async fn capability_page(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<CapabilityQuery>,
+) -> Response {
+    let filter = query.filter.unwrap_or_default();
+    let fetched = state.conformance.metadata(rv.0, &rt.id).await;
+    let (view, raw) = match fetched {
+        Ok(statement) => {
+            let mut view = capability::build_view(&statement);
+            if !filter.is_empty() {
+                let needle = filter.to_lowercase();
+                view.resources
+                    .retain(|r| r.resource_type.to_lowercase().contains(&needle));
+            }
+            let raw = serde_json::to_string_pretty(&statement).unwrap_or_default();
+            (Some(view), raw)
+        }
+        Err(error) => {
+            tracing::warn!("CapabilityStatement self-fetch failed: {error}");
+            (None, String::new())
+        }
+    };
+    render(CapabilityPage {
+        status: current_status(&state, rv.0, &rt),
+        i18n: I18n::new(locale),
+        active_page: "capability-statement",
+        view,
+        raw,
+        filter,
     })
 }
 
@@ -1843,7 +2867,6 @@ fn build_dashboard(
         .collect();
 
     let metrics = DashboardMetrics {
-        fhir_version: snapshot.fhir_version.clone(),
         resource_types: snapshot.distinct_types.to_string(),
         stored_resources: compact_count(snapshot.total_resources),
         export_jobs: snapshot.export_jobs,
@@ -2393,6 +3416,30 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_groups_compartments_under_server_and_labels_tools() {
+        for (locale, tools_label) in [("en", "Tools"), ("es", "Herramientas"), ("de", "Werkzeuge")]
+        {
+            let html = sample_index_page("1.2.3", 42, i18n(locale))
+                .render()
+                .expect("index renders");
+
+            assert!(html.contains(tools_label));
+        }
+
+        let html = sample_index_page("1.2.3", 42, i18n("en"))
+            .render()
+            .expect("index renders");
+        let server = html.find(">Server</div>").expect("Server section");
+        let compartments = html
+            .find(r#"href="/ui/compartments"#)
+            .expect("Compartments link");
+        let tools = html.find(">Tools</div>").expect("Tools section");
+
+        assert!(server < compartments && compartments < tools);
+        assert!(!html.contains("Admin / Ops"));
+    }
+
+    #[test]
     fn status_partial_is_fragment_not_full_page() {
         let html = StatusPartial {
             status: Status {
@@ -2477,7 +3524,12 @@ mod tests {
 
         assert!(html.contains(r#"id="saved-query-form""#));
         assert!(html.contains(r#"id="saved-queries""#));
+        assert!(html.contains("/ui/assets/fhir-search-value.js"));
         assert!(html.contains("/ui/assets/saved-queries.js"));
+        assert!(
+            html.find("/ui/assets/fhir-search-value.js") < html.find("/ui/assets/saved-queries.js"),
+            "the FHIR search-value codec must load before its consumer"
+        );
         // Search Builder: the featured GET URL input, both submit intents,
         // and the Recent dropdown shell the script hydrates.
         assert!(html.contains(r#"name="url""#));
@@ -2489,8 +3541,16 @@ mod tests {
         assert!(html.contains("data-addbox-close"));
         // Resource picker rail (#541): a real link per type, server-marked
         // current; no count without a dashboard provider.
-        assert!(html.contains(r#"data-type="Patient" href="/ui/queries?type=Patient""#));
-        assert!(html.contains(r#"data-type="Observation" href="/ui/queries?type=Observation""#));
+        for resource_type in ["Patient", "Observation"] {
+            let attributes =
+                format!(r#"data-type="{resource_type}" data-full-name="{resource_type}""#);
+            let href = format!(r#"href="/ui/queries?type={resource_type}""#);
+            assert!(
+                html.contains(&attributes),
+                "{resource_type} rail attributes"
+            );
+            assert!(html.contains(&href), "{resource_type} rail link");
+        }
         assert!(!html.contains(r#"class="count""#));
         // Saved Queries has no nav entry any more (#282 folded search / editor
         // / history / saved-queries into Resources); the route still renders.
@@ -2550,6 +3610,14 @@ mod tests {
         // parameter suggestions come from the server-rendered datalist.
         assert!(source.contains("application/fhir+json"));
         assert!(source.contains("/ui/queries/params"));
+    }
+
+    #[test]
+    fn fhir_search_value_codec_is_embedded() {
+        let file = Assets::get("fhir-search-value.js").expect("FHIR search-value codec embedded");
+        let source = std::str::from_utf8(&file.data).expect("FHIR search-value codec is UTF-8");
+        assert!(source.contains("parseAlternatives"));
+        assert!(source.contains("serializeAlternative"));
     }
 
     /// The builder's datalist fragment is fed by the SearchParameter

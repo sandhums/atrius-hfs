@@ -228,8 +228,13 @@ impl ResourceStorage for SqliteBackend {
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit create: {}", e)))?;
 
+        // An overlay-affecting SearchParameter write changes this tenant's
+        // registry — drop the cached copy so the next access rebuilds from
+        // storage. Seeded spec copies never affect the overlay (see
+        // `create_affects_overlay`), which keeps bulk seeding from triggering
+        // an O(n²) rebuild storm.
         if resource_type == "SearchParameter"
-            && crate::search::search_parameter_create_affects_overlay(&resource)
+            && self.tenant_registries().create_affects_overlay(&resource)
         {
             self.tenant_registries().invalidate(tenant_id);
         }
@@ -1164,9 +1169,10 @@ impl SqliteBackend {
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit restore: {}", e)))?;
 
-        // A restored *active* SearchParameter re-enters this tenant's overlay.
+        // A restored overlay-affecting SearchParameter re-enters this tenant's
+        // overlay.
         if resource_type == "SearchParameter"
-            && crate::search::search_parameter_create_affects_overlay(&resource)
+            && self.tenant_registries().create_affects_overlay(&resource)
         {
             self.tenant_registries().invalidate(tenant_id);
         }

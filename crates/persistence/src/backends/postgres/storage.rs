@@ -219,8 +219,14 @@ impl ResourceStorage for PostgresBackend {
                     let _ = client.execute("ROLLBACK", &[]).await;
                     return Err(internal_error(format!("Failed to commit create: {}", e)));
                 }
+                // An overlay-affecting SearchParameter write: reload the stored cache
+                // and drop the per-tenant registries so they rebuild. Seeded spec
+                // copies never affect the overlay (see `create_affects_overlay`),
+                // which keeps bulk seeding from triggering an O(n²) reload storm.
                 if resource_type == "SearchParameter"
-                    && crate::search::search_parameter_create_affects_overlay(stored.content())
+                    && self
+                        .tenant_registries()
+                        .create_affects_overlay(stored.content())
                 {
                     if let Err(e) = self.reload_stored_cache().await {
                         tracing::warn!("SearchParameter cache reload failed: {e}");

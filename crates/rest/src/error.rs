@@ -252,6 +252,19 @@ pub enum RestError {
         /// Error message.
         message: String,
     },
+
+    /// Multiple independent structural problems were found together — e.g.
+    /// the SQL-on-FHIR dependency-graph resolver (`handlers::sof::graph`)
+    /// found both a cycle and an unresolved reference in the same request.
+    /// Carries a fully-formed OperationOutcome with one `issue` per problem,
+    /// mirroring [`RestError::ValidationFailed`]'s multi-issue shape. Always
+    /// HTTP `400 Bad Request`: the request as a whole cannot proceed until
+    /// every problem named here is fixed. A single problem keeps its own
+    /// precise status code instead of using this variant.
+    MultiIssue {
+        /// The OperationOutcome to return as the response body.
+        outcome: serde_json::Value,
+    },
 }
 
 impl fmt::Display for RestError {
@@ -343,6 +356,9 @@ impl fmt::Display for RestError {
             }
             RestError::InvalidParameter { param, message } => {
                 write!(f, "Invalid parameter '{}': {}", param, message)
+            }
+            RestError::MultiIssue { .. } => {
+                write!(f, "Multiple structural problems detected")
             }
         }
     }
@@ -499,6 +515,12 @@ impl RestError {
                 "invalid",
                 format!("Invalid parameter '{}': {}", param, message),
             ),
+            RestError::MultiIssue { .. } => (
+                StatusCode::BAD_REQUEST,
+                "invalid",
+                "Multiple structural problems detected; see the OperationOutcome issues"
+                    .to_string(),
+            ),
         }
     }
 }
@@ -516,7 +538,9 @@ impl IntoResponse for RestError {
         if let RestError::ValidationFailed { outcome } = &self {
             return (StatusCode::UNPROCESSABLE_ENTITY, Json(outcome.clone())).into_response();
         }
-
+        if let RestError::MultiIssue { outcome } = &self {
+            return (StatusCode::BAD_REQUEST, Json(outcome.clone())).into_response();
+        }
         let (status, code, details) = self.client_response();
         let operation_outcome = create_operation_outcome("error", code, &details);
 
@@ -555,14 +579,15 @@ impl IntoResponse for RestError {
             retry_after_secs: Some(secs),
             ..
         } = &self
-            && let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string()) {
-                return (
-                    status,
-                    [(axum::http::header::RETRY_AFTER, value)],
-                    Json(operation_outcome),
-                )
-                    .into_response();
-            }
+            && let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string())
+        {
+            return (
+                status,
+                [(axum::http::header::RETRY_AFTER, value)],
+                Json(operation_outcome),
+            )
+                .into_response();
+        }
 
         (status, Json(operation_outcome)).into_response()
     }
