@@ -103,21 +103,24 @@ impl ResourceHeaders {
 
         // ETag
         if let Some(etag) = &self.etag
-            && let Ok(value) = HeaderValue::from_str(etag) {
-                headers.insert(header::ETAG, value);
-            }
+            && let Ok(value) = HeaderValue::from_str(etag)
+        {
+            headers.insert(header::ETAG, value);
+        }
 
         // Last-Modified
         if let Some(last_modified) = &self.last_modified
-            && let Ok(value) = HeaderValue::from_str(last_modified) {
-                headers.insert(header::LAST_MODIFIED, value);
-            }
+            && let Ok(value) = HeaderValue::from_str(last_modified)
+        {
+            headers.insert(header::LAST_MODIFIED, value);
+        }
 
         // Location
         if let Some(location) = &self.location
-            && let Ok(value) = HeaderValue::from_str(location) {
-                headers.insert(header::LOCATION, value);
-            }
+            && let Ok(value) = HeaderValue::from_str(location)
+        {
+            headers.insert(header::LOCATION, value);
+        }
 
         headers
     }

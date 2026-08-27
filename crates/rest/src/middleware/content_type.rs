@@ -218,9 +218,10 @@ pub fn get_accept_fhir_version(headers: &HeaderMap) -> Option<FhirVersion> {
     // Parse Accept header and extract fhirVersion
     for media_type in accept.split(',') {
         if let Some(ct) = FhirContentType::parse(media_type.trim())
-            && ct.fhir_version.is_some() {
-                return ct.fhir_version;
-            }
+            && ct.fhir_version.is_some()
+        {
+            return ct.fhir_version;
+        }
     }
     None
 }

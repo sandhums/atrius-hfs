@@ -325,11 +325,11 @@ fn extract_operation_for_routing(
     if tenant_url_routing
         && let Some((_tenant, remaining)) =
             extract_tenant_from_path(path, &FhirVersion::default_enabled())
-        {
-            // Classify against the tenant-stripped path the router will actually
-            // dispatch to.
-            return extract_operation(&remaining, method);
-        }
+    {
+        // Classify against the tenant-stripped path the router will actually
+        // dispatch to.
+        return extract_operation(&remaining, method);
+    }
 
     extract_operation(path, method)
 }

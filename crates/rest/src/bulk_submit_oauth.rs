@@ -135,9 +135,10 @@ impl FileTokenProvider for JwtClientCredentialsTokenProvider {
         {
             let cache = self.cache.lock().await;
             if let Some((tok, exp)) = cache.get(&cache_key)
-                && Instant::now() < *exp {
-                    return Some(tok.clone());
-                }
+                && Instant::now() < *exp
+            {
+                return Some(tok.clone());
+            }
         }
 
         let (token, exp) = self.request_token(&token_endpoint, scope).await?;

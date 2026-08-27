@@ -257,10 +257,10 @@ impl<Sink: ExportSink + 'static> ExportJobController for InMemoryController<Sink
             if matches!(
                 jobs.get(&jid).as_deref(),
                 Some(JobStatus::Cancelled { .. }) | Some(JobStatus::Failed { .. })
-            )
-                && let Err(e) = sink.delete_job(&jid) {
-                    warn!(job_id = %jid, error = %e, "failed to delete partial export output of unfinished job");
-                }
+            ) && let Err(e) = sink.delete_job(&jid)
+            {
+                warn!(job_id = %jid, error = %e, "failed to delete partial export output of unfinished job");
+            }
         });
 
         job_id
@@ -303,10 +303,9 @@ impl<Sink: ExportSink + 'static> ExportJobController for InMemoryController<Sink
         // results on cancel. Drop any shards written so far. A background task
         // still draining cleans up whatever it writes after this point when it
         // observes the Cancelled state (see `submit`).
-        if now_cancelled
-            && let Err(e) = self.sink.delete_job(job_id) {
-                warn!(%job_id, error = %e, "failed to delete partial export output on cancel");
-            }
+        if now_cancelled && let Err(e) = self.sink.delete_job(job_id) {
+            warn!(%job_id, error = %e, "failed to delete partial export output on cancel");
+        }
         true
     }
 
@@ -325,11 +324,17 @@ impl<Sink: ExportSink + 'static> ExportJobController for InMemoryController<Sink
         self.sink.read_shard(job_id, filename)
     }
 
-    fn download_url(&self, tenant_id: &str, job_id: &str, filename: &str) -> Option<String> {
+    fn download_url(
+        &self,
+        tenant_id: &str,
+        public_base_url: &str,
+        job_id: &str,
+        filename: &str,
+    ) -> Option<String> {
         if !self.tenant_matches(tenant_id, job_id) {
             return None;
         }
-        match self.sink.download_url(job_id, filename) {
+        match self.sink.download_url(public_base_url, job_id, filename) {
             Ok(url) => Some(url),
             Err(e) => {
                 warn!(%job_id, %filename, error = %e, "failed to resolve export download URL");
@@ -399,9 +404,10 @@ fn ext_for(format: &str) -> &'static str {
 /// finishes anyway must not resurrect the job to Completed/Failed.
 fn set_status_if_running(jobs: &DashMap<String, JobStatus>, jid: &str, status: JobStatus) {
     if let Some(mut entry) = jobs.get_mut(jid)
-        && matches!(&*entry, JobStatus::Running { .. }) {
-            *entry = status;
-        }
+        && matches!(&*entry, JobStatus::Running { .. })
+    {
+        *entry = status;
+    }
 }
 
 /// Records job progress, capped at 99 while running so callers don't see
@@ -1000,7 +1006,8 @@ mod tests {
             .unwrap();
         assert_eq!(filename, "shard-0.ndjson");
         assert_eq!(
-            sink.download_url("job-1", &filename).unwrap(),
+            sink.download_url("http://localhost", "job-1", &filename)
+                .unwrap(),
             "http://localhost/export/job-1/shard-0.ndjson"
         );
     }
@@ -1025,7 +1032,12 @@ mod tests {
         fn read_shard(&self, _job_id: &str, _filename: &str) -> Option<Vec<u8>> {
             None
         }
-        fn download_url(&self, job_id: &str, filename: &str) -> Result<String, ExportError> {
+        fn download_url(
+            &self,
+            _public_base_url: &str,
+            job_id: &str,
+            filename: &str,
+        ) -> Result<String, ExportError> {
             // Each call advances the nonce, mimicking a fresh pre-signature.
             let n = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok(format!(
@@ -1058,17 +1070,33 @@ mod tests {
         // Two polls yield two distinct URLs — proof the URL is resolved fresh
         // rather than reused from write time.
         let first = controller
-            .download_url("t1", &job_id, "shard-0.ndjson")
+            .download_url(
+                "t1",
+                "https://public.example/fhir/acme",
+                &job_id,
+                "shard-0.ndjson",
+            )
             .expect("owner should resolve a URL");
         let second = controller
-            .download_url("t1", &job_id, "shard-0.ndjson")
+            .download_url(
+                "t1",
+                "https://public.example/fhir/acme",
+                &job_id,
+                "shard-0.ndjson",
+            )
             .expect("owner should resolve a URL");
+        assert!(first.starts_with("https://signed.example/"));
         assert_ne!(first, second, "each poll must re-resolve the download URL");
 
         // A different tenant cannot resolve URLs for this job.
         assert!(
             controller
-                .download_url("other", &job_id, "shard-0.ndjson")
+                .download_url(
+                    "other",
+                    "https://public.example/fhir/other",
+                    &job_id,
+                    "shard-0.ndjson",
+                )
                 .is_none(),
             "cross-tenant resolution must be denied"
         );

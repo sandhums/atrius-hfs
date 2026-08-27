@@ -439,19 +439,20 @@ fn parse_search_parameter(
     // the same composite instance.
     if matches!(param_type, SearchParamType::Composite)
         && let Some(def) = registry.get_param(resource_type, base_name)
-            && let Some(comps) = def.component.as_ref() {
-                param.components = comps
-                    .iter()
-                    .filter_map(|c| {
-                        registry
-                            .get_by_url(&c.definition)
-                            .map(|sub| CompositeSearchComponent {
-                                param_type: sub.param_type,
-                                param_name: sub.code.clone(),
-                            })
+        && let Some(comps) = def.component.as_ref()
+    {
+        param.components = comps
+            .iter()
+            .filter_map(|c| {
+                registry
+                    .get_by_url(&c.definition)
+                    .map(|sub| CompositeSearchComponent {
+                        param_type: sub.param_type,
+                        param_name: sub.code.clone(),
                     })
-                    .collect();
-            }
+            })
+            .collect();
+    }
 
     Ok(param)
 }

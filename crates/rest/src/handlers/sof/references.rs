@@ -163,12 +163,13 @@ fn split_canonical_version(url: &str) -> (String, Option<String>) {
         return (u.to_string(), Some(v.to_string()));
     }
     if let Some(last_slash) = url.rfind('/')
-        && let Some(at_offset) = url[last_slash..].rfind('@') {
-            let split_at = last_slash + at_offset;
-            let (u, v) = url.split_at(split_at);
-            // skip the '@'
-            return (u.to_string(), Some(v[1..].to_string()));
-        }
+        && let Some(at_offset) = url[last_slash..].rfind('@')
+    {
+        let split_at = last_slash + at_offset;
+        let (u, v) = url.split_at(split_at);
+        // skip the '@'
+        return (u.to_string(), Some(v[1..].to_string()));
+    }
     (url.to_string(), None)
 }
 

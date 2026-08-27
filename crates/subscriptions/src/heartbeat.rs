@@ -33,7 +33,8 @@ pub async fn run_heartbeat_worker(engine: Arc<SubscriptionEngine>, config: Subsc
             if sub.status != SubscriptionStatusCode::Active {
                 continue;
             }
-            match notification::build_heartbeat(&sub, engine.base_url()) {
+            let public_base_url = engine.public_base_url(&sub.tenant_id);
+            match notification::build_heartbeat(&sub, &public_base_url) {
                 Ok(bundle) => {
                     engine.dispatch_heartbeat(&sub, &bundle).await;
                 }

@@ -72,15 +72,16 @@ where
         Some(stored) => {
             // If the client requested a specific FHIR version, verify it matches.
             if let Some(requested) = version.accept_version()
-                && stored.fhir_version() != requested {
-                    return Err(RestError::NotAcceptable {
-                        message: format!(
-                            "Resource is FHIR {} but {} was requested",
-                            stored.fhir_version().as_mime_param(),
-                            requested.as_mime_param()
-                        ),
-                    });
-                }
+                && stored.fhir_version() != requested
+            {
+                return Err(RestError::NotAcceptable {
+                    message: format!(
+                        "Resource is FHIR {} but {} was requested",
+                        stored.fhir_version().as_mime_param(),
+                        requested.as_mime_param()
+                    ),
+                });
+            }
 
             // Negotiate response format.
             let format_param = params.get("_format").map(|s| s.as_str());
