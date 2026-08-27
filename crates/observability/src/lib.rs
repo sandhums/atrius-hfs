@@ -10,8 +10,6 @@
 //! - [`middleware`] — per-request count/latency metrics and a tracing span.
 //! - [`telemetry`] — `tracing-subscriber` init, optionally bridged to OTLP
 //!   (feature `otel`).
-//! - [`propagation`] — W3C `traceparent` injection for outbound HTTP (no-op
-//!   without the `otel` feature).
 //! - [`dashboard`] — process-global provider of storage-count snapshots for the
 //!   web UI's "FHIR resources over time" chart, registered by the server.
 //!
@@ -42,7 +40,6 @@ pub mod dashboard;
 pub mod metrics;
 pub mod middleware;
 pub mod mode;
-pub mod propagation;
 pub mod reqlog;
 pub mod subscriptions;
 pub mod telemetry;
