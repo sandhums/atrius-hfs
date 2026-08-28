@@ -121,23 +121,23 @@ impl SearchParameterLoader {
                 if let Some(resource) = entry.get("resource")
                     && resource.get("resourceType").and_then(|t| t.as_str())
                         == Some("SearchParameter")
-                    {
-                        match self.parse_resource(resource) {
-                            Ok(mut param) => {
-                                param.source = SearchParameterSource::Embedded;
-                                // Treat draft params from spec files as active
-                                // (the FHIR spec uses "draft" for most standard params)
-                                if param.status == SearchParameterStatus::Draft {
-                                    param.status = SearchParameterStatus::Active;
-                                }
-                                params.push(param);
+                {
+                    match self.parse_resource(resource) {
+                        Ok(mut param) => {
+                            param.source = SearchParameterSource::Embedded;
+                            // Treat draft params from spec files as active
+                            // (the FHIR spec uses "draft" for most standard params)
+                            if param.status == SearchParameterStatus::Draft {
+                                param.status = SearchParameterStatus::Active;
                             }
-                            Err(e) => {
-                                // Log but continue - don't fail on individual params
-                                errors.push(e);
-                            }
+                            params.push(param);
+                        }
+                        Err(e) => {
+                            // Log but continue - don't fail on individual params
+                            errors.push(e);
                         }
                     }
+                }
             }
         }
 
@@ -370,9 +370,9 @@ impl SearchParameterLoader {
                 if let Some(resource) = entry.get("resource")
                     && resource.get("resourceType").and_then(|t| t.as_str())
                         == Some("SearchParameter")
-                    {
-                        params.push(self.parse_resource(resource)?);
-                    }
+                {
+                    params.push(self.parse_resource(resource)?);
+                }
             }
         } else if let Some(array) = json.as_array() {
             for item in array {
@@ -463,13 +463,15 @@ impl SearchParameterLoader {
             raw_expression.to_string()
         };
 
-        if expression.is_empty() && param_type != SearchParamType::Composite
-            && !code.starts_with('_') {
-                return Err(LoaderError::MissingField {
-                    field: "expression".to_string(),
-                    url: Some(url),
-                });
-            }
+        if expression.is_empty()
+            && param_type != SearchParamType::Composite
+            && !code.starts_with('_')
+        {
+            return Err(LoaderError::MissingField {
+                field: "expression".to_string(),
+                url: Some(url),
+            });
+        }
 
         let base: Vec<String> = resource
             .get("base")
@@ -1079,6 +1081,11 @@ mod tests {
     /// (the fallback's definition is functionally identical: same code, base,
     /// type, and expression) and the collision does not block any of the
     /// other 15 custom-file parameters from registering.
+    ///
+    /// `load_custom_from_directory` also picks up other custom Bundles in
+    /// `data/` (Atrius IG params live in `atrius-search-params.json`). Count
+    /// and register only ViewDefinition entries so those extras do not fail
+    /// this Helios assertion.
     #[cfg(feature = "R4")]
     #[test]
     fn view_definition_url_and_version_collide_benignly_with_embedded_fallback() {
@@ -1088,18 +1095,22 @@ mod tests {
             registry.register(param).unwrap();
         }
 
-        let custom_params = loader
+        let vd_params: Vec<_> = loader
             .load_custom_from_directory(&workspace_data_dir())
-            .expect("custom directory should load");
+            .expect("custom directory should load")
+            .into_iter()
+            .filter(|p| p.base.iter().any(|b| b == "ViewDefinition"))
+            .collect();
         assert_eq!(
-            custom_params.len(),
-            17,
-            "sql-on-fhir-search-parameters.json should contribute all 17 ViewDefinition params"
+            vd_params.len(),
+            VIEW_DEFINITION_PARAM_CODES.len(),
+            "sql-on-fhir-search-parameters.json should contribute all {} ViewDefinition params",
+            VIEW_DEFINITION_PARAM_CODES.len()
         );
 
         let mut collisions = 0;
         let mut registered = 0;
-        for param in custom_params {
+        for param in vd_params {
             let code = param.code.clone();
             match registry.register(param) {
                 Ok(()) => registered += 1,
