@@ -124,8 +124,9 @@ fn is_mongodb_url(url: &str) -> bool {
 /// default) acks the write as soon as the primary commits and forwards the
 /// search-index write on a background worker — lowest latency, but a
 /// follow-up search can race the indexing. `Synchronous` blocks the write
-/// until the search backend has indexed it, giving read-your-write
-/// semantics at the cost of extra latency on each write.
+/// until the search backend has indexed it and a refresh has made it
+/// searchable (`refresh=wait_for`), giving read-your-write semantics at the
+/// cost of extra latency on each write (bounded by the index refresh interval).
 #[cfg(feature = "elasticsearch")]
 fn composite_sync_mode_from_env() -> helios_persistence::composite::SyncMode {
     use helios_persistence::composite::SyncMode;

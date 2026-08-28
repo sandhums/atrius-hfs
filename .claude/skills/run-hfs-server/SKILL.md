@@ -71,7 +71,7 @@ HFS_SERVER_PORT=3000 HFS_LOG_LEVEL=debug cargo run --bin hfs
 | `HFS_ELASTICSEARCH_PASSWORD` | none | Elasticsearch basic auth password |
 | `HFS_COMPOSITE_SYNC_MODE` | `asynchronous` | ES-backed composite write sync mode: asynchronous, synchronous, or hybrid |
 
-Use `HFS_COMPOSITE_SYNC_MODE=synchronous` when callers need read-your-write search semantics, such as integration tests or bulk loads that immediately search.
+Use `HFS_COMPOSITE_SYNC_MODE=synchronous` when callers need read-your-write search semantics, such as integration tests or bulk loads that immediately search. Elasticsearch document index/delete uses `refresh=wait_for` so a search after that sync returns sees the write (bounded by `refresh_interval`, default 1s).
 
 ## Storage Backends
 

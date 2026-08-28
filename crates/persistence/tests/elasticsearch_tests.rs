@@ -782,6 +782,40 @@ mod es_integration {
         assert_eq!(created.version_id(), "1");
     }
 
+    /// CRUD writes use `refresh=wait_for`, so a search issued after `create`
+    /// returns must see the document (no sleep for index refresh).
+    #[tokio::test]
+    async fn es_integration_create_is_searchable_before_write_returns() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::SearchQuery;
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("wait-for-refresh");
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": "wait-for-1",
+                    "gender": "male"
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        let result = backend
+            .search(&tenant, &SearchQuery::new("Patient"))
+            .await
+            .unwrap();
+        let ids: Vec<&str> = result.resources.items.iter().map(|r| r.id()).collect();
+        assert!(
+            ids.contains(&"wait-for-1"),
+            "create must wait until the document is searchable; got {ids:?}"
+        );
+    }
+
     #[tokio::test]
     async fn es_integration_create_with_id() {
         let backend = create_backend().await;

@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use chrono::Utc;
+use elasticsearch::params::Refresh;
 use elasticsearch::{DeleteByQueryParts, DeleteParts, GetParts, IndexParts};
 use helios_fhir::FhirVersion;
 use serde_json::{Value, json};
@@ -39,6 +40,15 @@ fn unavailable_error(message: String) -> StorageError {
         message,
     })
 }
+
+/// CRUD `index`/`delete` wait until a refresh makes the change searchable.
+///
+/// Elasticsearch otherwise acks the write before the next `refresh_interval`
+/// (default 1s), so a follow-up search on a synchronously-synced composite
+/// can miss the document. `wait_for` blocks the write instead of forcing a
+/// refresh per document (`refresh=true`). Reindex and contained-doc loops
+/// omit this so a bulk rewrite does not pay one interval per resource.
+const SEARCH_VISIBLE: Refresh = Refresh::WaitFor;
 
 /// Content extracted from a resource for full-text search.
 struct SearchableContent {
@@ -441,6 +451,9 @@ impl ElasticsearchBackend {
                 &contained.contained_type,
                 &contained_resource_id(container_id, &contained.local_id),
             );
+            // No `wait_for`: N contained docs would wait N refresh intervals.
+            // `_contained` search can lag one interval; the container document
+            // write already used `wait_for`.
             let response = self
                 .client()
                 .index(IndexParts::IndexId(&index, &doc_id))
@@ -531,6 +544,7 @@ impl ResourceStorage for ElasticsearchBackend {
         let response = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
+            .refresh(SEARCH_VISIBLE)
             .body(doc)
             .send()
             .await
@@ -697,6 +711,7 @@ impl ResourceStorage for ElasticsearchBackend {
         let response = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
+            .refresh(SEARCH_VISIBLE)
             .body(doc)
             .send()
             .await
@@ -862,6 +877,7 @@ impl ResourceStorage for ElasticsearchBackend {
         let response = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
+            .refresh(SEARCH_VISIBLE)
             .body(doc)
             .send()
             .await
@@ -905,6 +921,7 @@ impl ResourceStorage for ElasticsearchBackend {
         let response = self
             .client()
             .delete(DeleteParts::IndexId(&index, &doc_id))
+            .refresh(SEARCH_VISIBLE)
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to delete document: {}", e)))?;
@@ -1193,6 +1210,8 @@ impl ReindexTarget for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
         let doc_id = Self::document_id(resource_type, resource_id);
 
+        // No `wait_for`: `$reindex` walks every resource. Waiting a refresh
+        // interval per document would make a tenant rebuild take hours.
         let response = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
