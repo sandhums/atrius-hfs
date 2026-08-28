@@ -392,6 +392,34 @@ impl Status {
         self.subscriptions_enabled
     }
 
+    /// The topbar avatar menu's identity (#725). `/ui` sits outside the auth
+    /// layer today (#320), so no request carries a signed-in principal — every
+    /// accessor returns the signed-out shape and the menu renders its
+    /// local-operator state. When the browser login flow lands, these become
+    /// the seam where the IdP's profile claims (#724) surface: display name,
+    /// secondary line (email or subject), initials, photo URL.
+    pub(crate) fn user_display(&self) -> Option<&str> {
+        None
+    }
+
+    pub(crate) fn user_secondary(&self) -> Option<&str> {
+        None
+    }
+
+    pub(crate) fn user_initials(&self) -> Option<&str> {
+        None
+    }
+
+    pub(crate) fn user_photo(&self) -> Option<&str> {
+        None
+    }
+
+    /// Whether the menu offers Sign out — requires an interactive session,
+    /// which does not exist yet (#320).
+    pub(crate) fn user_can_logout(&self) -> bool {
+        false
+    }
+
     /// A browser-safe terminology destination, when the configured value is a
     /// valid absolute HTTP(S) URL (#611).
     pub(crate) fn terminology_url(&self) -> Option<&str> {
@@ -1116,6 +1144,10 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         .route(
             "/ui/bulk-import/{id}/delete",
             axum::routing::post(bulk_import::delete),
+        )
+        .route(
+            "/ui/bulk-import/{id}/edit",
+            axum::routing::post(bulk_import::edit),
         )
         .route(
             "/ui/bulk-import/{id}/abort",
@@ -3591,6 +3623,7 @@ mod tests {
 
         assert!(html.contains("Helios FHIR Server"));
         assert!(html.contains("1.2.3"));
+        assert!(html.contains(r#"<link rel="icon" type="image/png" href="/ui/assets/logo.png">"#));
         assert!(html.contains("/ui/assets/htmx.min.js"));
         // No runtime CDN dependency.
         assert!(!html.contains("unpkg.com"));
