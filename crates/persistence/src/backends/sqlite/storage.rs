@@ -44,6 +44,22 @@ fn serialization_error(message: String) -> StorageError {
     StorageError::Backend(BackendError::SerializationError { message })
 }
 
+/// Begin a write transaction that takes the SQLite reserved lock up front.
+///
+/// Default (DEFERRED) transactions take a read snapshot on the first SELECT,
+/// then fail the upgrade to a write with `SQLITE_BUSY_SNAPSHOT` if another
+/// connection committed in between. The busy handler is not invoked for that
+/// code, so `busy_timeout` does not cover it — concurrent bulk-submit workers
+/// then drop a resource as `processing_error`. IMMEDIATE waits on the write
+/// lock instead. Same reason as `purge_tenant_data` and FHIR `BEGIN IMMEDIATE`.
+fn begin_immediate_tx<'c>(
+    conn: &'c mut rusqlite::Connection,
+    context: &str,
+) -> StorageResult<rusqlite::Transaction<'c>> {
+    conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| internal_error(format!("Failed to begin {context} transaction: {e}")))
+}
+
 /// Whether the optional `resource_fts` FTS5 virtual table exists on this
 /// database.
 ///
@@ -178,9 +194,7 @@ impl ResourceStorage for SqliteBackend {
         let version_id = "1";
         let fhir_version_str = fhir_version.as_mime_param();
 
-        let tx = conn
-            .transaction()
-            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+        let tx = begin_immediate_tx(&mut conn, "write")?;
 
         let exists: bool = tx
             .query_row(
@@ -398,9 +412,7 @@ impl ResourceStorage for SqliteBackend {
         let last_updated = now.to_rfc3339();
         let fhir_version_str = fhir_version.as_mime_param();
 
-        let tx = conn
-            .transaction()
-            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+        let tx = begin_immediate_tx(&mut conn, "write")?;
 
         let actual_version: Result<String, _> = tx.query_row(
             "SELECT version_id FROM resources
@@ -508,9 +520,7 @@ impl ResourceStorage for SqliteBackend {
         let now = Utc::now();
         let deleted_at = now.to_rfc3339();
 
-        let tx = conn
-            .transaction()
-            .map_err(|e| internal_error(format!("Failed to begin write transaction: {}", e)))?;
+        let tx = begin_immediate_tx(&mut conn, "write")?;
 
         let result: Result<(String, Vec<u8>, String), _> = tx.query_row(
             "SELECT version_id, data, fhir_version FROM resources
@@ -1122,9 +1132,7 @@ impl SqliteBackend {
         let fhir_version = FhirVersion::from_storage(&fhir_version_str)
             .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
-        let tx = conn
-            .transaction()
-            .map_err(|e| internal_error(format!("Failed to begin restore transaction: {}", e)))?;
+        let tx = begin_immediate_tx(&mut conn, "restore")?;
 
         tx.execute(
             "UPDATE resources
