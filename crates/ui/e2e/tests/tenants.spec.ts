@@ -30,12 +30,19 @@ test.describe("tenants", () => {
     await expect(tenants.addForm).toBeHidden();
     // …and the table reports the in-flight job, surviving a reload.
     const row = tenants.row(id);
+    const resourcesHeader = tenants.page.locator(".data-table th.col-num");
+    const resourcesCell = row.locator("td.col-num");
+    await expect(resourcesHeader).toHaveCSS("text-align", "left");
     await expect(row.locator(".spinner")).toBeVisible();
+    await expect(resourcesCell).toHaveCSS("text-align", "left");
+    await expect(resourcesCell).toHaveCSS("font-variant-numeric", "tabular-nums");
     await tenants.page.reload();
     await expect(tenants.row(id).locator(".spinner")).toBeVisible();
     // Eventually the job settles into a normal row.
     await expect(tenants.row(id).locator("[hx-delete]")).toBeVisible({ timeout: 240_000 });
     await expect(tenants.row(id).locator(".spinner")).toHaveCount(0);
+    await expect(resourcesCell).toHaveCSS("text-align", "left");
+    await expect(resourcesCell).toHaveCSS("font-variant-numeric", "tabular-nums");
   });
 
   test("the search box filters the table (htmx)", async ({ page, tenants }) => {
@@ -68,7 +75,10 @@ test.describe("tenants", () => {
     await tenants.addForm.locator("input[name=id]").fill(id);
     await tenants.addForm.locator("input[name=display_name]").fill("Second");
     await tenants.addForm.locator("button[type=submit]").click();
-    await expect(page.locator("#tenant-rows .alert")).toContainText("already exists");
+    // The dialog's own submit error (#681 adenda): rendered inside the panel
+    // via an out-of-band swap, not the page-level #tenant-rows banner, which
+    // sits behind the modal scrim while the dialog is open.
+    await expect(page.locator("#tenant-add-error")).toContainText("already exists");
     await expect(tenants.addForm.locator("input[name=id]")).toHaveValue(id);
     await expect(tenants.addForm.locator("input[name=display_name]")).toHaveValue("Second");
   });
