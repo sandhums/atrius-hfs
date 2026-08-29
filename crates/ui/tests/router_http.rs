@@ -1605,7 +1605,7 @@ async fn batch_page_carries_the_shared_busy_affordances() {
     // falls back to the key itself and would still carry the attribute.
     assert!(html.contains(r#"data-msg-reading="Reading bundle…""#));
     assert!(html.contains(r#"data-msg-executing="Executing…""#));
-    assert!(html.contains(r#"data-msg-read-failed="The file could not be read""#));
+    assert!(html.contains(r#"data-msg-read-failed="The file could not be read.""#));
     // The stage that receives focus when the preflight appears (#679).
     assert!(html.contains(r#"<section id="batch-preflight" tabindex="-1" hidden>"#));
     // The helper loads from the shared layout, before the page script (both
@@ -2117,7 +2117,7 @@ async fn user_menu_carries_language_and_the_signed_out_state() {
     // English is the negotiated default: its option is current, once.
     assert!(html.contains(r#"href="?lang=en" aria-current="true""#));
     assert!(!html.contains(r#"href="?lang=es" aria-current="true""#));
-    assert!(html.contains("Local user"));
+    assert!(html.contains("Anonymous user"));
     assert!(html.contains("Authentication is disabled"));
     assert!(!html.contains("/ui/logout"));
 }
