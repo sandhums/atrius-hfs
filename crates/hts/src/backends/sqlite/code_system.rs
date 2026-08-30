@@ -70,9 +70,10 @@ pub(super) fn lookup_property_codes(
     canonical: &str,
 ) -> Arc<Vec<String>> {
     if let Ok(read) = cache.read()
-        && let Some(v) = read.get(system_url) {
-            return v.clone();
-        }
+        && let Some(v) = read.get(system_url)
+    {
+        return v.clone();
+    }
     let codes = Arc::new(cs_property_local_codes(conn, system_url, canonical));
     if let Ok(mut w) = cache.write() {
         w.entry(system_url.to_owned())
@@ -117,9 +118,10 @@ pub(super) fn cached_inactive_property_codes(
 /// to fix test-isolation regressions when cargo runs tests in parallel.
 pub(crate) fn invalidate_cs_language_cache() {
     if let Some(cache) = CS_LANGUAGE_CACHE.get()
-        && let Ok(mut w) = cache.write() {
-            w.clear();
-        }
+        && let Ok(mut w) = cache.write()
+    {
+        w.clear();
+    }
 }
 
 // ─── Per-instance $lookup response cache ────────────────────────────────────
@@ -236,9 +238,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         };
         if let Some(ref k) = cache_key
             && let Ok(read) = self.lookup_response_cache().read()
-                && let Some(arc) = read.get(k) {
-                    return Ok((**arc).clone());
-                }
+            && let Some(arc) = read.get(k)
+        {
+            return Ok((**arc).clone());
+        }
 
         let pool = self.pool().clone();
         let cache_key_owned = cache_key.clone();
@@ -316,20 +319,20 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
             // URL-wide via `concept_designations`).
             if let Some(lang) = req.display_language.as_deref()
                 && req.version.is_none()
-                    && !all_designations.iter().any(|d| {
-                        d.language
-                            .as_deref()
-                            .is_some_and(|l| crate::language::lang_matches(lang, l))
-                    })
-                {
-                    all_designations.extend(fetch_designations_cross_version(
-                        &conn,
-                        &req.system,
-                        &req.code,
-                        &system_id,
-                        lang,
-                    )?);
-                }
+                && !all_designations.iter().any(|d| {
+                    d.language
+                        .as_deref()
+                        .is_some_and(|l| crate::language::lang_matches(lang, l))
+                })
+            {
+                all_designations.extend(fetch_designations_cross_version(
+                    &conn,
+                    &req.system,
+                    &req.code,
+                    &system_id,
+                    lang,
+                )?);
+            }
             let all_designations = all_designations;
 
             // 10.2: When displayLanguage is set and a matching designation
@@ -680,9 +683,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         // The cache is invalidated alongside the in-memory expansion indexes
         // when `import_bundle` succeeds (see `mod.rs::import_bundle`).
         if let Ok(read) = self.cs_version_for_url_cache().read()
-            && let Some(cached) = read.get(url) {
-                return Ok(cached.clone());
-            }
+            && let Some(cached) = read.get(url)
+        {
+            return Ok(cached.clone());
+        }
 
         let pool = self.pool().clone();
         let url_owned = url.to_string();
@@ -719,9 +723,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
     /// flushed by `import_bundle` (see `mod.rs::import_bundle`).
     async fn code_system_exists(&self, _ctx: &TenantContext, url: &str) -> Result<bool, HtsError> {
         if let Ok(read) = self.cs_exists_cache().read()
-            && let Some(&cached) = read.get(url) {
-                return Ok(cached);
-            }
+            && let Some(&cached) = read.get(url)
+        {
+            return Ok(cached);
+        }
 
         let pool = self.pool().clone();
         let url_owned = url.to_string();
@@ -758,9 +763,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         // the cache is invalidated whenever code_systems is written (see
         // `invalidate_cs_language_cache`).
         if let Ok(read) = cs_language_cache().read()
-            && let Some(cached) = read.get(url) {
-                return Ok(cached.clone());
-            }
+            && let Some(cached) = read.get(url)
+        {
+            return Ok(cached.clone());
+        }
 
         let pool = self.pool().clone();
         let url_owned = url.to_string();
@@ -1124,20 +1130,36 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
 
     /// Search CodeSystem resources by query parameters.
     ///
-    /// Filters are applied as exact matches against stored columns. Omitting a
-    /// field means "no filter". Returns up to `count` results starting at
-    /// `offset`, defaulting to 20 results from the beginning.
+    /// `url`, `version`, and `status` use exact matching. `name` and `title`
+    /// use normalized FHIR prefix matching by default and support `:contains`
+    /// and `:exact`. Multiple populated fields are ANDed.
     async fn search(
         &self,
         _ctx: &TenantContext,
-        query: ResourceSearchQuery,
+        mut query: ResourceSearchQuery,
     ) -> Result<Vec<serde_json::Value>, HtsError> {
+        let string_search = crate::string_search::ResourceStringSearch::new(&query);
+        if string_search.is_empty() {
+            query.name = None;
+            query.title = None;
+        }
         let pool = self.pool().clone();
 
         tokio::task::spawn_blocking(move || {
-            let conn = pool
+            let mut conn = pool
                 .get()
                 .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
+
+            if !string_search.is_empty() {
+                return super::search_resources(
+                    &mut conn,
+                    "code_systems",
+                    "CodeSystem",
+                    query,
+                    string_search,
+                    true,
+                );
+            }
 
             let limit = i64::from(query.count.unwrap_or(20));
             let offset = i64::from(query.offset.unwrap_or(0));
@@ -1539,9 +1561,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
             let mut out: std::collections::HashMap<String, serde_json::Value> =
                 std::collections::HashMap::new();
             if let Some(json_str) = resource_json
-                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&json_str) {
-                    walk_concepts(&v, &codes, &mut out);
-                }
+                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&json_str)
+            {
+                walk_concepts(&v, &codes, &mut out);
+            }
             Ok(out)
         })
         .await
@@ -1620,9 +1643,11 @@ fn walk_concepts(
     };
     for c in concepts {
         if let Some(code) = c.get("code").and_then(|v| v.as_str())
-            && codes.iter().any(|x| x == code) && !out.contains_key(code) {
-                out.insert(code.to_string(), c.clone());
-            }
+            && codes.iter().any(|x| x == code)
+            && !out.contains_key(code)
+        {
+            out.insert(code.to_string(), c.clone());
+        }
         walk_concepts(c, codes, out);
     }
 }
@@ -1688,16 +1713,18 @@ fn cs_property_local_codes(
     let suffix = format!("#{canonical}");
     if let Some(json) = resource_json
         && let Ok(v) = serde_json::from_str::<serde_json::Value>(&json)
-            && let Some(props) = v.get("property").and_then(|p| p.as_array()) {
-                for p in props {
-                    let uri = p.get("uri").and_then(|u| u.as_str()).unwrap_or("");
-                    if (uri.ends_with(&suffix) || uri == canonical)
-                        && let Some(local_code) = p.get("code").and_then(|c| c.as_str())
-                            && !codes.iter().any(|c| c == local_code) {
-                                codes.push(local_code.to_string());
-                            }
-                }
+        && let Some(props) = v.get("property").and_then(|p| p.as_array())
+    {
+        for p in props {
+            let uri = p.get("uri").and_then(|u| u.as_str()).unwrap_or("");
+            if (uri.ends_with(&suffix) || uri == canonical)
+                && let Some(local_code) = p.get("code").and_then(|c| c.as_str())
+                && !codes.iter().any(|c| c == local_code)
+            {
+                codes.push(local_code.to_string());
             }
+        }
+    }
     codes
 }
 
@@ -1753,9 +1780,10 @@ fn resolve_code_system(
     if date.is_none() {
         let key = (url.to_string(), version.map(|s| s.to_string()));
         if let Ok(read) = cache.read()
-            && let Some(v) = read.get(&key) {
-                return Ok(v.clone());
-            }
+            && let Some(v) = read.get(&key)
+        {
+            return Ok(v.clone());
+        }
         // Compute then cache.
         let resolved = resolve_code_system_uncached(conn, url, version, date)?;
         if let Ok(mut w) = cache.write() {
