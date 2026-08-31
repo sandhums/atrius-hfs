@@ -265,6 +265,7 @@ where
             get(handlers::group_export_kickoff_handler::<S>)
                 .post(handlers::group_export_kickoff_handler::<S>),
         )
+        .route("/export-jobs", get(handlers::export_jobs_list_handler::<S>))
         .route(
             "/export-status/{job_id}",
             get(handlers::export_status_handler::<S>).delete(handlers::export_cancel_handler::<S>),

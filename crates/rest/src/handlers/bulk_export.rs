@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use axum::{
     body::Body,
-    extract::{Path, Request, State},
+    extract::{Path, Query, Request, State},
     http::{HeaderMap, Method, StatusCode},
     response::Response,
 };
@@ -17,14 +17,15 @@ use helios_fhir::FhirVersion;
 use helios_persistence::core::ExportDataProvider;
 use helios_persistence::core::{
     DownloadUrl, ExportJobId, ExportLevel, ExportManifest, ExportOutputFile, ExportOutputStore,
-    ExportRequest, ExportStatus, GroupExportProvider, PatientExportProvider, RawManifestEntry,
-    ResourceStorage, StartExportInput, TypeFilter,
+    ExportRequest, ExportStatus, GroupExportProvider, ListExportsQuery, PatientExportProvider,
+    RawManifestEntry, ResourceStorage, StartExportInput, TypeFilter,
 };
 use helios_persistence::error::{BulkExportError, StorageError};
 
 use crate::error::{RestError, RestResult};
 use crate::extractors::{FhirVersionExtractor, TenantExtractor};
 use crate::state::AppState;
+use std::collections::HashMap;
 
 /// Trait bound shared by all bulk-export handlers (the resource-store side).
 pub trait ExportResourceStore:
@@ -455,6 +456,70 @@ where
     .await
 }
 
+/// `GET /export-jobs` — list jobs the caller owns (or all jobs, with `system/*`).
+pub async fn export_jobs_list_handler<S>(
+    State(state): State<AppState<S>>,
+    tenant: TenantExtractor,
+    Query(params): Query<HashMap<String, String>>,
+    request: Request,
+) -> RestResult<Response>
+where
+    S: ExportResourceStore + Send + Sync + 'static,
+{
+    let cfg = state.bulk_export_config();
+    if !cfg.enabled {
+        return Err(not_implemented());
+    }
+    let jobs = state.bulk_export_jobs().ok_or_else(not_implemented)?;
+    let principal = request.extensions().get::<Principal>().cloned();
+
+    let count = match params.get("_count") {
+        None => 0,
+        Some(s) => s
+            .parse::<u32>()
+            .map_err(|_| bad_request("invalid `_count`"))?,
+    };
+    let status = match params.get("status") {
+        None => None,
+        Some(s) => Some(
+            s.parse::<ExportStatus>()
+                .map_err(|_| bad_request(format!("invalid `status` '{s}'")))?,
+        ),
+    };
+    let since = match params.get("_since") {
+        None => None,
+        Some(s) => Some(parse_instant(s)?),
+    };
+    let cursor = params.get("_cursor").cloned();
+    if let Some(c) = cursor.as_deref()
+        && helios_persistence::core::decode_export_job_cursor(c).is_none()
+    {
+        return Err(bad_request("invalid `_cursor`"));
+    }
+
+    let query = ListExportsQuery {
+        owner_subject: list_owner_filter(principal.as_ref()),
+        status,
+        since,
+        count,
+        cursor,
+    };
+    let list = jobs
+        .list_export_jobs(tenant.context(), &query)
+        .await
+        .map_err(map_storage_err)?;
+    let body = serde_json::to_vec(&list).map_err(|e| RestError::InternalError {
+        message: e.to_string(),
+    })?;
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .body(Body::from(body))
+        .map_err(|e| RestError::InternalError {
+            message: e.to_string(),
+        })
+}
+
 /// `GET /export-status/{job_id}` — poll status / fetch manifest.
 pub async fn export_status_handler<S>(
     State(state): State<AppState<S>>,
@@ -774,9 +839,48 @@ fn owns_job(principal: Option<&Principal>, owner_subject: Option<&str>) -> bool 
     }
 }
 
+/// Jobs the list endpoint may return: the caller's own, unless they hold
+/// `system/*` (or auth is off). Matches the per-id `system/*` override in
+/// spirit; typed `user/*` wildcards do not see other owners' jobs.
+fn list_owner_filter(principal: Option<&Principal>) -> Option<String> {
+    match principal {
+        None => None,
+        Some(p) if p.scopes.has_system_wildcard() => None,
+        Some(p) => Some(p.subject.clone()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use helios_auth::ScopeSet;
+
+    fn principal(subject: &str, scopes: &str) -> Principal {
+        Principal {
+            subject: subject.to_string(),
+            issuer: "https://issuer.example".to_string(),
+            fhir_user: None,
+            tenant_id: None,
+            scopes: ScopeSet::parse(scopes),
+            jti: None,
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+            custom_claims: serde_json::Map::new(),
+        }
+    }
+
+    #[test]
+    fn list_owner_filter_is_caller_unless_system_wildcard() {
+        assert_eq!(list_owner_filter(None), None);
+        let typed = principal("alice", "system/Patient.rs");
+        assert_eq!(list_owner_filter(Some(&typed)).as_deref(), Some("alice"));
+        let wildcard_user = principal("alice", "user/*.rs");
+        assert_eq!(
+            list_owner_filter(Some(&wildcard_user)).as_deref(),
+            Some("alice")
+        );
+        let admin = principal("alice", "system/*.rs");
+        assert_eq!(list_owner_filter(Some(&admin)), None);
+    }
 
     #[test]
     fn presigned_download_url_is_preserved_byte_for_byte() {

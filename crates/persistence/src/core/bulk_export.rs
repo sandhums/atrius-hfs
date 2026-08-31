@@ -802,6 +802,143 @@ pub struct RawExportManifest {
     pub errors: Vec<RawManifestEntry>,
 }
 
+/// Default page size for [`BulkExportStorage::list_export_jobs`].
+pub const EXPORT_JOB_LIST_DEFAULT_COUNT: u32 = 20;
+/// Hard cap on `_count` for [`BulkExportStorage::list_export_jobs`].
+pub const EXPORT_JOB_LIST_MAX_COUNT: u32 = 100;
+
+/// Query for [`BulkExportStorage::list_export_jobs`].
+///
+/// `owner_subject = Some(sub)` restricts to that principal's jobs. `None` means
+/// every job in the tenant (auth disabled, or a `system/*` wildcard token).
+#[derive(Debug, Clone, Default)]
+pub struct ListExportsQuery {
+    /// When set, only jobs whose `owner_subject` matches.
+    pub owner_subject: Option<String>,
+    /// When set, only jobs in this status.
+    pub status: Option<ExportStatus>,
+    /// When set, only jobs whose `transaction_time` is at or after this instant.
+    pub since: Option<DateTime<Utc>>,
+    /// Page size (`_count`). `0` means the default.
+    pub count: u32,
+    /// Opaque cursor from a previous page's `next_cursor`.
+    pub cursor: Option<String>,
+}
+
+impl ListExportsQuery {
+    /// `_count` clamped to `(0, MAX]`, with `0` becoming the default.
+    pub fn clamped_count(&self) -> u32 {
+        let n = if self.count == 0 {
+            EXPORT_JOB_LIST_DEFAULT_COUNT
+        } else {
+            self.count
+        };
+        n.min(EXPORT_JOB_LIST_MAX_COUNT)
+    }
+}
+
+/// One row in the export-job list (plain JSON, not a FHIR resource).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportJobListRow {
+    /// The job ID.
+    pub job_id: ExportJobId,
+    /// Current status (`accepted`, `in-progress`, `complete`, `error`, `cancelled`).
+    pub status: String,
+    /// `system`, `patient`, or `group`.
+    pub level: String,
+    /// Group id when `level` is `group`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<String>,
+    /// Subject of the principal that kicked off the job.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner_subject: Option<String>,
+    /// Original kick-off URL (manifest `request`).
+    pub request_url: String,
+    /// Server wall-clock frozen at kick-off.
+    pub transaction_time: DateTime<Utc>,
+    /// When the worker started the job.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<DateTime<Utc>>,
+    /// When the job reached a terminal status.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<DateTime<Utc>>,
+    /// Error message when status is `error`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+impl ExportJobListRow {
+    /// Builds a list row from stored columns.
+    pub fn from_stored(
+        job_id: ExportJobId,
+        status: ExportStatus,
+        level: ExportLevel,
+        owner_subject: Option<String>,
+        request_url: String,
+        transaction_time: DateTime<Utc>,
+        started_at: Option<DateTime<Utc>>,
+        completed_at: Option<DateTime<Utc>>,
+        error_message: Option<String>,
+    ) -> Self {
+        let (level_kind, group_id) = match &level {
+            ExportLevel::System => ("system".to_string(), None),
+            ExportLevel::Patient => ("patient".to_string(), None),
+            ExportLevel::Group { group_id } => ("group".to_string(), Some(group_id.clone())),
+        };
+        Self {
+            job_id,
+            status: status.to_string(),
+            level: level_kind,
+            group_id,
+            owner_subject,
+            request_url,
+            transaction_time,
+            started_at,
+            completed_at,
+            error_message,
+        }
+    }
+}
+
+/// Paginated export-job list.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportJobList {
+    /// Jobs on this page, newest `created_at` first.
+    pub jobs: Vec<ExportJobListRow>,
+    /// Pass as `_cursor` to fetch the next page. Absent on the last page.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
+}
+
+/// Encodes a list-page cursor (`{created_at}|{job_id}`).
+pub fn encode_export_job_cursor(created_at: DateTime<Utc>, job_id: &str) -> String {
+    format!("{}|{job_id}", created_at.to_rfc3339())
+}
+
+/// Encodes a list-page cursor from the raw `created_at` column (SQLite TEXT).
+pub fn encode_export_job_cursor_raw(created_at: &str, job_id: &str) -> String {
+    format!("{created_at}|{job_id}")
+}
+
+/// Decodes [`encode_export_job_cursor`]. Returns `(created_at, job_id)`.
+pub fn decode_export_job_cursor(cursor: &str) -> Option<(DateTime<Utc>, String)> {
+    let (ts, id) = cursor.split_once('|')?;
+    if id.is_empty() {
+        return None;
+    }
+    let dt = DateTime::parse_from_rfc3339(ts).ok()?.with_timezone(&Utc);
+    Some((dt, id.to_string()))
+}
+
+/// Decodes a cursor keeping the raw timestamp string for TEXT-column comparison.
+pub fn decode_export_job_cursor_raw(cursor: &str) -> Option<(String, String)> {
+    let (ts, id) = cursor.split_once('|')?;
+    if ts.is_empty() || id.is_empty() {
+        return None;
+    }
+    Some((ts.to_string(), id.to_string()))
+}
+
 /// Lightweight job metadata for authorization checks.
 ///
 /// Returned by `get_export_job_metadata` — a single cheap row lookup the REST
@@ -963,6 +1100,15 @@ pub trait BulkExportStorage: Send + Sync {
         tenant: &TenantContext,
         include_completed: bool,
     ) -> StorageResult<Vec<ExportProgress>>;
+
+    /// Lists export jobs with owner scoping, status/`_since` filters, and cursor pagination.
+    ///
+    /// Newest jobs first (`created_at DESC, id DESC`). Used by `GET /export-jobs`.
+    async fn list_export_jobs(
+        &self,
+        tenant: &TenantContext,
+        query: &ListExportsQuery,
+    ) -> StorageResult<ExportJobList>;
 
     /// Returns lightweight job metadata for an authorization check.
     ///
@@ -1265,6 +1411,40 @@ mod tests {
 
         let system_request = ExportRequest::system();
         assert_eq!(system_request.group_id(), None);
+    }
+
+    #[test]
+    fn export_job_cursor_roundtrips() {
+        let ts = DateTime::parse_from_rfc3339("2026-08-31T07:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let encoded = encode_export_job_cursor(ts, "job-1");
+        let (decoded, id) = decode_export_job_cursor(&encoded).unwrap();
+        assert_eq!(decoded, ts);
+        assert_eq!(id, "job-1");
+        assert!(decode_export_job_cursor("not-a-cursor").is_none());
+        assert!(decode_export_job_cursor("2026-08-31T07:00:00Z|").is_none());
+    }
+
+    #[test]
+    fn list_exports_query_clamps_count() {
+        assert_eq!(ListExportsQuery::default().clamped_count(), 20);
+        assert_eq!(
+            ListExportsQuery {
+                count: 3,
+                ..Default::default()
+            }
+            .clamped_count(),
+            3
+        );
+        assert_eq!(
+            ListExportsQuery {
+                count: 10_000,
+                ..Default::default()
+            }
+            .clamped_count(),
+            EXPORT_JOB_LIST_MAX_COUNT
+        );
     }
 
     #[test]

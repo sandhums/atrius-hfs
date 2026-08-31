@@ -111,9 +111,11 @@ pub mod versioned;
 pub use backend::{Backend, BackendCapability, BackendConfig, BackendKind, BackendPoolStats};
 pub use bulk_export::{
     BulkExportStorage, ExpiredExportRef, ExportDataProvider, ExportFileMetadata, ExportJobId,
-    ExportJobMetadata, ExportLevel, ExportManifest, ExportOutputFile, ExportProgress,
-    ExportRequest, ExportStatus, GroupExportProvider, NdjsonBatch, PatientExportProvider,
-    RawExportManifest, RawManifestEntry, StartExportInput, TypeExportProgress, TypeFilter,
+    ExportJobList, ExportJobListRow, ExportJobMetadata, ExportLevel, ExportManifest,
+    ExportOutputFile, ExportProgress, ExportRequest, ExportStatus, GroupExportProvider,
+    ListExportsQuery, NdjsonBatch, PatientExportProvider, RawExportManifest, RawManifestEntry,
+    StartExportInput, TypeExportProgress, TypeFilter, decode_export_job_cursor,
+    decode_export_job_cursor_raw, encode_export_job_cursor, encode_export_job_cursor_raw,
 };
 pub use bulk_export_output::{
     DownloadUrl, ExportOutputStore, ExportPartKey, ExportPartWriter, FinalizedPart,

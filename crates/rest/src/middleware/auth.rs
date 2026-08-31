@@ -375,6 +375,13 @@ fn extract_operation(path: &str, method: &str) -> Option<(String, FhirOperation)
         return None;
     }
 
+    // Bulk Data Export job list / poll / download. Ownership is enforced in
+    // the handlers (`owns_job` / `list_owner_filter`); treating these as FHIR
+    // resource types would require a fake Search/Read on "export-jobs".
+    if matches!(first, "export-jobs" | "export-status" | "export-file") {
+        return None;
+    }
+
     // The first segment is the resource type (or tenant — handled by prefix stripping)
     let resource_type = first.to_string();
 
@@ -797,6 +804,9 @@ mod tests {
         // A first segment starting with '$' is a system-level operation → None.
         assert!(extract_operation("/$export", "GET").is_none());
         assert!(extract_operation("/$export", "POST").is_none());
+        assert!(extract_operation("/export-jobs", "GET").is_none());
+        assert!(extract_operation("/export-status/job-1", "GET").is_none());
+        assert!(extract_operation("/export-file/job-1/Patient-0", "GET").is_none());
     }
 
     #[test]

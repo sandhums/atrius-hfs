@@ -65,8 +65,9 @@ pub(crate) fn extract_patient_from_resource(
 // Re-export handlers for convenience
 pub use batch::batch_handler;
 pub use bulk_export::{
-    export_cancel_handler, export_download_handler, export_status_handler,
-    group_export_kickoff_handler, patient_export_kickoff_handler, system_export_kickoff_handler,
+    export_cancel_handler, export_download_handler, export_jobs_list_handler,
+    export_status_handler, group_export_kickoff_handler, patient_export_kickoff_handler,
+    system_export_kickoff_handler,
 };
 pub use bulk_submit::{
     bulk_submit_cancel_handler, bulk_submit_file_handler, bulk_submit_kickoff_handler,

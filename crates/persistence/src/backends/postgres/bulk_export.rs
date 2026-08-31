@@ -7,9 +7,10 @@ use std::time::Duration as StdDuration;
 
 use crate::core::bulk_export::{
     BulkExportStorage, ExpiredExportRef, ExportDataProvider, ExportFileMetadata, ExportJobId,
-    ExportJobMetadata, ExportLevel, ExportProgress, ExportRequest, ExportStatus,
-    GroupExportProvider, NdjsonBatch, PatientExportProvider, RawExportManifest, RawManifestEntry,
-    StartExportInput, TypeExportProgress,
+    ExportJobList, ExportJobListRow, ExportJobMetadata, ExportLevel, ExportProgress, ExportRequest,
+    ExportStatus, GroupExportProvider, ListExportsQuery, NdjsonBatch, PatientExportProvider,
+    RawExportManifest, RawManifestEntry, StartExportInput, TypeExportProgress,
+    decode_export_job_cursor, encode_export_job_cursor,
 };
 use crate::core::bulk_export_output::{ExportPartKey, FinalizedPart};
 use crate::core::bulk_export_worker::{
@@ -545,6 +546,95 @@ impl BulkExportStorage for PostgresBackend {
         }
 
         Ok(results)
+    }
+
+    async fn list_export_jobs(
+        &self,
+        tenant: &TenantContext,
+        query: &ListExportsQuery,
+    ) -> StorageResult<ExportJobList> {
+        let client = self.get_client().await?;
+        let tenant_id = tenant.tenant_id().as_str();
+        let owner = query.owner_subject.clone();
+        let status = query.status.map(|s| s.to_string());
+        let since = query.since;
+        let cursor = query.cursor.as_deref().and_then(decode_export_job_cursor);
+        let cursor_ts = cursor.as_ref().map(|(ts, _)| *ts);
+        let cursor_id = cursor.as_ref().map(|(_, id)| id.clone());
+        let limit = i64::from(query.clamped_count()) + 1;
+
+        let rows = client
+            .query(
+                "SELECT id, status, level, group_id, owner_subject, request_url,
+                        transaction_time, started_at, completed_at, error_message, created_at
+                 FROM bulk_export_jobs
+                 WHERE tenant_id = $1
+                   AND ($2::text IS NULL OR owner_subject = $2)
+                   AND ($3::text IS NULL OR status = $3)
+                   AND ($4::timestamptz IS NULL OR transaction_time >= $4)
+                   AND ($5::timestamptz IS NULL OR created_at < $5
+                        OR (created_at = $5 AND id < $6))
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT $7",
+                &[
+                    &tenant_id, &owner, &status, &since, &cursor_ts, &cursor_id, &limit,
+                ],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to query list_export_jobs: {e}")))?;
+
+        let mut records = Vec::new();
+        for row in &rows {
+            let id: String = row.get(0);
+            let status_str: String = row.get(1);
+            let level_str: String = row.get(2);
+            let group_id: Option<String> = row.get(3);
+            let owner_subject: Option<String> = row.get(4);
+            let request_url: String = row.get(5);
+            let transaction_time: DateTime<Utc> = row.get(6);
+            let started_at: Option<DateTime<Utc>> = row.get(7);
+            let completed_at: Option<DateTime<Utc>> = row.get(8);
+            let error_message: Option<String> = row.get(9);
+            let created_at: DateTime<Utc> = row.get(10);
+            let status: ExportStatus = status_str
+                .parse()
+                .map_err(|_| internal_error(format!("Invalid status in database: {status_str}")))?;
+            let level = match level_str.as_str() {
+                "system" => ExportLevel::System,
+                "patient" => ExportLevel::Patient,
+                "group" => ExportLevel::Group {
+                    group_id: group_id.unwrap_or_default(),
+                },
+                _ => return Err(internal_error(format!("Invalid level: {level_str}"))),
+            };
+            records.push((
+                ExportJobListRow::from_stored(
+                    ExportJobId::from_string(id),
+                    status,
+                    level,
+                    owner_subject,
+                    request_url,
+                    transaction_time,
+                    started_at,
+                    completed_at,
+                    error_message,
+                ),
+                created_at,
+            ));
+        }
+
+        let page_size = query.clamped_count() as usize;
+        let next_cursor = if records.len() > page_size {
+            let (row, created_at) = &records[page_size - 1];
+            Some(encode_export_job_cursor(*created_at, row.job_id.as_str()))
+        } else {
+            None
+        };
+        records.truncate(page_size);
+        Ok(ExportJobList {
+            jobs: records.into_iter().map(|(row, _)| row).collect(),
+            next_cursor,
+        })
     }
 }
 

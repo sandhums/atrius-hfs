@@ -9,9 +9,10 @@ use tokio::sync::Mutex;
 
 use crate::core::bulk_export::{
     BulkExportStorage, ExpiredExportRef, ExportDataProvider, ExportFileMetadata, ExportJobId,
-    ExportJobMetadata, ExportLevel, ExportProgress, ExportRequest, ExportStatus,
-    GroupExportProvider, NdjsonBatch, PatientExportProvider, RawExportManifest, RawManifestEntry,
-    StartExportInput, TypeExportProgress,
+    ExportJobList, ExportJobListRow, ExportJobMetadata, ExportLevel, ExportProgress, ExportRequest,
+    ExportStatus, GroupExportProvider, ListExportsQuery, NdjsonBatch, PatientExportProvider,
+    RawExportManifest, RawManifestEntry, StartExportInput, TypeExportProgress,
+    decode_export_job_cursor_raw, encode_export_job_cursor_raw,
 };
 use crate::core::bulk_export_output::{ExportPartKey, FinalizedPart};
 use crate::core::bulk_export_worker::{
@@ -423,6 +424,119 @@ impl BulkExportStorage for SqliteBackend {
         }
 
         Ok(results)
+    }
+
+    async fn list_export_jobs(
+        &self,
+        tenant: &TenantContext,
+        query: &ListExportsQuery,
+    ) -> StorageResult<ExportJobList> {
+        let conn = self.get_connection()?;
+        let tenant_id = tenant.tenant_id().as_str();
+        let owner = query.owner_subject.as_deref();
+        let status = query.status.map(|s| s.to_string());
+        let since = query.since.map(|d| d.to_rfc3339());
+        let cursor = query
+            .cursor
+            .as_deref()
+            .and_then(decode_export_job_cursor_raw);
+        let cursor_ts = cursor.as_ref().map(|(ts, _)| ts.as_str());
+        let cursor_id = cursor.as_ref().map(|(_, id)| id.as_str());
+        let limit = i64::from(query.clamped_count()) + 1;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, status, level, group_id, owner_subject, request_url,
+                        transaction_time, started_at, completed_at, error_message, created_at
+                 FROM bulk_export_jobs
+                 WHERE tenant_id = ?1
+                   AND (?2 IS NULL OR owner_subject = ?2)
+                   AND (?3 IS NULL OR status = ?3)
+                   AND (?4 IS NULL OR transaction_time >= ?4)
+                   AND (?5 IS NULL OR created_at < ?5 OR (created_at = ?5 AND id < ?6))
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT ?7",
+            )
+            .map_err(|e| internal_error(format!("Failed to prepare list_export_jobs: {e}")))?;
+
+        let rows = stmt
+            .query_map(
+                params![tenant_id, owner, status, since, cursor_ts, cursor_id, limit],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?,
+                        row.get::<_, String>(5)?,
+                        row.get::<_, String>(6)?,
+                        row.get::<_, Option<String>>(7)?,
+                        row.get::<_, Option<String>>(8)?,
+                        row.get::<_, Option<String>>(9)?,
+                        row.get::<_, String>(10)?,
+                    ))
+                },
+            )
+            .map_err(|e| internal_error(format!("Failed to query list_export_jobs: {e}")))?;
+
+        let mut records = Vec::new();
+        for row in rows {
+            let (
+                id,
+                status_str,
+                level_str,
+                group_id,
+                owner_subject,
+                request_url,
+                transaction_time,
+                started_at,
+                completed_at,
+                error_message,
+                created_at,
+            ) = row.map_err(|e| internal_error(format!("Failed to read export job row: {e}")))?;
+            let status: ExportStatus = status_str
+                .parse()
+                .map_err(|_| internal_error(format!("Invalid status in database: {status_str}")))?;
+            let level = match level_str.as_str() {
+                "system" => ExportLevel::System,
+                "patient" => ExportLevel::Patient,
+                "group" => ExportLevel::Group {
+                    group_id: group_id.unwrap_or_default(),
+                },
+                _ => return Err(internal_error(format!("Invalid level: {level_str}"))),
+            };
+            records.push((
+                ExportJobListRow::from_stored(
+                    ExportJobId::from_string(id),
+                    status,
+                    level,
+                    owner_subject,
+                    request_url,
+                    parse_dt(&transaction_time)?,
+                    parse_dt_opt(started_at),
+                    parse_dt_opt(completed_at),
+                    error_message,
+                ),
+                created_at,
+            ));
+        }
+
+        let page_size = query.clamped_count() as usize;
+        let next_cursor = if records.len() > page_size {
+            let (row, created_at) = &records[page_size - 1];
+            Some(encode_export_job_cursor_raw(
+                created_at,
+                row.job_id.as_str(),
+            ))
+        } else {
+            None
+        };
+        records.truncate(page_size);
+        Ok(ExportJobList {
+            jobs: records.into_iter().map(|(row, _)| row).collect(),
+            next_cursor,
+        })
     }
 
     async fn get_export_job_metadata(
@@ -1644,6 +1758,88 @@ mod tests {
 
         let exports = backend.list_exports(&tenant, false).await.unwrap();
         assert_eq!(exports.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_list_export_jobs_filters_and_paginates() {
+        let backend = create_test_backend();
+        let tenant = create_test_tenant();
+
+        let mut mine = test_input(ExportRequest::system());
+        mine.owner_subject = Some("alice".to_string());
+        mine.transaction_time = DateTime::parse_from_rfc3339("2026-08-01T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let alice_id = backend.start_export(&tenant, mine).await.unwrap();
+
+        let mut other = test_input(ExportRequest::patient());
+        other.owner_subject = Some("bob".to_string());
+        other.transaction_time = DateTime::parse_from_rfc3339("2026-08-02T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let bob_id = backend.start_export(&tenant, other).await.unwrap();
+
+        let alice_page = backend
+            .list_export_jobs(
+                &tenant,
+                &ListExportsQuery {
+                    owner_subject: Some("alice".to_string()),
+                    count: 20,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(alice_page.jobs.len(), 1);
+        assert_eq!(alice_page.jobs[0].job_id, alice_id);
+        assert_eq!(alice_page.jobs[0].owner_subject.as_deref(), Some("alice"));
+        assert_eq!(alice_page.jobs[0].level, "system");
+        assert!(alice_page.jobs[0].request_url.contains("$export"));
+
+        let since_page = backend
+            .list_export_jobs(
+                &tenant,
+                &ListExportsQuery {
+                    since: Some(
+                        DateTime::parse_from_rfc3339("2026-08-01T12:00:00Z")
+                            .unwrap()
+                            .with_timezone(&Utc),
+                    ),
+                    count: 20,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(since_page.jobs.len(), 1);
+        assert_eq!(since_page.jobs[0].job_id, bob_id);
+
+        let first = backend
+            .list_export_jobs(
+                &tenant,
+                &ListExportsQuery {
+                    count: 1,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(first.jobs.len(), 1);
+        assert!(first.next_cursor.is_some());
+        let second = backend
+            .list_export_jobs(
+                &tenant,
+                &ListExportsQuery {
+                    count: 1,
+                    cursor: first.next_cursor,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(second.jobs.len(), 1);
+        assert_ne!(second.jobs[0].job_id, first.jobs[0].job_id);
+        assert!(second.next_cursor.is_none());
     }
 
     #[tokio::test]

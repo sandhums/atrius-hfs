@@ -17,8 +17,8 @@ use helios_fhir::FhirVersion;
 use helios_persistence::backends::local_fs::LocalFsOutputStore;
 use helios_persistence::backends::sqlite::{SqliteBackend, SqliteBackendConfig};
 use helios_persistence::core::{
-    BulkExportJobStore, DefaultExportWorker, ExportClaimStrategy, ExportOutputStore,
-    ResourceStorage, WorkerId,
+    BulkExportJobStore, BulkExportStorage, DefaultExportWorker, ExportClaimStrategy,
+    ExportOutputStore, ExportRequest, ResourceStorage, StartExportInput, WorkerId,
 };
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use helios_rest::ServerConfig;
@@ -119,6 +119,88 @@ async fn create_bulk_export_server_with(
     let server = TestServer::new(app).expect("create test server");
 
     (server, backend, output, tmp)
+}
+
+fn inject_principal(app: axum::Router, subject: &str, scopes: &str) -> axum::Router {
+    let principal = Principal {
+        subject: subject.to_string(),
+        issuer: "https://issuer.example".to_string(),
+        fhir_user: None,
+        tenant_id: None,
+        scopes: ScopeSet::parse(scopes),
+        jti: None,
+        expires_at: Utc::now() + chrono::Duration::hours(1),
+        custom_claims: serde_json::Map::new(),
+    };
+    app.layer(axum::middleware::from_fn(
+        move |mut request: axum::extract::Request, next: Next| {
+            let principal = principal.clone();
+            async move {
+                request.extensions_mut().insert(principal);
+                next.run(request).await
+            }
+        },
+    ))
+}
+
+async fn create_bulk_export_server_as(
+    subject: &str,
+    scopes: &str,
+) -> (
+    TestServer,
+    Arc<SqliteBackend>,
+    Arc<LocalFsOutputStore>,
+    tempfile::TempDir,
+) {
+    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.join("data"))
+        .unwrap_or_else(|| PathBuf::from("data"));
+
+    let backend_config = SqliteBackendConfig {
+        data_dir: Some(data_dir),
+        ..Default::default()
+    };
+    let backend = Arc::new(
+        SqliteBackend::with_config(":memory:", backend_config).expect("create SQLite backend"),
+    );
+    backend.init_schema().expect("init schema");
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let output = Arc::new(LocalFsOutputStore::new(
+        tmp.path(),
+        "https://wrong-internal.example",
+    ));
+    let file_auth = Arc::new(BearerScopeAuth);
+
+    let config = ServerConfig {
+        default_tenant: "test-tenant".to_string(),
+        ..ServerConfig::for_testing()
+    };
+
+    let state = helios_rest::AppState::new(Arc::clone(&backend), config).with_bulk_export(
+        backend.clone() as Arc<dyn BulkExportJobStore>,
+        output.clone() as Arc<dyn ExportOutputStore>,
+        file_auth,
+    );
+    let app = inject_principal(
+        helios_rest::routing::fhir_routes::create_routes(state),
+        subject,
+        scopes,
+    );
+    let server = TestServer::new(app).expect("create test server");
+    (server, backend, output, tmp)
+}
+
+fn test_export_input(owner: &str, request: ExportRequest) -> StartExportInput {
+    StartExportInput {
+        request,
+        transaction_time: Utc::now(),
+        request_url: "http://localhost:8080/$export?_type=Patient".to_string(),
+        owner_subject: Some(owner.to_string()),
+        fhir_version: FhirVersion::default(),
+    }
 }
 
 fn test_tenant() -> TenantContext {
@@ -601,4 +683,146 @@ async fn test_capability_statement_advertises_export() {
         cs["instantiates"][0],
         "http://hl7.org/fhir/uv/bulkdata/CapabilityStatement/bulk-data"
     );
+}
+
+#[tokio::test]
+async fn export_jobs_list_includes_owner_and_request_url() {
+    let (server, backend, _output, _tmp) = create_bulk_export_server().await;
+    let job_id = backend
+        .start_export(
+            &test_tenant(),
+            test_export_input("alice", ExportRequest::system()),
+        )
+        .await
+        .expect("start");
+
+    let resp = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::OK);
+    let body: Value = resp.json();
+    let jobs = body["jobs"].as_array().expect("jobs");
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0]["job_id"], job_id.as_str());
+    assert_eq!(jobs[0]["owner_subject"], "alice");
+    assert_eq!(jobs[0]["level"], "system");
+    assert_eq!(
+        jobs[0]["request_url"],
+        "http://localhost:8080/$export?_type=Patient"
+    );
+    assert_eq!(jobs[0]["status"], "accepted");
+}
+
+#[tokio::test]
+async fn export_jobs_list_scopes_to_caller_without_system_wildcard() {
+    let (server, backend, _output, _tmp) =
+        create_bulk_export_server_as("alice", "system/Patient.rs").await;
+    backend
+        .start_export(
+            &test_tenant(),
+            test_export_input("alice", ExportRequest::system()),
+        )
+        .await
+        .expect("alice job");
+    backend
+        .start_export(
+            &test_tenant(),
+            test_export_input("bob", ExportRequest::patient()),
+        )
+        .await
+        .expect("bob job");
+
+    let resp = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::OK);
+    let body: Value = resp.json();
+    let jobs = body["jobs"].as_array().expect("jobs");
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0]["owner_subject"], "alice");
+}
+
+#[tokio::test]
+async fn export_jobs_list_system_wildcard_sees_all_owners() {
+    let (server, backend, _output, _tmp) =
+        create_bulk_export_server_as("alice", "system/*.rs").await;
+    backend
+        .start_export(
+            &test_tenant(),
+            test_export_input("alice", ExportRequest::system()),
+        )
+        .await
+        .expect("alice job");
+    backend
+        .start_export(
+            &test_tenant(),
+            test_export_input("bob", ExportRequest::patient()),
+        )
+        .await
+        .expect("bob job");
+
+    let resp = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::OK);
+    let body: Value = resp.json();
+    assert_eq!(body["jobs"].as_array().expect("jobs").len(), 2);
+}
+
+#[tokio::test]
+async fn export_jobs_list_paginates_and_filters_status() {
+    let (server, backend, _output, _tmp) = create_bulk_export_server().await;
+    for _ in 0..3 {
+        backend
+            .start_export(
+                &test_tenant(),
+                test_export_input("alice", ExportRequest::system()),
+            )
+            .await
+            .expect("start");
+    }
+
+    let page1 = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .add_query_param("_count", "2")
+        .await;
+    assert_eq!(page1.status_code(), StatusCode::OK);
+    let body1: Value = page1.json();
+    assert_eq!(body1["jobs"].as_array().expect("jobs").len(), 2);
+    let cursor = body1["next_cursor"].as_str().expect("next_cursor");
+
+    let page2 = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .add_query_param("_count", "2")
+        .add_query_param("_cursor", cursor)
+        .await;
+    assert_eq!(page2.status_code(), StatusCode::OK);
+    let body2: Value = page2.json();
+    assert_eq!(body2["jobs"].as_array().expect("jobs").len(), 1);
+    assert!(body2["next_cursor"].is_null());
+
+    let filtered = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .add_query_param("status", "complete")
+        .await;
+    assert_eq!(filtered.status_code(), StatusCode::OK);
+    let body: Value = filtered.json();
+    assert!(body["jobs"].as_array().expect("jobs").is_empty());
+}
+
+#[tokio::test]
+async fn export_jobs_list_rejects_bad_cursor() {
+    let (server, _backend, _output, _tmp) = create_bulk_export_server().await;
+    let resp = server
+        .get("/export-jobs")
+        .add_header("x-tenant-id", "test-tenant")
+        .add_query_param("_cursor", "not-a-cursor")
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::BAD_REQUEST);
 }
