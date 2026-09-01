@@ -3,10 +3,21 @@
 {#
   View Definitions workspace (#649, Figma 420-2): rail of stored
   ViewDefinitions (name left, resource type right), the selected one in a
-  collapsible JSON fold, and a $sql-run Results preview. Save/Duplicate are
-  submit buttons of one plain form (POST back to this route); Run is a plain
-  link (?run=1); Delete rides conformance-crud.js like the other conformance
+  collapsible JSON fold, and a $sql-run Results preview. The rail is one page
+  of a server-side search (#741) — the search box filters by name, and plain
+  previous/next links at its foot page through the rest — so it never loads
+  the tenant's whole ViewDefinition collection. Save/Duplicate are submit
+  buttons of one plain form (POST back to this route); Run is a plain link
+  (?run=1); Delete rides conformance-crud.js like the other conformance
   viewers. Everything works without JavaScript.
+
+  #753 (evaluation POC, not merged): the JSON fold below still posts the
+  plain `<textarea name="json">`, but vd-editor.js progressively enhances it
+  into a CodeMirror 6 editor with JSON + FHIRPath highlighting, provided the
+  vendored bundle it depends on loaded first. The textarea stays in the DOM
+  as the form's real value and is what nojs, no-cdn, and every other
+  Playwright project see — without the bundle, without JS, or if the mount
+  fails, this page is unchanged.
 #}
 
 {% block title %}{{ i18n.t("sql-vd-title") }} — {{ i18n.t("app-title") }}{% endblock %}
@@ -51,6 +62,16 @@
       <p class="filter-rail__heading filter-rail__heading--group">{{ i18n.t("vd-none") }}</p>
       {% endif %}
     </div>
+    {% if prev_href.is_some() || next_href.is_some() %}
+    <nav class="pagination" aria-label="{{ i18n.t("vd-pagination-label") }}">
+      {% if let Some(href) = prev_href %}
+      <a class="btn" href="{{ href }}">{{ i18n.t("vd-page-prev") }}</a>
+      {% endif %}
+      {% if let Some(href) = next_href %}
+      <a class="btn" href="{{ href }}">{{ i18n.t("vd-page-next") }}</a>
+      {% endif %}
+    </nav>
+    {% endif %}
   </aside>
 
   <div class="filter-center">
@@ -143,4 +164,9 @@
 </div>
 
 <script src="/ui/assets/conformance-crud.js" defer></script>
+<!-- #753 evaluation POC: the CodeMirror 6 vendored bundle (ticket 01) must
+     load before vd-editor.js, which reads window.HfsCodeMirror at the top
+     of its IIFE. Loaded only on this page. -->
+<script src="/ui/assets/vendor/codemirror.bundle.js" defer></script>
+<script src="/ui/assets/vd-editor.js" defer></script>
 {% endblock %}

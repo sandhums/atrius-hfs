@@ -1,6 +1,8 @@
 import { test, expect } from "../pages/fixtures";
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
 import { ROUTES, seedBulkImportDetail } from "../pages/routes";
+import { createResource, waitSearchable } from "../pages/api";
+import { expectDetailFieldSpacing } from "../pages/detail-spacing";
 import postcss from "postcss";
 
 // The design-system guard (#543). The stylesheet defines one component
@@ -280,7 +282,7 @@ test("shared query-builder actions stay 30px while their inputs keep the field s
   }
 });
 
-test("shared back links match the Figma geometry on both consumers", async ({
+test("shared back links match the Figma geometry on every consumer", async ({
   page,
   request,
 }) => {
@@ -328,9 +330,11 @@ test("shared back links match the Figma geometry on both consumers", async ({
   expect(headerRule?.["grid-template-areas"]).toContain('"back-link ."');
   expect(headerRule?.["grid-template-areas"]).toContain('"copy action"');
 
+  // One-shot bulk import (#781) dropped the detail page's action slot; its
+  // copy column simply spans. The shared link geometry still binds both.
   const consumers = [
-    { name: "bulk import detail", route: await seedBulkImportDetail(request) },
-    { name: "active bulk exports", route: "/ui/bulk-export/active" },
+    { name: "bulk import detail", route: await seedBulkImportDetail(request), hasAction: false },
+    { name: "new bulk export", route: "/ui/bulk-export/new", hasAction: false },
   ];
   for (const theme of ["light", "dark"] as const) {
     await page.goto("/ui");
@@ -355,9 +359,13 @@ test("shared back links match the Figma geometry on both consumers", async ({
         const actionControl = action.locator(
           ":scope > a.btn, :scope > details > summary.btn",
         );
-        await expect(action).toHaveCount(1);
-        await expect(actionControl).toHaveCount(1);
-        await expect(actionControl).toBeVisible();
+        if (consumer.hasAction) {
+          await expect(action).toHaveCount(1);
+          await expect(actionControl).toHaveCount(1);
+          await expect(actionControl).toBeVisible();
+        } else {
+          await expect(action).toHaveCount(0);
+        }
         // Grid items are blockified, so the authored inline-flex computes to
         // flex here. The source-rule assertion above guards the shared value.
         await expect(link).toHaveCSS("display", "flex");
@@ -367,22 +375,24 @@ test("shared back links match the Figma geometry on both consumers", async ({
         await expect(icon).toHaveAttribute("width", "5");
         await expect(icon).toHaveAttribute("height", "8");
 
-        const [linkBox, iconBox, labelBox, titleBox, actionBox] = await Promise.all([
+        const [linkBox, iconBox, labelBox, titleBox] = await Promise.all([
           link.boundingBox(),
           icon.boundingBox(),
           label.boundingBox(),
           title.boundingBox(),
-          action.boundingBox(),
         ]);
+        const actionBox = consumer.hasAction ? await action.boundingBox() : null;
         expect(linkBox).not.toBeNull();
         expect(iconBox).not.toBeNull();
         expect(labelBox).not.toBeNull();
         expect(titleBox).not.toBeNull();
-        expect(actionBox).not.toBeNull();
         expect(Math.abs(labelBox!.x - (iconBox!.x + iconBox!.width) - 7)).toBeLessThanOrEqual(1);
         expect(Math.abs(titleBox!.y - (linkBox!.y + linkBox!.height) - 24)).toBeLessThanOrEqual(1);
-        expect(actionBox!.y).toBeGreaterThan(linkBox!.y + linkBox!.height);
-        expect(Math.abs(actionBox!.y - titleBox!.y)).toBeLessThanOrEqual(1);
+        if (consumer.hasAction) {
+          expect(actionBox).not.toBeNull();
+          expect(actionBox!.y).toBeGreaterThan(linkBox!.y + linkBox!.height);
+          expect(Math.abs(actionBox!.y - titleBox!.y)).toBeLessThanOrEqual(1);
+        }
 
         const normal = await link.evaluate((element) => {
           const style = getComputedStyle(element);
@@ -464,3 +474,110 @@ test("no selector is defined twice in app.css", async ({ request }) => {
     .map(([key, lines]) => `${key} — lines ${lines.join(", ")}`);
   expect(dupes, `selectors defined more than once:\n${dupes.join("\n")}`).toEqual([]);
 });
+
+test("every exercised detail field gets external spacing from its direct parent", async ({
+  page,
+  request,
+}) => {
+  const viewDefinitionId = await createResource(request, "ViewDefinition", {
+    name: `spacing_guard_${Date.now()}`,
+    status: "active",
+    resource: "Patient",
+    select: [{ column: [{ name: "id", path: "getResourceKey()" }] }],
+  });
+  await waitSearchable(request, "ViewDefinition", viewDefinitionId);
+
+  await page.goto("/ui/capability-statement", { waitUntil: "networkidle" });
+  await expectDetailFieldSpacing(page, "Capability Statement summary");
+
+  await page.goto("/ui/sql/export", { waitUntil: "networkidle" });
+  await expectDetailFieldSpacing(page, "SQL Export form");
+
+  await page.goto("/ui/sql/files", { waitUntil: "networkidle" });
+  await expectDetailFieldSpacing(page, "SQL Files form");
+
+  await page.goto("/ui/search-parameters", { waitUntil: "networkidle" });
+  await page.locator("a.row-link").first().click();
+  await expect(page.locator(".detail .detail__field").first()).toBeVisible();
+  await expectDetailFieldSpacing(page, "Search Parameters detail");
+
+  await page.goto("/ui/compartments", { waitUntil: "networkidle" });
+  await expectDetailFieldSpacing(page, "Compartments definition");
+  await page.locator(".tabs .tab").last().click();
+  const tester = page.locator("form.tester");
+  await expect(tester).toBeVisible();
+  await expect(tester.locator(":scope > .detail__field").first()).toBeVisible();
+  await expectDetailFieldSpacing(page, "Compartments tester");
+
+  await page.goto(await seedBulkImportDetail(request), { waitUntil: "networkidle" });
+  await expectDetailFieldSpacing(page, "Bulk Import summary");
+});
+
+for (const viewport of [
+  { width: 1440, height: 900, columns: 2 },
+  { width: 1240, height: 800, columns: 1 },
+  { width: 390, height: 844, columns: 1 },
+] as const) {
+  test(`Capability Summary follows the shared metadata grid at ${viewport.width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto("/ui/capability-statement", { waitUntil: "networkidle" });
+
+    const summary = page.locator("section.card").first();
+    const body = summary.locator(":scope > .card__body");
+    const grid = body.locator(":scope > .kv-grid");
+    const fields = grid.locator(":scope > .detail__field");
+    await expect(fields).toHaveCount(7);
+
+    // A deliberately hostile implementation URL proves the shared field/grid
+    // contract wraps unbroken values instead of widening the document.
+    await fields
+      .nth(1)
+      .locator(":scope > div")
+      .evaluate((element) => {
+        element.textContent = `https://example.test/${"deeply-nested-segment/".repeat(24)}metadata`;
+      });
+
+    const metrics = await summary.evaluate((element) => {
+      const body = element.querySelector<HTMLElement>(":scope > .card__body")!;
+      const grid = body.querySelector<HTMLElement>(":scope > .kv-grid")!;
+      const fields = Array.from(grid.querySelectorAll<HTMLElement>(":scope > .detail__field"));
+      const bodyBox = body.getBoundingClientRect();
+      const gridBox = grid.getBoundingClientRect();
+      const boxes = fields.map((field) => field.getBoundingClientRect().toJSON());
+      const gridStyle = getComputedStyle(grid);
+      return {
+        columns: gridStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length,
+        rowGap: gridStyle.rowGap,
+        columnGap: gridStyle.columnGap,
+        marginBottom: gridStyle.marginBottom,
+        fieldGap: getComputedStyle(fields[0]).rowGap,
+        bottomInset: bodyBox.bottom - gridBox.bottom,
+        gridWidth: gridBox.width,
+        boxes,
+        documentOverflows:
+          document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    });
+
+    expect(metrics.columns).toBe(viewport.columns);
+    expect(metrics.rowGap).toBe("14px");
+    expect(metrics.columnGap).toBe("18px");
+    expect(metrics.marginBottom).toBe("0px");
+    expect(metrics.fieldGap).toBe("5px");
+    expect(Math.abs(metrics.bottomInset - 14)).toBeLessThanOrEqual(1);
+    expect(metrics.documentOverflows).toBe(false);
+    expect(Math.abs(metrics.boxes[0].width - metrics.gridWidth)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.boxes[1].width - metrics.gridWidth)).toBeLessThanOrEqual(1);
+
+    if (viewport.columns === 2) {
+      expect(Math.abs(metrics.boxes[2].y - metrics.boxes[3].y)).toBeLessThanOrEqual(1);
+      expect(metrics.boxes[3].x).toBeGreaterThan(metrics.boxes[2].x);
+    } else {
+      for (const box of metrics.boxes) {
+        expect(Math.abs(box.width - metrics.gridWidth)).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+}
