@@ -5,7 +5,7 @@ use rusqlite::Connection;
 use crate::error::StorageResult;
 
 /// Current schema version.
-pub const SCHEMA_VERSION: i32 = 17;
+pub const SCHEMA_VERSION: i32 = 18;
 
 /// Initialize the database schema.
 pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
@@ -298,6 +298,7 @@ fn migrate_schema(conn: &Connection, from_version: i32) -> StorageResult<()> {
             14 => migrate_v14_to_v15(conn)?,
             15 => migrate_v15_to_v16(conn)?,
             16 => migrate_v16_to_v17(conn)?,
+            17 => migrate_v17_to_v18(conn)?,
             _ => {
                 return Err(crate::error::StorageError::Backend(
                     crate::error::BackendError::Internal {
@@ -1411,6 +1412,27 @@ fn migration_err(message: String) -> crate::error::StorageError {
     })
 }
 
+/// v17 -> v18: provider-side Bulk Submit store (#772).
+///
+/// Helios numbered this v16→v17. Atrius v17 is the subscription outbox, so the
+/// provider table lands as v18. `IF NOT EXISTS` is safe if a Helios-main
+/// database already applied the table under version 17.
+fn migrate_v17_to_v18(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS bulk_provider_submissions (
+            tenant_id  TEXT NOT NULL,
+            id         TEXT NOT NULL,
+            data       BLOB NOT NULL,
+            version    INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (tenant_id, id)
+        )",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create bulk_provider_submissions table: {e}")))?;
+    Ok(())
+}
+
 /// Drop all tables (for testing).
 #[cfg(test)]
 #[allow(dead_code)]
@@ -1567,6 +1589,25 @@ mod tests {
 
         let version = get_schema_version(&conn).unwrap();
         assert_eq!(version, SCHEMA_VERSION);
+
+        let table_exists = |name: &str| -> i32 {
+            conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                [name],
+                |row| row.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(
+            table_exists("subscription_outbox"),
+            1,
+            "v17 must create the Atrius subscription outbox"
+        );
+        assert_eq!(
+            table_exists("bulk_provider_submissions"),
+            1,
+            "v18 must create Helios bulk_provider_submissions"
+        );
     }
 
     #[test]

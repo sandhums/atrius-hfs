@@ -41,6 +41,7 @@
 mod bulk_export;
 mod bulk_import;
 mod capability;
+mod capability_json;
 mod compartments;
 mod conformance;
 mod editor;
@@ -57,9 +58,21 @@ mod tenants;
 #[doc(hidden)]
 pub use conformance::{ConformanceSource, SqlExportStatus, StaticConformanceSource};
 
+/// The locale plumbing, re-exported out of the private `i18n` module.
+///
+/// `mount` needs neither of these, but `tests/router_http.rs` does: it is an
+/// integration test, so it lives outside the crate, and it asserts the topbar
+/// account menu against `helios_ui_chrome::user_menu` rendered from the *real*
+/// Fluent catalogs. Without the re-export that test would have to hard-code
+/// English strings, which is precisely the drift it exists to catch (#799).
+/// `RequestLocale` comes along because it is the only public way to build an
+/// [`I18n`].
+pub use i18n::{I18n, RequestLocale};
+
 use askama::Template;
 use axum::{
     Json, Router,
+    body::Bytes,
     extract::{DefaultBodyLimit, Query, RawQuery, State},
     http::StatusCode,
     middleware,
@@ -72,12 +85,11 @@ use chrono::{DateTime, Datelike, Duration, Utc};
 use helios_observability::dashboard::{
     DashboardPoint, DashboardSeries, DashboardSnapshot, DashboardWindow, ExportJobCounts, TypeCount,
 };
-use helios_persistence::core::{ResourceStorage, SettingsStore};
-use i18n::{I18n, RequestLocale};
+use helios_persistence::core::{BulkProviderStore, ResourceStorage, SettingsStore};
 use rust_embed::RustEmbed;
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, atomic::AtomicBool};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Static UI assets (htmx, CSS) embedded into the binary at compile time.
@@ -103,6 +115,18 @@ pub struct NlSearch {
     /// `HFS_NL_SEARCH_MODEL` â€” shown in the setup state so an operator can see
     /// what they would be billed for.
     pub model: String,
+}
+
+/// Whether the mounted FHIR API can search Patient resources by name.
+///
+/// Exact logical-id reads remain available in both modes. The UI keeps this
+/// capability separate because standalone S3 intentionally has no search
+/// index, while S3 combined with Elasticsearch does.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PatientNameSearchSupport {
+    #[default]
+    Enabled,
+    IdOnly,
 }
 
 /// Shared router state: values that are constant for the process lifetime.
@@ -133,6 +157,12 @@ struct WebState {
     /// submissions target as their recipient (#689). Distinct from the
     /// loopback self-call base the conformance source uses.
     public_base_url: String,
+    /// Trusted loopback base used for UI calls back into this HFS process.
+    /// Unlike `public_base_url`, this never carries a reverse-proxy prefix.
+    self_base_url: String,
+    /// Runtime capability cache. A standards-compliant 501 from Patient name
+    /// search downgrades this process to exact-id lookup only.
+    patient_name_search: Arc<AtomicBool>,
     /// Whether canonical tenant URLs include the selected tenant as a path.
     tenant_path_routing: bool,
     /// The server's default FHIR version, used when seeding a new tenant.
@@ -147,6 +177,10 @@ struct WebState {
     /// when the backend has no settings store; the selector then applies
     /// per-page only.
     settings: Option<Arc<dyn SettingsStore>>,
+    /// Provider-side Bulk Submit submissions (#772): tenant-scoped, shared by
+    /// the tenant's operators. None when the backend has no store; the Bulk
+    /// Import workspace then reports itself unavailable.
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 }
 
 /// The settings keys holding the user's FHIR-version and tenant choices, and
@@ -410,6 +444,27 @@ impl Status {
     /// which does not exist yet (#320).
     pub(crate) fn user_can_logout(&self) -> bool {
         false
+    }
+
+    /// The topbar account menu, rendered by `helios-ui-chrome` so HFS and HTS
+    /// cannot drift (#799). `i18n` is a parameter because it is a sibling field
+    /// on every page struct, not part of `Status`.
+    ///
+    /// Takes `&I18n` rather than `I18n` even though the type is `Copy`: askama
+    /// passes template fields to a method call by reference, so the generated
+    /// code hands us `&self.i18n`.
+    pub(crate) fn user_menu(&self, i18n: &I18n) -> Result<String, askama::Error> {
+        helios_ui_chrome::user_menu(
+            i18n,
+            helios_ui_chrome::UserIdentity {
+                display: self.user_display(),
+                secondary: self.user_secondary(),
+                initials: self.user_initials(),
+                photo: self.user_photo(),
+                can_logout: self.user_can_logout(),
+                logout_href: "/ui/logout",
+            },
+        )
     }
 
     /// A browser-safe terminology destination, when the configured value is a
@@ -735,6 +790,25 @@ struct JsonViewFragment {
     json_view_paths: bool,
 }
 
+/// A small CapabilityStatement (or subtree) rendered by the unchanged shared
+/// JSON highlighter.
+#[derive(Template)]
+#[template(path = "partials/capability-json-full.html")]
+struct CapabilityJsonFullFragment {
+    i18n: I18n,
+    json_lines: Vec<json_view::JsonLine>,
+    json_view_id: String,
+    json_view_paths: bool,
+}
+
+/// One bounded level of a large CapabilityStatement.
+#[derive(Template)]
+#[template(path = "partials/capability-json-outline.html")]
+struct CapabilityJsonOutlineFragment {
+    i18n: I18n,
+    outline: capability_json::Outline,
+}
+
 /// Compartment viewer & route tester (#237). Read-only: the base definitions
 /// are codegen'd into the binary; a tenant-scoped override layer is open
 /// question 1 on the issue.
@@ -842,6 +916,7 @@ pub fn mount(
     fhir_version: helios_fhir::FhirVersion,
     terminology: Option<String>,
     public_base_url: String,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 ) -> Router {
     mount_with_body_limit(
         fhir_app,
@@ -857,6 +932,7 @@ pub fn mount(
         terminology,
         public_base_url,
         10 * 1024 * 1024,
+        bulk_provider,
     )
 }
 
@@ -876,6 +952,7 @@ pub fn mount_with_body_limit(
     terminology: Option<String>,
     public_base_url: String,
     max_body_size: usize,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 ) -> Router {
     mount_with_body_limit_and_tenant_routing(
         fhir_app,
@@ -892,6 +969,8 @@ pub fn mount_with_body_limit(
         public_base_url,
         max_body_size,
         false,
+        bulk_provider,
+        PatientNameSearchSupport::Enabled,
     )
 }
 
@@ -912,14 +991,16 @@ pub fn mount_with_body_limit_and_tenant_routing(
     public_base_url: String,
     max_body_size: usize,
     tenant_path_routing: bool,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
+    patient_name_search: PatientNameSearchSupport,
 ) -> Router {
     let source: Arc<dyn ConformanceSource> = Arc::new(conformance::HttpConformanceSource::new(
-        self_base_url,
+        self_base_url.clone(),
         outbound_auth,
         fhir_version,
         data_dir.clone(),
     ));
-    mount_with_conformance_source_and_body_limit_and_tenant_routing(
+    mount_with_conformance_source_and_runtime(
         fhir_app,
         hfs_version,
         data_dir,
@@ -933,6 +1014,9 @@ pub fn mount_with_body_limit_and_tenant_routing(
         public_base_url,
         max_body_size,
         tenant_path_routing,
+        bulk_provider,
+        self_base_url,
+        patient_name_search,
     )
 }
 
@@ -954,6 +1038,7 @@ pub fn mount_with_conformance_source(
     fhir_version: helios_fhir::FhirVersion,
     terminology: Option<String>,
     public_base_url: String,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 ) -> Router {
     mount_with_conformance_source_and_body_limit(
         fhir_app,
@@ -968,6 +1053,7 @@ pub fn mount_with_conformance_source(
         terminology,
         public_base_url,
         10 * 1024 * 1024,
+        bulk_provider,
     )
 }
 
@@ -987,6 +1073,7 @@ pub fn mount_with_conformance_source_and_body_limit(
     terminology: Option<String>,
     public_base_url: String,
     max_body_size: usize,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 ) -> Router {
     mount_with_conformance_source_and_body_limit_and_tenant_routing(
         fhir_app,
@@ -1002,6 +1089,7 @@ pub fn mount_with_conformance_source_and_body_limit(
         public_base_url,
         max_body_size,
         false,
+        bulk_provider,
     )
 }
 
@@ -1022,8 +1110,58 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
     public_base_url: String,
     max_body_size: usize,
     tenant_path_routing: bool,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
+) -> Router {
+    mount_with_conformance_source_and_runtime(
+        fhir_app,
+        hfs_version,
+        data_dir,
+        nl,
+        tenants,
+        settings,
+        default_tenant,
+        source,
+        fhir_version,
+        terminology,
+        public_base_url.clone(),
+        max_body_size,
+        tenant_path_routing,
+        bulk_provider,
+        public_base_url,
+        PatientNameSearchSupport::Enabled,
+    )
+}
+
+/// Testable mount with explicit same-process FHIR routing and capabilities.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn mount_with_conformance_source_and_runtime(
+    fhir_app: Router,
+    hfs_version: &'static str,
+    data_dir: Option<PathBuf>,
+    nl: NlSearch,
+    tenants: Option<Arc<dyn ResourceStorage>>,
+    settings: Option<Arc<dyn SettingsStore>>,
+    default_tenant: String,
+    source: Arc<dyn ConformanceSource>,
+    fhir_version: helios_fhir::FhirVersion,
+    terminology: Option<String>,
+    public_base_url: String,
+    max_body_size: usize,
+    tenant_path_routing: bool,
+    bulk_provider: Option<Arc<dyn BulkProviderStore>>,
+    self_base_url: String,
+    patient_name_search: PatientNameSearchSupport,
 ) -> Router {
     let nl_enabled = nl.enabled;
+    let mut parsed_self_base = reqwest::Url::parse(&self_base_url)
+        .expect("UI mount requires a valid HTTP(S) self base URL");
+    let trimmed_path = parsed_self_base.path().trim_end_matches('/').to_string();
+    parsed_self_base.set_path(&trimmed_path);
+    let self_base_url = parsed_self_base
+        .to_string()
+        .trim_end_matches('/')
+        .to_string();
     let mut parsed_public_base = reqwest::Url::parse(&public_base_url)
         .expect("UI mount requires a valid HTTP(S) public base URL");
     let trimmed_path = parsed_public_base.path().trim_end_matches('/').to_string();
@@ -1053,12 +1191,21 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         .route("/ui/compartments", get(compartments_page))
         // Read-only live CapabilityStatement (#653).
         .route("/ui/capability-statement", get(capability_page))
+        .route(
+            "/ui/capability-statement/json-fragment",
+            get(capability_json_fragment),
+        )
         // Batch/Transaction workspace (#476): upload â†’ preflight â†’ response.
         .route("/ui/batch", get(batch_page))
         // SQL on FHIR workspaces (#649).
         .route(
             "/ui/sql/view-definitions",
             get(sql_view_definitions_page).post(sql_view_definitions_save),
+        )
+        // #753 ticket 03 (evaluation POC): the editor's async server lint.
+        .route(
+            "/ui/sql/view-definitions/lint",
+            axum::routing::post(sql_view_definitions_lint),
         )
         .route(
             "/ui/sql/queries",
@@ -1095,9 +1242,14 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         .route("/ui/history/diff", axum::routing::post(history_diff))
         .route(
             "/ui/bulk-export",
-            get(bulk_export::page).post(bulk_export::start),
+            get(bulk_export::active).post(bulk_export::start),
         )
-        .route("/ui/bulk-export/active", get(bulk_export::active))
+        .route("/ui/bulk-export/new", get(bulk_export::page))
+        .route(
+            "/ui/bulk-export/patient-options",
+            axum::routing::post(bulk_export::patient_options),
+        )
+        .route("/ui/bulk-export/active", get(bulk_export::active_redirect))
         .route("/ui/bulk-export/active/{id}/card", get(bulk_export::card))
         .route(
             "/ui/bulk-export/active/{id}/cancel",
@@ -1106,6 +1258,14 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         .route(
             "/ui/bulk-export/active/{id}/retry",
             axum::routing::post(bulk_export::retry),
+        )
+        .route(
+            "/ui/bulk-export/active/{id}/delete",
+            axum::routing::post(bulk_export::delete),
+        )
+        .route(
+            "/ui/bulk-export/active/{id}/download",
+            get(bulk_export::download_all),
         )
         .route(
             "/ui/bulk-import",
@@ -1120,14 +1280,6 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
             get(bulk_import::empty_manifest),
         )
         .route("/ui/bulk-import/keys", get(bulk_import::keys))
-        .route(
-            "/ui/bulk-import/{id}/manifests/{mid}/replace",
-            axum::routing::post(bulk_import::replace_manifest),
-        )
-        .route(
-            "/ui/bulk-import/{id}/manifests/{mid}/abort",
-            axum::routing::post(bulk_import::abort_manifest),
-        )
         .route("/ui/bulk-import/{id}", get(bulk_import::detail))
         .route(
             "/ui/bulk-import/{id}/status",
@@ -1144,26 +1296,6 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         .route(
             "/ui/bulk-import/{id}/abort",
             axum::routing::post(bulk_import::abort),
-        )
-        .route(
-            "/ui/bulk-import/{id}/complete",
-            axum::routing::post(bulk_import::complete),
-        )
-        .route(
-            "/ui/bulk-import/{id}/submit-all",
-            axum::routing::post(bulk_import::submit_all),
-        )
-        .route(
-            "/ui/bulk-import/{id}/manifests",
-            axum::routing::post(bulk_import::add_manifest),
-        )
-        .route(
-            "/ui/bulk-import/{id}/manifests/{mid}/delete",
-            axum::routing::post(bulk_import::delete_manifest),
-        )
-        .route(
-            "/ui/bulk-import/{id}/manifests/{mid}/submit",
-            axum::routing::post(bulk_import::submit_manifest),
         )
         .route("/ui/tenants", get(tenants::page).post(tenants::create))
         .route("/ui/tenants/rows", get(tenants::rows))
@@ -1188,11 +1320,17 @@ pub fn mount_with_conformance_source_and_body_limit_and_tenant_routing(
         tenants,
         provisioning: Default::default(),
         settings,
+        bulk_provider,
         data_dir,
         fhir_version,
         default_tenant,
         terminology,
         public_base_url,
+        self_base_url,
+        patient_name_search: Arc::new(AtomicBool::new(matches!(
+            patient_name_search,
+            PatientNameSearchSupport::Enabled
+        ))),
         tenant_path_routing,
     };
 
@@ -1894,10 +2032,14 @@ struct SqlViewDefinitionsPage {
     rail: Vec<sql_views::VdSummary>,
     /// The rail's server-side name filter, echoed back into the search box.
     filter: String,
-    /// The list fetch failed — the page says so instead of showing an empty rail.
+    /// The rail's "previous" link, `None` on the first page (#741).
+    prev_href: Option<String>,
+    /// The rail's "next" link, `None` when the search reported no further page.
+    next_href: Option<String>,
+    /// The list search failed — the page says so instead of showing an empty rail.
     degraded: Option<String>,
-    /// `?vd=` (or the first entry): id, name, and pretty JSON. `None` only
-    /// when the store holds no views and none is being created.
+    /// `?vd=` (or the rail's first visible entry): id, name, and pretty JSON.
+    /// `None` only when the store holds no views and none is being created.
     selected: Option<SelectedVd>,
     /// `?vd=new`: the JSON below is the starter document, not a stored view.
     is_new: bool,
@@ -1919,8 +2061,20 @@ struct SqlVdQuery {
     filter: Option<String>,
     run: Option<String>,
     saved: Option<String>,
+    /// 1-based (#741). Kept as raw text rather than `Option<usize>` so a
+    /// non-numeric value fails the `parse` below instead of the whole
+    /// extractor — an invalid page falls back to 1, it never 400s.
+    page: Option<String>,
 }
 
+/// `GET /ui/sql/view-definitions`: the rail is one page of a server-side
+/// `ViewDefinition` search (#741) — `name:contains`, `_sort=name`,
+/// `_count`/`_offset` — never the full-collection fetch this page used
+/// before #741. The old in-memory filter also matched the resource-type
+/// column (`ViewDefinition.resource`); that match is dropped on purpose, not
+/// carried over into `name:contains` — it was never a documented part of
+/// #649 and has no standard FHIR search expression (see
+/// [`sql_views::rail_search_params`] for why).
 async fn sql_view_definitions_page(
     State(state): State<WebState>,
     locale: RequestLocale,
@@ -1929,28 +2083,44 @@ async fn sql_view_definitions_page(
     Query(query): Query<SqlVdQuery>,
 ) -> Response {
     let filter = query.filter.unwrap_or_default();
-    let (mut rail, degraded) = match state
+    // Absent or non-numeric falls back to page 1 rather than 400ing — a
+    // stale or hand-edited `?page=` is a navigation mistake, not an error.
+    let page = query
+        .page
+        .as_deref()
+        .and_then(|p| p.parse::<usize>().ok())
+        .filter(|&p| p >= 1)
+        .unwrap_or(1);
+    let offset = (page - 1) * sql_views::PAGE_SIZE;
+
+    // The rail is one page of a server-side search (#741): filtered by
+    // `name:contains`, ordered by `_sort=name`, sliced by `_count`/`_offset`.
+    // It never pulls the tenant's whole ViewDefinition collection into memory
+    // the way the page's other consumers of `ConformanceSource::fetch`
+    // (SearchParameters, Compartments, SQL Export) still do.
+    let params = sql_views::rail_search_params(&filter);
+    let (mut page_resources, has_next, degraded) = match state
         .conformance
-        .fetch("ViewDefinition", rv.0, &rt.id)
+        .search_page(
+            "ViewDefinition",
+            &params,
+            sql_views::PAGE_SIZE,
+            offset,
+            rv.0,
+            &rt.id,
+        )
         .await
     {
-        Ok(resources) => (resources, None),
+        Ok(page) => (page.resources, page.has_next, None),
         Err(error) => {
-            tracing::warn!("ViewDefinition self-fetch failed: {error}");
-            (Vec::new(), Some(error))
+            tracing::warn!("ViewDefinition search failed: {error}");
+            (Vec::new(), false, Some(error))
         }
     };
-    let summaries = {
-        let mut s = sql_views::summarize(&rail);
-        if !filter.is_empty() {
-            let needle = filter.to_lowercase();
-            s.retain(|e| {
-                e.name.to_lowercase().contains(&needle)
-                    || e.resource.to_lowercase().contains(&needle)
-            });
-        }
-        s
-    };
+    let summaries = sql_views::summarize(&page_resources);
+    let prev_href =
+        (page > 1).then(|| sql_views::page_href(&filter, query.vd.as_deref(), page - 1));
+    let next_href = has_next.then(|| sql_views::page_href(&filter, query.vd.as_deref(), page + 1));
 
     let is_new = query.vd.as_deref() == Some("new");
     let (selected, selected_value) = if is_new {
@@ -1963,17 +2133,44 @@ async fn sql_view_definitions_page(
             None,
         )
     } else {
-        // ?vd=<id>, defaulting to the first rail entry. The full resource is
-        // taken from the fetch — no second round trip.
+        // ?vd=<id>, defaulting to the rail's first visible entry. When the id
+        // is on the visible page the resource is taken from the search
+        // above — no second round trip; otherwise (a different page, or a
+        // filter that no longer matches it) it's read directly by id, so
+        // selection stays independent of what the rail currently shows
+        // (#741).
         let wanted = query
             .vd
             .clone()
             .or_else(|| summaries.first().map(|e| e.id.clone()));
-        let found = wanted.and_then(|id| {
-            rail.iter()
-                .position(|vd| vd.get("id").and_then(serde_json::Value::as_str) == Some(&id))
+        let on_page = wanted.as_deref().and_then(|id| {
+            page_resources
+                .iter()
+                .position(|vd| vd.get("id").and_then(serde_json::Value::as_str) == Some(id))
         });
-        match found.map(|i| rail.swap_remove(i)) {
+        let resource = match on_page {
+            Some(i) => Some(page_resources.swap_remove(i)),
+            None => match &wanted {
+                Some(id) => {
+                    match state
+                        .conformance
+                        .read_resource("ViewDefinition", id, rv.0, &rt.id)
+                        .await
+                    {
+                        Ok(vd) => Some(vd),
+                        Err(error) => {
+                            // A stale or mistyped id is ordinary navigation,
+                            // not an operator concern — the page just falls
+                            // back to its no-selection state below.
+                            tracing::debug!("ViewDefinition read failed for vd={id}: {error}");
+                            None
+                        }
+                    }
+                }
+                None => None,
+            },
+        };
+        match resource {
             Some(vd) => {
                 let id = vd
                     .get("id")
@@ -2008,6 +2205,8 @@ async fn sql_view_definitions_page(
         active_page: "sql-view-definitions",
         rail: summaries,
         filter,
+        prev_href,
+        next_href,
         degraded,
         selected,
         is_new,
@@ -2047,6 +2246,8 @@ async fn sql_view_definitions_save(
             active_page: "sql-view-definitions",
             rail: Vec::new(),
             filter: String::new(),
+            prev_href: None,
+            next_href: None,
             degraded: None,
             selected: Some(SelectedVd {
                 name: if is_new { String::new() } else { id.clone() },
@@ -2121,6 +2322,43 @@ async fn sql_view_definitions_save(
         }
         Err(error) => render(error_page(error, form.json, id.is_none(), form.id)),
     }
+}
+
+/// #753 ticket 03 (evaluation POC, not merged upstream): structural +
+/// FHIRPath-syntax lint for the ViewDefinition editor's async CodeMirror 6
+/// linter (ticket 02's `vd-editor.js`, RF7). Delegates entirely to
+/// [`helios_sof::lint::lint_view_definition`] — this handler only decodes
+/// the request body and shapes the response; it never touches storage, the
+/// tenant, or the configured FHIR version, because the lint itself is
+/// purely structural (RF5) and version-agnostic.
+///
+/// Plain JSON in, JSON out — no htmx swap involved, matching the precedent
+/// `/ui/editor/expand` already sets for a browser-facing JSON endpoint that
+/// exists to support an editor rather than to mirror the FHIR REST surface.
+/// The body is read as raw bytes (not the `Json` extractor) so a malformed
+/// body reports RF5's exact `{"error": "..."}` shape instead of axum's
+/// generic rejection body.
+async fn sql_view_definitions_lint(body: Bytes) -> Response {
+    let doc: serde_json::Value = match serde_json::from_slice(&body) {
+        Ok(doc) => doc,
+        Err(error) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": format!("invalid JSON: {error}") })),
+            )
+                .into_response();
+        }
+    };
+
+    let diagnostics = helios_sof::lint::lint_view_definition(&doc);
+    // NF2: never log the document itself — a ViewDefinition's `constant[]`
+    // can carry PHI — only how many diagnostics it produced.
+    tracing::debug!(
+        diagnostic_count = diagnostics.len(),
+        "linted a ViewDefinition document"
+    );
+
+    Json(serde_json::json!({ "diagnostics": diagnostics })).into_response()
 }
 
 /// What tells the SQL Queries workspace apart from SQL Views: both edit and
@@ -2687,14 +2925,17 @@ struct CapabilityPage {
     active_page: &'static str,
     /// `None` when the self-fetch failed — the page degrades to a warning.
     view: Option<capability::CapabilityView>,
-    /// Highlighted, foldable JSON when the statement fits the render budget.
-    json_lines: Vec<json_view::JsonLine>,
-    json_view_id: String,
-    json_view_paths: bool,
-    /// Pretty-printed raw statement when highlighted rendering exceeds its
-    /// budget. Askama escapes it inside the fallback `<pre>`.
+    /// Pretty-printed JSON for the explicit no-JavaScript fallback. This never
+    /// passes through the highlighted renderer.
     raw: String,
-    raw_fallback: bool,
+    /// Whether this request explicitly asked for the plain JSON fallback.
+    raw_requested: bool,
+    /// Version- and filter-preserving URL used by the ordinary no-JS link.
+    raw_url: String,
+    /// Bounded, server-driven JSON root loaded by htmx.
+    fragment_url: String,
+    /// Effective version carried by the resource filter's ordinary GET form.
+    effective_version: &'static str,
     /// The server-side resource-type filter, echoed back into the form.
     filter: String,
 }
@@ -2702,6 +2943,100 @@ struct CapabilityPage {
 #[derive(Deserialize, Default)]
 struct CapabilityQuery {
     filter: Option<String>,
+    version: Option<String>,
+    /// A string flag because the public query spelling is `raw=1`, not a Serde
+    /// boolean literal such as `raw=true`.
+    raw: Option<String>,
+}
+
+fn capability_raw_url(filter: &str, version: helios_fhir::FhirVersion) -> String {
+    let mut query = form_urlencoded::Serializer::new(String::new());
+    query.append_pair("raw", "1");
+    query.append_pair("version", version.as_str());
+    query.append_pair("filter", filter);
+    format!("/ui/capability-statement?{}", query.finish())
+}
+
+#[derive(Deserialize, Default)]
+struct CapabilityJsonQuery {
+    version: Option<String>,
+    #[serde(default)]
+    path: String,
+    #[serde(default)]
+    offset: usize,
+    limit: Option<usize>,
+}
+
+fn bounded_capability_fragment<T: Template>(template: T) -> Response {
+    match template.render() {
+        Ok(html) if html.len() <= capability_json::MAX_FRAGMENT_HTML_BYTES => {
+            Html(html).into_response()
+        }
+        Ok(_) => (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "CapabilityStatement fragment exceeds the rendering budget",
+        )
+            .into_response(),
+        Err(error) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("template render error: {error}"),
+        )
+            .into_response(),
+    }
+}
+
+async fn capability_json_fragment(
+    State(state): State<WebState>,
+    locale: RequestLocale,
+    rv: RequestVersion,
+    rt: RequestTenant,
+    Query(query): Query<CapabilityJsonQuery>,
+) -> Response {
+    let version = match query.version.as_deref() {
+        Some(value) => match search_params::version_from_str(value) {
+            Some(version) => version,
+            None => return (StatusCode::BAD_REQUEST, "Unsupported FHIR version").into_response(),
+        },
+        None => rv.0,
+    };
+    let statement = match state.conformance.metadata(version, &rt.id).await {
+        Ok(statement) => statement,
+        Err(error) => {
+            tracing::warn!("CapabilityStatement fragment fetch failed: {error}");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "CapabilityStatement is unavailable",
+            )
+                .into_response();
+        }
+    };
+    let limit = query.limit.unwrap_or(capability_json::DEFAULT_PAGE_SIZE);
+    match capability_json::plan(&statement, &query.path, query.offset, limit, version) {
+        Ok(capability_json::View::Full(json_lines)) => {
+            bounded_capability_fragment(CapabilityJsonFullFragment {
+                i18n: I18n::new(locale),
+                json_lines,
+                json_view_id: if query.path.is_empty() {
+                    "capability-json".to_string()
+                } else {
+                    String::new()
+                },
+                json_view_paths: false,
+            })
+        }
+        Ok(capability_json::View::Outline(outline)) => {
+            bounded_capability_fragment(CapabilityJsonOutlineFragment {
+                i18n: I18n::new(locale),
+                outline,
+            })
+        }
+        Err(capability_json::Error::NotFound) => {
+            (StatusCode::NOT_FOUND, "JSON path not found").into_response()
+        }
+        Err(capability_json::Error::InvalidPointer | capability_json::Error::InvalidPage) => {
+            (StatusCode::BAD_REQUEST, "Invalid JSON fragment request").into_response()
+        }
+    }
 }
 
 async fn capability_page(
@@ -2712,51 +3047,44 @@ async fn capability_page(
     Query(query): Query<CapabilityQuery>,
 ) -> Response {
     let filter = query.filter.unwrap_or_default();
-    let fetched = state.conformance.metadata(rv.0, &rt.id).await;
-    let (view, json_lines, raw, raw_fallback) = match fetched {
+    let version = query
+        .version
+        .as_deref()
+        .and_then(search_params::version_from_str)
+        .unwrap_or(rv.0);
+    let raw_requested = query.raw.as_deref() == Some("1");
+    let raw_url = capability_raw_url(&filter, version);
+    let fetched = state.conformance.metadata(version, &rt.id).await;
+    let (view, raw) = match fetched {
         Ok(statement) => {
-            let mut view = capability::build_view(&statement, rv.0);
+            let mut view = capability::build_view(&statement, version);
             if !filter.is_empty() {
                 let needle = filter.to_lowercase();
                 view.resources
                     .retain(|r| r.resource_type.to_lowercase().contains(&needle));
             }
-            const MAX_LINES: usize = 4_000;
-            const MAX_ESTIMATED_HTML_BYTES: usize = 2 * 1024 * 1024;
-            match json_view::try_lines(
-                &statement,
-                json_view::RenderOptions {
-                    include_paths: false,
-                    budget: Some(json_view::RenderBudget {
-                        max_lines: MAX_LINES,
-                        max_estimated_html_bytes: MAX_ESTIMATED_HTML_BYTES,
-                    }),
-                },
-            ) {
-                Ok(lines) => (Some(view), lines, String::new(), false),
-                Err(_) => (
-                    Some(view),
-                    Vec::new(),
-                    serde_json::to_string_pretty(&statement).unwrap_or_default(),
-                    true,
-                ),
-            }
+            let raw = if raw_requested {
+                serde_json::to_string_pretty(&statement).unwrap_or_default()
+            } else {
+                String::new()
+            };
+            (Some(view), raw)
         }
         Err(error) => {
             tracing::warn!("CapabilityStatement self-fetch failed: {error}");
-            (None, Vec::new(), String::new(), false)
+            (None, String::new())
         }
     };
     render(CapabilityPage {
-        status: current_status(&state, rv.0, &rt),
+        status: current_status(&state, version, &rt),
         i18n: I18n::new(locale),
         active_page: "capability-statement",
         view,
-        json_lines,
-        json_view_id: "capability-json".to_string(),
-        json_view_paths: false,
         raw,
-        raw_fallback,
+        raw_requested,
+        raw_url,
+        fragment_url: capability_json::root_fragment_url(version),
+        effective_version: version.as_str(),
         filter,
     })
 }
@@ -3502,8 +3830,44 @@ fn unix_timestamp_seconds() -> u64 {
 mod tests {
     use super::*;
 
+    #[derive(Template)]
+    #[template(source = "{{ value }}", ext = "html")]
+    struct BoundedFragmentTestTemplate<'a> {
+        value: &'a str,
+    }
+
+    struct FailingDisplay;
+
+    impl std::fmt::Display for FailingDisplay {
+        fn fmt(&self, _formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            Err(std::fmt::Error)
+        }
+    }
+
+    #[derive(Template)]
+    #[template(source = "{{ value }}", ext = "html")]
+    struct FailingFragmentTestTemplate {
+        value: FailingDisplay,
+    }
+
     fn i18n(tag: &str) -> I18n {
         I18n::from_tag(tag).expect("supported locale")
+    }
+
+    #[test]
+    fn capability_fragments_enforce_the_rendering_budget() {
+        let oversized = "x".repeat(capability_json::MAX_FRAGMENT_HTML_BYTES + 1);
+        let response =
+            bounded_capability_fragment(BoundedFragmentTestTemplate { value: &oversized });
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    #[test]
+    fn capability_fragments_report_template_errors() {
+        let response = bounded_capability_fragment(FailingFragmentTestTemplate {
+            value: FailingDisplay,
+        });
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     /// Builds an `IndexPage` from the sample snapshot for template-rendering tests.
@@ -3724,6 +4088,34 @@ mod tests {
         assert!(Assets::get("fonts/figtree-latin.woff2").is_some());
         assert!(Assets::get("fonts/figtree-latin-ext.woff2").is_some());
         assert!(Assets::get("logo.png").is_some());
+    }
+
+    /// #753 ticket 01: the CodeMirror 6 + lezer-fhirpath vendoring ritual's
+    /// one committed output (`crates/ui/vendor/codemirror/README.md`) is
+    /// embedded exactly like any other subfolder asset — `assets/fonts/` is
+    /// the existing precedent for rust-embed walking into `assets/vendor/` —
+    /// and opens with the license banner rollup.config.js generates, wrapping
+    /// the `window.HfsCodeMirror` global tickets 02 and 03 build against.
+    #[test]
+    fn codemirror_vendor_bundle_is_embedded() {
+        let file = Assets::get("vendor/codemirror.bundle.js").expect("CodeMirror bundle embedded");
+        let source = std::str::from_utf8(&file.data).expect("bundle is UTF-8");
+        assert!(
+            source.starts_with("/*!"),
+            "bundle must open with the license banner"
+        );
+        assert!(
+            source.contains("HfsCodeMirror"),
+            "bundle must define the window.HfsCodeMirror global"
+        );
+    }
+
+    /// #753 ticket 02: vd-editor.js — the hand-written mount script that
+    /// progressively enhances the ViewDefinition textarea with the ticket 01
+    /// bundle — is embedded like every other page script.
+    #[test]
+    fn vd_editor_script_is_embedded() {
+        assert!(Assets::get("vd-editor.js").is_some());
     }
 
     /// The theme script persists the choice to the per-user settings document

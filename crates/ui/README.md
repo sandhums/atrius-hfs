@@ -19,9 +19,12 @@ partial page updates. Handlers return **full pages** on hard navigations and
 thin.
 
 **There is no React, Vue, Svelte, Alpine, or jQuery here — and no bundler, no
-npm dependency, and no build step for the browser code.** The only vendored
-third-party script is htmx itself; everything else under `assets/` is
-hand-written vanilla JS in an IIFE. Do not introduce a framework.
+npm dependency, and no build step for the browser code, with one narrow,
+documented exception** (see "Assets: vendored & embedded" below). Two
+third-party scripts are vendored: htmx, and — as a prebuilt, never-built-here
+bundle — CodeMirror 6, for the ViewDefinition editor (#753). Everything else
+under `assets/` is hand-written vanilla JS in an IIFE. Do not introduce a
+framework.
 
 Why, over a SPA + JSON API:
 
@@ -93,6 +96,29 @@ stale.
 To update htmx, replace `assets/htmx.min.js` with the new pinned release and
 note the version bump in the commit.
 
+### The one exception: a vendored, prebuilt bundle
+
+"No bundler" (above) is the default, not an absolute: a third-party script that
+is a real parser or grammar — not a widget — cannot reasonably be hand-written
+in the style every other asset in this crate uses. For that narrow case:
+
+> Third-party browser code may be vendored as a prebuilt single-file bundle produced by a
+> documented, checked-in, one-off script under `crates/ui/vendor/`; pinned versions and a
+> lockfile are committed alongside it; the script is never executed at build time or in CI;
+> the resulting bundle is never loaded from a CDN; and the bundle ships with its license
+> banner intact.
+
+CodeMirror 6 is the first, and so far only, case this applies to (#753):
+[`crates/ui/vendor/codemirror/`](vendor/codemirror/README.md) is the vendoring
+ritual (pinned npm dependencies, a committed lockfile, a rollup + terser recipe
+run by hand, never by `cargo build` or CI); its one output,
+[`assets/vendor/codemirror.bundle.js`](assets/vendor/codemirror.bundle.js), is
+the vendored bundle itself — embedded and served exactly like every other
+asset in this crate (above), nothing bundler-specific about how it ships. It
+backs the ViewDefinition editor on `/ui/sql/view-definitions`; see
+[`docs/viewdefinition-editor-evaluation.md`](../../docs/viewdefinition-editor-evaluation.md)
+for the full evaluation this amendment is drawn from.
+
 ### Client-side scripts
 
 Each is a small, self-contained IIFE. Page-specific scripts load with `defer`;
@@ -110,11 +136,13 @@ it exists to be called by the others.
 | `saved-queries.js` | Saved queries, the visual search builder, and the `/_user/settings` read/modify/write cycle |
 | `editor.js` | The schema-driven editor loop — posts the document to `/ui/editor/render` and swaps in the server's HTML |
 | `json-view.js` | Delegated folding and accessibility state for every server-rendered JSON view |
+| `combobox.js` | Shared multi-select state, chips, keyboard/ARIA behavior, and progressive fallback upgrade; htmx owns transport and callers own result semantics |
 | `resources.js` | The Resources workspace edit modal and "Create new" |
 | `batch.js` | Bundle pick → lazy highlighted previews → execution plan → per-entry outcomes |
+| `bulk-export.js` | All Resources, individual resource types, and Since/Custom instant state on the Bulk Export builder |
 | `history.js` | Version selection and diff requests |
 | `nl-search.js` | Natural-language search mode (only loaded when configured) |
-| `resource-filter.js`, `conformance-crud.js` | The conformance viewers' rail filter and write half |
+| `resource-filter.js`, `conformance-crud.js` | Shared truncated-name tooltips and the conformance viewers' rail filter/write half |
 
 `editor.js` is deliberately thin, and that is the architectural point: it does
 not model the resource, know what a choice type is, or understand cardinality.
@@ -203,8 +231,10 @@ Errors follow one convention across the Fluent catalogs
   persistence or terminology logic here.
 - **No new browser-facing JSON API** to feed the UI. htmx consumes HTML
   fragments, not JSON.
-- **No SPA framework, no bundler, no npm dependency** for browser code. (The
-  `e2e/` directory has a `package.json`, but that is test-only and never ships.)
+- **No SPA framework, no bundler, no npm dependency** for browser code, with
+  one documented exception — see "Assets: vendored & embedded" above. (The
+  `e2e/` directory also has a `package.json`, but that is test-only and never
+  ships.)
 - **No inline `<script>` blobs or scattered JS.** Prefer `hx-*` attributes
   (Locality of Behaviour); where JS is truly needed, use small pinned assets.
   Inert `type="application/json"` data carriers are the one allowed exception,
@@ -239,12 +269,15 @@ These are the shared primitives. Before styling anything, reach for one; add to
 | `.btn`, `.btn--primary`, `.btn--danger`, `.btn--current`, `.btn--icon` | The action button: 30px high, 12px horizontal padding, 12px type, and a 9px radius. Primary, danger, and current change emphasis only; `--icon` makes the control a 30px square with no horizontal padding. |
 | `.card`, `.card-head`, `.table-card` | Raised surface; its header row; the padding variant that hosts a table. |
 | `.panel` | Padding for a full-width card that hosts detail fields without rail behavior. |
-| `.kv-grid` | Responsive two-column key/value layout; collapses to one column on compact viewports. |
+| `.detail__field`, `.detail__field--wide` | One labelled value. The field owns the 5px label/value gap; `--wide` spans all columns when the field is inside a key/value grid. |
+| `.detail-stack` | Padding-free vertical composition for detail fields and form actions, with a 12px gap. Direct `.form-actions` children rely on that gap instead of adding their usual top margin. |
+| `.kv-grid`, `.kv-grid--flush` | Responsive two-column key/value layout with 14px row and 18px column gaps; it collapses to one column at 1250px. `--flush` removes the grid's trailing margin when its container already provides the bottom inset. |
 | `.page-head`, `.page-head__title`, `.page-head__lede`, `.page-head--row` | Page heading block; the only `<h1>` treatment; `--row` puts an action on the right. |
 | `.back-link` | In-page return link with theme-safe normal, visited, hover, and focus states. |
 | `.table-wrap` > `.data-table`, `.col-num`, `.col-actions`, `.data-table__empty`, `.table-foot` | The table, always in its scroll wrapper: ordinary headers and data align left; `.col-num` uses tabular figures without changing alignment; `.col-actions` aligns right; empty-state rows stay centered; the footer hosts pagination. |
 | `.empty-state` | The same centered, muted empty treatment for non-table content. |
 | `.field`, `.field__label`, `.field__input`, `.field__hint`, `.field__hint--error` | A labelled form field. |
+| `.combobox`, `.combobox__*` | Shared progressively enhanced multi-select. Render it through `partials/combobox.html`; callers provide localized domain copy and an HTML-fragment endpoint, while `combobox.js` owns selection/keyboard state and repeated hidden inputs. Keep a named textarea fallback usable without JavaScript. |
 | `.addbox`, `.addbox--modal`, `.addbox__panel`, `.addbox__head`, `.addbox__x`, `.addbox__actions` | The `<details>` disclosure for create/add flows; `--modal` centers it as a dialog. |
 | `.choice-grid`, `.choice-card`, `.choice-card__title`, `.choice-card__hint` | The radio-group treatment: one selectable card per choice, `:has(:checked)` accent (#735). |
 | `.progress`, `.progress__bar`, `.progress--complete`, `.progress--failed`, `.progress--cancelled` | Full-width job progress track; terminal states recolor the fill. |
@@ -260,6 +293,43 @@ These are the shared primitives. Before styling anything, reach for one; add to
 | `.filter-rail`, `.nav-panel` | Left rails: the filter list inside a page; the type panel flush against the sidebar. |
 | `.icon-button`, `.icon-button--danger` | Bare 30px-square icon action (table rows), with the action-button 9px radius. |
 | `.busy-status` > `.spinner` | Inline working state: the ring plus a short label, `role="status"` in the markup so it announces. |
+
+Labeled values follow one spacing contract: `.detail__field` owns only its 5px
+internal label/value gap, while its direct parent owns the larger external
+rhythm. Use `.detail-stack`, `.kv-grid`, `.detail`, or `.tester` as that parent;
+do not add outer margins to individual fields or place them directly in a
+generic `.card__body`.
+
+```text
+Parent owns external rhythm (> 5px)
+
+  Wide metadata (> 1250px)                 Compact metadata (<= 1250px)
+  ┌──────────────────────────────────┐      ┌─────────────────────────┐
+  │ DESCRIPTION — full width         │      │ DESCRIPTION — full width│
+  │   ↕ 5px  value                   │      │   ↕ 5px  value          │
+  │              ↕ 14px              │      │          ↕ 14px         │
+  │ BASE URL — full width            │      │ BASE URL — full width   │
+  │   ↕ 5px  value                   │      │   ↕ 5px  value          │
+  │              ↕ 14px              │      │          ↕ 14px         │
+  │ FHIR VERSION       ← 18px → STATUS│      │ FHIR VERSION            │
+  │   ↕ 5px value          ↕ 5px value│      │   ↕ 5px  value          │
+  │              ↕ 14px              │      │          ↕ 14px         │
+  │ KIND               ← 18px → DATE │      │ STATUS                  │
+  │   ↕ 5px value          ↕ 5px value│      │   ↕ 5px  value          │
+  │              ↕ 14px              │      │          ↕ 14px         │
+  │ FORMATS             │              │      │ KIND                    │
+  │   ↕ 5px value       │              │      │   ↕ 5px  value          │
+  └──────────────────────────────────┘      │          ↕ 14px         │
+                                            │ DATE                    │
+                                            │   ↕ 5px  value          │
+                                            │          ↕ 14px         │
+                                            │ FORMATS                 │
+                                            │   ↕ 5px  value          │
+                                            └─────────────────────────┘
+
+  `.detail-stack` uses the same contract vertically: 12px between fields,
+  while each field keeps exactly 5px between its label and value.
+```
 
 Starting a new page: copy `templates/pages/_scaffold.html` (or crib
 `tenants.html`, the smallest real page). Both compose only this vocabulary.

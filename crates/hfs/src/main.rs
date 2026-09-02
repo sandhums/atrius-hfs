@@ -39,9 +39,9 @@ use tracing::{info, warn};
     feature = "s3"
 ))]
 use helios_persistence::backends::local_fs::LocalFsOutputStore;
-use helios_persistence::core::SettingsStore;
 #[cfg(any(feature = "sqlite", feature = "postgres"))]
 use helios_persistence::core::{BulkExportJobStore, DefaultExportWorker};
+use helios_persistence::core::{BulkProviderStore, SettingsStore};
 #[cfg(any(
     feature = "sqlite",
     feature = "postgres",
@@ -589,6 +589,7 @@ async fn start_mongodb(
     // settings-capable builder (like the SQLite/Postgres backends).
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(backend.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(backend.clone());
 
     // MongoDB primary; embedded SQLite sidecar for bulk-export job state.
     let export_bundle = {
@@ -625,7 +626,15 @@ async fn start_mongodb(
     );
     // Second handle to the same backend for the web UI's tenant-maintenance
     // read/write path (the FHIR app keeps its own).
-    serve(app, &config, serve_audit_state, Some(backend), ui_settings).await
+    serve(
+        app,
+        &config,
+        serve_audit_state,
+        Some(backend),
+        ui_settings,
+        ui_bulk_provider,
+    )
+    .await
 }
 
 /// Fallback when mongodb feature is not enabled.
@@ -649,6 +658,7 @@ async fn serve(
     audit_state: Option<Arc<AuditMiddlewareState>>,
     ui_tenants: Option<Arc<dyn ResourceStorage>>,
     ui_settings: Option<Arc<dyn SettingsStore>>,
+    ui_bulk_provider: Option<Arc<dyn BulkProviderStore>>,
 ) -> anyhow::Result<()> {
     #[cfg(all(feature = "ui", not(feature = "headless")))]
     let app = {
@@ -667,6 +677,11 @@ async fn serve(
         // configured from HFS_UI_* client credentials.
         let self_base_url = format!("http://127.0.0.1:{}", config.port);
         let outbound_auth = AuthConfig::from_env().outbound_provider();
+        let patient_name_search = patient_name_search_support(
+            config
+                .storage_backend_mode()
+                .expect("storage backend was validated before server startup"),
+        );
         helios_ui::mount_with_body_limit_and_tenant_routing(
             app,
             env!("CARGO_PKG_VERSION"),
@@ -686,10 +701,12 @@ async fn serve(
             config.base_url.clone(),
             config.max_body_size,
             config.multitenancy.routing_mode.supports_url_path(),
+            ui_bulk_provider.clone(),
+            patient_name_search,
         )
     };
     #[cfg(not(all(feature = "ui", not(feature = "headless"))))]
-    let _ = (&ui_tenants, &ui_settings);
+    let _ = (&ui_tenants, &ui_settings, &ui_bulk_provider);
 
     let addr = config.socket_addr();
     info!(address = %addr, "Server listening");
@@ -723,6 +740,20 @@ async fn serve(
     })
     .await?;
     Ok(())
+}
+
+#[cfg(all(feature = "ui", not(feature = "headless")))]
+fn patient_name_search_support(mode: StorageBackendMode) -> helios_ui::PatientNameSearchSupport {
+    match mode {
+        StorageBackendMode::S3 => helios_ui::PatientNameSearchSupport::IdOnly,
+        StorageBackendMode::Sqlite
+        | StorageBackendMode::SqliteElasticsearch
+        | StorageBackendMode::Postgres
+        | StorageBackendMode::PostgresElasticsearch
+        | StorageBackendMode::MongoDB
+        | StorageBackendMode::MongoDBElasticsearch
+        | StorageBackendMode::S3Elasticsearch => helios_ui::PatientNameSearchSupport::Enabled,
+    }
 }
 
 /// Initializes the authentication subsystem from environment configuration.
@@ -1182,6 +1213,7 @@ async fn start_sqlite(
     // keeps ownership of the backend Arc and uses the settings-capable builder.
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(backend.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(backend.clone());
     let export_bundle = build_bulk_export(&config, backend.clone(), backend.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, backend.clone()).await?;
     let ops = standalone_ops(
@@ -1200,7 +1232,15 @@ async fn start_sqlite(
         settings_store,
         ops,
     );
-    serve(app, &config, serve_audit_state, ui_tenants, ui_settings).await
+    serve(
+        app,
+        &config,
+        serve_audit_state,
+        ui_tenants,
+        ui_settings,
+        ui_bulk_provider,
+    )
+    .await
 }
 
 /// Constructs an embedded SQLite job store for backends that can't host job
@@ -1851,6 +1891,7 @@ async fn start_sqlite_elasticsearch(
     // though the app is served over the composite storage.
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(sqlite.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(sqlite.clone());
 
     let export_bundle = build_bulk_export(&config, sqlite.clone(), sqlite.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, sqlite.clone()).await?;
@@ -1883,6 +1924,7 @@ async fn start_sqlite_elasticsearch(
         serve_audit_state,
         Some(composite),
         ui_settings,
+        ui_bulk_provider,
     )
     .await
 }
@@ -1921,6 +1963,7 @@ async fn start_postgres(
     // keeps ownership of the backend Arc and uses the settings-capable builder.
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(backend.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(backend.clone());
     let export_bundle = build_bulk_export(&config, backend.clone(), backend.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, backend.clone()).await?;
     let ops = standalone_ops(
@@ -1941,7 +1984,15 @@ async fn start_postgres(
     );
     // Second handle to the same backend for the web UI's tenant-maintenance
     // read/write path (the FHIR app keeps its own).
-    serve(app, &config, serve_audit_state, Some(backend), ui_settings).await
+    serve(
+        app,
+        &config,
+        serve_audit_state,
+        Some(backend),
+        ui_settings,
+        ui_bulk_provider,
+    )
+    .await
 }
 
 /// Fallback when postgres feature is not enabled.
@@ -2089,6 +2140,7 @@ async fn start_postgres_elasticsearch(
     // though the app is served over the composite storage.
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(pg.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(pg.clone());
 
     let export_bundle = build_bulk_export(&config, pg.clone(), pg.clone()).await?;
     let submit_bundle = build_bulk_submit(&config, pg.clone()).await?;
@@ -2118,6 +2170,7 @@ async fn start_postgres_elasticsearch(
         serve_audit_state,
         Some(composite),
         ui_settings,
+        ui_bulk_provider,
     )
     .await
 }
@@ -2271,6 +2324,7 @@ async fn start_mongodb_elasticsearch(
     // though the app is served over the composite storage.
     let settings_store: Option<Arc<dyn SettingsStore>> = Some(mongo.clone());
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(mongo.clone());
 
     // MongoDB primary; embedded SQLite sidecar for bulk-export job state.
     let export_bundle = {
@@ -2315,6 +2369,7 @@ async fn start_mongodb_elasticsearch(
         serve_audit_state,
         Some(composite),
         ui_settings,
+        ui_bulk_provider,
     )
     .await
 }
@@ -2412,6 +2467,7 @@ async fn start_s3(
         None
     };
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(backend.clone());
 
     // S3 standalone can purge, but it has NO search index of any kind — its
     // SearchProvider reports search unsupported — so `$reindex` has nothing to
@@ -2451,7 +2507,15 @@ async fn start_s3(
         settings_store,
         ops,
     );
-    serve(app, &config, serve_audit_state, ui_tenants, ui_settings).await
+    serve(
+        app,
+        &config,
+        serve_audit_state,
+        ui_tenants,
+        ui_settings,
+        ui_bulk_provider,
+    )
+    .await
 }
 
 /// Fallback when s3 feature is not enabled.
@@ -2664,6 +2728,7 @@ async fn start_s3_elasticsearch(
         None
     };
     let ui_settings = settings_store.clone();
+    let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(s3.clone());
 
     // Reindex reads from the S3 primary and writes to Elasticsearch, which is
     // the only search index in this deployment — S3 maintains none. The
@@ -2722,6 +2787,7 @@ async fn start_s3_elasticsearch(
         serve_audit_state,
         Some(composite),
         ui_settings,
+        ui_bulk_provider,
     )
     .await
 }
@@ -2952,6 +3018,47 @@ mod tests {
             StorageBackendMode::S3Elasticsearch.primary_backend_kind(),
             BackendKind::S3
         );
+    }
+
+    #[cfg(all(feature = "ui", not(feature = "headless")))]
+    #[test]
+    fn test_patient_name_search_support_matches_storage_capability() {
+        for (mode, expected) in [
+            (
+                StorageBackendMode::Sqlite,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::SqliteElasticsearch,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::Postgres,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::PostgresElasticsearch,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::MongoDB,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::MongoDBElasticsearch,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+            (
+                StorageBackendMode::S3,
+                helios_ui::PatientNameSearchSupport::IdOnly,
+            ),
+            (
+                StorageBackendMode::S3Elasticsearch,
+                helios_ui::PatientNameSearchSupport::Enabled,
+            ),
+        ] {
+            assert_eq!(patient_name_search_support(mode), expected, "{mode:?}");
+        }
     }
 
     #[test]

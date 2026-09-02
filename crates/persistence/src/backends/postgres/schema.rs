@@ -3,7 +3,7 @@
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version.
-pub const SCHEMA_VERSION: i32 = 17;
+pub const SCHEMA_VERSION: i32 = 18;
 
 /// Advisory-lock key serializing schema migration across HFS instances sharing
 /// one database. Arbitrary but must stay stable across releases.
@@ -315,6 +315,7 @@ async fn migrate_schema(
             14 => migrate_v14_to_v15(client).await?,
             15 => migrate_v15_to_v16(client).await?,
             16 => migrate_v16_to_v17(client).await?,
+            17 => migrate_v17_to_v18(client).await?,
             _ => {
                 return Err(pg_error(format!("Unknown schema version: {}", version)));
             }
@@ -900,6 +901,29 @@ async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult
             .map_err(|e| pg_error(format!("Migration v16->v17 failed: {}", e)))?;
     }
 
+    Ok(())
+}
+
+/// v17 -> v18: provider-side Bulk Submit store (#772).
+///
+/// Helios numbered this v16→v17. Atrius v17 is the subscription outbox, so the
+/// provider table lands as v18. `IF NOT EXISTS` is safe if a Helios-main
+/// database already applied the table under version 17.
+async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "CREATE TABLE IF NOT EXISTS bulk_provider_submissions (
+                tenant_id  TEXT NOT NULL,
+                id         TEXT NOT NULL,
+                data       JSONB NOT NULL,
+                version    BIGINT NOT NULL DEFAULT 1,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (tenant_id, id)
+            )",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
     Ok(())
 }
 
