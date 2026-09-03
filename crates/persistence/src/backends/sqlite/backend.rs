@@ -22,38 +22,22 @@ use crate::search::{
 
 use super::schema;
 
-/// Reads a tenant's stored (POSTed) active SearchParameter definitions from an
-/// open connection. Prefer this during write-path indexing so the loader does
-/// not take a second pooled connection while a write transaction is held
-/// (shared-cache in-memory SQLite returns `SQLITE_LOCKED` for that pattern,
-/// which used to cache an empty overlay and skip custom SearchParameter
-/// indexing — see [`SqliteBackend::tenant_registry_for_indexing`]).
-///
-/// Postgres does **not** need an equivalent: its
-/// [`TenantSearchRegistries`] loader reads an in-memory `stored_by_tenant`
-/// map (refreshed on SearchParameter writes), so indexing never opens a
-/// second DB connection against an open write txn.
-fn load_tenant_stored_params_on_conn(
-    conn: &rusqlite::Connection,
+/// The query shared by both stored-SearchParameter loader variants below.
+const STORED_SEARCH_PARAMS_QUERY: &str = "SELECT data FROM resources \
+    WHERE resource_type = 'SearchParameter' AND tenant_id = ?1 AND is_deleted = 0";
+
+/// Parses each row's raw JSON into an active, stored SearchParameter
+/// definition. A row that fails to decode or parse is skipped individually —
+/// that is not a load failure, unlike a connection/query error in the two
+/// loader variants below (which return `None`/`Err` instead of an empty
+/// result, so callers never mistake "could not even ask" for "asked, and
+/// there is genuinely nothing").
+fn parse_stored_search_params(
+    rows: impl Iterator<Item = rusqlite::Result<Vec<u8>>>,
     fhir_version: FhirVersion,
-    tenant_id: &str,
 ) -> Vec<SearchParameterDefinition> {
     use crate::search::registry::{SearchParameterSource, SearchParameterStatus};
 
-    let Ok(mut stmt) = conn.prepare(
-        "SELECT data FROM resources WHERE resource_type = 'SearchParameter' \
-         AND tenant_id = ?1 AND is_deleted = 0",
-    ) else {
-        tracing::warn!("SearchParameter loader: prepare failed");
-        return Vec::new();
-    };
-    let rows = match stmt.query_map([tenant_id], |row| row.get::<_, Vec<u8>>(0)) {
-        Ok(rows) => rows,
-        Err(e) => {
-            tracing::warn!("SearchParameter loader: query failed: {e}");
-            return Vec::new();
-        }
-    };
     let loader = SearchParameterLoader::new(fhir_version);
     let mut defs = Vec::new();
     for row in rows {
@@ -72,19 +56,68 @@ fn load_tenant_stored_params_on_conn(
 }
 
 /// Reads a tenant's stored (POSTed) active SearchParameter definitions from the
-/// database. Used as the [`TenantSearchRegistries`] loader closure — it captures
-/// only the pool + FHIR version, never the backend, so an Elasticsearch backend
-/// sharing the container resolves per-tenant params through this same query.
+/// database via a fresh connection from the pool. Used as the
+/// [`TenantSearchRegistries`] loader closure — it captures only the pool + FHIR
+/// version, never the backend, so an Elasticsearch backend sharing the
+/// container resolves per-tenant params through this same query.
+///
+/// Returns `None` on a genuine connection/query failure — e.g. a pooled
+/// connection whose in-memory database turned out empty because `cache=shared`
+/// was silently inert on the SQLite build in use (#787) — so
+/// `TenantSearchRegistries::for_tenant` does not cache a false "tenant has no
+/// stored params" result and permanently poison the tenant.
+///
+/// Not used by `begin_transaction` — see
+/// [`load_tenant_stored_params_with_conn`], which reuses the transaction's own
+/// connection instead of asking the pool for a second, simultaneous one (the
+/// actual trigger of #787: a second connection can see a *different*,
+/// potentially empty, in-memory database on a build where `cache=shared` is
+/// inert).
 fn load_tenant_stored_params(
     pool: &Pool<SqliteConnectionManager>,
     fhir_version: FhirVersion,
     tenant_id: &str,
-) -> Vec<SearchParameterDefinition> {
+) -> Option<Vec<SearchParameterDefinition>> {
     let Ok(conn) = pool.get() else {
         tracing::warn!("SearchParameter loader: could not get connection");
-        return Vec::new();
+        return None;
     };
-    load_tenant_stored_params_on_conn(&conn, fhir_version, tenant_id)
+    let Ok(mut stmt) = conn.prepare(STORED_SEARCH_PARAMS_QUERY) else {
+        tracing::warn!("SearchParameter loader: prepare failed");
+        return None;
+    };
+    let rows = match stmt.query_map([tenant_id], |row| row.get::<_, Vec<u8>>(0)) {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::warn!("SearchParameter loader: query failed: {e}");
+            return None;
+        }
+    };
+    Some(parse_stored_search_params(rows, fhir_version))
+}
+
+/// Reads a tenant's stored (POSTed) active SearchParameter definitions using
+/// an already-held connection, instead of requesting a separate one from the
+/// pool. `begin_transaction` (`transaction.rs`) uses this — on a cache miss,
+/// building the transaction's search-parameter extractor from a *different*
+/// pooled connection than the one the transaction itself holds meant two
+/// connections were needed at the same instant; on a build where
+/// `cache=shared` is silently inert, that second connection could see an
+/// empty database, and the resulting (previously silently-swallowed) empty
+/// overlay got baked into every resource the transaction indexed — no later
+/// cache heal fixes an already-written index row (#787). Reusing the
+/// transaction's own connection removes the two-connections requirement
+/// entirely; propagating a real error here (rather than defaulting to an
+/// empty overlay) means `begin_transaction` fails loudly instead of silently
+/// mis-indexing.
+pub(crate) fn load_tenant_stored_params_with_conn(
+    conn: &rusqlite::Connection,
+    fhir_version: FhirVersion,
+    tenant_id: &str,
+) -> rusqlite::Result<Vec<SearchParameterDefinition>> {
+    let mut stmt = conn.prepare(STORED_SEARCH_PARAMS_QUERY)?;
+    let rows = stmt.query_map([tenant_id], |row| row.get::<_, Vec<u8>>(0))?;
+    Ok(parse_stored_search_params(rows, fhir_version))
 }
 
 /// Counter for generating unique in-memory database names.
@@ -488,6 +521,12 @@ impl SqliteBackend {
         self.registries.for_tenant(tenant_id)
     }
 
+    /// A value extractor over a tenant's registry, for indexing that tenant's
+    /// resources.
+    pub(crate) fn tenant_extractor(&self, tenant_id: &str) -> SearchParameterExtractor {
+        SearchParameterExtractor::new(self.tenant_registry(tenant_id))
+    }
+
     /// Registry for indexing on `conn`: use the cache when warm, otherwise load
     /// stored params on this same connection (safe inside an open write txn).
     ///
@@ -495,23 +534,28 @@ impl SqliteBackend {
     /// index inside the writer txn, and a pool-based overlay load can
     /// `SQLITE_LOCKED`, return no stored params, and cache that empty overlay.
     /// Postgres avoids this via its in-memory `stored_by_tenant` loader (no
-    /// second DB round-trip during `for_tenant`).
+    /// second DB round-trip during `for_tenant`). On a load error the base
+    /// registry is used for this call and is not cached, matching
+    /// [`TenantSearchRegistries::for_tenant`].
     pub(crate) fn tenant_registry_for_indexing(
         &self,
         conn: &rusqlite::Connection,
         tenant_id: &str,
     ) -> Arc<RwLock<SearchParameterRegistry>> {
-        if let Some(reg) = self.registries.get_cached(tenant_id) {
+        if let Some(reg) = self.registries.cached(tenant_id) {
             return reg;
         }
-        let overlay = load_tenant_stored_params_on_conn(conn, self.config.fhir_version, tenant_id);
-        self.registries.cache_from_overlay(tenant_id, overlay)
-    }
-
-    /// A value extractor over a tenant's registry, for indexing that tenant's
-    /// resources.
-    pub(crate) fn tenant_extractor(&self, tenant_id: &str) -> SearchParameterExtractor {
-        SearchParameterExtractor::new(self.tenant_registry(tenant_id))
+        match load_tenant_stored_params_with_conn(conn, self.config.fhir_version, tenant_id) {
+            Ok(overlay) => self.registries.build_and_cache(tenant_id, overlay),
+            Err(e) => {
+                tracing::warn!(
+                    tenant_id,
+                    error = %e,
+                    "SearchParameter overlay load on writer conn failed; indexing with base registry only"
+                );
+                Arc::new(RwLock::new(self.registries.base().read().clone()))
+            }
+        }
     }
 
     /// Extractor for write-path indexing; see [`Self::tenant_registry_for_indexing`].

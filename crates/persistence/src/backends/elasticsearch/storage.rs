@@ -6,7 +6,6 @@
 
 use async_trait::async_trait;
 use chrono::Utc;
-use elasticsearch::params::Refresh;
 use elasticsearch::{DeleteByQueryParts, DeleteParts, GetParts, IndexParts};
 use helios_fhir::FhirVersion;
 use serde_json::{Value, json};
@@ -40,15 +39,6 @@ fn unavailable_error(message: String) -> StorageError {
         message,
     })
 }
-
-/// CRUD `index`/`delete` wait until a refresh makes the change searchable.
-///
-/// Elasticsearch otherwise acks the write before the next `refresh_interval`
-/// (default 1s), so a follow-up search on a synchronously-synced composite
-/// can miss the document. `wait_for` blocks the write instead of forcing a
-/// refresh per document (`refresh=true`). Reindex and contained-doc loops
-/// omit this so a bulk rewrite does not pay one interval per resource.
-const SEARCH_VISIBLE: Refresh = Refresh::WaitFor;
 
 /// Content extracted from a resource for full-text search.
 struct SearchableContent {
@@ -451,13 +441,14 @@ impl ElasticsearchBackend {
                 &contained.contained_type,
                 &contained_resource_id(container_id, &contained.local_id),
             );
-            // No `wait_for`: N contained docs would wait N refresh intervals.
-            // `_contained` search can lag one interval; the container document
-            // write already used `wait_for`.
-            let response = self
+            let mut request = self
                 .client()
                 .index(IndexParts::IndexId(&index, &doc_id))
-                .body(doc)
+                .body(doc);
+            if let Some(refresh) = self.write_refresh_param() {
+                request = request.refresh(refresh);
+            }
+            let response = request
                 .send()
                 .await
                 .map_err(|e| internal_error(format!("Failed to index contained doc: {}", e)))?;
@@ -503,7 +494,7 @@ impl ResourceStorage for ElasticsearchBackend {
             .get("id")
             .and_then(|v| v.as_str())
             .map(String::from)
-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+            .unwrap_or_else(crate::types::new_resource_id);
 
         let version_id = "1";
 
@@ -541,11 +532,14 @@ impl ResourceStorage for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
         let doc_id = Self::document_id(resource_type, &id);
 
-        let response = self
+        let mut request = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
-            .refresh(SEARCH_VISIBLE)
-            .body(doc)
+            .body(doc);
+        if let Some(refresh) = self.write_refresh_param() {
+            request = request.refresh(refresh);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to index document: {}", e)))?;
@@ -708,11 +702,14 @@ impl ResourceStorage for ElasticsearchBackend {
         // Ensure index exists
         schema::ensure_index(self, tenant_id, resource_type).await?;
 
-        let response = self
+        let mut request = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
-            .refresh(SEARCH_VISIBLE)
-            .body(doc)
+            .body(doc);
+        if let Some(refresh) = self.write_refresh_param() {
+            request = request.refresh(refresh);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to index document: {}", e)))?;
@@ -874,11 +871,14 @@ impl ResourceStorage for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
         let doc_id = Self::document_id(resource_type, id);
 
-        let response = self
+        let mut request = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
-            .refresh(SEARCH_VISIBLE)
-            .body(doc)
+            .body(doc);
+        if let Some(refresh) = self.write_refresh_param() {
+            request = request.refresh(refresh);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to update document: {}", e)))?;
@@ -918,10 +918,11 @@ impl ResourceStorage for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
         let doc_id = Self::document_id(resource_type, id);
 
-        let response = self
-            .client()
-            .delete(DeleteParts::IndexId(&index, &doc_id))
-            .refresh(SEARCH_VISIBLE)
+        let mut request = self.client().delete(DeleteParts::IndexId(&index, &doc_id));
+        if let Some(refresh) = self.write_refresh_param() {
+            request = request.refresh(refresh);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to delete document: {}", e)))?;
@@ -1210,12 +1211,14 @@ impl ReindexTarget for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
         let doc_id = Self::document_id(resource_type, resource_id);
 
-        // No `wait_for`: `$reindex` walks every resource. Waiting a refresh
-        // interval per document would make a tenant rebuild take hours.
-        let response = self
+        let mut request = self
             .client()
             .index(IndexParts::IndexId(&index, &doc_id))
-            .body(doc)
+            .body(doc);
+        if let Some(refresh) = self.write_refresh_param() {
+            request = request.refresh(refresh);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| internal_error(format!("Failed to index document: {e}")))?;
