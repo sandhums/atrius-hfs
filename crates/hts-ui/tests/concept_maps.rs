@@ -429,7 +429,7 @@ async fn browser_renders_full_page_with_translated_heading() {
     );
     for key in [
         "hts-cm-browser-title",
-        "hts-cm-browser-filter-search",
+        "hts-cm-browser-filter-reset",
         "hts-cm-browser-column-url",
         "hts-cm-browser-load-more",
         "hts-cm-translate-heading",
@@ -1256,18 +1256,31 @@ fn cm_detail_templates_only_use_classes_that_exist_in_app_css() {
     );
 }
 
-/// The V3 compact header on the ConceptMap detail page.
+/// The V3 compact header on the ConceptMap detail page. Since #801 it also
+/// takes the HFS back-link idiom: a `.page-head--back-link` modifier, a
+/// leading `.back-link`, and the rest of the head wrapped in
+/// `.page-head__copy`.
 #[test]
 fn cm_detail_page_uses_the_v3_compact_header_shape() {
     const PAGE: &str = include_str!("../templates/pages/cm-detail.html");
     let body = strip_template_comments(PAGE);
 
     for hook in [
-        r#"<header class="page-head">"#,
+        r#"<header class="page-head page-head--back-link">"#,
+        r#"class="back-link""#,
+        r#"class="page-head__copy""#,
         r#"class="page-head__title""#,
         r#"class="facets facets--bare""#,
         r#"class="detail__field detail__field--wide""#,
-        r#"<summary class="field__label">"#,
+        // #806: the facts fold uses HFS's shared `.disclosure` pattern, so
+        // the summary is a `list-item` with a chevron and a pointer cursor.
+        // The summary now spans several lines, so the class and the label
+        // are pinned separately rather than as one `<summary …>…</summary>`.
+        r#"<details class="disclosure">"#,
+        r#"<summary class="disclosure__summary">"#,
+        r#"<span class="icon disclosure__chevron" aria-hidden="true">"#,
+        r#"{% include "icons/chevron-down.svg" %}"#,
+        r#"{{ chrome.i18n.t("hts-cm-detail-facts-summary") }}"#,
     ] {
         assert!(
             body.contains(hook),
@@ -1279,6 +1292,7 @@ fn cm_detail_page_uses_the_v3_compact_header_shape() {
         "addbox",
         "hts-cm-detail__",
         "backlink",
+        "row-link",
         "<dl",
     ] {
         assert!(
@@ -1290,6 +1304,53 @@ fn cm_detail_page_uses_the_v3_compact_header_shape() {
         !body.contains("<details open"),
         "the facts disclosure must render collapsed",
     );
+}
+
+/// #806 regression guard: a `<summary>` carrying `.field__label` is
+/// `display: block`, so the browser draws no disclosure marker, and the
+/// rule sets no `cursor` — the fold looked like an inert grey label. The
+/// ConceptMap templates must keep using the shared `.disclosure` pattern
+/// and must never reintroduce that summary class.
+#[test]
+fn cm_detail_folds_never_reintroduce_the_markerless_field_label_summary() {
+    // (template, carries a fold of its own). The translate result includes
+    // the raw fold from `partials/hts-raw-fold.html` (#803), so the shape
+    // is asserted on the partial rather than on the includer.
+    let templates = [
+        (
+            "pages/cm-detail.html",
+            include_str!("../templates/pages/cm-detail.html"),
+            true,
+        ),
+        (
+            "partials/hts-cm-translate-result.html",
+            include_str!("../templates/partials/hts-cm-translate-result.html"),
+            false,
+        ),
+        (
+            "partials/hts-raw-fold.html",
+            include_str!("../templates/partials/hts-raw-fold.html"),
+            true,
+        ),
+    ];
+
+    for (name, template, carries_fold) in templates {
+        let body = strip_template_comments(template);
+        assert!(
+            !body.contains(r#"<summary class="field__label""#),
+            "{name} must not pin a `.field__label` summary: it kills the \
+             native disclosure marker and leaves no pointer cursor (#806)",
+        );
+        if !carries_fold {
+            continue;
+        }
+        assert!(
+            body.contains(r#"<details class="disclosure">"#)
+                && body.contains(r#"<summary class="disclosure__summary">"#)
+                && body.contains(r#"class="icon disclosure__chevron""#),
+            "{name} must use the shared `.disclosure` fold shape",
+        );
+    }
 }
 
 /// Reverse-mode `$translate` responses carry no `originMap`, so the Origin
