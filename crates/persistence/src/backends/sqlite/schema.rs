@@ -1,26 +1,92 @@
 //! SQLite schema definitions and migrations.
 
-use rusqlite::Connection;
+use std::collections::HashSet;
 
+use rusqlite::{Connection, OptionalExtension};
+
+use crate::core::schema_ledger::{
+    BASE_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering, implied_applied_indices,
+};
 use crate::error::StorageResult;
 
-/// Current schema version.
+/// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
 pub const SCHEMA_VERSION: i32 = 19;
 
+pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
+
+/// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
+const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
+    ("search_index_enhanced_columns", migrate_v1_to_v2),
+    ("resource_fts", migrate_v2_to_v3),
+    ("token_display_identifier_type", migrate_v3_to_v4),
+    ("fts_triggers", migrate_v4_to_v5),
+    ("bulk_export_submit_tables", migrate_v5_to_v6),
+    ("fhir_version", migrate_v6_to_v7),
+    ("bulk_export_leases", migrate_v7_to_v8),
+    ("bulk_submit_worker", migrate_v8_to_v9),
+    ("reference_display_ucum_folded_string", migrate_v9_to_v10),
+    ("contained_search", migrate_v10_to_v11),
+    ("bulk_submit_async_schema", migrate_v11_to_v12),
+    ("user_settings", migrate_v12_to_v13),
+    ("tenant_registry", migrate_v13_to_v14),
+    ("resource_fts_orphan_sweep", migrate_v14_to_v15),
+    ("bulk_entry_results_file_url", migrate_v15_to_v16),
+    (OUTBOX_STEP, migrate_v16_to_v17),
+    ("bulk_provider_submissions", migrate_v17_to_v18),
+    ("bulk_manifests_byte_progress", migrate_v18_to_v19),
+];
+
+const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
+
 /// Initialize the database schema.
+///
+/// Dispatch consults `schema_migrations` by step name. The integer
+/// `schema_version` is stamped at the tip for operators and used only to
+/// bootstrap the ledger on databases that predate it.
 pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
-    // Check current version
+    debug_assert_eq!(SQLITE_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+    debug_assert_eq!(SQLITE_STEPS[OUTBOX_STEP_INDEX].0, OUTBOX_STEP);
+
     let current_version = get_schema_version(conn)?;
+    ensure_schema_flavour_column(conn)?;
+    ensure_schema_migrations_table(conn)?;
+
+    let flavour = get_schema_flavour(conn)?;
+    let outbox_exists = table_exists(conn, "subscription_outbox")?;
+    let mut applied = load_applied_steps(conn)?;
+
+    if applied.is_empty() && current_version > 0 {
+        backfill_legacy_integer(
+            conn,
+            current_version,
+            flavour.as_deref(),
+            outbox_exists,
+            &mut applied,
+        )?;
+    }
 
     if current_version == 0 {
-        // Fresh database - create base schema then run all migrations
         create_schema_v1(conn)?;
         set_schema_version(conn, 1)?;
-        // Run migrations from v1 to latest
-        migrate_schema(conn, 1)?;
-    } else if current_version < SCHEMA_VERSION {
-        // Run migrations
-        migrate_schema(conn, current_version)?;
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    } else if !applied.contains(BASE_STEP) {
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    }
+
+    for &(name, migrate) in SQLITE_STEPS {
+        let present = if name == OUTBOX_STEP {
+            table_exists(conn, "subscription_outbox")?
+        } else {
+            true
+        };
+        if applied.contains(name) && present {
+            continue;
+        }
+        migrate(conn)?;
+        record_step(conn, name)?;
+        applied.insert(name.to_string());
     }
 
     // Safety net for the tenant registry (schema v14). A pre-release build could
@@ -30,6 +96,9 @@ pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
     // `IF NOT EXISTS` and idempotent, so ensuring it here every startup
     // self-heals such databases and is a no-op for correctly-migrated ones.
     ensure_tenants_table(conn)?;
+
+    set_schema_version(conn, SCHEMA_VERSION)?;
+    stamp_schema_flavour(conn)?;
 
     Ok(())
 }
@@ -47,6 +116,153 @@ fn ensure_tenants_table(conn: &Connection) -> StorageResult<()> {
         [],
     )
     .map_err(|e| migration_err(format!("ensure tenants table: {e}")))?;
+    Ok(())
+}
+
+/// Idempotently ensures the durable subscription outbox exists.
+///
+/// Body of the v16 → v17 migration, and a startup self-heal so an
+/// upstream-numbered database (which skipped that step) still gets the table.
+fn ensure_subscription_outbox(conn: &Connection) -> StorageResult<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource TEXT,
+            previous_resource TEXT,
+            envelope TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            available_at TEXT NOT NULL,
+            processed_at TEXT,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+            ON subscription_outbox (available_at, id)
+            WHERE processed_at IS NULL;
+        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+            ON subscription_outbox (tenant_id, id)
+            WHERE processed_at IS NOT NULL;",
+    )
+    .map_err(|e| migration_err(format!("ensure subscription_outbox: {e}")))?;
+    Ok(())
+}
+
+/// SQLite has no `ADD COLUMN IF NOT EXISTS`.
+fn ensure_schema_flavour_column(conn: &Connection) -> StorageResult<()> {
+    let columns: Vec<String> = {
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(schema_version)")
+            .map_err(|e| migration_err(format!("pragma schema_version: {e}")))?;
+        stmt.query_map([], |row| row.get::<_, String>(1))
+            .map_err(|e| migration_err(format!("pragma schema_version rows: {e}")))?
+            .filter_map(|r| r.ok())
+            .collect()
+    };
+    if !columns.iter().any(|c| c == "flavour") {
+        conn.execute("ALTER TABLE schema_version ADD COLUMN flavour TEXT", [])
+            .map_err(|e| migration_err(format!("add schema_version.flavour: {e}")))?;
+    }
+    Ok(())
+}
+
+fn stamp_schema_flavour(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "UPDATE schema_version SET flavour = ?1 WHERE flavour IS NULL",
+        [SCHEMA_FLAVOUR],
+    )
+    .map_err(|e| migration_err(format!("stamp schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+fn get_schema_flavour(conn: &Connection) -> StorageResult<Option<String>> {
+    let flavour: Option<Option<String>> = conn
+        .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+            row.get(0)
+        })
+        .optional()
+        .map_err(|e| migration_err(format!("read schema_version.flavour: {e}")))?;
+    Ok(flavour.flatten())
+}
+
+fn ensure_schema_migrations_table(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
+            name TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create schema_migrations: {e}")))?;
+    Ok(())
+}
+
+fn load_applied_steps(conn: &Connection) -> StorageResult<HashSet<String>> {
+    let mut stmt = conn
+        .prepare("SELECT name FROM schema_migrations")
+        .map_err(|e| migration_err(format!("select schema_migrations: {e}")))?;
+    let names = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| migration_err(format!("schema_migrations rows: {e}")))?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(names)
+}
+
+fn record_step(conn: &Connection, name: &str) -> StorageResult<()> {
+    conn.execute(
+        "INSERT OR IGNORE INTO schema_migrations (name) VALUES (?1)",
+        [name],
+    )
+    .map_err(|e| migration_err(format!("record schema step {name}: {e}")))?;
+    Ok(())
+}
+
+fn table_exists(conn: &Connection, name: &str) -> StorageResult<bool> {
+    let n: i32 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+            [name],
+            |row| row.get(0),
+        )
+        .map_err(|e| migration_err(format!("probe table {name}: {e}")))?;
+    Ok(n > 0)
+}
+
+fn backfill_legacy_integer(
+    conn: &Connection,
+    recorded_version: i32,
+    flavour: Option<&str>,
+    outbox_exists: bool,
+    applied: &mut HashSet<String>,
+) -> StorageResult<()> {
+    let numbering = classify_numbering(flavour, recorded_version, SCHEMA_VERSION, outbox_exists);
+    tracing::info!(
+        ?numbering,
+        recorded_version,
+        outbox_exists,
+        "backfilling schema_migrations from legacy integer"
+    );
+    if recorded_version >= 1 {
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    }
+    for i in implied_applied_indices(recorded_version, numbering, SQLITE_STEPS.len()) {
+        let name = SQLITE_STEPS[i].0;
+        if name == OUTBOX_STEP && !outbox_exists {
+            continue;
+        }
+        record_step(conn, name)?;
+        applied.insert(name.to_string());
+    }
     Ok(())
 }
 
@@ -272,47 +488,6 @@ fn create_fts_table(conn: &Connection) -> StorageResult<()> {
             source: None,
         })
     })?;
-
-    Ok(())
-}
-
-/// Run schema migrations from current version to latest.
-fn migrate_schema(conn: &Connection, from_version: i32) -> StorageResult<()> {
-    let mut version = from_version;
-
-    while version < SCHEMA_VERSION {
-        match version {
-            1 => migrate_v1_to_v2(conn)?,
-            2 => migrate_v2_to_v3(conn)?,
-            3 => migrate_v3_to_v4(conn)?,
-            4 => migrate_v4_to_v5(conn)?,
-            5 => migrate_v5_to_v6(conn)?,
-            6 => migrate_v6_to_v7(conn)?,
-            7 => migrate_v7_to_v8(conn)?,
-            8 => migrate_v8_to_v9(conn)?,
-            9 => migrate_v9_to_v10(conn)?,
-            10 => migrate_v10_to_v11(conn)?,
-            11 => migrate_v11_to_v12(conn)?,
-            12 => migrate_v12_to_v13(conn)?,
-            13 => migrate_v13_to_v14(conn)?,
-            14 => migrate_v14_to_v15(conn)?,
-            15 => migrate_v15_to_v16(conn)?,
-            16 => migrate_v16_to_v17(conn)?,
-            17 => migrate_v17_to_v18(conn)?,
-            18 => migrate_v18_to_v19(conn)?,
-            _ => {
-                return Err(crate::error::StorageError::Backend(
-                    crate::error::BackendError::Internal {
-                        backend_name: "sqlite".to_string(),
-                        message: format!("Unknown schema version: {}", version),
-                        source: None,
-                    },
-                ));
-            }
-        }
-        version += 1;
-        set_schema_version(conn, version)?;
-    }
 
     Ok(())
 }
@@ -1335,35 +1510,7 @@ fn migrate_v15_to_v16(conn: &Connection) -> StorageResult<()> {
 /// `IF NOT EXISTS` and still receive the upstream #386 FTS orphan sweep here,
 /// because they never ran the Helios v14→v15 sweep under that version number.
 fn migrate_v16_to_v17(conn: &Connection) -> StorageResult<()> {
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS subscription_outbox (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_id TEXT NOT NULL UNIQUE,
-            tenant_id TEXT NOT NULL,
-            fhir_version TEXT NOT NULL,
-            resource_type TEXT NOT NULL,
-            resource_id TEXT NOT NULL,
-            version_id TEXT NOT NULL DEFAULT '',
-            event_type TEXT NOT NULL,
-            resource TEXT,
-            previous_resource TEXT,
-            envelope TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            available_at TEXT NOT NULL,
-            processed_at TEXT,
-            attempts INTEGER NOT NULL DEFAULT 0,
-            last_error TEXT,
-            locked_by TEXT,
-            locked_until TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
-            ON subscription_outbox (available_at, id)
-            WHERE processed_at IS NULL;
-        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
-            ON subscription_outbox (tenant_id, id)
-            WHERE processed_at IS NOT NULL;",
-    )
-    .map_err(|e| migration_err(format!("Migration v16->v17 failed: {e}")))?;
+    ensure_subscription_outbox(conn)?;
     sweep_orphaned_resource_fts(conn)?;
     Ok(())
 }
@@ -1526,6 +1673,34 @@ pub fn drop_all_tables(conn: &Connection) -> StorageResult<()> {
 mod tests {
     use super::*;
 
+    fn applied_steps(conn: &Connection) -> HashSet<String> {
+        load_applied_steps(conn).unwrap()
+    }
+
+    /// Un-record migrate steps that complete at a version after `from`, so
+    /// named dispatch re-runs them. The integer stamp alone is not enough.
+    fn unrecord_steps_completing_after(conn: &Connection, from: i32) {
+        for (i, (name, _)) in SQLITE_STEPS.iter().enumerate() {
+            let completes_at = i as i32 + 2;
+            if completes_at > from {
+                conn.execute("DELETE FROM schema_migrations WHERE name = ?1", [name])
+                    .unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn test_sqlite_steps_align_with_schema_version() {
+        assert_eq!(SQLITE_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+        assert_eq!(SQLITE_STEPS[OUTBOX_STEP_INDEX].0, OUTBOX_STEP);
+        let unique: HashSet<&str> = SQLITE_STEPS.iter().map(|(n, _)| *n).collect();
+        assert_eq!(
+            unique.len(),
+            SQLITE_STEPS.len(),
+            "step names must be unique"
+        );
+    }
+
     #[test]
     fn test_schema_initialization() {
         let conn = Connection::open_in_memory().unwrap();
@@ -1546,6 +1721,11 @@ mod tests {
         assert!(tables.contains(&"schema_version".to_string()));
         // The tenant registry (schema v14) is created on a fresh init.
         assert!(tables.contains(&"tenants".to_string()));
+        assert!(tables.contains(&"schema_migrations".to_string()));
+        let applied = applied_steps(&conn);
+        assert!(applied.contains(BASE_STEP));
+        assert!(applied.contains(OUTBOX_STEP));
+        assert_eq!(applied.len(), SQLITE_STEPS.len() + 1);
     }
 
     #[test]
@@ -1645,6 +1825,16 @@ mod tests {
             1,
             "v18 must create Helios bulk_provider_submissions"
         );
+        let flavour: Option<String> = conn
+            .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .ok();
+        assert_eq!(
+            flavour.as_deref(),
+            Some(SCHEMA_FLAVOUR),
+            "startup must stamp fork provenance"
+        );
         let has_bytes = conn
             .prepare("PRAGMA table_info(bulk_manifests)")
             .unwrap()
@@ -1653,6 +1843,10 @@ mod tests {
             .filter_map(|r| r.ok())
             .any(|c| c == "bytes_processed");
         assert!(has_bytes, "v19 must add bulk_manifests.bytes_processed");
+        let applied = applied_steps(&conn);
+        assert!(applied.contains(OUTBOX_STEP));
+        assert!(applied.contains("bulk_provider_submissions"));
+        assert!(applied.contains("bulk_manifests_byte_progress"));
     }
 
     #[test]
@@ -1672,16 +1866,112 @@ mod tests {
     /// and so does a build that stamped a version before finishing its work).
     /// SQLite has no `ADD COLUMN IF NOT EXISTS`, so every `ALTER TABLE ... ADD
     /// COLUMN` step has to guard against the column already being there.
+    ///
+    /// Named dispatch keys off `schema_migrations`, so this un-records steps
+    /// that complete after `from` rather than relying on the integer stamp.
     #[test]
     fn test_migration_ladder_replays_on_a_current_database() {
         for from in 1..SCHEMA_VERSION {
             let conn = Connection::open_in_memory().unwrap();
             initialize_schema(&conn).unwrap();
             set_schema_version(&conn, from).unwrap();
+            unrecord_steps_completing_after(&conn, from);
             initialize_schema(&conn)
                 .unwrap_or_else(|e| panic!("replay from v{from} failed: {e:?}"));
             assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         }
+    }
+
+    /// An upstream-numbered database at v18 never ran this fork's v16→v17
+    /// outbox step. Empty ledger + no flavour + no table is the real upgrade
+    /// path; named dispatch must create the table rather than boot with a
+    /// silent missing outbox.
+    #[test]
+    fn test_initialize_schema_heals_outbox_on_upstream_numbered_database() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        conn.execute("DELETE FROM schema_migrations", [])
+            .expect("empty ledger");
+        set_schema_version(&conn, 18).unwrap();
+
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(exists, 1, "heal must create subscription_outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let flavour: String = conn
+            .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(flavour, SCHEMA_FLAVOUR);
+        assert!(
+            applied_steps(&conn).contains(OUTBOX_STEP),
+            "ledger must record the outbox step after heal"
+        );
+    }
+
+    /// Integer already at the tip, but the named outbox step is missing from
+    /// the ledger (and the table is gone). Dispatch must consult names, not
+    /// skip because `version >= SCHEMA_VERSION`.
+    #[test]
+    fn test_named_ledger_dispatch_runs_unrecorded_outbox_at_tip() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_STEP],
+        )
+        .expect("un-record outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            exists, 1,
+            "named dispatch must run the unrecorded outbox step"
+        );
+        assert!(applied_steps(&conn).contains(OUTBOX_STEP));
+    }
+
+    /// Already at the fork tip, but missing the table (dropped, or a version
+    /// stamp that skipped the outbox step). Heal must not depend on version <.
+    #[test]
+    fn test_initialize_schema_heals_outbox_when_already_at_tip() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(exists, 1, "heal must create subscription_outbox at tip");
+        assert!(applied_steps(&conn).contains(OUTBOX_STEP));
     }
 
     #[test]

@@ -100,6 +100,7 @@ pub mod bulk_submit_worker;
 pub mod capabilities;
 pub mod history;
 pub mod preconditions;
+pub mod schema_ledger;
 pub mod search;
 pub mod sof_runner;
 pub mod storage;
@@ -155,6 +156,7 @@ pub use preconditions::{
     bundle_if_none_exist_gate, if_match_field_satisfied, multiple_matches_entry,
     not_supported_entry, precondition_failed_entry,
 };
+pub use schema_ledger::{BASE_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{
     ChainedSearchProvider, FullSearchProvider, IncludeProvider, MultiTypeSearchProvider,
     RevincludeProvider, SearchProvider, SearchResult, TerminologySearchProvider,

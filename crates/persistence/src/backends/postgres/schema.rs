@@ -1,15 +1,72 @@
 //! PostgreSQL schema definitions and migrations.
 
+use std::collections::HashSet;
+
+use crate::core::schema_ledger::{
+    BASE_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering, implied_applied_indices,
+};
 use crate::error::{BackendError, StorageResult};
 
-/// Current schema version.
-pub const SCHEMA_VERSION: i32 = 37;
+/// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
+pub const SCHEMA_VERSION: i32 = 38;
+
+pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
+
+/// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
+/// Dispatch consults these names; the integer is an operator stamp and a
+/// one-time bootstrap for databases that predate `schema_migrations`.
+const PG_STEPS: &[&str] = &[
+    "search_index_enhanced_columns",
+    "resource_fts",
+    "token_display_identifier_type",
+    "fts_triggers",
+    "bulk_export_submit_tables",
+    "fhir_version",
+    "bulk_export_leases",
+    "bulk_submit_worker",
+    "reference_display_ucum_folded_string",
+    "contained_search",
+    "bulk_submit_async_schema",
+    "user_settings",
+    "tenant_registry",
+    "search_performance_indexes",
+    "token_date_covering_indexes",
+    OUTBOX_STEP,
+    "bulk_provider_submissions",
+    "search_index_last_updated",
+    "search_index_partial_indexes",
+    "search_index_recent_first",
+    "token_index_includes_sort",
+    "token_code_recent_restored",
+    "search_index_drop_surrogate_pk",
+    "drop_fk_search_resource",
+    "token_index_payload_sort",
+    "resource_fts_drop_text",
+    "search_index_skip_unanswerable",
+    "composite_covering_sort",
+    "drop_unread_search_indexes",
+    "resource_fts_unique",
+    "token_family_rewrite",
+    "token_index_nuisance_fix",
+    "value_reference_base_form",
+    "string_search_seek",
+    "drop_unread_compress",
+    "search_index_autovacuum",
+    "search_index_slot2_columns",
+];
+
+const _: () = assert!(PG_STEPS.len() + 1 == SCHEMA_VERSION as usize);
+const _: () = assert!(OUTBOX_STEP_INDEX < PG_STEPS.len());
 
 /// Advisory-lock key serializing schema migration across HFS instances sharing
 /// one database. Arbitrary but must stay stable across releases.
 const MIGRATION_LOCK_KEY: i64 = 0x4846_5300_4d49_4752; // "HFS\0MIGR"
 
 /// Initialize the database schema.
+///
+/// Dispatch consults `schema_migrations` by step name. The integer
+/// `schema_version` is stamped at the tip for operators and used only to
+/// bootstrap the ledger on databases that predate it.
 ///
 /// Serialized across instances with a session-level advisory lock: several HFS
 /// processes routinely share one database (see `.github/workflows/cluster-smoke.yml`,
@@ -42,15 +99,53 @@ pub async fn initialize_schema(client: &deadpool_postgres::Client) -> StorageRes
 }
 
 async fn run_migrations(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    debug_assert_eq!(PG_STEPS[OUTBOX_STEP_INDEX], OUTBOX_STEP);
+
     let current_version = get_schema_version(client).await?;
+    ensure_schema_flavour_column(client).await?;
+    ensure_schema_migrations_table(client).await?;
+
+    let flavour = get_schema_flavour(client).await?;
+    let outbox_exists = table_exists(client, "subscription_outbox").await?;
+    let mut applied = load_applied_steps(client).await?;
+
+    if applied.is_empty() && current_version > 0 {
+        backfill_legacy_integer(
+            client,
+            current_version,
+            flavour.as_deref(),
+            outbox_exists,
+            &mut applied,
+        )
+        .await?;
+    }
 
     if current_version == 0 {
         create_schema_v1(client).await?;
         set_schema_version(client, 1).await?;
-        migrate_schema(client, 1).await?;
-    } else if current_version < SCHEMA_VERSION {
-        migrate_schema(client, current_version).await?;
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
+    } else if !applied.contains(BASE_STEP) {
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
     }
+
+    for &name in PG_STEPS {
+        let present = if name == OUTBOX_STEP {
+            table_exists(client, "subscription_outbox").await?
+        } else {
+            true
+        };
+        if applied.contains(name) && present {
+            continue;
+        }
+        run_pg_step(client, name).await?;
+        record_step(client, name).await?;
+        applied.insert(name.to_string());
+    }
+
+    set_schema_version(client, SCHEMA_VERSION).await?;
+    stamp_schema_flavour(client).await?;
 
     Ok(())
 }
@@ -73,6 +168,201 @@ async fn get_schema_version(client: &deadpool_postgres::Client) -> StorageResult
         .map_err(|e| pg_error(format!("Failed to query schema version: {}", e)))?;
 
     Ok(row.map(|r| r.get::<_, i32>(0)).unwrap_or(0))
+}
+
+/// Idempotently ensures the durable subscription outbox exists.
+///
+/// Body of the v16 → v17 migration, and a startup self-heal so an
+/// upstream-numbered database (which skipped that step) still gets the table.
+async fn ensure_subscription_outbox(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    let stmts = [
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id BIGSERIAL PRIMARY KEY,
+            event_id UUID NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource JSONB,
+            previous_resource JSONB,
+            envelope JSONB NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            processed_at TIMESTAMPTZ,
+            attempts INT NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TIMESTAMPTZ
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+         ON subscription_outbox (available_at, id)
+         WHERE processed_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+         ON subscription_outbox (tenant_id, id)
+         WHERE processed_at IS NOT NULL",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("ensure subscription_outbox: {e}")))?;
+    }
+
+    Ok(())
+}
+
+async fn ensure_schema_flavour_column(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "ALTER TABLE schema_version ADD COLUMN IF NOT EXISTS flavour TEXT",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("add schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+async fn stamp_schema_flavour(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "UPDATE schema_version SET flavour = $1 WHERE flavour IS NULL",
+            &[&SCHEMA_FLAVOUR],
+        )
+        .await
+        .map_err(|e| pg_error(format!("stamp schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+async fn get_schema_flavour(client: &deadpool_postgres::Client) -> StorageResult<Option<String>> {
+    let row = client
+        .query_opt("SELECT flavour FROM schema_version LIMIT 1", &[])
+        .await
+        .map_err(|e| pg_error(format!("read schema_version.flavour: {e}")))?;
+    Ok(row.and_then(|r| r.get::<_, Option<String>>(0)))
+}
+
+async fn ensure_schema_migrations_table(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (
+                name TEXT PRIMARY KEY,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("create schema_migrations: {e}")))?;
+    Ok(())
+}
+
+async fn load_applied_steps(client: &deadpool_postgres::Client) -> StorageResult<HashSet<String>> {
+    let rows = client
+        .query("SELECT name FROM schema_migrations", &[])
+        .await
+        .map_err(|e| pg_error(format!("select schema_migrations: {e}")))?;
+    Ok(rows.into_iter().map(|r| r.get::<_, String>(0)).collect())
+}
+
+async fn record_step(client: &deadpool_postgres::Client, name: &str) -> StorageResult<()> {
+    client
+        .execute(
+            "INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING",
+            &[&name],
+        )
+        .await
+        .map_err(|e| pg_error(format!("record schema step {name}: {e}")))?;
+    Ok(())
+}
+
+async fn table_exists(client: &deadpool_postgres::Client, name: &str) -> StorageResult<bool> {
+    let row = client
+        .query_one(
+            "SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = $1
+            )",
+            &[&name],
+        )
+        .await
+        .map_err(|e| pg_error(format!("probe table {name}: {e}")))?;
+    Ok(row.get(0))
+}
+
+async fn backfill_legacy_integer(
+    client: &deadpool_postgres::Client,
+    recorded_version: i32,
+    flavour: Option<&str>,
+    outbox_exists: bool,
+    applied: &mut HashSet<String>,
+) -> StorageResult<()> {
+    let numbering = classify_numbering(flavour, recorded_version, SCHEMA_VERSION, outbox_exists);
+    tracing::info!(
+        ?numbering,
+        recorded_version,
+        outbox_exists,
+        "backfilling schema_migrations from legacy integer"
+    );
+    if recorded_version >= 1 {
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
+    }
+    for i in implied_applied_indices(recorded_version, numbering, PG_STEPS.len()) {
+        let name = PG_STEPS[i];
+        if name == OUTBOX_STEP && !outbox_exists {
+            continue;
+        }
+        record_step(client, name).await?;
+        applied.insert(name.to_string());
+    }
+    Ok(())
+}
+
+/// Run one named step. Names must match [`PG_STEPS`]; async fn pointers cannot
+/// live in that table, so this match is the other half of the ledger.
+async fn run_pg_step(client: &deadpool_postgres::Client, name: &str) -> StorageResult<()> {
+    match name {
+        "search_index_enhanced_columns" => migrate_v1_to_v2(client).await,
+        "resource_fts" => migrate_v2_to_v3(client).await,
+        "token_display_identifier_type" => migrate_v3_to_v4(client).await,
+        "fts_triggers" => migrate_v4_to_v5(client).await,
+        "bulk_export_submit_tables" => migrate_v5_to_v6(client).await,
+        "fhir_version" => migrate_v6_to_v7(client).await,
+        "bulk_export_leases" => migrate_v7_to_v8(client).await,
+        "bulk_submit_worker" => migrate_v8_to_v9(client).await,
+        "reference_display_ucum_folded_string" => migrate_v9_to_v10(client).await,
+        "contained_search" => migrate_v10_to_v11(client).await,
+        "bulk_submit_async_schema" => migrate_v11_to_v12(client).await,
+        "user_settings" => migrate_v12_to_v13(client).await,
+        "tenant_registry" => migrate_v13_to_v14(client).await,
+        "search_performance_indexes" => migrate_v14_to_v15(client).await,
+        "token_date_covering_indexes" => migrate_v15_to_v16(client).await,
+        OUTBOX_STEP => migrate_v16_to_v17(client).await,
+        "bulk_provider_submissions" => migrate_v17_to_v18(client).await,
+        "search_index_last_updated" => migrate_v18_to_v19(client).await,
+        "search_index_partial_indexes" => migrate_v19_to_v20(client).await,
+        "search_index_recent_first" => migrate_v20_to_v21(client).await,
+        "token_index_includes_sort" => migrate_v21_to_v22(client).await,
+        "token_code_recent_restored" => migrate_v22_to_v23(client).await,
+        "search_index_drop_surrogate_pk" => migrate_v23_to_v24(client).await,
+        "drop_fk_search_resource" => migrate_v24_to_v25(client).await,
+        "token_index_payload_sort" => migrate_v25_to_v26(client).await,
+        "resource_fts_drop_text" => migrate_v26_to_v27(client).await,
+        "search_index_skip_unanswerable" => migrate_v27_to_v28(client).await,
+        "composite_covering_sort" => migrate_v28_to_v29(client).await,
+        "drop_unread_search_indexes" => migrate_v29_to_v30(client).await,
+        "resource_fts_unique" => migrate_v30_to_v31(client).await,
+        "token_family_rewrite" => migrate_v31_to_v32(client).await,
+        "token_index_nuisance_fix" => migrate_v32_to_v33(client).await,
+        "value_reference_base_form" => migrate_v33_to_v34(client).await,
+        "string_search_seek" => migrate_v34_to_v35(client).await,
+        "drop_unread_compress" => migrate_v35_to_v36(client).await,
+        "search_index_autovacuum" => migrate_v36_to_v37(client).await,
+        "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
+        other => Err(pg_error(format!("unknown schema step {other}"))),
+    }
 }
 
 /// Set the schema version.
@@ -165,6 +455,8 @@ async fn create_schema_v1(client: &deadpool_postgres::Client) -> StorageResult<(
                 -- Observation.code-value-concept), which would otherwise
                 -- collide. Slot 2 holds the second component of that type.
                 -- Max observed per family is 2, so one extra slot suffices.
+                -- The writer always binds these three columns. Tables created
+                -- before they were added here get them from migrate_v37_to_v38.
                 value_token_system_2 TEXT,
                 value_token_code_2 TEXT,
                 value_number_2 DOUBLE PRECISION
@@ -308,62 +600,6 @@ async fn create_fts_tables(client: &deadpool_postgres::Client) -> StorageResult<
             &[],
         )
         .await;
-
-    Ok(())
-}
-
-/// Run schema migrations from current version to latest.
-async fn migrate_schema(
-    client: &deadpool_postgres::Client,
-    from_version: i32,
-) -> StorageResult<()> {
-    let mut version = from_version;
-
-    while version < SCHEMA_VERSION {
-        match version {
-            1 => migrate_v1_to_v2(client).await?,
-            2 => migrate_v2_to_v3(client).await?,
-            3 => migrate_v3_to_v4(client).await?,
-            4 => migrate_v4_to_v5(client).await?,
-            5 => migrate_v5_to_v6(client).await?,
-            6 => migrate_v6_to_v7(client).await?,
-            7 => migrate_v7_to_v8(client).await?,
-            8 => migrate_v8_to_v9(client).await?,
-            9 => migrate_v9_to_v10(client).await?,
-            10 => migrate_v10_to_v11(client).await?,
-            11 => migrate_v11_to_v12(client).await?,
-            12 => migrate_v12_to_v13(client).await?,
-            13 => migrate_v13_to_v14(client).await?,
-            14 => migrate_v14_to_v15(client).await?,
-            15 => migrate_v15_to_v16(client).await?,
-            16 => migrate_v16_to_v17(client).await?,
-            17 => migrate_v17_to_v18(client).await?,
-            18 => migrate_v18_to_v19(client).await?,
-            19 => migrate_v19_to_v20(client).await?,
-            20 => migrate_v20_to_v21(client).await?,
-            21 => migrate_v21_to_v22(client).await?,
-            22 => migrate_v22_to_v23(client).await?,
-            23 => migrate_v23_to_v24(client).await?,
-            24 => migrate_v24_to_v25(client).await?,
-            25 => migrate_v25_to_v26(client).await?,
-            26 => migrate_v26_to_v27(client).await?,
-            27 => migrate_v27_to_v28(client).await?,
-            28 => migrate_v28_to_v29(client).await?,
-            29 => migrate_v29_to_v30(client).await?,
-            30 => migrate_v30_to_v31(client).await?,
-            31 => migrate_v31_to_v32(client).await?,
-            32 => migrate_v32_to_v33(client).await?,
-            33 => migrate_v33_to_v34(client).await?,
-            34 => migrate_v34_to_v35(client).await?,
-            35 => migrate_v35_to_v36(client).await?,
-            36 => migrate_v36_to_v37(client).await?,
-            _ => {
-                return Err(pg_error(format!("Unknown schema version: {}", version)));
-            }
-        }
-        version += 1;
-        set_schema_version(client, version).await?;
-    }
 
     Ok(())
 }
@@ -947,43 +1183,7 @@ pub async fn read_index_layout(client: &deadpool_postgres::Client) -> IndexLayou
 
 /// v16 -> v17: durable subscription event outbox (transactional outbox foundation).
 async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult<()> {
-    let stmts = [
-        "CREATE TABLE IF NOT EXISTS subscription_outbox (
-            id BIGSERIAL PRIMARY KEY,
-            event_id UUID NOT NULL UNIQUE,
-            tenant_id TEXT NOT NULL,
-            fhir_version TEXT NOT NULL,
-            resource_type TEXT NOT NULL,
-            resource_id TEXT NOT NULL,
-            version_id TEXT NOT NULL DEFAULT '',
-            event_type TEXT NOT NULL,
-            resource JSONB,
-            previous_resource JSONB,
-            envelope JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            processed_at TIMESTAMPTZ,
-            attempts INT NOT NULL DEFAULT 0,
-            last_error TEXT,
-            locked_by TEXT,
-            locked_until TIMESTAMPTZ
-        )",
-        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
-         ON subscription_outbox (available_at, id)
-         WHERE processed_at IS NULL",
-        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
-         ON subscription_outbox (tenant_id, id)
-         WHERE processed_at IS NOT NULL",
-    ];
-
-    for sql in stmts {
-        client
-            .execute(sql, &[])
-            .await
-            .map_err(|e| pg_error(format!("Migration v16->v17 failed: {}", e)))?;
-    }
-
-    Ok(())
+    ensure_subscription_outbox(client).await
 }
 
 /// v17 -> v18: provider-side Bulk Submit store (#772).
@@ -3360,7 +3560,42 @@ async fn migrate_v36_to_v37(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v35->v36 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v36->v37 failed: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// v37 -> v38: add the denormalized composite slot-2 columns on **every**
+/// layout, including a pre-v18 `legacy` `search_index`.
+///
+/// `#279` folded token+token / number+number composites into one row by adding
+/// `value_token_system_2`, `value_token_code_2`, and `value_number_2`. Those
+/// columns were written into `create_schema_v1` and into the INSERT the writer
+/// always emits, but no migration added them to an existing table. A database
+/// created before that CREATE TABLE change — typical of a dedicated
+/// `HFS_AUDIT_DATABASE_URL` that was populated at the v18 layout fork and then
+/// migrated in place — stays at `search_index_layout = legacy` and never grew
+/// the columns. Every subsequent `INSERT INTO search_index` then fails with
+/// `column "value_token_system_2" does not exist`. Clinical FHIR writes can
+/// still succeed when search is offloaded to Elasticsearch; the database audit
+/// sink cannot, because it indexes locally.
+///
+/// `ADD COLUMN IF NOT EXISTS` is catalog-only (nullable, no rewrite). Legacy
+/// query paths ignore slot 2; denormalized paths start matching a table the
+/// writer has been assuming all along.
+async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    let stmts = [
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_token_system_2 TEXT",
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_token_code_2 TEXT",
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_number_2 DOUBLE PRECISION",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("Migration v37->v38 failed: {}", e)))?;
     }
 
     Ok(())
@@ -3978,4 +4213,18 @@ fn pg_error(message: String) -> crate::error::StorageError {
         message,
         source: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pg_steps_align_with_schema_version() {
+        assert_eq!(PG_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+        assert_eq!(PG_STEPS[OUTBOX_STEP_INDEX], OUTBOX_STEP);
+        let unique: HashSet<&str> = PG_STEPS.iter().copied().collect();
+        assert_eq!(unique.len(), PG_STEPS.len(), "step names must be unique");
+        assert!(PG_STEPS.contains(&OUTBOX_STEP));
+    }
 }
