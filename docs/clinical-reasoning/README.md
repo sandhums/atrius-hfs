@@ -124,7 +124,7 @@ Checklist before expecting CMS165 (or similar eCQM) to evaluate cleanly:
 ### Processes (startup order)
 
 1. **HTS** — terminology loaded (see [data-import.md](./data-import.md))
-2. **Clinical HFS** — Atrius profile manifest, `HFS_TERMINOLOGY_SERVER` → HTS
+2. **Clinical HFS** — `HFS_FHIR_PACKAGES` overlay + `HFS_VALIDATION_MODE`, `HFS_TERMINOLOGY_SERVER` → HTS
 3. **KR HFS** — eCQM / Atrius `Library` resources imported
 4. **JVM sidecar** — listening on 8088
 5. **cds-server** (optional for CDS Hooks) — sidecar URL + manifest

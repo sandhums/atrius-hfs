@@ -4,6 +4,8 @@ This guide describes how to keep **Atrius clinical-reasoning feature branches** 
 
 Use it whenever you sync `upstream/main` → your fork `main` → `feat-clinical-reasoning` (or related feat branches).
 
+There is **one** validation engine: `helios-fhir-validator`, reached through `ValidationService`. Atrius IG profiles load as listed `HFS_FHIR_PACKAGES` overlays. The `fhir-validation*` crates, `HFS_PROFILE_MANIFEST`, `ProfileValidationService`, and `enforce_profile_on_write` were removed on 1 Aug 2026 (`f257914a8`). Do not restore them on conflict. Operator config: [validation-cutover.md](../validation-cutover.md).
+
 ---
 
 ## Branch roles
@@ -49,9 +51,9 @@ If Git reports conflicts, use the [conflict resolution table](#conflict-resoluti
 
 ```bash
 cargo build
-cargo build -p cds-server -p atrius-clinical-reasoning
-cargo test -p fhir-validation --lib
-cargo test -p helios-rest --test profile_validation_integration
+cargo build -p cds-server
+cargo test -p helios-rest --test validation_enforcement_tests
+cargo test -p helios-rest --test validate_operation_tests
 ```
 
 Optional (requires running stack):
@@ -84,14 +86,12 @@ git log --oneline HEAD..origin/main | wc -l    # commits behind main — keep th
 These paths rarely conflict with Helios and should stay on feature branches:
 
 ```
-crates/atrius-clinical-reasoning/
 crates/cds-server/
-crates/fhir-validation/
-crates/fhir-validation-gen/
-crates/fhir-validation-types/
 crates/fhir-valueset-gen/
+crates/fhir-terminology/
 docs/clinical-reasoning/
 docs/his/
+docs/validation-cutover.md
 manifests/
 deploy/
 scripts/cds-*.sh
@@ -100,11 +100,14 @@ scripts/generate-*.py
 scripts/import-*.py
 scripts/run-kr-hfs.sh
 scripts/setup-plandefinition-cds-catalog.sh
+scripts/setup-atrius-profile-registry.sh
 scripts/validate-manifest-kr-pins.sh
 data/clinical-reasoning/
 ```
 
 **Do not commit:** `org/opencds/**/*.class` (JVM bytecode belongs in the sidecar JAR, not git).
+
+**Do not resurrect:** `crates/fhir-validation/`, `crates/fhir-validation-gen/`, `crates/fhir-validation-types/`, `crates/rest/src/profile_validation.rs`. Those trees are gone.
 
 ### Helios-owned (take `main` on conflict)
 
@@ -118,7 +121,7 @@ crates/rest/src/export/
 crates/persistence/
 crates/sof/
 crates/hts/          # except tiny CDS-related tweaks — re-apply manually if needed
-crates/hfs/          # v2 loads profile validation inside helios-rest build_app
+crates/hfs/          # ValidationService is constructed inside helios-rest build_app
 crates/fhirpath/     # except terminology_client extensions listed below
 crates/audit/
 crates/subscriptions/
@@ -136,33 +139,37 @@ After taking `main` for a conflicted shared file, re-apply only these **Atrius t
 
 ### `crates/rest`
 
-| File | Atrius change |
-|------|----------------|
-| `src/profile_validation.rs` | **New file** — NDHM/ABDM profile validation service |
-| `src/handlers/validate.rs` | **New file** — `$validate` handler |
-| `src/config.rs` | `ProfileValidationMode`, `HFS_PROFILE_MANIFEST`, `HFS_PROFILE_VALIDATION_MODE`, `HFS_PROFILE_VALIDATION_ADDONS` |
-| `src/state.rs` | `profile_validation` field, `with_profile_validation`, `enforce_profile_on_write` |
-| `src/lib.rs` | `pub mod profile_validation`, load manifest in `build_app`, re-exports |
-| `src/error.rs` | `RestError::ValidationOutcome { outcome }` + `into_response` arm |
-| `src/routing/fhir_routes.rs` | Routes for `/{type}/$validate` and `/{type}/{id}/$validate` |
-| `src/handlers/mod.rs` | `pub mod validate` |
-| `src/handlers/create.rs` | `state.enforce_profile_on_write(...)` before persist |
-| `src/handlers/update.rs` | same |
-| `src/handlers/patch.rs` | same |
-| `src/handlers/batch.rs` | same + `batch_validation_error_result` |
-| `tests/profile_validation_integration.rs` | Integration tests (config-driven; no extra arg to `create_app_with_auth`) |
-| `Cargo.toml` | `fhir-validation` dependency + feature passthrough on R4/R4B/R5/R6 |
-
-### `crates/fhir`
+One engine. Writes go through `ValidationService::check_write` (`HFS_VALIDATION_MODE`: `off` / `log` / `enforce`). `$validate` uses `ValidationService::validate_resource`. Atrius IG profiles are **not** a second validator; they are extra `SchemaRegistry` layers on `CompositeResolver`.
 
 | File | Atrius change |
 |------|----------------|
-| `src/error.rs` | **New file** — `TerminologyValidationError` |
-| `src/lib.rs` | `mod error; pub use error::TerminologyValidationError;` |
-| `src/r4.rs` (and `r4b.rs`, `r5.rs`, `r6.rs`) | Append: `pub mod terminology;` |
-| `src/r4/terminology/**` (etc.) | **Generated** ValueSet/CodeSystem binding tables (~1k files per version) — keep Atrius copy |
+| `src/validation.rs` | `package_layers` from `HFS_FHIR_PACKAGES` (listed packages only; do not walk `package.json` deps) on `CompositeResolver` with the tenant overlay and embedded core pack |
+| `src/config.rs` | `HFS_FHIR_PACKAGE_CACHE`, `HFS_FHIR_PACKAGES` (Helios already owns `HFS_VALIDATION_MODE`) |
+| `src/state.rs` | `validation: Arc<ValidationService>` — **not** a `profile_validation` field |
+| `src/handlers/create.rs` / `update.rs` / `patch.rs` | `state.validation().check_write(...)` before persist |
+| `src/handlers/batch.rs` | `check_write` on batch POST/PUT and on the transaction pre-flight loop for POST/PUT |
+| `src/handlers/validate.rs` | Helios `$validate` (keep upstream; do not restore the deleted Atrius handler) |
+| `tests/validation_enforcement_tests.rs` | Write-path `HFS_VALIDATION_MODE` tests |
 
-When merging Helios updates to `r4.rs`, **take Helios generated body**, then re-add the single line `pub mod terminology;` at the end.
+`check_write` **does** run on batch and transaction POST/PUT. The obsolete backlog line “Atrius profile-manifest enforcement does not run on batch or transaction entries” is false since 1 Aug 2026.
+
+Real remaining validation gaps (do not “fix” them by restoring the old crates):
+
+- Bulk-submit ingest writes via `storage.create` / `update` and does not call `check_write`.
+- Transaction `DELETE` entries are skipped by the pre-flight loop (`batch.rs` continues unless POST/PUT).
+- Bundle `PATCH` entries return 501; the instance PATCH endpoint does validate.
+- `$validate` `mode` is parsed; only `delete` short-circuits. Other modes do not change enforcement.
+- Fork slicing: `converter/slicing.rs` builds `Match` IR for `type` / `profile` / `binding`, but `engine/slicing.rs::slice_matches` still evaluates pattern only.
+
+### `crates/persistence`
+
+| File | Atrius change |
+|------|----------------|
+| `src/core/schema_ledger.rs` | Named `schema_migrations` ledger; fork vs upstream integer classification |
+| `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`. Do not restore a pure integer `migrate_schema` loop |
+| `src/backends/*/subscription_outbox.rs` | Durable outbox store |
+
+`SCHEMA_VERSION` (19 SQLite / 38 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder.
 
 ### `crates/fhirpath`
 
@@ -175,11 +182,12 @@ When merging Helios updates to `r4.rs`, **take Helios generated body**, then re-
 
 Merge carefully — do **not** replace the whole file with an old feat copy (you will lose `resolve()` and resource visibility fixes from Helios).
 
-### `crates/fhir-gen`
+### `crates/fhir-validator`
 
 | File | Atrius change |
 |------|----------------|
-| `src/lib.rs` | `pub fn make_rust_safe` (used by `fhir-validation-gen`) |
+| `src/packages/resolve.rs` | Listed `HFS_FHIR_PACKAGES` only — do not walk `package.json` dependencies (that pulls `ndhm.in` and fails offline) |
+| `src/converter/slicing.rs` | Extra `Match` IR for `type` / `profile` / `binding` (runtime still pattern-only until engine catches up) |
 
 ### `crates/cds-hooks`
 
@@ -195,13 +203,17 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 |------|----------------|
 | `src/discovery.rs` | Expanded SMART scopes/capabilities when authorize endpoint is configured |
 
+### `crates/subscriptions`
+
+Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `with_status_store` — do not restore `SubscriptionStatusStore`.
+
 ### Root workspace
 
 | File | Atrius change |
 |------|----------------|
-| `Cargo.toml` | Add Atrius crates to `default-members` (keep `version = "0.2.0"` and Helios serde pins from `main`) |
+| `Cargo.toml` | Keep Atrius `default-members` (`fhir-valueset-gen`, `fhir-terminology`, `cds-server` is a workspace member via `crates/*` but not a default member). Helios version / serde pins from `main` |
 
-**Note:** Profile validation is wired in `helios-rest` `build_app()` from `ServerConfig` — **`crates/hfs/src/main.rs` does not need Atrius patches** in the v2 layout.
+**Note:** `ValidationService` is wired in `helios-rest` `build_app()` from `ServerConfig` — **`crates/hfs/src/main.rs` does not need Atrius patches**.
 
 ---
 
@@ -209,17 +221,15 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 
 | Conflict location | Resolution |
 |-------------------|------------|
-| `crates/fhir/src/r4.rs` (huge generated file) | Take **`main`**, re-add `pub mod terminology;` at EOF |
-| `crates/fhir/src/r*/terminology/**` | Keep **Atrius** tree |
-| `crates/fhir/src/error.rs` | Keep **Atrius** |
-| `crates/rest/**` except profile files | Take **`main`**, re-apply [REST touch points](#cratesrest) |
-| `crates/persistence/**`, `crates/sof/**` | Take **`main`** |
+| `crates/fhir/src/r4.rs` or `crates/fhir/src/r4/**` (generated models) | Take **`main`** if Helios is still flat-file; this fork emits directory layout — see §3.5 of the merge audit. Do **not** look for `r4/terminology/**` (that tree is gone) |
+| `crates/rest/**` | Take **`main`**, re-apply [REST touch points](#cratesrest) |
+| `crates/persistence/**` | Take **`main`**, re-apply named ledger + outbox |
 | `crates/hfs/**` | Take **`main`** |
 | `crates/cds-hooks/**` | **Merge** — keep measurement period + BadGateway |
-| `Cargo.toml` | Take **`main`** pins/version, add Atrius `default-members` |
+| `Cargo.toml` | Take **`main`** pins/version, keep Atrius `default-members` |
 | `Cargo.lock` | Do not hand-merge — fix `Cargo.toml`, run `cargo build` |
 | `.gitattributes` | Keep fork rule: `helios_fhir/** merge=ours` |
-| `.gitignore` | Keep fork entries (e.g. `/crates/fhir/tests/`) |
+| `.gitignore` | Keep fork entries (e.g. `/crates/fhir/tests/`, `/data/fhir-packages/`) |
 
 ---
 
@@ -233,14 +243,12 @@ git checkout origin/main -b feat-clinical-reasoning-v2
 
 # 1. Copy Atrius-only trees from the old branch
 git checkout origin/feat-clinical-reasoning -- \
-  crates/atrius-clinical-reasoning \
   crates/cds-server \
-  crates/fhir-validation \
-  crates/fhir-validation-gen \
-  crates/fhir-validation-types \
   crates/fhir-valueset-gen \
+  crates/fhir-terminology \
   docs/clinical-reasoning \
   docs/his \
+  docs/validation-cutover.md \
   manifests \
   data/clinical-reasoning \
   deploy \
@@ -252,31 +260,23 @@ git checkout origin/feat-clinical-reasoning -- \
   scripts/import-synthea-atrius.py \
   scripts/run-kr-hfs.sh \
   scripts/setup-plandefinition-cds-catalog.sh \
+  scripts/setup-atrius-profile-registry.sh \
   scripts/validate-manifest-kr-pins.sh
 
-# 2. Copy new REST validation files
-git checkout origin/feat-clinical-reasoning -- \
-  crates/rest/src/profile_validation.rs \
-  crates/rest/src/handlers/validate.rs \
-  crates/rest/tests/profile_validation_integration.rs
+# 2. Do NOT copy fhir-validation*, profile_validation.rs, or HFS_PROFILE_* config.
 
-# 3. Copy generated terminology + fhir error (if not already present)
-git checkout origin/feat-clinical-reasoning -- \
-  crates/fhir/src/error.rs \
-  crates/fhir/src/r4/terminology \
-  crates/fhir/src/r4b/terminology \
-  crates/fhir/src/r5/terminology \
-  crates/fhir/src/r6/terminology
-
-# 4. Re-port surgical shared-crate patches (see tables above) onto current main files
+# 3. Re-port surgical shared-crate patches (see tables above) onto current main files
 #    — or diff against feat-clinical-reasoning-v2 from a prior successful rebuild.
+#    Persistence: named schema_migrations ledger + subscription_outbox.
+#    REST: HFS_FHIR_PACKAGES overlay on ValidationService.
 
-# 5. Build and test
+# 4. Build and test
 cargo build
-cargo test -p fhir-validation --lib
-cargo test -p helios-rest --test profile_validation_integration
+cargo build -p cds-server
+cargo test -p helios-rest --test validation_enforcement_tests
+cargo test -p helios-rest --test validate_operation_tests
 
-# 6. When validated, rename branches
+# 5. When validated, rename branches
 git branch -m feat-clinical-reasoning feat-clinical-reasoning-archive
 git branch -m feat-clinical-reasoning-v2 feat-clinical-reasoning
 ```
@@ -291,14 +291,7 @@ On `main` you should keep:
 helios_fhir/** merge=ours
 ```
 
-Optional (only if merges keep clobbering generated Atrius trees):
-
-```gitattributes
-crates/fhir/src/r4/terminology/** merge=ours
-crates/fhir-validation-gen/generated/** merge=ours
-```
-
-Use `merge=ours` only for **generated or fork-owned** paths — not for hand-written integration in `rest/` or `cds-hooks/`.
+Use `merge=ours` only for **generated or fork-owned** paths — not for hand-written integration in `rest/` or `cds-hooks/`. Do not add a `fhir-validation-gen/generated/**` rule; that crate is gone.
 
 ---
 
@@ -308,11 +301,10 @@ To reduce merge conflict surface:
 
 | Branch | Scope |
 |--------|--------|
-| `feat/fhir-validation` | `fhir-validation*`, `fhir-valueset-gen`, fhir `terminology/` trees |
-| `feat/cds-stack` | `cds-server`, `atrius-clinical-reasoning` |
-| `feat/clinical-reasoning` | REST/HFS integration, docs, manifests, smokes |
+| `feat/cds-stack` | `cds-server`, terminology/valueset generators |
+| `feat/clinical-reasoning` | REST/HFS package overlay, docs, manifests, smokes |
 
-Merge order: `main` → validation → cds-stack → clinical-reasoning integration.
+Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 ---
 
@@ -329,9 +321,11 @@ Merge order: `main` → validation → cds-stack → clinical-reasoning integrat
 
 - [ ] `cargo build` (default workspace)
 - [ ] `cargo build -p cds-server`
-- [ ] `cargo test -p fhir-validation --lib`
-- [ ] `cargo test -p helios-rest --test profile_validation_integration`
+- [ ] `cargo test -p helios-rest --test validation_enforcement_tests`
+- [ ] `cargo test -p helios-rest --test validate_operation_tests`
 - [ ] No accidental deletion of `handlers/sof/`, `bulk_submit`, or `persistence/src/sof/`
+- [ ] No resurrection of `fhir-validation*` or `HFS_PROFILE_MANIFEST`
+- [ ] `schema_migrations` dispatch still present in SQLite and Postgres schema.rs
 
 ---
 
@@ -342,11 +336,13 @@ Merge order: `main` → validation → cds-stack → clinical-reasoning integrat
 3. **Replacing entire `rest/` or `hfs/` from old feat** — regresses Helios 0.2.0 features.
 4. **Hand-editing `Cargo.lock`** — regenerate via `cargo build`.
 5. **Committing `org/*.class` or local terminology zips** — huge diffs and merge noise.
+6. **Keeping “dual validators” on the sync keep-list** — there is no second engine; restoring `fhir-validation` undoes the 1 Aug cutover.
 
 ---
 
 ## Related docs
 
 - [Clinical reasoning stack overview](./README.md)
+- [Single-engine validation cutover](../validation-cutover.md)
 - [Startup guide](./startup-guide.md) — local stack and smoke scripts
 - [Troubleshooting](./troubleshooting.md) — runtime issues after sync

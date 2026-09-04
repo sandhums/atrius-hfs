@@ -102,7 +102,7 @@ HFS_DATABASE_URL=postgresql://...
 HFS_ELASTICSEARCH_NODES=http://...
 HFS_AUTH_ENABLED=true
 HFS_FHIR_PACKAGE_CACHE=/var/lib/hfs/fhir-packages
-HFS_FHIR_PACKAGES=atrius.in.r4@x.y.z
+HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0   # name@version from IG package.json
 HFS_VALIDATION_MODE=enforce
 HFS_TERMINOLOGY_SERVER=http://hts:8090
 HFS_SUBSCRIPTIONS_ENABLED=true
@@ -214,7 +214,7 @@ Consent (data sharing, treatment)
 
 ### Validation gates
 
-- `HFS_PROFILE_VALIDATION_MODE=strict` on Patient writes
+- `HFS_VALIDATION_MODE=enforce` + `HFS_FHIR_PACKAGES` (Atrius IG) on Patient writes
 - HTS `$validate-code` for identifier type codes, gender, marital status
 - Business rules in domain service: required fields, age constraints, duplicate policy
 
@@ -417,7 +417,7 @@ Also:
 
 - ValueSets: appointment-type, visit-mode (in-person/tele), OPD service types
 - Examples: Schedule with RRULE `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR`, Slots, booked Appointment
-- Publish via `build-atrius-profile-manifest.sh`; enable strict validation on writes
+- Seed `HFS_FHIR_PACKAGE_CACHE` via `setup-atrius-profile-registry.sh`; set `HFS_FHIR_PACKAGES` + `HFS_VALIDATION_MODE=enforce`
 
 #### 3.5.2 Domain layer (atrius-his)
 
@@ -672,9 +672,8 @@ Enable `order-select`, `order-sign` hooks (already typed in [`helios-cds-hooks`]
 
 ```
 atrius-hfs/                          # Layer 1 — FHIR platform
-  crates/fhir-validation/            # Profile validation (fix + extend as IG grows)
-  manifests/atrius-r4-profile-manifest-core.json
-  scripts/build-atrius-profile-manifest.sh
+  crates/fhir-validator/             # Single engine; Atrius IG via HFS_FHIR_PACKAGES
+  scripts/setup-atrius-profile-registry.sh
   docs/his/                          # This plan
 
 atrius-his/                          # Layer 2 — domain services (active implementation)
@@ -763,7 +762,7 @@ Alternative: keep domain services entirely in **`atrius-bff`** if you prefer a s
 ## Immediate next steps (Phase 3.5 — first 2–3 weeks)
 
 1. **AtriusIGDraft:** Author **`atrius-in-schedule`**, **`atrius-in-slot`**, **`atrius-in-appointment`** + **`atrius-schedule-recurrence`** extension (RRULE/TZID/EXDATE); examples and ValueSets
-2. **Manifest:** Rebuild `atrius-r4-profile-manifest-core.json`; confirm strict `$validate` passes on examples
+2. **Packages:** Re-seed `data/fhir-packages` from the published IG; confirm `$validate` in `enforce` mode passes on examples
 3. **his-domain:** Profile constants + builders for Schedule/Slot/Appointment; recurrence expansion module
 4. **his-scheduling:** Apply profiles on write; `expand-slots`; extend smoke with `$validate`
 5. **his-adt:** `POST /encounters/start-visit` from Appointment; EpisodeOfCare on admit; ADT validate smoke

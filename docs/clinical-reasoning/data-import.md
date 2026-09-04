@@ -10,7 +10,7 @@ What to load, where it lives, and in what order for CDS / measure evaluation.
 3. ICD-10-CM XML (optional if bundled copy suffices)
 4. RxNorm RRF (NLM ToS; needed for medication ValueSets)
 5. LOINC (optional; Synthea vitals/labs)
-6. Atrius IG → profile manifest for clinical HFS validation
+6. Atrius IG → `HFS_FHIR_PACKAGES` overlay for clinical HFS validation
 7. Clinical patient data → clinical HFS
 8. Atrius IG Libraries + PlanDefinitions → KR HFS
    (AtriusIGDraft: translate-cql.sh + import-atrius-kr-libraries.py --clinical-reasoning)
@@ -80,7 +80,7 @@ Script: [`scripts/import-synthea-atrius.py`](../../scripts/import-synthea-atrius
 
 - Adds Atrius `meta.profile` to Synthea resources before POST
 - Default base URL: `http://127.0.0.1:8082`
-- Requires clinical HFS with profile manifest for strict validation
+- Requires clinical HFS with `HFS_FHIR_PACKAGES` + `HFS_VALIDATION_MODE=enforce`
 
 ```bash
 ./scripts/import-synthea-atrius.py --base-url http://127.0.0.1:8082 ./synthea/output/fhir/
