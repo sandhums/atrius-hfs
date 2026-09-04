@@ -33,6 +33,7 @@ pub struct PostgresSubscriptionOutbox {
 }
 
 impl PostgresSubscriptionOutbox {
+    /// Wraps an existing pool. `source` is the CloudEvents `source` on every envelope.
     pub fn new(pool: Pool, source: impl Into<String>) -> Self {
         Self {
             pool,

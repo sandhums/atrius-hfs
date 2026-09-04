@@ -775,7 +775,10 @@ mod postgres_integration {
     use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig};
     use helios_persistence::core::SettingsStore;
     use helios_persistence::core::history::{HistoryParams, InstanceHistoryProvider};
-    use helios_persistence::core::{Backend, BackendCapability, BackendKind, ResourceStorage};
+    use helios_persistence::core::{
+        BASE_STEP, Backend, BackendCapability, BackendKind, OUTBOX_STEP, ResourceStorage,
+        SCHEMA_FLAVOUR,
+    };
     use helios_persistence::error::{BackendError, ConcurrencyError, ResourceError, StorageError};
     use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 
@@ -893,6 +896,133 @@ mod postgres_integration {
     fn create_tenant(id: &str) -> TenantContext {
         let unique_id = format!("{}_{}", id, uuid::Uuid::new_v4().simple());
         TenantContext::new(TenantId::new(&unique_id), TenantPermissions::full_access())
+    }
+
+    /// Serializes tests that toggle `HFS_SUBSCRIPTIONS_ENABLED` so they restore
+    /// the process env before another such test runs.
+    static SUBSCRIPTIONS_ENV: Mutex<()> = Mutex::const_new(());
+
+    struct SubscriptionsEnabledGuard {
+        prev: Option<String>,
+    }
+
+    impl SubscriptionsEnabledGuard {
+        fn enable() -> Self {
+            let prev = std::env::var("HFS_SUBSCRIPTIONS_ENABLED").ok();
+            // SAFETY: caller holds `SUBSCRIPTIONS_ENV` for the test duration and
+            // Drop restores the previous value before the lock is released.
+            unsafe {
+                std::env::set_var("HFS_SUBSCRIPTIONS_ENABLED", "true");
+            }
+            Self { prev }
+        }
+    }
+
+    impl Drop for SubscriptionsEnabledGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.prev {
+                    Some(v) => std::env::set_var("HFS_SUBSCRIPTIONS_ENABLED", v),
+                    None => std::env::remove_var("HFS_SUBSCRIPTIONS_ENABLED"),
+                }
+            }
+        }
+    }
+
+    async fn outbox_event_types(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query(
+                "SELECT event_type FROM subscription_outbox
+                 WHERE tenant_id = $1 AND resource_id = $2
+                 ORDER BY id",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("outbox query");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    async fn patient_row_exists(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM resources
+                 WHERE tenant_id = $1 AND resource_type = 'Patient' AND id = $2",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("resources query")
+            .is_some()
+    }
+
+    async fn search_index_row_count(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> i64 {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_one(
+                "SELECT COUNT(*)::bigint FROM search_index
+                 WHERE tenant_id = $1 AND resource_id = $2",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("search_index count")
+            .get(0)
+    }
+
+    async fn install_outbox_fail_trigger(
+        backend: &PostgresBackend,
+        trigger: &str,
+        tenant_id: &str,
+    ) {
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "CREATE OR REPLACE FUNCTION hfs_test_fail_outbox_insert() RETURNS trigger AS $$
+                 BEGIN
+                   RAISE EXCEPTION 'injected outbox failure';
+                 END;
+                 $$ LANGUAGE plpgsql;",
+            )
+            .await
+            .expect("fail function");
+        let quoted: String = client
+            .query_one("SELECT quote_literal($1::text)", &[&tenant_id])
+            .await
+            .expect("quote_literal")
+            .get(0);
+        client
+            .batch_execute(&format!(
+                "DROP TRIGGER IF EXISTS {trigger} ON subscription_outbox;
+                 CREATE TRIGGER {trigger}
+                 BEFORE INSERT ON subscription_outbox
+                 FOR EACH ROW
+                 WHEN (NEW.tenant_id = {quoted})
+                 EXECUTE FUNCTION hfs_test_fail_outbox_insert();"
+            ))
+            .await
+            .unwrap_or_else(|e| panic!("create outbox-fail trigger: {e}"));
+    }
+
+    async fn drop_outbox_fail_trigger(backend: &PostgresBackend, trigger: &str) {
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(&format!(
+                "DROP TRIGGER IF EXISTS {trigger} ON subscription_outbox"
+            ))
+            .await
+            .expect("drop trigger");
     }
 
     #[tokio::test]
@@ -1036,6 +1166,469 @@ mod postgres_integration {
                 StorageError::Backend(BackendError::Timeout { .. })
             ),
             "the `?` conversion must classify too, got {converted:?}"
+        );
+    }
+
+    /// Dedicated database so DROP COLUMN cannot race the shared container.
+    async fn isolated_backend() -> PostgresBackend {
+        let dbname = format!("hfs_slot2_{}", uuid::Uuid::new_v4().simple());
+        let admin = create_backend().await;
+        let client = admin.get_client().await.expect("admin client");
+        client
+            .execute(&format!("CREATE DATABASE {dbname}"), &[])
+            .await
+            .unwrap_or_else(|e| panic!("CREATE DATABASE {dbname}: {e}"));
+        drop(client);
+
+        let pg = shared_pg().await;
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("data"))
+            .unwrap_or_else(|| PathBuf::from("data"));
+        let config = PostgresConfig {
+            host: pg.host.clone(),
+            port: pg.port,
+            dbname,
+            user: "postgres".to_string(),
+            password: Some("postgres".to_string()),
+            max_connections: 5,
+            data_dir: Some(data_dir),
+            ..Default::default()
+        };
+        let backend = PostgresBackend::new(config)
+            .await
+            .expect("isolated PostgresBackend");
+        backend.init_schema().await.expect("init isolated schema");
+        backend
+    }
+
+    async fn subscription_outbox_exists(backend: &PostgresBackend) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM information_schema.tables
+                 WHERE table_schema = 'public' AND table_name = 'subscription_outbox'",
+                &[],
+            )
+            .await
+            .expect("information_schema")
+            .is_some()
+    }
+
+    async fn recorded_schema_version(backend: &PostgresBackend) -> i32 {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_one("SELECT version FROM schema_version LIMIT 1", &[])
+            .await
+            .expect("schema version")
+            .get(0)
+    }
+
+    async fn recorded_schema_flavour(backend: &PostgresBackend) -> Option<String> {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt("SELECT flavour FROM schema_version LIMIT 1", &[])
+            .await
+            .expect("schema flavour")
+            .and_then(|row| row.get::<_, Option<String>>(0))
+    }
+
+    async fn applied_schema_steps(backend: &PostgresBackend) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query("SELECT name FROM schema_migrations ORDER BY name", &[])
+            .await
+            .expect("schema_migrations");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    async fn search_index_slot2_columns(backend: &PostgresBackend) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query(
+                "SELECT column_name FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'search_index'
+                   AND column_name IN (
+                       'value_token_system_2',
+                       'value_token_code_2',
+                       'value_number_2'
+                   )
+                 ORDER BY column_name",
+                &[],
+            )
+            .await
+            .expect("information_schema");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    fn audit_event_resource() -> serde_json::Value {
+        json!({
+            "resourceType": "AuditEvent",
+            "type": {
+                "system": "http://dicom.nema.org/resources/ontology/DCM",
+                "code": "110110"
+            },
+            "recorded": "2026-09-04T12:00:00Z",
+            "agent": [{ "requestor": true }],
+            "source": {
+                "observer": { "display": "hfs-test" }
+            }
+        })
+    }
+
+    /// Fresh schema includes the composite slot-2 columns the writer always binds.
+    #[tokio::test]
+    async fn search_index_slot2_columns_exist_after_init() {
+        let backend = create_backend().await;
+        assert_eq!(
+            search_index_slot2_columns(&backend).await,
+            [
+                "value_number_2",
+                "value_token_code_2",
+                "value_token_system_2",
+            ]
+        );
+    }
+
+    /// A database whose `search_index` never received the #279 slot-2 columns
+    /// (typical of a dedicated `HFS_AUDIT_DATABASE_URL` created before those
+    /// columns existed in `CREATE TABLE` and then migrated in place as
+    /// `search_index_layout = legacy`) must (1) surface the missing column in
+    /// the insert error instead of a bare `db error`, and (2) grow the columns
+    /// on `init_schema` from v37 so an AuditEvent write succeeds.
+    #[tokio::test]
+    async fn schema_v38_adds_slot2_columns_and_audit_event_indexes() {
+        let backend = isolated_backend().await;
+        let tenant = TenantContext::system();
+
+        let client = backend.get_client().await.expect("client");
+        for col in [
+            "value_token_system_2",
+            "value_token_code_2",
+            "value_number_2",
+        ] {
+            client
+                .execute(
+                    &format!("ALTER TABLE search_index DROP COLUMN IF EXISTS {col} CASCADE"),
+                    &[],
+                )
+                .await
+                .unwrap_or_else(|e| panic!("DROP COLUMN {col}: {e}"));
+        }
+        drop(client);
+
+        assert!(
+            search_index_slot2_columns(&backend).await.is_empty(),
+            "slot-2 columns must be gone before the write"
+        );
+
+        let err = backend
+            .create(
+                &tenant,
+                "AuditEvent",
+                audit_event_resource(),
+                FhirVersion::default(),
+            )
+            .await
+            .expect_err("insert must fail while slot-2 columns are missing");
+        let message = err.to_string();
+        assert!(
+            message.contains("Failed to insert search index rows"),
+            "writer context must survive, got {message}"
+        );
+        assert!(
+            message.contains("value_token_system_2"),
+            "driver source() chain must name the missing column, got {message}"
+        );
+
+        let client = backend.get_client().await.expect("client");
+        client
+            .execute("DELETE FROM schema_version", &[])
+            .await
+            .expect("clear schema_version");
+        client
+            .execute("INSERT INTO schema_version (version) VALUES (37)", &[])
+            .await
+            .expect("stamp v37");
+        drop(client);
+
+        backend
+            .init_schema()
+            .await
+            .expect("v37 → v38 must add slot-2 columns");
+        assert_eq!(
+            search_index_slot2_columns(&backend).await.len(),
+            3,
+            "v38 must restore all three slot-2 columns"
+        );
+
+        let created = backend
+            .create(
+                &tenant,
+                "AuditEvent",
+                audit_event_resource(),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("AuditEvent create after v38: {e}"));
+        assert_eq!(created.resource_type(), "AuditEvent");
+        assert!(!created.id().is_empty());
+    }
+
+    /// Direct REST CRUD enqueues the outbox row in the same commit as the
+    /// resource (the durability contract SQLite already had).
+    #[tokio::test]
+    async fn postgres_integration_direct_crud_commits_outbox_with_resource() {
+        let _env = SUBSCRIPTIONS_ENV.lock().await;
+        let _enabled = SubscriptionsEnabledGuard::enable();
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("outbox-commit");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        let id = format!("p-{}", uuid::Uuid::new_v4().simple());
+
+        let created = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Commit"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("create");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create"]
+        );
+
+        backend
+            .update(
+                &tenant,
+                &created,
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Updated"}]
+                }),
+            )
+            .await
+            .expect("update");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create", "update"]
+        );
+
+        backend
+            .delete(&tenant, "Patient", &id)
+            .await
+            .expect("delete");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create", "update", "delete"]
+        );
+    }
+
+    /// A failure at the outbox insert must not leave a committed resource
+    /// (or its search_index rows). Injected via a tenant-scoped trigger so
+    /// parallel tests are unaffected.
+    #[tokio::test]
+    async fn postgres_integration_direct_crud_rolls_back_when_outbox_insert_fails() {
+        let _env = SUBSCRIPTIONS_ENV.lock().await;
+        let _enabled = SubscriptionsEnabledGuard::enable();
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("outbox-rollback");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        let id = format!("p-{}", uuid::Uuid::new_v4().simple());
+        let trigger = format!("hfs_fail_outbox_{}", uuid::Uuid::new_v4().simple());
+
+        install_outbox_fail_trigger(&backend, &trigger, &tenant_id).await;
+
+        let err = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Rollback"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect_err("create must fail when the outbox insert is rejected");
+        let message = err.to_string();
+        assert!(
+            message.contains("injected outbox failure") || message.contains("outbox insert"),
+            "error should mention the injected failure, got: {message}"
+        );
+
+        assert!(
+            !patient_row_exists(&backend, &tenant_id, &id).await,
+            "resource must roll back with the failed outbox insert"
+        );
+        assert_eq!(
+            search_index_row_count(&backend, &tenant_id, &id).await,
+            0,
+            "search_index must roll back with the failed outbox insert"
+        );
+        assert!(
+            outbox_event_types(&backend, &tenant_id, &id)
+                .await
+                .is_empty()
+        );
+
+        drop_outbox_fail_trigger(&backend, &trigger).await;
+
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Rollback"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("create must succeed after the fail trigger is dropped");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create"]
+        );
+    }
+
+    /// Fresh init stamps fork provenance and has the outbox table.
+    #[tokio::test]
+    async fn postgres_integration_schema_flavour_and_outbox_after_init() {
+        let backend = isolated_backend().await;
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "fresh schema must include subscription_outbox"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(
+            recorded_schema_flavour(&backend).await.as_deref(),
+            Some(SCHEMA_FLAVOUR)
+        );
+        let applied = applied_schema_steps(&backend).await;
+        assert!(applied.iter().any(|n| n == BASE_STEP));
+        assert!(applied.iter().any(|n| n == OUTBOX_STEP));
+        assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+    }
+
+    /// Upstream numbering at v36 never ran this fork's v16→v17 outbox step.
+    /// Empty ledger + no flavour + no table is the real upgrade path;
+    /// `init_schema` must create the table rather than boot with a silent
+    /// missing outbox. Slot-2 (`v37→v38`) is also absent on Helios v36 and
+    /// must run; the rest of the ladder must not be replayed from scratch.
+    #[tokio::test]
+    async fn postgres_integration_heals_outbox_on_upstream_numbered_database() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP TABLE IF EXISTS subscription_outbox;
+                 DELETE FROM schema_migrations;
+                 UPDATE schema_version SET version = 36, flavour = NULL;",
+            )
+            .await
+            .expect("stamp upstream v36 without outbox");
+        drop(client);
+
+        assert!(
+            !subscription_outbox_exists(&backend).await,
+            "precondition: outbox dropped"
+        );
+
+        backend
+            .init_schema()
+            .await
+            .expect("init_schema must heal the outbox");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "heal must create subscription_outbox"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(
+            recorded_schema_flavour(&backend).await.as_deref(),
+            Some(SCHEMA_FLAVOUR)
+        );
+        let applied = applied_schema_steps(&backend).await;
+        assert!(applied.iter().any(|n| n == OUTBOX_STEP));
+        assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+    }
+
+    /// Integer already at the tip, but the named outbox step is missing from
+    /// the ledger (and the table is gone). Dispatch must consult names, not
+    /// skip because `version >= SCHEMA_VERSION`.
+    #[tokio::test]
+    async fn postgres_integration_named_ledger_dispatch_runs_unrecorded_outbox_at_tip() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP TABLE IF EXISTS subscription_outbox;
+                 DELETE FROM schema_migrations WHERE name = 'subscription_outbox';",
+            )
+            .await
+            .expect("un-record outbox at tip");
+        drop(client);
+
+        assert_eq!(recorded_schema_version(&backend).await, 38);
+
+        backend
+            .init_schema()
+            .await
+            .expect("named dispatch must run the unrecorded outbox step");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "named dispatch must create subscription_outbox"
+        );
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_STEP)
+        );
+    }
+
+    /// Already at the fork tip, but missing the table. Heal must not depend
+    /// on `version < SCHEMA_VERSION`.
+    #[tokio::test]
+    async fn postgres_integration_heals_outbox_when_already_at_tip() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute("DROP TABLE IF EXISTS subscription_outbox")
+            .await
+            .expect("drop outbox");
+        drop(client);
+
+        backend
+            .init_schema()
+            .await
+            .expect("init_schema must heal at tip");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "heal must create subscription_outbox at tip"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_STEP)
         );
     }
 

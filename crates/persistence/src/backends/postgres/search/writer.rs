@@ -156,17 +156,9 @@ use chrono::{DateTime, Utc};
 
 use crate::backends::postgres::cached::execute_cached;
 use crate::backends::postgres::schema::IndexLayout;
-use crate::error::{BackendError, StorageResult};
+use crate::error::{QueryErrorExt, StorageResult};
 use crate::search::{converters::IndexValue, extractor::ExtractedValue};
 use crate::types::strip_reference_version;
-
-fn internal_error(message: String) -> crate::error::StorageError {
-    crate::error::StorageError::Backend(BackendError::Internal {
-        backend_name: "postgres".to_string(),
-        message,
-        source: None,
-    })
-}
 
 /// Parses an extracted date value into the UTC timestamp stored in `value_date`.
 ///
@@ -1168,7 +1160,7 @@ impl PostgresSearchIndexWriter {
                 &[&tenant_id, &resource_type, &resource_id],
             )
             .await
-            .map_err(|e| internal_error(format!("Failed to clear search index rows: {}", e)))?;
+            .or_query_error("Failed to clear search index rows")?;
             return Ok(());
         }
 
@@ -1199,9 +1191,7 @@ impl PostgresSearchIndexWriter {
 
             execute_cached(client, sql, &param_refs)
                 .await
-                .map_err(|e| {
-                    internal_error(format!("Failed to insert search index rows: {}", e))
-                })?;
+                .or_query_error("Failed to insert search index rows")?;
         }
 
         Ok(())
@@ -1262,9 +1252,7 @@ impl PostgresSearchIndexWriter {
 
             execute_cached(client, INSERT_SQL_MULTI.as_str(), &param_refs)
                 .await
-                .map_err(|e| {
-                    internal_error(format!("Failed to insert search index rows: {}", e))
-                })?;
+                .or_query_error("Failed to insert search index rows")?;
         }
 
         Ok(())

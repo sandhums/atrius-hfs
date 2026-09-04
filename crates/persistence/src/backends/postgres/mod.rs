@@ -84,6 +84,7 @@ mod storage;
 mod subscription_outbox;
 mod transaction;
 mod user_settings;
+mod write_tx;
 
 pub use backend::{PostgresBackend, PostgresConfig};
 pub use subscription_outbox::PostgresSubscriptionOutbox;

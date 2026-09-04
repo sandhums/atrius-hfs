@@ -48,12 +48,16 @@ pub fn subscription_outbox_source() -> String {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OutboxEventType {
+    /// Resource was created.
     Create,
+    /// Resource was updated (including restore).
     Update,
+    /// Resource was deleted.
     Delete,
 }
 
 impl OutboxEventType {
+    /// Wire / SQL form (`create`, `update`, `delete`).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Create => "create",
@@ -62,6 +66,7 @@ impl OutboxEventType {
         }
     }
 
+    /// Parses the wire / SQL form. Unknown values return `None`.
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "create" => Some(Self::Create),
@@ -85,20 +90,29 @@ pub struct SubscriptionOutboxEntry {
     pub id: Option<i64>,
     /// Stable event id (UUID), also used as CloudEvents `id`.
     pub event_id: Uuid,
+    /// Tenant that owns the changed resource.
     pub tenant_id: TenantId,
+    /// FHIR version of the stored resource.
     pub fhir_version: FhirVersion,
+    /// FHIR resource type (e.g. `Patient`).
     pub resource_type: String,
+    /// Logical id of the changed resource.
     pub resource_id: String,
+    /// Version id after the write (`""` when unknown).
     pub version_id: String,
+    /// Kind of write that produced this event.
     pub event_type: OutboxEventType,
     /// Resource content after the write (`None` for delete).
     pub resource: Option<Value>,
     /// Resource content before the write (`None` for create).
     pub previous_resource: Option<Value>,
+    /// When the outbox row was first inserted.
     pub created_at: DateTime<Utc>,
     /// Earliest time the row may be claimed (supports retry backoff).
     pub available_at: DateTime<Utc>,
+    /// How many times a worker has claimed this row.
     pub attempts: u32,
+    /// Last processing error, if a claim failed and was released for retry.
     pub last_error: Option<String>,
 }
 
@@ -213,6 +227,7 @@ struct InMemoryState {
 }
 
 impl InMemorySubscriptionOutbox {
+    /// Empty in-memory outbox.
     pub fn new() -> Self {
         Self::default()
     }

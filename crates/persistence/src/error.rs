@@ -809,6 +809,25 @@ impl From<r2d2::Error> for StorageError {
     }
 }
 
+/// `tokio_postgres::Error`'s `Display` is often just `"db error"`; the
+/// server's SQLSTATE text lives on `source()`. Walk the chain so logs and
+/// [`BackendError::Internal`] carry `column "value_token_system_2" does not
+/// exist` rather than a bare `db error`.
+#[cfg(feature = "postgres")]
+fn postgres_error_chain(err: &tokio_postgres::Error) -> String {
+    let mut out = err.to_string();
+    let mut src = std::error::Error::source(err);
+    while let Some(s) = src {
+        let piece = s.to_string();
+        if !piece.is_empty() && !out.contains(&piece) {
+            out.push_str(": ");
+            out.push_str(&piece);
+        }
+        src = std::error::Error::source(s);
+    }
+    out
+}
+
 /// Classifies a `tokio_postgres` error into a [`BackendError`] by SQLSTATE,
 /// preserving the code rather than collapsing everything to `Internal`.
 ///
@@ -829,8 +848,10 @@ impl From<r2d2::Error> for StorageError {
 ///   `57P01 admin_shutdown`, `57P02 crash_shutdown`, `57P03 cannot_connect_now`
 ///   — the server is saturated or going away, and a retry may well land
 ///   → [`BackendError::Unavailable`] (503 + `Retry-After`).
-/// - everything else — unchanged: [`BackendError::Internal`], byte-for-byte the
-///   message this helper's callers produced before.
+/// - everything else — [`BackendError::Internal`]. Displayed text walks the
+///   driver `source()` chain: `tokio_postgres::Error`'s own `Display` is often
+///   just `"db error"`, with the server's `column … does not exist` (or
+///   equivalent) living on the inner error.
 ///
 /// Deliberately **not** reclassified here: `40001 serialization_failure` and
 /// `40P01 deadlock_detected`. Both are retryable, but deciding what a FHIR
@@ -846,10 +867,11 @@ pub fn classify_postgres_error(context: &str, err: tokio_postgres::Error) -> Bac
     // non-structural-match, so `SqlState::QUERY_CANCELED` in a pattern position
     // does not compile.
     let code = err.code().cloned();
+    let detail = postgres_error_chain(&err);
     let message = if context.is_empty() {
-        err.to_string()
+        detail
     } else {
-        format!("{context}: {err}")
+        format!("{context}: {detail}")
     };
 
     if code.as_ref() == Some(&SqlState::QUERY_CANCELED) {
@@ -988,8 +1010,8 @@ impl From<mongodb::error::Error> for StorageError {
 /// where it is unit tested: a server-side deadline becomes
 /// [`BackendError::Timeout`] (504), an unreachable or saturated server becomes
 /// [`BackendError::Unavailable`] (503 + `Retry-After`), and everything else
-/// stays [`BackendError::Internal`] (500) with byte-identical text to the
-/// `internal_error(format!(…))` these call sites used before.
+/// stays [`BackendError::Internal`] (500). Postgres messages include the
+/// driver `source()` chain; SQLite and MongoDB keep the driver's `Display`.
 ///
 /// Because each impl is written for one concrete driver error type, a site
 /// whose `Result` carries some other error (serde, chrono, a parse) fails to
