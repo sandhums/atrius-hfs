@@ -3,9 +3,11 @@
 //! #232 already makes package overlays the native validation shape: convert
 //! StructureDefinitions to FHIR Schemas and push a [`SchemaRegistry`] layer
 //! over the embedded core pack. This module is **materialization proper** —
-//! loading full IG/NPM packages from a curated on-disk cache, resolving
-//! `package.json` dependencies against that cache only, and producing
-//! registry layers for [`CompositeResolver`](crate::CompositeResolver).
+//! loading full IG/NPM packages from a curated on-disk cache and
+//! producing registry layers for
+//! [`CompositeResolver`](crate::CompositeResolver). Only packages named in
+//! the caller list (`HFS_FHIR_PACKAGES`) are resolved; `package.json`
+//! `dependencies` are not walked.
 //!
 //! ## Cache layout
 //!
@@ -54,19 +56,16 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// Resolve roots against `cache`, materialize each package into a schema
-/// registry, and return layers in **CompositeResolver order** (earlier wins):
-/// configured roots first (config order), then transitive dependencies
-/// (dependents before deeper deps), so a root IG overrides dependency
-/// profiles with the same canonical URL.
+/// registry, and return layers in **CompositeResolver order** (earlier
+/// wins): configured roots in list order. `package.json` dependencies are
+/// not materialized unless they also appear in `roots`.
 pub fn materialize_package_layers(
     cache: &PackageCache,
     roots: &[PackageRef],
 ) -> Result<Vec<(PackageRef, Arc<SchemaRegistry>, MaterializeReport)>, PackageError> {
     let resolved = resolve_packages(cache, roots)?;
-    // resolve_packages returns deps-first topo order; reverse for overlay
-    // precedence (dependents / roots win over dependencies).
     let mut layers = Vec::with_capacity(resolved.len());
-    for pkg in resolved.into_iter().rev() {
+    for pkg in resolved {
         let (registry, report) = materialize_package(&pkg.path)?;
         layers.push((pkg.id, Arc::new(registry), report));
     }

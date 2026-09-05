@@ -42,7 +42,7 @@
 //! | `HFS_VALIDATION_TERMINOLOGY_FAIL` | open | Terminology outage posture: open (warn) or closed (error) |
 //! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
 //! | `HFS_FHIR_PACKAGE_CACHE` | (none) | Curated FHIR NPM package cache root (offline materialization) |
-//! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` package roots to overlay on core schemas |
+//! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` packages to overlay (listed packages only) |
 //!
 //! # Example
 //!
@@ -495,8 +495,9 @@ pub struct ValidationConfig {
     /// Curated FHIR NPM package cache directory (`HFS_FHIR_PACKAGE_CACHE`).
     /// Empty disables package overlays.
     pub package_cache: Option<String>,
-    /// Comma-separated `name@version` roots (`HFS_FHIR_PACKAGES`). Requires
-    /// [`Self::package_cache`]. Resolution is offline against the cache only.
+    /// Comma-separated `name@version` packages (`HFS_FHIR_PACKAGES`).
+    /// Requires [`Self::package_cache`]. Resolution is offline against the
+    /// cache only and does not walk `package.json` dependencies.
     pub packages: Vec<String>,
 }
 

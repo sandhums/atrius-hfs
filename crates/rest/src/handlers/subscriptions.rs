@@ -146,15 +146,7 @@ fn snapshot_from_stored(
     }
 }
 
-/// Handler for the `$events` operation on Subscription resources.
-///
-/// Returns recent events for the subscription. This is a simplified
-/// implementation that returns the current event count.
-///
-/// # HTTP Request
-///
-/// `GET [base]/Subscription/{id}/$events`
-
+/// Query string for `GET /Subscription/{id}/$events`.
 #[derive(Debug, Deserialize)]
 pub struct EventsQuery {
     /// Exclusive outbox cursor (resume after this row id).
@@ -163,6 +155,14 @@ pub struct EventsQuery {
     pub count: Option<u32>,
 }
 
+/// Handler for the `$events` operation on Subscription resources.
+///
+/// Returns a notification Bundle of recent processed outbox events for the
+/// subscription, plus a `SubscriptionStatus` entry. Used for gap recovery.
+///
+/// # HTTP Request
+///
+/// `GET [base]/Subscription/{id}/$events`
 pub async fn subscription_events_handler<S>(
     State(state): State<AppState<S>>,
     Path((_resource_type, id)): Path<(String, String)>,

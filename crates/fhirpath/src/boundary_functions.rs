@@ -554,9 +554,10 @@ fn calculate_date_high_boundary(date_str: &str, precision_param: Option<u32>) ->
             // YYYY-MM format - return last day of month
             if let Ok(year) = date_str[0..4].parse::<i32>()
                 && let Ok(month) = date_str[5..7].parse::<u32>()
-                    && let Some(last_day) = last_day_of_month(year, month) {
-                        return EvaluationResult::date(format!("{}-{:02}", date_str, last_day));
-                    }
+                && let Some(last_day) = last_day_of_month(year, month)
+            {
+                return EvaluationResult::date(format!("{}-{:02}", date_str, last_day));
+            }
             EvaluationResult::Empty
         }
         (10, 4) => {
@@ -567,12 +568,13 @@ fn calculate_date_high_boundary(date_str: &str, precision_param: Option<u32>) ->
             // YYYY-MM-DD format with month precision - return as DateTime
             if let Ok(year) = date_str[0..4].parse::<i32>()
                 && let Ok(month) = date_str[5..7].parse::<u32>()
-                    && let Some(last_day) = last_day_of_month(year, month) {
-                        return EvaluationResult::datetime(format!(
-                            "{}-{:02}-{:02}T23:59:59.999-12:00",
-                            year, month, last_day
-                        ));
-                    }
+                && let Some(last_day) = last_day_of_month(year, month)
+            {
+                return EvaluationResult::datetime(format!(
+                    "{}-{:02}-{:02}T23:59:59.999-12:00",
+                    year, month, last_day
+                ));
+            }
             EvaluationResult::Empty
         }
         (10, _) => {

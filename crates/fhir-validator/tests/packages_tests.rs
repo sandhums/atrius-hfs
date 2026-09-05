@@ -37,7 +37,7 @@ fn minimal_patient_profile_sd() -> Vec<u8> {
         "kind": "resource",
         "abstract": false,
         "type": "Patient",
-        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient|4.0.1",
         "derivation": "constraint",
         "differential": {
             "element": [
@@ -174,37 +174,64 @@ fn cache_ensure_from_tgz_and_get() {
 }
 
 #[test]
-fn resolve_requires_deps_in_cache() {
+fn resolve_lists_only_configured_roots() {
     let tmp = tempfile::tempdir().unwrap();
     seed_dep_and_root(tmp.path());
     let cache = PackageCache::new(tmp.path());
 
-    let missing = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]);
-    // dep was seeded — should succeed with dep then root
-    let ok = missing.unwrap();
-    assert_eq!(ok.len(), 2);
-    assert_eq!(ok[0].id.to_string(), "example.dep@1.0.0");
-    assert_eq!(ok[1].id.to_string(), "example.ig@1.0.0");
+    let ok = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap();
+    assert_eq!(ok.len(), 1);
+    assert_eq!(ok[0].id.to_string(), "example.ig@1.0.0");
 
-    // Fresh cache with only root → missing dep
-    let tmp2 = tempfile::tempdir().unwrap();
-    let cache2 = PackageCache::new(tmp2.path());
-    let tgz = tmp2.path().join("root.tgz");
+    let both = resolve_packages(
+        &cache,
+        &[
+            PackageRef::parse("example.ig@1.0.0").unwrap(),
+            PackageRef::parse("example.dep@1.0.0").unwrap(),
+            PackageRef::parse("example.ig@1.0.0").unwrap(),
+        ],
+    )
+    .unwrap();
+    assert_eq!(both.len(), 2);
+    assert_eq!(both[0].id.to_string(), "example.ig@1.0.0");
+    assert_eq!(both[1].id.to_string(), "example.dep@1.0.0");
+}
+
+#[test]
+fn resolve_succeeds_when_package_json_deps_are_absent() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = PackageCache::new(tmp.path());
+    let tgz = tmp.path().join("root.tgz");
     write_tgz(
         &tgz,
-        &[(
-            "package/package.json",
-            br#"{
-              "name": "example.ig",
-              "version": "1.0.0",
-              "dependencies": { "example.dep": "1.0.0" }
-            }"#,
-        )],
+        &[
+            (
+                "package/package.json",
+                br#"{
+                  "name": "example.ig",
+                  "version": "1.0.0",
+                  "dependencies": { "example.dep": "1.0.0" }
+                }"#,
+            ),
+            (
+                "package/StructureDefinition-example-patient.json",
+                &minimal_patient_profile_sd(),
+            ),
+        ],
     );
-    cache2.ensure_from_tgz(&tgz).unwrap();
+    cache.ensure_from_tgz(&tgz).unwrap();
+    let ok = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap();
+    assert_eq!(ok.len(), 1);
+    assert_eq!(ok[0].id.to_string(), "example.ig@1.0.0");
+}
+
+#[test]
+fn resolve_fails_when_configured_root_is_missing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = PackageCache::new(tmp.path());
     let err =
-        resolve_packages(&cache2, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap_err();
-    assert!(err.to_string().contains("example.dep@1.0.0"), "{err}");
+        resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap_err();
+    assert!(err.to_string().contains("example.ig@1.0.0"), "{err}");
 }
 
 #[test]
@@ -233,9 +260,21 @@ fn package_layers_overlay_core_for_meta_profile() {
     let layers =
         materialize_package_layers(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()])
             .unwrap();
-    // Overlay order: root then dep (dependents first).
+    assert_eq!(layers.len(), 1);
     assert_eq!(layers[0].0.to_string(), "example.ig@1.0.0");
-    assert_eq!(layers[1].0.to_string(), "example.dep@1.0.0");
+    assert!(
+        layers[0]
+            .1
+            .resolve("http://example.org/fhir/StructureDefinition/example-patient")
+            .is_some()
+    );
+    assert!(
+        layers[0]
+            .1
+            .resolve("http://example.org/fhir/StructureDefinition/example-ext")
+            .is_none(),
+        "package.json deps must not be auto-overlaid"
+    );
 
     let core = packs::core_registry(FhirVersion::R4);
     let mut resolvers: Vec<Arc<dyn helios_fhir_validator::SchemaResolver>> = layers

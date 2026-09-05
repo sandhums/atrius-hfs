@@ -58,16 +58,17 @@ pub fn not_function(
     // We will prioritize making `testNotInvalid` pass by returning an error for multi-item collections.
 
     if let EvaluationResult::Collection { items, .. } = invocation_base
-        && items.len() > 1 {
-            return Err(EvaluationError::TypeError(format!(
-                "not() on a collection with {} items is an error for this implementation (to satisfy testNotInvalid). Spec implies {{}}.",
-                items.len()
-            )));
-        }
-        // If items.len() == 0 (Empty collection) or 1 (Singleton collection),
-        // it will be handled correctly by to_boolean_for_logic() below.
-        // For a singleton collection, to_boolean_for_logic() evaluates the inner item.
-        // For an empty collection, to_boolean_for_logic() yields Empty.
+        && items.len() > 1
+    {
+        return Err(EvaluationError::TypeError(format!(
+            "not() on a collection with {} items is an error for this implementation (to satisfy testNotInvalid). Spec implies {{}}.",
+            items.len()
+        )));
+    }
+    // If items.len() == 0 (Empty collection) or 1 (Singleton collection),
+    // it will be handled correctly by to_boolean_for_logic() below.
+    // For a singleton collection, to_boolean_for_logic() evaluates the inner item.
+    // For an empty collection, to_boolean_for_logic() yields Empty.
 
     // Convert invocation_base to its 3-valued logic boolean form.
     // This handles singletons (Boolean, Integer, String, etc.) and empty/singleton collections.

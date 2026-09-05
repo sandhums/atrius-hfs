@@ -4,7 +4,7 @@
 # Prerequisites:
 #   - HTS running (default http://127.0.0.1:9091)
 #   - Atrius IG built: cd "$ATRIUS_IG_DRAFT" && ./_build.sh
-#   - Local NDHM mirror at NDHM_DIR (default ~/Downloads/ndhm)
+#   - Local NDHM mirror at NDHM_DIR (default ~/Downloads/package_ndhm)
 #
 # Usage:
 #   export HTS_URL=http://127.0.0.1:9091
@@ -14,7 +14,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HTS_URL="${HTS_URL:-http://127.0.0.1:9091}"
-NDHM_DIR="${NDHM_DIR:-/Users/sandhu/Downloads/ndhm}"
+NDHM_DIR="${NDHM_DIR:-/Users/sandhu/Downloads/package_ndhm}"
 ATRIUS_IG_DRAFT="${ATRIUS_IG_DRAFT:-/Users/sandhu/AtriusIGDraft}"
 HIS_ROOT="${ATRIUS_HIS_ROOT:-$(cd "${ROOT}/../atrius-his" 2>/dev/null && pwd || true)}"
 
@@ -35,4 +35,7 @@ else
   echo "Skip seed-atrius-terminology.py (atrius-his not found at ${HIS_ROOT})"
 fi
 
-echo "Done. Set HFS_TERMINOLOGY_SERVER=${HTS_URL} and HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json"
+echo "Done. Set HFS_TERMINOLOGY_SERVER=${HTS_URL} on clinical HFS."
+echo "Then run ./scripts/setup-atrius-profile-registry.sh to seed the FHIR package"
+echo "cache; it prints the exact HFS_FHIR_PACKAGE_CACHE / HFS_FHIR_PACKAGES /"
+echo "HFS_VALIDATION_MODE=enforce values to use (name@version from the IG package.json)."

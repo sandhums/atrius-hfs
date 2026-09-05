@@ -30,11 +30,12 @@ fn main() {
     let marker_path = json_resources_dir.join(".download_marker");
     if let Ok(metadata) = fs::metadata(&marker_path)
         && let Ok(modified) = metadata.modified()
-            && let Ok(duration) = modified.elapsed()
-                && duration.as_secs() < 86400 {
-                    println!("cargo:warning=R6 test data is recent, skipping download");
-                    return;
-                }
+        && let Ok(duration) = modified.elapsed()
+        && duration.as_secs() < 86400
+    {
+        println!("cargo:warning=R6 test data is recent, skipping download");
+        return;
+    }
 
     println!("cargo:warning=Downloading R6 test data from HL7 build server");
 

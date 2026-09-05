@@ -868,16 +868,17 @@ pub fn add_slice_element(
         let mut item_path: Vec<Step> = path.to_vec();
         item_path.push(Step::Field(name.to_string()));
         if let Some(Value::Array(items)) = node_at_mut(document, &item_path)
-            && let Some(last) = items.last_mut() {
-                if last.is_null() {
-                    *last = Value::Object(serde_json::Map::new());
-                }
-                if let Some(target) = last.as_object_mut() {
-                    for (key, value) in pattern {
-                        target.entry(key).or_insert(value);
-                    }
+            && let Some(last) = items.last_mut()
+        {
+            if last.is_null() {
+                *last = Value::Object(serde_json::Map::new());
+            }
+            if let Some(target) = last.as_object_mut() {
+                for (key, value) in pattern {
+                    target.entry(key).or_insert(value);
                 }
             }
+        }
     }
     Some(added)
 }

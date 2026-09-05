@@ -30,21 +30,22 @@ pub fn contains_function(
 ) -> Result<EvaluationResult, EvaluationError> {
     // Check if we're dealing with a collection and a string argument
     if let EvaluationResult::Collection { items, .. } = invocation_base
-        && matches!(arg, EvaluationResult::String(_, _, _)) {
-            // Check if the collection contains only strings
-            let all_strings = items
-                .iter()
-                .all(|item| matches!(item, EvaluationResult::String(_, _, _)));
+        && matches!(arg, EvaluationResult::String(_, _, _))
+    {
+        // Check if the collection contains only strings
+        let all_strings = items
+            .iter()
+            .all(|item| matches!(item, EvaluationResult::String(_, _, _)));
 
-            if !all_strings && !items.is_empty() {
-                // Collection contains non-string items, and we have a string argument
-                // This is a semantic error
-                return Err(EvaluationError::SemanticError(
-                    "contains() with string argument requires string collection or single string"
-                        .to_string(),
-                ));
-            }
+        if !all_strings && !items.is_empty() {
+            // Collection contains non-string items, and we have a string argument
+            // This is a semantic error
+            return Err(EvaluationError::SemanticError(
+                "contains() with string argument requires string collection or single string"
+                    .to_string(),
+            ));
         }
+    }
 
     // Spec: X contains {} -> {}
     if arg == &EvaluationResult::Empty {

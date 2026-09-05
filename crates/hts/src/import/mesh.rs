@@ -122,9 +122,10 @@ pub async fn import_mesh(
                 for tn in &d.tree_numbers {
                     if let Some(parent_tn) = parent_tree_number(tn)
                         && let Some(parent_ui) = tree_to_ui.get(parent_tn)
-                            && !seen.contains(parent_ui) {
-                                seen.push(parent_ui.clone());
-                            }
+                        && !seen.contains(parent_ui)
+                    {
+                        seen.push(parent_ui.clone());
+                    }
                 }
                 seen
             })

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Expand Atrius IG FHIR NPM package (.tgz) for ProfileRegistry manifest generation.
+# Expand Atrius IG FHIR NPM package (.tgz) for manifest generation / cache seeding.
 #
 # Usage:
 #   # From local tarball (CI artifact or post-publish-package.sh output)
@@ -10,13 +10,16 @@
 #     ./scripts/load-atrius-ig-package.sh
 #
 # Prints expanded directory path on stdout (for ATRIUS_IG_EXPANDED).
+# Prefer ./scripts/setup-atrius-profile-registry.sh, which also seeds
+# HFS_FHIR_PACKAGE_CACHE from this expansion.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARBALL="${ATRIUS_IG_PACKAGE_TGZ:-}"
 URL="${ATRIUS_IG_PACKAGE_URL:-}"
-# Default under manifests/ so relative HFS_PROFILE_MANIFEST entries stay portable.
+# Default under manifests/ (gitignored); setup-atrius-profile-registry.sh copies
+# into data/fhir-packages/{name}/{version}/ for HFS_FHIR_PACKAGE_CACHE.
 EXPAND_DIR="${ATRIUS_IG_EXPANDED:-${ROOT}/manifests/atrius-ig-package}"
 
 if [[ -z "${TARBALL}" && -z "${URL}" ]]; then

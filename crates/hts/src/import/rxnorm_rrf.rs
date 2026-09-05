@@ -342,13 +342,12 @@ fn parse_concepts(
         let is_pref = ispref == "Y";
         let already_preferred = raw.get(rxcui).map(|(_, _, p)| *p).unwrap_or(false);
 
-        if (is_pref || !raw.contains_key(rxcui))
-            && (!already_preferred || is_pref) {
-                raw.insert(
-                    rxcui.to_string(),
-                    (str_val.to_string(), tty.to_string(), is_pref),
-                );
-            }
+        if (is_pref || !raw.contains_key(rxcui)) && (!already_preferred || is_pref) {
+            raw.insert(
+                rxcui.to_string(),
+                (str_val.to_string(), tty.to_string(), is_pref),
+            );
+        }
     }
 
     Ok(raw

@@ -30,12 +30,14 @@ pub fn first_function(
         has_undefined_order,
         ..
     } = invocation_base
-        && *has_undefined_order && context.check_ordered_functions {
-            return Err(EvaluationError::SemanticError(
+        && *has_undefined_order
+        && context.check_ordered_functions
+    {
+        return Err(EvaluationError::SemanticError(
                 "first() operation on collection with undefined order is not allowed when checkOrderedFunctions is true."
                     .to_string(),
             ));
-        }
+    }
 
     // Return the first item or Empty if collection is empty
     Ok(match invocation_base {
@@ -70,12 +72,14 @@ pub fn last_function(
         has_undefined_order,
         ..
     } = invocation_base
-        && *has_undefined_order && context.check_ordered_functions {
-            return Err(EvaluationError::SemanticError(
+        && *has_undefined_order
+        && context.check_ordered_functions
+    {
+        return Err(EvaluationError::SemanticError(
                 "last() operation on collection with undefined order is not allowed when checkOrderedFunctions is true."
                     .to_string(),
             ));
-        }
+    }
 
     // Return the last item or Empty if collection is empty
     Ok(match invocation_base {

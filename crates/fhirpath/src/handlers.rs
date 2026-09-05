@@ -501,29 +501,30 @@ pub async fn evaluate_fhirpath_r6(
 fn detect_fhir_version(resource: &Value) -> FhirVersion {
     // Try to detect version from meta.profile or other version-specific markers
     if let Some(meta) = resource.get("meta")
-        && let Some(profiles) = meta.get("profile").and_then(|p| p.as_array()) {
-            for profile in profiles {
-                if let Some(url) = profile.as_str() {
-                    // Check for version indicators in profile URLs
-                    #[cfg(feature = "R4B")]
-                    if url.contains("/R4B/") || url.contains("/4.3.") {
-                        return FhirVersion::R4B;
-                    }
-                    #[cfg(feature = "R5")]
-                    if url.contains("/R5/") || url.contains("/5.0.") {
-                        return FhirVersion::R5;
-                    }
-                    #[cfg(feature = "R6")]
-                    if url.contains("/R6/") || url.contains("/6.0.") {
-                        return FhirVersion::R6;
-                    }
-                    #[cfg(feature = "R4")]
-                    if url.contains("/R4/") || url.contains("/4.0.") {
-                        return FhirVersion::R4;
-                    }
+        && let Some(profiles) = meta.get("profile").and_then(|p| p.as_array())
+    {
+        for profile in profiles {
+            if let Some(url) = profile.as_str() {
+                // Check for version indicators in profile URLs
+                #[cfg(feature = "R4B")]
+                if url.contains("/R4B/") || url.contains("/4.3.") {
+                    return FhirVersion::R4B;
+                }
+                #[cfg(feature = "R5")]
+                if url.contains("/R5/") || url.contains("/5.0.") {
+                    return FhirVersion::R5;
+                }
+                #[cfg(feature = "R6")]
+                if url.contains("/R6/") || url.contains("/6.0.") {
+                    return FhirVersion::R6;
+                }
+                #[cfg(feature = "R4")]
+                if url.contains("/R4/") || url.contains("/4.0.") {
+                    return FhirVersion::R4;
                 }
             }
         }
+    }
 
     // Check for version-specific fields
     // R5+ has meta.versionId as a distinct element
@@ -598,37 +599,38 @@ fn set_variable_from_json(
 fn preserve_underscore_properties(context: &mut EvaluationContext, resource_json: &Value) {
     // Get the resource type and create a variable for it
     if let Value::Object(obj) = resource_json
-        && let Some(Value::String(resource_type)) = obj.get("resourceType") {
-            // Clone the existing resource from context
-            if let Some(existing_resource) = context.this.as_ref()
-                && let EvaluationResult::Object {
-                    map: existing_map,
-                    type_info,
-                } = existing_resource
-                {
-                    let mut enhanced_map = existing_map.clone();
+        && let Some(Value::String(resource_type)) = obj.get("resourceType")
+    {
+        // Clone the existing resource from context
+        if let Some(existing_resource) = context.this.as_ref()
+            && let EvaluationResult::Object {
+                map: existing_map,
+                type_info,
+            } = existing_resource
+        {
+            let mut enhanced_map = existing_map.clone();
 
-                    // Add underscore properties from JSON
-                    for (key, value) in obj {
-                        if key.starts_with('_') {
-                            // Convert JSON value to EvaluationResult
-                            if let Ok(eval_result) = json_value_to_evaluation_result(value) {
-                                enhanced_map.insert(key.clone(), eval_result);
-                            }
-                        }
+            // Add underscore properties from JSON
+            for (key, value) in obj {
+                if key.starts_with('_') {
+                    // Convert JSON value to EvaluationResult
+                    if let Ok(eval_result) = json_value_to_evaluation_result(value) {
+                        enhanced_map.insert(key.clone(), eval_result);
                     }
-
-                    // Update context with enhanced resource
-                    let enhanced_resource = EvaluationResult::Object {
-                        map: enhanced_map,
-                        type_info: type_info.clone(),
-                    };
-                    context.set_this(enhanced_resource.clone());
-
-                    // Also set as a variable with the resource type name
-                    context.set_variable_result(resource_type, enhanced_resource);
                 }
+            }
+
+            // Update context with enhanced resource
+            let enhanced_resource = EvaluationResult::Object {
+                map: enhanced_map,
+                type_info: type_info.clone(),
+            };
+            context.set_this(enhanced_resource.clone());
+
+            // Also set as a variable with the resource type name
+            context.set_variable_result(resource_type, enhanced_resource);
         }
+    }
 }
 
 /// Convert JSON value to EvaluationResult

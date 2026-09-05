@@ -109,9 +109,10 @@ pub fn get_reference_key_function(
                         if let Some((resource_type, id)) = parse_reference(ref_str) {
                             // Check type filter if provided
                             if let Some(filter_type) = &type_filter
-                                && resource_type != *filter_type {
-                                    return Ok(EvaluationResult::Empty);
-                                }
+                                && resource_type != *filter_type
+                            {
+                                return Ok(EvaluationResult::Empty);
+                            }
 
                             // Return just the ID part as the key
                             Ok(EvaluationResult::String(id, None, None))

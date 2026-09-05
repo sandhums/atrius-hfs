@@ -276,9 +276,10 @@ impl TerminologyFunctions {
                 if let Some(parameters) = value.get("parameter").and_then(|p| p.as_array()) {
                     for param in parameters {
                         if param.get("name").and_then(|n| n.as_str()) == Some("outcome")
-                            && let Some(code) = param.get("valueCode").and_then(|c| c.as_str()) {
-                                return Ok(EvaluationResult::string(code.to_string()));
-                            }
+                            && let Some(code) = param.get("valueCode").and_then(|c| c.as_str())
+                        {
+                            return Ok(EvaluationResult::string(code.to_string()));
+                        }
                     }
                 }
                 Err(EvaluationError::InvalidOperation(
@@ -441,9 +442,10 @@ fn extract_params_map(
                                 _ => None,
                             }),
                             extract_parameter_value(param_map),
-                        ) {
-                            params_map.insert(name.clone(), value);
-                        }
+                        )
+                    {
+                        params_map.insert(name.clone(), value);
+                    }
                 }
             } else {
                 // Treat as simple key-value map
@@ -537,23 +539,24 @@ pub fn member_of(
 
     // Extract the 'result' parameter from the Parameters response
     if let EvaluationResult::Object { map, .. } = validation_result
-        && let Some(EvaluationResult::Collection { items, .. }) = map.get("parameter") {
-            for item in items {
-                if let EvaluationResult::Object { map: param_map, .. } = item
-                    && param_map.get("name").and_then(|n| match n {
-                        EvaluationResult::String(s, _, _) => Some(s.as_str()),
-                        _ => None,
-                    }) == Some("result")
-                    {
-                        // Return the boolean value
-                        if let Some(EvaluationResult::Boolean(result, type_info, _)) =
-                            param_map.get("valueBoolean")
-                        {
-                            return Ok(EvaluationResult::Boolean(*result, type_info.clone(), None));
-                        }
-                    }
+        && let Some(EvaluationResult::Collection { items, .. }) = map.get("parameter")
+    {
+        for item in items {
+            if let EvaluationResult::Object { map: param_map, .. } = item
+                && param_map.get("name").and_then(|n| match n {
+                    EvaluationResult::String(s, _, _) => Some(s.as_str()),
+                    _ => None,
+                }) == Some("result")
+            {
+                // Return the boolean value
+                if let Some(EvaluationResult::Boolean(result, type_info, _)) =
+                    param_map.get("valueBoolean")
+                {
+                    return Ok(EvaluationResult::Boolean(*result, type_info.clone(), None));
+                }
             }
         }
+    }
 
     // If we couldn't extract the result, return false
     Ok(EvaluationResult::boolean(false))

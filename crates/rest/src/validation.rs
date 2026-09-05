@@ -64,8 +64,8 @@ pub struct ValidationService {
     /// Per-tenant profile overlays, fed from stored StructureDefinition
     /// writes. `None` disables the feature.
     tenant_profiles: Option<TenantProfileMap>,
-    /// Server-wide IG/NPM package registry layers (dependents before deps).
-    /// Empty when `HFS_FHIR_PACKAGES` is unset.
+    /// Server-wide IG/NPM package registry layers (`HFS_FHIR_PACKAGES`
+    /// list order; earlier wins). Empty when the env var is unset.
     package_layers: Vec<Arc<SchemaRegistry>>,
 }
 
@@ -97,8 +97,9 @@ impl ValidationService {
     /// `terminology_server` is `HFS_TERMINOLOGY_SERVER` (required for
     /// `terminology = remote`; the config validator enforces the pairing).
     ///
-    /// Fails when `HFS_FHIR_PACKAGES` is set and package resolution or
-    /// materialization fails — never boots with a silently empty overlay.
+    /// Fails when `HFS_FHIR_PACKAGES` is set and a listed package is missing
+    /// from the cache or materialization fails — never boots with a silently
+    /// empty overlay. `package.json` dependencies are not required.
     pub fn from_config(
         config: &ValidationConfig,
         terminology_server: Option<&str>,

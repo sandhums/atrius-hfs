@@ -99,9 +99,10 @@ impl JwksFetcher {
         for jwk in doc.keys {
             // Only include signing keys (use=sig or unspecified)
             if let Some(ref key_use) = jwk.key_use
-                && key_use != "sig" {
-                    continue;
-                }
+                && key_use != "sig"
+            {
+                continue;
+            }
 
             let kid = match jwk.kid {
                 Some(ref kid) => kid.clone(),
@@ -173,9 +174,10 @@ fn parse_max_age(cache_control: &str) -> Option<Duration> {
     for directive in cache_control.split(',') {
         let directive = directive.trim();
         if let Some(val) = directive.strip_prefix("max-age=")
-            && let Ok(secs) = val.trim().parse::<u64>() {
-                return Some(Duration::from_secs(secs));
-            }
+            && let Ok(secs) = val.trim().parse::<u64>()
+        {
+            return Some(Duration::from_secs(secs));
+        }
     }
     None
 }

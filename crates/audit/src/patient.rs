@@ -24,15 +24,17 @@ impl PatientResolver {
     ) -> Option<String> {
         // Step 1: Direct Patient resource access
         if resource_type == "Patient"
-            && let Some(id) = resource_id {
-                return Some(format!("Patient/{id}"));
-            }
+            && let Some(id) = resource_id
+        {
+            return Some(format!("Patient/{id}"));
+        }
 
         // Step 2: Compartment — check subject/patient field in body
         if let Some(body) = resource_body
-            && let Some(ref_str) = extract_patient_reference(body) {
-                return Some(ref_str);
-            }
+            && let Some(ref_str) = extract_patient_reference(body)
+        {
+            return Some(ref_str);
+        }
 
         // Step 3: Search parameters — look for "patient" or "subject" param
         if let Some(params) = search_params {
@@ -61,9 +63,10 @@ fn extract_patient_reference(body: &serde_json::Value) -> Option<String> {
             .get(field)
             .and_then(|s| s.get("reference"))
             .and_then(|r| r.as_str())
-            && ref_val.starts_with("Patient/") {
-                return Some(ref_val.to_string());
-            }
+            && ref_val.starts_with("Patient/")
+        {
+            return Some(ref_val.to_string());
+        }
     }
     None
 }

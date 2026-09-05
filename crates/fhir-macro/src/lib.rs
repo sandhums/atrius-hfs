@@ -424,11 +424,12 @@ fn get_option_inner_type(ty: &Type) -> Option<&Type> {
         ..
     }) = ty
         && let Some(segment) = segments.last()
-            && segment.ident == "Option"
-                && let PathArguments::AngleBracketed(args) = &segment.arguments
-                    && let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-                        return Some(inner_ty);
-                    }
+        && segment.ident == "Option"
+        && let PathArguments::AngleBracketed(args) = &segment.arguments
+        && let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+    {
+        return Some(inner_ty);
+    }
     None
 }
 
@@ -464,11 +465,12 @@ fn get_vec_inner_type(ty: &Type) -> Option<&Type> {
         ..
     }) = ty
         && let Some(segment) = segments.last()
-            && segment.ident == "Vec"
-                && let PathArguments::AngleBracketed(args) = &segment.arguments
-                    && let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-                        return Some(inner_ty);
-                    }
+        && segment.ident == "Vec"
+        && let PathArguments::AngleBracketed(args) = &segment.arguments
+        && let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+    {
+        return Some(inner_ty);
+    }
     None
 }
 
@@ -502,11 +504,12 @@ fn get_box_inner_type(ty: &Type) -> Option<&Type> {
         ..
     }) = ty
         && let Some(segment) = segments.last()
-            && segment.ident == "Box"
-                && let PathArguments::AngleBracketed(args) = &segment.arguments
-                    && let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-                        return Some(inner_ty);
-                    }
+        && segment.ident == "Box"
+        && let PathArguments::AngleBracketed(args) = &segment.arguments
+        && let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+    {
+        return Some(inner_ty);
+    }
     None
 }
 
@@ -621,29 +624,30 @@ fn get_element_info(field_ty: &Type) -> (bool, bool, bool, bool) {
 
     // Check if the (potentially unwrapped) type path ends with Element or DecimalElement
     if let Type::Path(TypePath { path, .. }) = current_ty
-        && let Some(segment) = path.segments.last() {
-            let type_name_ident = &segment.ident;
-            let type_name_str = type_name_ident.to_string();
+        && let Some(segment) = path.segments.last()
+    {
+        let type_name_ident = &segment.ident;
+        let type_name_str = type_name_ident.to_string();
 
-            // Check if the last segment's identifier is Element, DecimalElement, or a known alias
-            let is_direct_element = type_name_str == "Element";
-            let is_direct_decimal_element = type_name_str == "DecimalElement";
-            let is_known_element_alias = KNOWN_ELEMENT_ALIASES.contains(&type_name_str.as_str());
-            let is_known_decimal_alias = type_name_str == KNOWN_DECIMAL_ELEMENT_ALIAS;
+        // Check if the last segment's identifier is Element, DecimalElement, or a known alias
+        let is_direct_element = type_name_str == "Element";
+        let is_direct_decimal_element = type_name_str == "DecimalElement";
+        let is_known_element_alias = KNOWN_ELEMENT_ALIASES.contains(&type_name_str.as_str());
+        let is_known_decimal_alias = type_name_str == KNOWN_DECIMAL_ELEMENT_ALIAS;
 
-            let is_element = is_direct_element || is_known_element_alias;
-            let is_decimal_element = is_direct_decimal_element || is_known_decimal_alias;
+        let is_element = is_direct_element || is_known_element_alias;
+        let is_decimal_element = is_direct_decimal_element || is_known_decimal_alias;
 
-            if is_element || is_decimal_element {
-                // It's considered an element type if it's Element, DecimalElement, or a known alias
-                return (
-                    is_element && !is_decimal_element, // Ensure is_element is false if it's a decimal type
-                    is_decimal_element,
-                    is_option,
-                    is_vec,
-                );
-            }
+        if is_element || is_decimal_element {
+            // It's considered an element type if it's Element, DecimalElement, or a known alias
+            return (
+                is_element && !is_decimal_element, // Ensure is_element is false if it's a decimal type
+                is_decimal_element,
+                is_option,
+                is_vec,
+            );
         }
+    }
 
     (false, false, is_option, is_vec) // Not an Element or DecimalElement type we handle specially
 }
@@ -653,11 +657,12 @@ fn get_element_info(field_ty: &Type) -> (bool, bool, bool, bool) {
 fn get_inner_type(ty: &Type) -> Option<&Type> {
     if let Type::Path(TypePath { path, .. }) = ty
         && let Some(segment) = path.segments.last()
-            && (segment.ident == "Option" || segment.ident == "Vec" || segment.ident == "Box")
-                && let PathArguments::AngleBracketed(args) = &segment.arguments
-                    && let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-                        return Some(inner_ty);
-                    }
+        && (segment.ident == "Option" || segment.ident == "Vec" || segment.ident == "Box")
+        && let PathArguments::AngleBracketed(args) = &segment.arguments
+        && let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+    {
+        return Some(inner_ty);
+    }
     None
 }
 
@@ -689,26 +694,28 @@ fn extract_inner_element_type(type_name: &str) -> &str {
 fn element_primitive_type_tokens(field_ty: &Type) -> TokenStream2 {
     let base_type = get_base_type(field_ty);
     if let Type::Path(type_path) = base_type
-        && let Some(last_segment) = type_path.path.segments.last() {
-            if last_segment.ident == "Element" {
-                if let PathArguments::AngleBracketed(generics) = &last_segment.arguments
-                    && let Some(GenericArgument::Type(inner_v_type)) = generics.args.first() {
-                        return quote! { #inner_v_type };
-                    }
-                panic!("Element missing generic argument V");
-            } else {
-                let alias_name = last_segment.ident.to_string();
-                let primitive_type_str = extract_inner_element_type(&alias_name);
-                let primitive_type_parsed: Type = syn::parse_str(primitive_type_str)
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Failed to parse primitive type string: {}",
-                            primitive_type_str
-                        )
-                    });
-                return quote! { #primitive_type_parsed };
+        && let Some(last_segment) = type_path.path.segments.last()
+    {
+        if last_segment.ident == "Element" {
+            if let PathArguments::AngleBracketed(generics) = &last_segment.arguments
+                && let Some(GenericArgument::Type(inner_v_type)) = generics.args.first()
+            {
+                return quote! { #inner_v_type };
             }
+            panic!("Element missing generic argument V");
+        } else {
+            let alias_name = last_segment.ident.to_string();
+            let primitive_type_str = extract_inner_element_type(&alias_name);
+            let primitive_type_parsed: Type =
+                syn::parse_str(primitive_type_str).unwrap_or_else(|_| {
+                    panic!(
+                        "Failed to parse primitive type string: {}",
+                        primitive_type_str
+                    )
+                });
+            return quote! { #primitive_type_parsed };
         }
+    }
     panic!("Element type is not a Type::Path");
 }
 
@@ -1706,17 +1713,18 @@ fn generate_deserialize_impl(data: &Data, name: &Ident) -> proc_macro2::TokenStr
                     if attr.path().is_ident("fhir_serde")
                         && let Ok(list) =
                             attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-                        {
-                            for meta in list {
-                                if let Meta::NameValue(nv) = meta
-                                    && nv.path.is_ident("rename")
-                                        && let syn::Expr::Lit(expr_lit) = nv.value
-                                            && let Lit::Str(lit_str) = expr_lit.lit {
-                                                rename = Some(lit_str.value());
-                                                break;
-                                            }
+                    {
+                        for meta in list {
+                            if let Meta::NameValue(nv) = meta
+                                && nv.path.is_ident("rename")
+                                && let syn::Expr::Lit(expr_lit) = nv.value
+                                && let Lit::Str(lit_str) = expr_lit.lit
+                            {
+                                rename = Some(lit_str.value());
+                                break;
                             }
                         }
+                    }
                     if rename.is_some() {
                         break;
                     }
@@ -2709,16 +2717,17 @@ fn get_fhirpath_field_name(field: &syn::Field) -> String {
         if attr.path().is_ident("fhir_serde")
             && let Ok(list) =
                 attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-            {
-                for meta in list {
-                    if let Meta::NameValue(nv) = meta
-                        && nv.path.is_ident("rename")
-                            && let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    return lit_str.value();
-                                }
+        {
+            for meta in list {
+                if let Meta::NameValue(nv) = meta
+                    && nv.path.is_ident("rename")
+                    && let syn::Expr::Lit(expr_lit) = nv.value
+                    && let Lit::Str(lit_str) = expr_lit.lit
+                {
+                    return lit_str.value();
                 }
             }
+        }
     }
     // Default to the raw field identifier if no rename attribute found
     field.ident.as_ref().unwrap().to_string()
@@ -3346,29 +3355,31 @@ fn extract_type_info_attributes(attrs: &[syn::Attribute], type_name: &Ident) -> 
         if attr.path().is_ident("type_info")
             && let Ok(list) =
                 attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-            {
-                let mut namespace = None;
-                let mut name = None;
+        {
+            let mut namespace = None;
+            let mut name = None;
 
-                for meta in list {
-                    if let Meta::NameValue(nv) = meta {
-                        if nv.path.is_ident("namespace") {
-                            if let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    namespace = Some(lit_str.value());
-                                }
-                        } else if nv.path.is_ident("name")
-                            && let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    name = Some(lit_str.value());
-                                }
+            for meta in list {
+                if let Meta::NameValue(nv) = meta {
+                    if nv.path.is_ident("namespace") {
+                        if let syn::Expr::Lit(expr_lit) = nv.value
+                            && let Lit::Str(lit_str) = expr_lit.lit
+                        {
+                            namespace = Some(lit_str.value());
+                        }
+                    } else if nv.path.is_ident("name")
+                        && let syn::Expr::Lit(expr_lit) = nv.value
+                        && let Lit::Str(lit_str) = expr_lit.lit
+                    {
+                        name = Some(lit_str.value());
                     }
                 }
-
-                if let (Some(ns), Some(n)) = (namespace, name) {
-                    return (format!("\"{}\"", ns), format!("\"{}\"", n));
-                }
             }
+
+            if let (Some(ns), Some(n)) = (namespace, name) {
+                return (format!("\"{}\"", ns), format!("\"{}\"", n));
+            }
+        }
     }
 
     // Default: Assume FHIR namespace and use the type name
@@ -3417,16 +3428,17 @@ fn extract_choice_element_base_name(attrs: &[syn::Attribute]) -> Option<String> 
         if attr.path().is_ident("fhir_choice_element")
             && let Ok(list) =
                 attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-            {
-                for meta in list {
-                    if let Meta::NameValue(nv) = meta
-                        && nv.path.is_ident("base_name")
-                            && let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    return Some(lit_str.value());
-                                }
+        {
+            for meta in list {
+                if let Meta::NameValue(nv) = meta
+                    && nv.path.is_ident("base_name")
+                    && let syn::Expr::Lit(expr_lit) = nv.value
+                    && let Lit::Str(lit_str) = expr_lit.lit
+                {
+                    return Some(lit_str.value());
                 }
             }
+        }
     }
     None
 }
@@ -3437,23 +3449,24 @@ fn extract_resource_choice_elements(attrs: &[syn::Attribute]) -> Option<Vec<Stri
         if attr.path().is_ident("fhir_resource")
             && let Ok(list) =
                 attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-            {
-                for meta in list {
-                    if let Meta::NameValue(nv) = meta
-                        && nv.path.is_ident("choice_elements")
-                            && let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    // Split the comma-separated list of choice elements
-                                    let elements: Vec<String> = lit_str
-                                        .value()
-                                        .split(',')
-                                        .map(|s| s.trim().to_string())
-                                        .filter(|s| !s.is_empty())
-                                        .collect();
-                                    return Some(elements);
-                                }
+        {
+            for meta in list {
+                if let Meta::NameValue(nv) = meta
+                    && nv.path.is_ident("choice_elements")
+                    && let syn::Expr::Lit(expr_lit) = nv.value
+                    && let Lit::Str(lit_str) = expr_lit.lit
+                {
+                    // Split the comma-separated list of choice elements
+                    let elements: Vec<String> = lit_str
+                        .value()
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    return Some(elements);
                 }
             }
+        }
     }
     None
 }
@@ -3464,23 +3477,24 @@ fn extract_resource_summary_fields(attrs: &[syn::Attribute]) -> Option<Vec<Strin
         if attr.path().is_ident("fhir_resource")
             && let Ok(list) =
                 attr.parse_args_with(Punctuated::<Meta, token::Comma>::parse_terminated)
-            {
-                for meta in list {
-                    if let Meta::NameValue(nv) = meta
-                        && nv.path.is_ident("summary_fields")
-                            && let syn::Expr::Lit(expr_lit) = nv.value
-                                && let Lit::Str(lit_str) = expr_lit.lit {
-                                    // Split the comma-separated list of summary fields
-                                    let fields: Vec<String> = lit_str
-                                        .value()
-                                        .split(',')
-                                        .map(|s| s.trim().to_string())
-                                        .filter(|s| !s.is_empty())
-                                        .collect();
-                                    return Some(fields);
-                                }
+        {
+            for meta in list {
+                if let Meta::NameValue(nv) = meta
+                    && nv.path.is_ident("summary_fields")
+                    && let syn::Expr::Lit(expr_lit) = nv.value
+                    && let Lit::Str(lit_str) = expr_lit.lit
+                {
+                    // Split the comma-separated list of summary fields
+                    let fields: Vec<String> = lit_str
+                        .value()
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    return Some(fields);
                 }
             }
+        }
     }
     None
 }

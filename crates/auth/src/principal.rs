@@ -52,9 +52,10 @@ impl Principal {
     #[must_use]
     pub fn audit_agent_identity(&self) -> Option<&str> {
         if let Some(ref fu) = self.fhir_user
-            && is_fhir_relative_reference(fu) {
-                return Some(fu.as_str());
-            }
+            && is_fhir_relative_reference(fu)
+        {
+            return Some(fu.as_str());
+        }
         if !self.subject.is_empty() {
             return Some(self.subject.as_str());
         }

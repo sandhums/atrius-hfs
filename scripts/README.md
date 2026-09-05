@@ -60,13 +60,35 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 
 | Script | Role |
 |--------|------|
-| `setup-atrius-profile-registry.sh` | **Recommended**: fetch published `package.tgz` → expand → relative manifests → verify |
-| `build-atrius-profile-manifest.sh` | Regenerate `manifests/atrius-r4-profile-manifest-core.json` (default: atrius.in) |
+| `setup-atrius-profile-registry.sh` | **Recommended**: fetch published `package.tgz` → seed `data/fhir-packages/{name}/{version}/` (optional audit manifests) |
+| `build-atrius-profile-manifest.sh` | Optional audit JSON under `manifests/` (HFS does not read these) |
 | `load-atrius-ig-package.sh` | Expand package into `manifests/atrius-ig-package/` |
 
-After setup, clinical HFS uses:
-`HFS_PROFILE_MANIFEST=manifests/atrius-r4-profile-manifest-core.json` +
-`HFS_PROFILE_VALIDATION_MODE=strict`.
+**Do we need the JSON manifests?** No for HFS runtime. After cutover, HFS loads IG
+profiles only from `HFS_FHIR_PACKAGE_CACHE` + `HFS_FHIR_PACKAGES`. The
+`atrius-r4-profile-manifest*.json` files are optional audit inventories
+(`SKIP_MANIFESTS=1` skips them).
+
+**Do we need `manifests/deps/hl7-*`?** No. Datatypes (`SimpleQuantity`, …) and
+standard Patient extensions (`patient-nationality`, …) come from the
+`helios-fhir-validator` **embedded R4 core pack**. Do not seed those into the
+package cache.
+
+After `./scripts/setup-atrius-profile-registry.sh`, use the values it prints
+(e.g. `atrius.fhir.r4.india@0.1.0` from the IG `package.json`). HFS overlays
+only packages named in `HFS_FHIR_PACKAGES`; sushi `dependsOn` entries in that
+`package.json` (NDHM, THO, Extensions Pack, …) are not loaded unless listed:
+
+```bash
+HFS_FHIR_PACKAGE_CACHE=./data/fhir-packages
+HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0
+HFS_VALIDATION_MODE=enforce
+HFS_TERMINOLOGY_SERVER=http://127.0.0.1:9091
+```
+
+Paths in `deploy/env/hfs-clinical.env` are relative to the repo root
+(`./scripts/run-hfs.sh` cds there). Override the cache root with
+`HFS_FHIR_PACKAGE_CACHE=…` when running setup.
 
 ## Shared
 

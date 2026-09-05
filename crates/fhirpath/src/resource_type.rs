@@ -801,78 +801,81 @@ fn check_type_match(
     // Special handling for FHIR types in is() operations
     // When target is FHIR.string, FHIR string subtypes should match
     if let (Some(value_ns), Some(target_ns)) = (value_namespace, target_namespace)
-        && value_ns.eq_ignore_ascii_case("FHIR") && target_ns.eq_ignore_ascii_case("FHIR") {
-            // Use generated type hierarchy to check if value_type is a subtype of target_type
-            #[cfg(feature = "R4")]
-            if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
-                return Ok(true);
-            }
-            #[cfg(feature = "R4B")]
-            if helios_fhir::r4b::type_hierarchy::is_subtype_of(value_type, target_type) {
-                return Ok(true);
-            }
-            #[cfg(feature = "R5")]
-            if helios_fhir::r5::type_hierarchy::is_subtype_of(value_type, target_type) {
-                return Ok(true);
-            }
-            #[cfg(feature = "R6")]
-            if helios_fhir::r6::type_hierarchy::is_subtype_of(value_type, target_type) {
-                return Ok(true);
-            }
+        && value_ns.eq_ignore_ascii_case("FHIR")
+        && target_ns.eq_ignore_ascii_case("FHIR")
+    {
+        // Use generated type hierarchy to check if value_type is a subtype of target_type
+        #[cfg(feature = "R4")]
+        if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
+            return Ok(true);
         }
+        #[cfg(feature = "R4B")]
+        if helios_fhir::r4b::type_hierarchy::is_subtype_of(value_type, target_type) {
+            return Ok(true);
+        }
+        #[cfg(feature = "R5")]
+        if helios_fhir::r5::type_hierarchy::is_subtype_of(value_type, target_type) {
+            return Ok(true);
+        }
+        #[cfg(feature = "R6")]
+        if helios_fhir::r6::type_hierarchy::is_subtype_of(value_type, target_type) {
+            return Ok(true);
+        }
+    }
 
     // Special handling for FHIR primitive types matching unqualified System types in is() operations
     if target_namespace.is_none()
         && let Some(ns) = value_namespace
-            && ns.eq_ignore_ascii_case("FHIR") {
-                // Use generated type hierarchy for FHIR subtypes
-                #[cfg(feature = "R4")]
-                if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
-                    if target_type.eq_ignore_ascii_case("string") {
-                        eprintln!("Matched FHIR string subtype: {} -> string", value_type);
-                    }
-                    return Ok(true);
-                }
-                #[cfg(feature = "R4B")]
-                if helios_fhir::r4b::type_hierarchy::is_subtype_of(value_type, target_type) {
-                    if target_type.eq_ignore_ascii_case("string") {
-                        eprintln!("Matched FHIR string subtype: {} -> string", value_type);
-                    }
-                    return Ok(true);
-                }
-                #[cfg(feature = "R5")]
-                if helios_fhir::r5::type_hierarchy::is_subtype_of(value_type, target_type) {
-                    if target_type.eq_ignore_ascii_case("string") {
-                        eprintln!("Matched FHIR string subtype: {} -> string", value_type);
-                    }
-                    return Ok(true);
-                }
-                #[cfg(feature = "R6")]
-                if helios_fhir::r6::type_hierarchy::is_subtype_of(value_type, target_type) {
-                    if target_type.eq_ignore_ascii_case("string") {
-                        eprintln!("Matched FHIR string subtype: {} -> string", value_type);
-                    }
-                    return Ok(true);
-                }
-
-                // Other FHIR primitive types should match their unqualified equivalents
-                let direct_matches = [
-                    ("boolean", "boolean"),
-                    ("decimal", "decimal"),
-                    ("date", "date"),
-                    ("datetime", "datetime"),
-                    ("time", "time"),
-                    ("instant", "datetime"), // instant is a special datetime
-                ];
-
-                for (fhir_type, system_type) in &direct_matches {
-                    if value_type.eq_ignore_ascii_case(fhir_type)
-                        && target_type.eq_ignore_ascii_case(system_type)
-                    {
-                        return Ok(true);
-                    }
-                }
+        && ns.eq_ignore_ascii_case("FHIR")
+    {
+        // Use generated type hierarchy for FHIR subtypes
+        #[cfg(feature = "R4")]
+        if helios_fhir::r4::type_hierarchy::is_subtype_of(value_type, target_type) {
+            if target_type.eq_ignore_ascii_case("string") {
+                eprintln!("Matched FHIR string subtype: {} -> string", value_type);
             }
+            return Ok(true);
+        }
+        #[cfg(feature = "R4B")]
+        if helios_fhir::r4b::type_hierarchy::is_subtype_of(value_type, target_type) {
+            if target_type.eq_ignore_ascii_case("string") {
+                eprintln!("Matched FHIR string subtype: {} -> string", value_type);
+            }
+            return Ok(true);
+        }
+        #[cfg(feature = "R5")]
+        if helios_fhir::r5::type_hierarchy::is_subtype_of(value_type, target_type) {
+            if target_type.eq_ignore_ascii_case("string") {
+                eprintln!("Matched FHIR string subtype: {} -> string", value_type);
+            }
+            return Ok(true);
+        }
+        #[cfg(feature = "R6")]
+        if helios_fhir::r6::type_hierarchy::is_subtype_of(value_type, target_type) {
+            if target_type.eq_ignore_ascii_case("string") {
+                eprintln!("Matched FHIR string subtype: {} -> string", value_type);
+            }
+            return Ok(true);
+        }
+
+        // Other FHIR primitive types should match their unqualified equivalents
+        let direct_matches = [
+            ("boolean", "boolean"),
+            ("decimal", "decimal"),
+            ("date", "date"),
+            ("datetime", "datetime"),
+            ("time", "time"),
+            ("instant", "datetime"), // instant is a special datetime
+        ];
+
+        for (fhir_type, system_type) in &direct_matches {
+            if value_type.eq_ignore_ascii_case(fhir_type)
+                && target_type.eq_ignore_ascii_case(system_type)
+            {
+                return Ok(true);
+            }
+        }
+    }
 
     // For Quantity types and their subtypes, we need to allow cross-namespace matching
     // because FHIR.Age should match System.Quantity

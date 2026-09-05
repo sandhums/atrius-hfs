@@ -43,11 +43,12 @@
 //!
 //! ## Current limitations (hardening backlog)
 //!
-//! - Slice matchers: `pattern`, `type`, `profile`, and `binding` are
-//!   evaluated. `resolve-ref` remains inert. Binding discriminators that
-//!   name a ValueSet canonical (rather than an inline code) do not expand
-//!   the ValueSet at mark time. The converter emits a warning when it
-//!   cannot translate a discriminator into a match.
+//! - Slice matchers: `pattern` is evaluated. `type`, `profile`, `binding`, and
+//!   `resolve-ref` are not (`engine/slicing.rs`). The converter emits Match IR
+//!   for `type` / `profile` / `binding`, but `slice_matches` still only does
+//!   pattern equality. Binding discriminators that name a ValueSet canonical
+//!   (rather than an inline code) would also need an expand at mark time. The
+//!   converter emits a warning when it cannot translate a discriminator.
 //! - `refers` (reference target types) is carried but not enforced.
 //! - `extensible`-strength bindings are never checked (only `required`,
 //!   per the FHIR Schema spec); a warning mode may come later.
@@ -92,6 +93,6 @@ pub use packages::{
     ResolvedPackage, ScannedPackage, materialize_package, materialize_package_layers,
     materialize_tgz, resolve_packages, scan_package_dir,
 };
-pub use resolver::{CompositeResolver, SchemaRegistry, SchemaResolver};
+pub use resolver::{CompositeResolver, SchemaRegistry, SchemaResolver, strip_canonical_version};
 pub use schema::{Binding, Constraint, FhirSchema, Match, Slice, Slicing};
 pub use terminology::{CoreTerminology, core_terminology};

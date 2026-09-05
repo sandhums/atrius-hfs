@@ -98,9 +98,10 @@ fn principal_value_set(params: &[Value]) -> Option<Value> {
             first_vs = Some(res.clone());
         }
         if let Some(ref u) = target_url
-            && res.get("url").and_then(|v| v.as_str()) == Some(u.as_str()) {
-                return Some(res.clone());
-            }
+            && res.get("url").and_then(|v| v.as_str()) == Some(u.as_str())
+        {
+            return Some(res.clone());
+        }
     }
 
     first_vs

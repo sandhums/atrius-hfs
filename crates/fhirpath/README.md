@@ -485,7 +485,7 @@ These functions extend the base FHIRPath specification with FHIR-specific capabi
     *   [memberOf()](https://build.fhir.org/fhirpath.html#functions): ✅ (Via %terminologies integration)
     *   [subsumes()](https://build.fhir.org/fhirpath.html#functions): ❌ Not Implemented (Function form; %terminologies.subsumes available)
     *   [subsumedBy()](https://build.fhir.org/fhirpath.html#functions): ❌ Not Implemented
-    *   [htmlChecks()](https://build.fhir.org/fhirpath.html#functions): ❌ Not Implemented (XHTML narrative validation)
+    *   [htmlChecks()](https://build.fhir.org/fhirpath.html#functions): ✅ (Narrative XHTML subset: allowed tags/attributes and non-whitespace content)
     *   [comparable()](https://build.fhir.org/fhirpath.html#functions): ✅ (UCUM unit comparison)
     *   [weight()](https://build.fhir.org/fhirpath.html#functions): ❌ Not Implemented
 

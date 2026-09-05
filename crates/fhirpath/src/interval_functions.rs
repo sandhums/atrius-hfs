@@ -187,9 +187,10 @@ fn date_duration(from: NaiveDate, to: NaiveDate, precision: &str) -> i64 {
             // Check if we've completed full years
             let anniversary = add_years(earlier, years as i32);
             if let Some(ann) = anniversary
-                && ann > later {
-                    years -= 1;
-                }
+                && ann > later
+            {
+                years -= 1;
+            }
             sign * years
         }
         "month" | "months" => {
@@ -197,9 +198,10 @@ fn date_duration(from: NaiveDate, to: NaiveDate, precision: &str) -> i64 {
                 + (later.month() as i64 - earlier.month() as i64);
             let anniversary = add_months(earlier, months as i32);
             if let Some(ann) = anniversary
-                && ann > later {
-                    months -= 1;
-                }
+                && ann > later
+            {
+                months -= 1;
+            }
             sign * months
         }
         "week" | "weeks" => {

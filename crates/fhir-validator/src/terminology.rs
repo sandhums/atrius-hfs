@@ -94,7 +94,9 @@ impl CoreTerminology {
     /// code under any system in the set (a bare `code` whose system is implied
     /// by the binding).
     fn contains(&self, value_set: &str, system: Option<&str>, code: &str) -> Option<bool> {
-        let set = self.sets.get(strip_version(value_set))?;
+        let set = self
+            .sets
+            .get(crate::resolver::strip_canonical_version(value_set))?;
         let Some(systems) = set.get(code) else {
             return Some(false);
         };
@@ -163,18 +165,13 @@ impl CoreTerminology {
                     path.clone(),
                     format!(
                         "code is not in the required value set '{}'",
-                        strip_version(&binding.value_set)
+                        crate::resolver::strip_canonical_version(&binding.value_set)
                     ),
                 ));
             }
         }
         errors
     }
-}
-
-/// Strips a `|version` suffix from a canonical URL (`…/administrative-gender|4.0.1`).
-fn strip_version(url: &str) -> &str {
-    url.split('|').next().unwrap_or(url)
 }
 
 fn coding_parts(coding: &Value) -> (Option<&str>, Option<&str>) {

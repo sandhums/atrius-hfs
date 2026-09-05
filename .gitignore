@@ -37,6 +37,9 @@ deploy/env/*.env
 # Local audit sink dumps (runtime; may contain PHI)
 /data/audit*.ndjson
 
+# Seeded FHIR NPM package cache (./scripts/setup-atrius-profile-registry.sh)
+/data/fhir-packages/
+
 # Runtime + build logs (hts-*.log, hts-run.log, test-*.log, compile.log, …)
 *.log
 

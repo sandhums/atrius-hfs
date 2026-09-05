@@ -191,6 +191,18 @@ fn apply_informational(element: &mut Node, ed: &Ed) {
 }
 
 fn descend<'a>(node: &'a mut Node, seg: &Segment) -> &'a mut Node {
+    // `code[x]:codeCodeableConcept` names a choice branch, not a slice, so it
+    // descends into the branch element the same way `apply` handles it as a
+    // final segment. Treating it as slicing would strand the subtree under a
+    // `code[x]` node that no instance data can ever match.
+    if seg.name.ends_with("[x]")
+        && let Some(branch) = &seg.slice
+    {
+        return node
+            .children
+            .entry(branch.clone())
+            .or_insert_with(|| Node::new(branch.clone()));
+    }
     let child = node
         .children
         .entry(seg.name.clone())
@@ -456,8 +468,18 @@ fn parse_numeric_max(max: Option<&str>) -> Option<u64> {
     }
 }
 
+/// Parse a `contentReference` into an element-reference path.
+///
+/// Both the local fragment (`#Composition.section`, as written in the core
+/// spec) and the absolute form (`<canonical>#Composition.section`) are
+/// accepted. Snapshot generation rewrites the local fragment into the
+/// absolute form whenever a base element is copied into a derived profile,
+/// because a bare fragment would otherwise resolve against the profile's own
+/// canonical, which does not define the element. The fragment root is an
+/// element id in the target and so always names the target's type, which is
+/// what the resolver keys on.
 fn parse_content_reference(reference: &str) -> Option<Vec<String>> {
-    let path = reference.strip_prefix('#')?;
+    let (_canonical, path) = reference.rsplit_once('#')?;
     let mut parts = path.split('.');
     let root = parts.next()?;
     if root.is_empty() {

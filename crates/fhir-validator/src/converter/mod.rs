@@ -17,7 +17,7 @@
 //! | `min >= 1` | parent `required` (choice base name for `foo[x]`) |
 //! | `base.max` (else `max`) `*`/`>1` | `array: true` + numeric `min`/`max` |
 //! | multi-type / `foo[x]` | `choices` declarer + one `choiceOf` branch per type |
-//! | `contentReference: "#A.b"` | `elementReference: ["A", "elements", "b"]` |
+//! | `contentReference: "#A.b"` (or `"<canonical>#A.b"`) | `elementReference: ["A", "elements", "b"]` |
 //! | `slicing.discriminator` | `slicing.slices[].match` (pattern) — see `slicing` |
 //! | `slicing.ordered` | `slicing.ordered` + `slices[].order` (declaration ordinal) |
 //! | extension slice + type profile | parent `extensions` sugar |

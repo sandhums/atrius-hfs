@@ -281,6 +281,7 @@ pub mod debug_trace;
 mod distinct_functions;
 mod extension_function;
 mod fhir_type_hierarchy;
+mod html_checks_function;
 mod long_conversion;
 mod not_function;
 mod polymorphic_access;

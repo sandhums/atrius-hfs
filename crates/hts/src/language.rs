@@ -74,9 +74,10 @@ pub(crate) fn best_lang_match_index<'a>(
     let mut best: Option<(u32, usize)> = None;
     for (idx, lang) in langs.into_iter().enumerate() {
         if let Some(rank) = lang.and_then(|l| lang_match_rank(requested, l))
-            && best.is_none_or(|(r, _)| rank < r) {
-                best = Some((rank, idx));
-            }
+            && best.is_none_or(|(r, _)| rank < r)
+        {
+            best = Some((rank, idx));
+        }
     }
     best.map(|(_, idx)| idx)
 }

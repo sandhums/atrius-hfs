@@ -106,9 +106,10 @@ fn standards_statuses(resource: &Value) -> Vec<String> {
                 == Some(
                     "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
                 )
-                && let Some(code) = ext.get("valueCode").and_then(|v| v.as_str()) {
-                    push_unique(code);
-                }
+                && let Some(code) = ext.get("valueCode").and_then(|v| v.as_str())
+            {
+                push_unique(code);
+            }
         }
     }
 
@@ -136,10 +137,12 @@ fn vs_extension_statuses(resource: &Value) -> Vec<String> {
                     "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
                 )
                 && let Some(code) = ext.get("valueCode").and_then(|v| v.as_str())
-                    && !code.is_empty() && is_warning_status(code) && !out.iter().any(|c| c == code)
-                    {
-                        out.push(code.to_string());
-                    }
+                && !code.is_empty()
+                && is_warning_status(code)
+                && !out.iter().any(|c| c == code)
+            {
+                out.push(code.to_string());
+            }
         }
     }
 
@@ -171,9 +174,10 @@ fn serialize_expansion_contains(
     // system — for single-version CSes the version is implicit (and the IG
     // fixtures don't expect it in the contains items).
     if multi_version_systems.contains(&c.system)
-        && let Some(version) = &c.version {
-            item.insert("version".into(), json!(version));
-        }
+        && let Some(version) = &c.version
+    {
+        item.insert("version".into(), json!(version));
+    }
     // FHIR expansion.contains.abstract / .inactive — only emit when true.
     if c.is_abstract == Some(true) {
         item.insert("abstract".into(), json!(true));
@@ -973,11 +977,11 @@ fn apply_concept_extension_data<'a, B: TerminologyBackend>(
                 && let Ok(map) = backend
                     .supplement_concept_entries(ctx, supplement_urls, codes)
                     .await
-                {
-                    for (code, entries) in map {
-                        supp_entries.insert((system.clone(), code), entries);
-                    }
+            {
+                for (code, entries) in map {
+                    supp_entries.insert((system.clone(), code), entries);
                 }
+            }
         }
 
         for c in contains.iter_mut() {
@@ -1238,28 +1242,29 @@ fn apply_display_language<'a, B: TerminologyBackend>(
                 // surface the original (CS-default) display as a designation
                 // with `use=preferredForLanguage` so consumers can recover it.
                 if let Some(orig) = original_display
-                    && !orig.is_empty() {
-                        let already = c
-                            .designations
-                            .iter()
-                            .any(|d| d.language == cs_lang && d.value == orig);
-                        if !already {
-                            // Front-insert for the same reason as the swap branch
-                            // above: the primary-display rotation must precede any
-                            // explicit same-language designation (en-multi
-                            // `code2aII`) under the validator's language-sort.
-                            c.designations.insert(
-                                0,
-                                ExpansionContainsDesignation {
-                                    language: cs_lang.clone(),
-                                    use_system: Some(HL7_TERM_MAINT_INFRA_SYSTEM.to_string()),
-                                    use_code: Some("preferredForLanguage".to_string()),
-                                    value: orig,
-                                    extensions: vec![],
-                                },
-                            );
-                        }
+                    && !orig.is_empty()
+                {
+                    let already = c
+                        .designations
+                        .iter()
+                        .any(|d| d.language == cs_lang && d.value == orig);
+                    if !already {
+                        // Front-insert for the same reason as the swap branch
+                        // above: the primary-display rotation must precede any
+                        // explicit same-language designation (en-multi
+                        // `code2aII`) under the validator's language-sort.
+                        c.designations.insert(
+                            0,
+                            ExpansionContainsDesignation {
+                                language: cs_lang.clone(),
+                                use_system: Some(HL7_TERM_MAINT_INFRA_SYSTEM.to_string()),
+                                use_code: Some("preferredForLanguage".to_string()),
+                                value: orig,
+                                extensions: vec![],
+                            },
+                        );
                     }
+                }
                 c.display = None;
             }
 
@@ -1740,10 +1745,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
     };
 
     if let Ok(cache) = state.expand_cache.read()
-        && let Some(cached) = cache.get(&cache_key) {
-            // O(1) clone — just bumps the reference count on the shared buffer.
-            return Ok(cached.clone());
-        }
+        && let Some(cached) = cache.get(&cache_key)
+    {
+        // O(1) clone — just bumps the reference count on the shared buffer.
+        return Ok(cached.clone());
+    }
 
     // ── Negative-cache check (URL-based 404s) ─────────────────────────────────
     // URLs that previously returned NotFound are remembered here so we can skip
@@ -1751,9 +1757,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // hit).
     if let Some(ref url_str) = url
         && let Ok(neg) = state.not_found_urls.read()
-            && neg.contains(url_str.as_str()) {
-                return Err(HtsError::NotFound(url_str.clone()));
-            }
+        && neg.contains(url_str.as_str())
+    {
+        return Err(HtsError::NotFound(url_str.clone()));
+    }
 
     // `tx-resource` parameters provide ad-hoc terminology that the caller does
     // not want to import. Each is a full FHIR resource (typically a ValueSet)
@@ -1840,13 +1847,14 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 .filter_map(|k| p.get(*k).and_then(|v| v.as_str()))
                 .next();
             if let Some(s) = raw
-                && let Some(pos) = s.find('|') {
-                    let url = s[..pos].to_string();
-                    let ver = s[pos + 1..].to_string();
-                    if !url.is_empty() && !ver.is_empty() {
-                        out.entry(url).or_insert(ver);
-                    }
+                && let Some(pos) = s.find('|')
+            {
+                let url = s[..pos].to_string();
+                let ver = s[pos + 1..].to_string();
+                if !url.is_empty() && !ver.is_empty() {
+                    out.entry(url).or_insert(ver);
                 }
+            }
         }
         out
     }
@@ -1959,9 +1967,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     msg.contains(&format!("'{url_str}'")) || msg.contains(&format!("'{url_str}|"));
                 if msg_names_top
                     && let Ok(mut neg) = state.not_found_urls.write()
-                        && neg.len() < NOT_FOUND_CACHE_MAX {
-                            neg.insert(url_str.clone());
-                        }
+                    && neg.len() < NOT_FOUND_CACHE_MAX
+                {
+                    neg.insert(url_str.clone());
+                }
             }
             // The IG fixtures format VS-not-found errors as
             //   "A definition for the value Set 'url|version' could not be found"
@@ -2102,42 +2111,43 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // OperationOutcome whose text mentions both "supplement" and the missing
     // CS canonical URL (matching `$fragments:supplement|...$`).
     if let Some(vs) = source_vs.as_ref()
-        && let Some(exts) = vs.get("extension").and_then(|e| e.as_array()) {
-            for ext in exts {
-                if ext.get("url").and_then(|u| u.as_str())
-                    != Some("http://hl7.org/fhir/StructureDefinition/valueset-supplement")
-                {
-                    continue;
+        && let Some(exts) = vs.get("extension").and_then(|e| e.as_array())
+    {
+        for ext in exts {
+            if ext.get("url").and_then(|u| u.as_str())
+                != Some("http://hl7.org/fhir/StructureDefinition/valueset-supplement")
+            {
+                continue;
+            }
+            let raw = match ext
+                .get("valueCanonical")
+                .or_else(|| ext.get("valueUri"))
+                .and_then(|v| v.as_str())
+            {
+                Some(s) => s.to_string(),
+                None => continue,
+            };
+            let bare = raw.split('|').next().unwrap_or(&raw).to_string();
+            if supplement_inputs
+                .iter()
+                .any(|s| s.split('|').next() == Some(&bare))
+            {
+                continue;
+            }
+            match state.backend().supplement_target(&ctx, &bare).await {
+                Ok(Some(info)) => {
+                    supplement_inputs.push(raw.clone());
+                    applied_supplements.push(info);
                 }
-                let raw = match ext
-                    .get("valueCanonical")
-                    .or_else(|| ext.get("valueUri"))
-                    .and_then(|v| v.as_str())
-                {
-                    Some(s) => s.to_string(),
-                    None => continue,
-                };
-                let bare = raw.split('|').next().unwrap_or(&raw).to_string();
-                if supplement_inputs
-                    .iter()
-                    .any(|s| s.split('|').next() == Some(&bare))
-                {
-                    continue;
+                Ok(None) => {
+                    return Err(HtsError::NotFound(format!(
+                        "Required supplement not found: {bare}"
+                    )));
                 }
-                match state.backend().supplement_target(&ctx, &bare).await {
-                    Ok(Some(info)) => {
-                        supplement_inputs.push(raw.clone());
-                        applied_supplements.push(info);
-                    }
-                    Ok(None) => {
-                        return Err(HtsError::NotFound(format!(
-                            "Required supplement not found: {bare}"
-                        )));
-                    }
-                    Err(e) => return Err(e),
-                }
+                Err(e) => return Err(e),
             }
         }
+    }
     // Rebuild bare_supplement_urls including any VS-extension additions.
     let bare_supplement_urls: Vec<String> = supplement_inputs
         .iter()
@@ -2284,56 +2294,55 @@ async fn process_expand_inner<B: TerminologyBackend>(
             .get("compose")
             .and_then(|c| c.get("include"))
             .and_then(|i| i.as_array())
-        {
-            for inc in includes {
-                let inc_sys = inc.get("system").and_then(|s| s.as_str());
-                let Some(concepts) = inc.get("concept").and_then(|c| c.as_array()) else {
+    {
+        for inc in includes {
+            let inc_sys = inc.get("system").and_then(|s| s.as_str());
+            let Some(concepts) = inc.get("concept").and_then(|c| c.as_array()) else {
+                continue;
+            };
+            for concept in concepts {
+                let Some(code) = concept.get("code").and_then(|v| v.as_str()) else {
                     continue;
                 };
-                for concept in concepts {
-                    let Some(code) = concept.get("code").and_then(|v| v.as_str()) else {
-                        continue;
-                    };
-                    // VS-compose-level designations attach to the matching
-                    // contains[] entry, alongside any base/supplement-derived
-                    // designations. The IG `extensions/expand-echo-enumerated`
-                    // fixture pins a `de`-language designation on the VS-
-                    // compose `code2` concept that must surface on the
-                    // expansion's contains entry — without this merge the
-                    // server only emits the supplement-contributed designation.
-                    if let Some(desigs) = concept.get("designation").and_then(|d| d.as_array()) {
-                        fn merge_designations_into_contains(
-                            list: &mut [crate::types::ExpansionContains],
-                            wanted_sys: Option<&str>,
-                            wanted_code: &str,
-                            desigs: &[Value],
-                        ) {
-                            use crate::types::ExpansionContainsDesignation;
-                            for c in list.iter_mut() {
-                                if c.code == wanted_code && wanted_sys.is_none_or(|s| s == c.system)
-                                {
-                                    for d in desigs {
-                                        let Some(value) = d.get("value").and_then(|v| v.as_str())
-                                        else {
-                                            continue;
-                                        };
-                                        let language = d
-                                            .get("language")
-                                            .and_then(|v| v.as_str())
-                                            .map(str::to_string);
-                                        // De-dupe by (language, value).
-                                        let dup = c.designations.iter().any(|existing| {
-                                            existing.value == value && existing.language == language
-                                        });
-                                        if dup {
-                                            continue;
-                                        }
-                                        // Only carry over extensions whose URL
-                                        // is well-known to the IG (the fixture
-                                        // doesn't expect every ad-hoc
-                                        // extension to round-trip — e.g.
-                                        // `unknown-extension-6` is filtered).
-                                        let extensions = d
+                // VS-compose-level designations attach to the matching
+                // contains[] entry, alongside any base/supplement-derived
+                // designations. The IG `extensions/expand-echo-enumerated`
+                // fixture pins a `de`-language designation on the VS-
+                // compose `code2` concept that must surface on the
+                // expansion's contains entry — without this merge the
+                // server only emits the supplement-contributed designation.
+                if let Some(desigs) = concept.get("designation").and_then(|d| d.as_array()) {
+                    fn merge_designations_into_contains(
+                        list: &mut [crate::types::ExpansionContains],
+                        wanted_sys: Option<&str>,
+                        wanted_code: &str,
+                        desigs: &[Value],
+                    ) {
+                        use crate::types::ExpansionContainsDesignation;
+                        for c in list.iter_mut() {
+                            if c.code == wanted_code && wanted_sys.is_none_or(|s| s == c.system) {
+                                for d in desigs {
+                                    let Some(value) = d.get("value").and_then(|v| v.as_str())
+                                    else {
+                                        continue;
+                                    };
+                                    let language = d
+                                        .get("language")
+                                        .and_then(|v| v.as_str())
+                                        .map(str::to_string);
+                                    // De-dupe by (language, value).
+                                    let dup = c.designations.iter().any(|existing| {
+                                        existing.value == value && existing.language == language
+                                    });
+                                    if dup {
+                                        continue;
+                                    }
+                                    // Only carry over extensions whose URL
+                                    // is well-known to the IG (the fixture
+                                    // doesn't expect every ad-hoc
+                                    // extension to round-trip — e.g.
+                                    // `unknown-extension-6` is filtered).
+                                    let extensions = d
                                             .get("extension")
                                             .and_then(|e| e.as_array())
                                             .map(|a| {
@@ -2350,111 +2359,108 @@ async fn process_expand_inner<B: TerminologyBackend>(
                                                     .collect::<Vec<_>>()
                                             })
                                             .unwrap_or_default();
-                                        c.designations.push(ExpansionContainsDesignation {
-                                            language,
-                                            use_system: None,
-                                            use_code: None,
-                                            value: value.to_string(),
-                                            extensions,
-                                        });
-                                    }
-                                }
-                                if !c.contains.is_empty() {
-                                    merge_designations_into_contains(
-                                        &mut c.contains,
-                                        wanted_sys,
-                                        wanted_code,
-                                        desigs,
-                                    );
-                                }
-                            }
-                        }
-                        merge_designations_into_contains(&mut resp.contains, inc_sys, code, desigs);
-                    }
-                    let Some(exts) = concept.get("extension").and_then(|e| e.as_array()) else {
-                        continue;
-                    };
-                    // VS-compose-applied extensions get a SUPERSET of the
-                    // base passthrough list. The `deprecated/expand-deprecating`
-                    // fixture pins `structuredefinition-standards-status:
-                    // deprecated` on a VS-compose concept and expects it to
-                    // surface verbatim on the matching contains[] entry.
-                    // (We don't add it to `PASSTHROUGH_CONCEPT_EXTENSIONS` for
-                    // the CS-resource path because `apply_concept_extension_data`
-                    // already converts that extension to a `status` property
-                    // for CS-native concepts — see `extension_to_property_code`.)
-                    fn vs_compose_passthrough(url: &str) -> bool {
-                        PASSTHROUGH_CONCEPT_EXTENSIONS.contains(&url)
-                            || url
-                                == "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status"
-                    }
-                    /// Map VS-compose-level extension URLs onto the FHIR
-                    /// concept-property `code` they synthesise. Mirrors
-                    /// [`extension_to_property_code`] but for the
-                    /// VS-compose-level shape (`valueset-conceptOrder` /
-                    /// `valueset-label`).  These OVERRIDE the CS-level values
-                    /// when both exist — IG `parameters/parameters-expand-
-                    /// enum-definitions3` and `extensions/expand-echo-
-                    /// enumerated` pin VS-compose `valueset-conceptOrder=0,1,
-                    /// 2,…` over a CS-level `codesystem-conceptOrder=6,5,4,…`.
-                    fn vs_compose_property_code(url: &str) -> Option<&'static str> {
-                        match url {
-                            "http://hl7.org/fhir/StructureDefinition/valueset-conceptOrder" => {
-                                Some("order")
-                            }
-                            "http://hl7.org/fhir/StructureDefinition/valueset-label" => {
-                                Some("label")
-                            }
-                            "http://hl7.org/fhir/StructureDefinition/itemWeight" => Some("weight"),
-                            _ => None,
-                        }
-                    }
-                    fn merge_into_contains(
-                        list: &mut [crate::types::ExpansionContains],
-                        wanted_sys: Option<&str>,
-                        wanted_code: &str,
-                        exts: &[Value],
-                    ) {
-                        use crate::types::ExpansionContainsProperty;
-                        for c in list.iter_mut() {
-                            if c.code == wanted_code && wanted_sys.is_none_or(|s| s == c.system) {
-                                for ext in exts {
-                                    let url = match ext.get("url").and_then(|u| u.as_str()) {
-                                        Some(s) => s,
-                                        None => continue,
-                                    };
-                                    if vs_compose_passthrough(url) {
-                                        c.extensions.retain(|existing| {
-                                            existing.get("url").and_then(|u| u.as_str())
-                                                != Some(url)
-                                        });
-                                        c.extensions.push(ext.clone());
-                                    }
-                                    // Synthesise/override CS-level property
-                                    // values from VS-compose-level extensions
-                                    // (last-writer-wins by `code`).
-                                    if let Some(prop_code) = vs_compose_property_code(url)
-                                        && let Some((value_type, value)) =
-                                            extension_value_for_property(ext)
-                                        {
-                                            c.properties.retain(|p| p.code != prop_code);
-                                            c.properties.push(ExpansionContainsProperty {
-                                                code: prop_code.to_string(),
-                                                value_type: value_type.to_string(),
-                                                value,
-                                            });
-                                        }
+                                    c.designations.push(ExpansionContainsDesignation {
+                                        language,
+                                        use_system: None,
+                                        use_code: None,
+                                        value: value.to_string(),
+                                        extensions,
+                                    });
                                 }
                             }
                             if !c.contains.is_empty() {
-                                merge_into_contains(&mut c.contains, wanted_sys, wanted_code, exts);
+                                merge_designations_into_contains(
+                                    &mut c.contains,
+                                    wanted_sys,
+                                    wanted_code,
+                                    desigs,
+                                );
                             }
                         }
                     }
-                    merge_into_contains(&mut resp.contains, inc_sys, code, exts);
+                    merge_designations_into_contains(&mut resp.contains, inc_sys, code, desigs);
                 }
+                let Some(exts) = concept.get("extension").and_then(|e| e.as_array()) else {
+                    continue;
+                };
+                // VS-compose-applied extensions get a SUPERSET of the
+                // base passthrough list. The `deprecated/expand-deprecating`
+                // fixture pins `structuredefinition-standards-status:
+                // deprecated` on a VS-compose concept and expects it to
+                // surface verbatim on the matching contains[] entry.
+                // (We don't add it to `PASSTHROUGH_CONCEPT_EXTENSIONS` for
+                // the CS-resource path because `apply_concept_extension_data`
+                // already converts that extension to a `status` property
+                // for CS-native concepts — see `extension_to_property_code`.)
+                fn vs_compose_passthrough(url: &str) -> bool {
+                    PASSTHROUGH_CONCEPT_EXTENSIONS.contains(&url)
+                        || url
+                            == "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status"
+                }
+                /// Map VS-compose-level extension URLs onto the FHIR
+                /// concept-property `code` they synthesise. Mirrors
+                /// [`extension_to_property_code`] but for the
+                /// VS-compose-level shape (`valueset-conceptOrder` /
+                /// `valueset-label`).  These OVERRIDE the CS-level values
+                /// when both exist — IG `parameters/parameters-expand-
+                /// enum-definitions3` and `extensions/expand-echo-
+                /// enumerated` pin VS-compose `valueset-conceptOrder=0,1,
+                /// 2,…` over a CS-level `codesystem-conceptOrder=6,5,4,…`.
+                fn vs_compose_property_code(url: &str) -> Option<&'static str> {
+                    match url {
+                        "http://hl7.org/fhir/StructureDefinition/valueset-conceptOrder" => {
+                            Some("order")
+                        }
+                        "http://hl7.org/fhir/StructureDefinition/valueset-label" => Some("label"),
+                        "http://hl7.org/fhir/StructureDefinition/itemWeight" => Some("weight"),
+                        _ => None,
+                    }
+                }
+                fn merge_into_contains(
+                    list: &mut [crate::types::ExpansionContains],
+                    wanted_sys: Option<&str>,
+                    wanted_code: &str,
+                    exts: &[Value],
+                ) {
+                    use crate::types::ExpansionContainsProperty;
+                    for c in list.iter_mut() {
+                        if c.code == wanted_code && wanted_sys.is_none_or(|s| s == c.system) {
+                            for ext in exts {
+                                let url = match ext.get("url").and_then(|u| u.as_str()) {
+                                    Some(s) => s,
+                                    None => continue,
+                                };
+                                if vs_compose_passthrough(url) {
+                                    c.extensions.retain(|existing| {
+                                        existing.get("url").and_then(|u| u.as_str()) != Some(url)
+                                    });
+                                    c.extensions.push(ext.clone());
+                                }
+                                // Synthesise/override CS-level property
+                                // values from VS-compose-level extensions
+                                // (last-writer-wins by `code`).
+                                if let Some(prop_code) = vs_compose_property_code(url)
+                                    && let Some((value_type, value)) =
+                                        extension_value_for_property(ext)
+                                {
+                                    c.properties.retain(|p| p.code != prop_code);
+                                    c.properties.push(ExpansionContainsProperty {
+                                        code: prop_code.to_string(),
+                                        value_type: value_type.to_string(),
+                                        value,
+                                    });
+                                }
+                            }
+                        }
+                        if !c.contains.is_empty() {
+                            merge_into_contains(&mut c.contains, wanted_sys, wanted_code, exts);
+                        }
+                    }
+                }
+                merge_into_contains(&mut resp.contains, inc_sys, code, exts);
             }
         }
+    }
 
     // ── Per-system CodeSystem metadata lookup (one search per distinct URL) ──
     // The CS resource is consulted by THREE downstream blocks:
@@ -2485,16 +2491,16 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 .get("compose")
                 .and_then(|c| c.get("include"))
                 .and_then(|i| i.as_array())
-            {
-                for inc in includes {
-                    if let Some(sys) = inc.get("system").and_then(|s| s.as_str()) {
-                        let s = sys.to_string();
-                        if !systems.contains(&s) {
-                            systems.push(s);
-                        }
+        {
+            for inc in includes {
+                if let Some(sys) = inc.get("system").and_then(|s| s.as_str()) {
+                    let s = sys.to_string();
+                    if !systems.contains(&s) {
+                        systems.push(s);
                     }
                 }
             }
+        }
         systems.sort();
         // Fan out per-system CS searches concurrently so total latency is
         // O(1) round-trip instead of O(N). For VSAC's typical 5+ systems
@@ -2546,16 +2552,17 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 .map(str::to_string)
         });
     if let Some(raw) = display_language.as_deref()
-        && let Some(spec) = parse_display_language(raw) {
-            apply_display_language(
-                state.backend(),
-                &ctx,
-                &mut resp.contains,
-                &spec,
-                &cs_lang_by_url,
-            )
-            .await;
-        }
+        && let Some(spec) = parse_display_language(raw)
+    {
+        apply_display_language(
+            state.backend(),
+            &ctx,
+            &mut resp.contains,
+            &spec,
+            &cs_lang_by_url,
+        )
+        .await;
+    }
 
     // ── activeOnly / compose.inactive=false filter ──────────────────────────
     // The IG fixtures drop inactive concepts when EITHER:
@@ -2850,10 +2857,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
             .next();
         if let Some((had_key, val)) = raw
             && had_key != "valueUri"
-                && let Some(obj) = ep.as_object_mut() {
-                    obj.remove(had_key);
-                    obj.insert("valueUri".into(), json!(val));
-                }
+            && let Some(obj) = ep.as_object_mut()
+        {
+            obj.remove(had_key);
+            obj.insert("valueUri".into(), json!(val));
+        }
     }
 
     // Pull additional default expansion parameters from the source ValueSet's
@@ -2884,9 +2892,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
                     if sub_url == "name" {
                         name = sub.get("valueCode").and_then(|v| v.as_str());
                     } else if let Some(obj) = sub.as_object()
-                        && let Some((k, v)) = obj.iter().find(|(k, _)| k.starts_with("value")) {
-                            value_entry = Some((k.clone(), v.clone()));
-                        }
+                        && let Some((k, v)) = obj.iter().find(|(k, _)| k.starts_with("value"))
+                    {
+                        value_entry = Some((k.clone(), v.clone()));
+                    }
                 }
                 if let (Some(n), Some((k, v))) = (name, value_entry) {
                     // `versionsMatch` is a tx-ecosystem-extension carried on
@@ -3008,10 +3017,11 @@ async fn process_expand_inner<B: TerminologyBackend>(
                             .unwrap_or("")
                             .to_string();
                         if let Some(includes) = include_versions.get(&sys)
-                            && !includes.contains(&ver) {
-                                whole_system_cross_version_exclude = true;
-                                break;
-                            }
+                            && !includes.contains(&ver)
+                        {
+                            whole_system_cross_version_exclude = true;
+                            break;
+                        }
                     }
                 }
                 if whole_system_cross_version_exclude {
@@ -3474,12 +3484,13 @@ async fn process_expand_inner<B: TerminologyBackend>(
         // `expansion.extension` pair (`valueset-unclosed` + `valueset-unclosed-
         // reason`) flagging the partial coverage.
         if let Some(cs) = cs_by_url.get(system_url).and_then(|c| c.as_ref())
-            && cs.get("content").and_then(|v| v.as_str()) == Some("fragment") {
-                emitted_params.push(json!({
-                    "name": "used-fragment",
-                    "valueUri": value_uri,
-                }));
-            }
+            && cs.get("content").and_then(|v| v.as_str()) == Some("fragment")
+        {
+            emitted_params.push(json!({
+                "name": "used-fragment",
+                "valueUri": value_uri,
+            }));
+        }
         // Emit `warning-<status>` only once per system URL (first pair wins).
         if warned_systems.insert(system_url.clone()) {
             let cs = cs_by_url.get(system_url).and_then(|c| c.as_ref());
@@ -3579,9 +3590,10 @@ async fn process_expand_inner<B: TerminologyBackend>(
             // Honour `default-valueset-version` pin when the ref itself
             // doesn't carry an explicit `|version` (FHIR R5 §$expand).
             if pinned_version.is_none()
-                && let Some(default_v) = default_value_set_versions_for_echo.get(&bare_url) {
-                    pinned_version = Some(default_v.clone());
-                }
+                && let Some(default_v) = default_value_set_versions_for_echo.get(&bare_url)
+            {
+                pinned_version = Some(default_v.clone());
+            }
             // When no version pin is in effect, fetch up to 20 candidates and pick
             // the one the BACKEND would resolve.  `count: Some(1)` against the
             // search SQL (which orders by created_at) yields the earliest-
@@ -3830,21 +3842,22 @@ async fn process_expand_inner<B: TerminologyBackend>(
                 )
                 .await
                     && let Some(cs) = hits.pop()
-                        && let Some(props) = cs.get("property").and_then(|p| p.as_array()) {
-                            for entry in props {
-                                if let (Some(code), Some(uri)) = (
-                                    entry.get("code").and_then(|v| v.as_str()),
-                                    entry.get("uri").and_then(|v| v.as_str()),
-                                ) {
-                                    // First-writer-wins so primary CS values
-                                    // dominate when a supplement re-declares
-                                    // an existing property code.
-                                    uri_by_code
-                                        .entry(code.to_string())
-                                        .or_insert_with(|| uri.to_string());
-                                }
-                            }
+                    && let Some(props) = cs.get("property").and_then(|p| p.as_array())
+                {
+                    for entry in props {
+                        if let (Some(code), Some(uri)) = (
+                            entry.get("code").and_then(|v| v.as_str()),
+                            entry.get("uri").and_then(|v| v.as_str()),
+                        ) {
+                            // First-writer-wins so primary CS values
+                            // dominate when a supplement re-declares
+                            // an existing property code.
+                            uri_by_code
+                                .entry(code.to_string())
+                                .or_insert_with(|| uri.to_string());
                         }
+                    }
+                }
             }
             let prop_decls: Vec<Value> = emitted_codes
                 .iter()
@@ -3872,68 +3885,69 @@ async fn process_expand_inner<B: TerminologyBackend>(
     // caller supplied the body — copy from there.
     let mut response = json!({ "resourceType": "ValueSet" });
     if let Some(ref vs) = source_vs
-        && let Some(obj) = vs.as_object() {
-            // Copy required-by-fixtures fields plus a few common optionals.
-            //
-            // For URL-based requests, do NOT copy `compose` / `contained` —
-            // every IG `expand-*-response*` fixture lists them under
-            // `$optional-properties$` and echoing the stored shape produces
-            // "unexpected property" diffs (extra `inactive`, wrong `system`,
-            // extra `valueSet` ref, …).
-            //
-            // For INLINE VS requests (`valueSet` body parameter) the caller
-            // supplied the document, and the IG `simple/expand-contained`
-            // fixture EXPECTS it echoed back — so we must copy it.  Apply
-            // small R4→R5 normalisations on the way out:
-            //   * `filter[].op = "child-of"` becomes `"is-a"` (semantically
-            //     identical; R4 spelling is deprecated in R5).
-            //   * `compose.inactive: false` is dropped (canonical R5 form
-            //     omits the property when its value is the default).
-            for field in [
-                "id",
-                "language",
-                "url",
-                "version",
-                "name",
-                "title",
-                "status",
-                "experimental",
-                "date",
-                "publisher",
-            ] {
-                if let Some(v) = obj.get(field) {
-                    response[field] = v.clone();
-                }
+        && let Some(obj) = vs.as_object()
+    {
+        // Copy required-by-fixtures fields plus a few common optionals.
+        //
+        // For URL-based requests, do NOT copy `compose` / `contained` —
+        // every IG `expand-*-response*` fixture lists them under
+        // `$optional-properties$` and echoing the stored shape produces
+        // "unexpected property" diffs (extra `inactive`, wrong `system`,
+        // extra `valueSet` ref, …).
+        //
+        // For INLINE VS requests (`valueSet` body parameter) the caller
+        // supplied the document, and the IG `simple/expand-contained`
+        // fixture EXPECTS it echoed back — so we must copy it.  Apply
+        // small R4→R5 normalisations on the way out:
+        //   * `filter[].op = "child-of"` becomes `"is-a"` (semantically
+        //     identical; R4 spelling is deprecated in R5).
+        //   * `compose.inactive: false` is dropped (canonical R5 form
+        //     omits the property when its value is the default).
+        for field in [
+            "id",
+            "language",
+            "url",
+            "version",
+            "name",
+            "title",
+            "status",
+            "experimental",
+            "date",
+            "publisher",
+        ] {
+            if let Some(v) = obj.get(field) {
+                response[field] = v.clone();
             }
-            // Echo top-level `extension[]` from the source ValueSet, minus
-            // entries that the expansion pipeline has already "consumed" so
-            // they don't double-fire on the response.  The IG
-            // `parameters/parameters-expand-enum-definitions3` fixture pins
-            // both `valueset-supplement` and an unknown extension (the spec
-            // says unknown extensions are ignored, but the round-tripped
-            // resource still echoes them verbatim).  In contrast,
-            // `deprecated/expand-withdrawn-response-valueSet` drops the
-            // top-level `structuredefinition-standards-status` because that
-            // extension is what triggered the warning emission upstream.
-            // Echo extension[] only when the source has at least one
-            // extension that ISN'T fully "consumed" by the expansion pipeline.
-            // valueset-supplement is consumed (it auto-applies a supplement
-            // CS — extensions/extensions-all expects no top-level extension
-            // when the source carries supplement alone). When the source
-            // ALSO carries a non-consumed extension (e.g. the unknown
-            // extension on extensions-enumerated, used by enum-definitions3),
-            // echo all extensions as-is — including supplement.
-            if let Some(exts) = obj.get("extension").and_then(|e| e.as_array()) {
-                let consumed_urls: &[&str] = &[
-                    "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
-                    "http://hl7.org/fhir/StructureDefinition/valueset-supplement",
-                ];
-                let has_non_consumed = exts.iter().any(|ext| {
-                    let url = ext.get("url").and_then(|u| u.as_str()).unwrap_or("");
-                    !consumed_urls.contains(&url)
-                });
-                if has_non_consumed {
-                    let filtered: Vec<Value> = exts
+        }
+        // Echo top-level `extension[]` from the source ValueSet, minus
+        // entries that the expansion pipeline has already "consumed" so
+        // they don't double-fire on the response.  The IG
+        // `parameters/parameters-expand-enum-definitions3` fixture pins
+        // both `valueset-supplement` and an unknown extension (the spec
+        // says unknown extensions are ignored, but the round-tripped
+        // resource still echoes them verbatim).  In contrast,
+        // `deprecated/expand-withdrawn-response-valueSet` drops the
+        // top-level `structuredefinition-standards-status` because that
+        // extension is what triggered the warning emission upstream.
+        // Echo extension[] only when the source has at least one
+        // extension that ISN'T fully "consumed" by the expansion pipeline.
+        // valueset-supplement is consumed (it auto-applies a supplement
+        // CS — extensions/extensions-all expects no top-level extension
+        // when the source carries supplement alone). When the source
+        // ALSO carries a non-consumed extension (e.g. the unknown
+        // extension on extensions-enumerated, used by enum-definitions3),
+        // echo all extensions as-is — including supplement.
+        if let Some(exts) = obj.get("extension").and_then(|e| e.as_array()) {
+            let consumed_urls: &[&str] = &[
+                "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+                "http://hl7.org/fhir/StructureDefinition/valueset-supplement",
+            ];
+            let has_non_consumed = exts.iter().any(|ext| {
+                let url = ext.get("url").and_then(|u| u.as_str()).unwrap_or("");
+                !consumed_urls.contains(&url)
+            });
+            if has_non_consumed {
+                let filtered: Vec<Value> = exts
                         .iter()
                         .filter(|ext| {
                             ext.get("url").and_then(|u| u.as_str())
@@ -3943,25 +3957,24 @@ async fn process_expand_inner<B: TerminologyBackend>(
                         })
                         .cloned()
                         .collect();
-                    if !filtered.is_empty() {
-                        response["extension"] = Value::Array(filtered);
-                    }
+                if !filtered.is_empty() {
+                    response["extension"] = Value::Array(filtered);
                 }
             }
-            // We deliberately do NOT echo `compose` on $expand responses.
-            // Every IG `expand-*-response*` fixture lists `compose` under
-            // `$optional-properties$`, so omitting it always satisfies the
-            // comparator. Echoing it instead invites mismatches: the
-            // `simple/simple-expand-contained` fixture, for example, expects
-            // a normalised compose (single include with filter:is-a derived
-            // from the resolved `valueSet[]` reference) — emitting the raw
-            // request compose surfaces an unexpected `valueSet[]` property.
-            // `contained` is still echoed because some fixtures pin it.
-            if caller_supplied_inline_vs
-                && let Some(c) = obj.get("contained") {
-                    response["contained"] = c.clone();
-                }
         }
+        // We deliberately do NOT echo `compose` on $expand responses.
+        // Every IG `expand-*-response*` fixture lists `compose` under
+        // `$optional-properties$`, so omitting it always satisfies the
+        // comparator. Echoing it instead invites mismatches: the
+        // `simple/simple-expand-contained` fixture, for example, expects
+        // a normalised compose (single include with filter:is-a derived
+        // from the resolved `valueSet[]` reference) — emitting the raw
+        // request compose surfaces an unexpected `valueSet[]` property.
+        // `contained` is still echoed because some fixtures pin it.
+        if caller_supplied_inline_vs && let Some(c) = obj.get("contained") {
+            response["contained"] = c.clone();
+        }
+    }
     response["expansion"] = expansion;
 
     // ── R4 / R4B downconversion ──────────────────────────────────────────────
@@ -4003,11 +4016,12 @@ async fn process_expand_inner<B: TerminologyBackend>(
     );
 
     if let Ok(mut cache) = state.expand_cache.write()
-        && cache.len() < EXPAND_CACHE_MAX {
-            // `Bytes::clone` is O(1); storing it here and returning the clone
-            // below means both the cache and the caller share the same buffer.
-            cache.insert(cache_key, bytes.clone());
-        }
+        && cache.len() < EXPAND_CACHE_MAX
+    {
+        // `Bytes::clone` is O(1); storing it here and returning the clone
+        // below means both the cache and the caller share the same buffer.
+        cache.insert(cache_key, bytes.clone());
+    }
 
     // EX_PROBE: total wall time for the whole request including parse + post-
     // processing + serialization.
@@ -4049,12 +4063,13 @@ fn downconvert_property_to_r4_extension(response: &mut Value) {
         let obj = prop.as_object()?;
         for (k, v) in obj {
             if let Some(suffix) = k.strip_prefix("value")
-                && !suffix.is_empty() {
-                    let mut sub = serde_json::Map::new();
-                    sub.insert("url".into(), Value::String("value".into()));
-                    sub.insert(k.clone(), v.clone());
-                    return Some(Value::Object(sub));
-                }
+                && !suffix.is_empty()
+            {
+                let mut sub = serde_json::Map::new();
+                sub.insert("url".into(), Value::String("value".into()));
+                sub.insert(k.clone(), v.clone());
+                return Some(Value::Object(sub));
+            }
         }
         None
     }
@@ -4413,9 +4428,10 @@ pub(crate) fn inject_accept_language(headers: &HeaderMap, params: &mut Vec<Value
         .iter()
         .any(|p| p.get("name").and_then(|v| v.as_str()) == Some("displayLanguage"));
     if let Some(l) = lang
-        && !already {
-            params.push(json!({"name": "displayLanguage", "valueCode": l}));
-        }
+        && !already
+    {
+        params.push(json!({"name": "displayLanguage", "valueCode": l}));
+    }
 }
 
 /// Inject (or replace) the `url` parameter in a params list.

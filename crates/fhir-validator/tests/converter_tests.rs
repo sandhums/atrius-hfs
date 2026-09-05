@@ -176,6 +176,94 @@ fn converts_content_reference() {
     assert_eq!(actual, expected);
 }
 
+/// Snapshot generation rewrites a base `#Composition.section` fragment into
+/// the absolute form when the element is copied into a derived profile, since
+/// a bare fragment would resolve against the profile's own canonical.
+#[test]
+fn converts_absolute_content_reference() {
+    let sd = load_sd("profile-content-reference-absolute.json");
+    let conversion = convert(&sd).unwrap();
+    assert!(
+        conversion.warnings.is_empty(),
+        "expected no warnings, got {:?}",
+        conversion.warnings
+    );
+    let actual = serde_json::to_value(&conversion.schema).unwrap();
+    let expected = json!({
+        "url": "http://example.org/fhir/StructureDefinition/example-composition",
+        "name": "ExampleComposition",
+        "base": "http://hl7.org/fhir/StructureDefinition/Composition",
+        "kind": "resource",
+        "derivation": "constraint",
+        "type": "Composition",
+        "elements": {
+            "section": {
+                "type": "BackboneElement",
+                "array": true,
+                "elements": {
+                    "section": {
+                        "array": true,
+                        "short": "Nested Section",
+                        "elementReference": ["Composition", "elements", "section"]
+                    }
+                }
+            }
+        }
+    });
+    assert_eq!(actual, expected);
+}
+
+/// `code[x]:codeCodeableConcept.extension:codeOptions` constrains a child of a
+/// choice *branch*. The subtree has to land on the branch element, not on a
+/// slice of a literal `code[x]` node that no instance data can match.
+#[test]
+fn converts_child_of_choice_branch() {
+    let sd = load_sd("profile-choice-branch-child.json");
+    let conversion = convert(&sd).unwrap();
+    assert!(
+        conversion.warnings.is_empty(),
+        "expected no warnings, got {:?}",
+        conversion.warnings
+    );
+    let actual = serde_json::to_value(&conversion.schema).unwrap();
+    let expected = json!({
+        "url": "http://example.org/fhir/StructureDefinition/example-devicerequest",
+        "name": "ExampleDeviceRequest",
+        "base": "http://hl7.org/fhir/StructureDefinition/DeviceRequest",
+        "kind": "resource",
+        "derivation": "constraint",
+        "type": "DeviceRequest",
+        "required": ["code"],
+        "elements": {
+            "codeReference": {
+                "type": "Reference",
+                "choiceOf": "code",
+                "refers": ["http://hl7.org/fhir/StructureDefinition/Device"]
+            },
+            "codeCodeableConcept": {
+                "type": "CodeableConcept",
+                "choiceOf": "code",
+                // The snapshot's slicing-declarer ED for `extension` survives
+                // as a plain element; only its slices lift into `extensions`.
+                "elements": {
+                    "extension": { "type": "Extension", "array": true }
+                },
+                "extensions": {
+                    "codeOptions": {
+                        "url": "http://example.org/fhir/StructureDefinition/code-options",
+                        "min": 0,
+                        "max": 1
+                    }
+                }
+            },
+            "code": {
+                "choices": ["codeReference", "codeCodeableConcept"]
+            }
+        }
+    });
+    assert_eq!(actual, expected);
+}
+
 #[test]
 fn converts_primitive_with_regex() {
     let actual = convert_to_value("primitive-string.json");

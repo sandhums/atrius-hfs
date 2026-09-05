@@ -61,9 +61,10 @@ pub fn negotiate_format(raw_query: Option<&str>, accept: Option<&str>) -> Respon
 
     // 2. Check Accept header.
     if let Some(accept) = accept
-        && accept.contains("xml") {
-            return ResponseFormat::Xml;
-        }
+        && accept.contains("xml")
+    {
+        return ResponseFormat::Xml;
+    }
 
     ResponseFormat::Json
 }

@@ -347,12 +347,13 @@ mod inner {
 
         // 2. Check If-Match (optimistic concurrency).
         if let Some(ref etag) = if_match
-            && !current.matches_etag(etag) {
-                return Err(HtsError::PreconditionFailed(format!(
-                    "ETag mismatch: supplied {etag}, current {}",
-                    current.etag()
-                )));
-            }
+            && !current.matches_etag(etag)
+        {
+            return Err(HtsError::PreconditionFailed(format!(
+                "ETag mismatch: supplied {etag}, current {}",
+                current.etag()
+            )));
+        }
 
         // 3. Update raw JSON in persistence store (version incremented).
         let updated = store

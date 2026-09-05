@@ -9,8 +9,22 @@ use crate::schema::FhirSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Drop a FHIR `|version` suffix (`url|4.0.1` → `url`).
+///
+/// IG Publisher snapshots pin `baseDefinition`, `type.profile`, and
+/// `targetProfile` this way. The registry indexes the unversioned canonical
+/// (and the resource name), so lookup has to accept both. A `#fragment`
+/// without a version is left intact.
+pub fn strip_canonical_version(reference: &str) -> &str {
+    match reference.split_once('|') {
+        Some((url, _)) => url,
+        None => reference,
+    }
+}
+
 /// Resolves a schema reference — a bare name (`"Patient"`) or a canonical URL
-/// (`"http://hl7.org/fhir/StructureDefinition/Patient"`) — to a schema.
+/// (`"http://hl7.org/fhir/StructureDefinition/Patient"`, with or without a
+/// `|version` suffix) — to a schema.
 pub trait SchemaResolver: Send + Sync {
     /// Returns the schema, or `None` if the reference is unknown.
     fn resolve(&self, reference: &str) -> Option<Arc<FhirSchema>>;
@@ -112,7 +126,15 @@ impl SchemaRegistry {
 
 impl SchemaResolver for SchemaRegistry {
     fn resolve(&self, reference: &str) -> Option<Arc<FhirSchema>> {
-        self.map.get(reference).cloned()
+        if let Some(schema) = self.map.get(reference) {
+            return Some(Arc::clone(schema));
+        }
+        let bare = strip_canonical_version(reference);
+        if bare != reference {
+            self.map.get(bare).cloned()
+        } else {
+            None
+        }
     }
 }
 
@@ -162,6 +184,24 @@ mod tests {
         assert!(Arc::ptr_eq(&by_key, &by_url));
         assert!(Arc::ptr_eq(&by_key, &by_name));
         assert!(reg.resolve("nope").is_none());
+    }
+
+    #[test]
+    fn resolves_versioned_canonical_to_unversioned_url() {
+        let mut reg = SchemaRegistry::new();
+        reg.insert(named("Patient"));
+        let bare = reg
+            .resolve("http://example.org/Patient")
+            .expect("unversioned");
+        let versioned = reg
+            .resolve("http://example.org/Patient|4.0.1")
+            .expect("versioned canonical");
+        assert!(Arc::ptr_eq(&bare, &versioned));
+        assert!(
+            reg.resolve("http://example.org/Patient|4.0.1#Patient.id")
+                .is_some()
+        );
+        assert!(reg.resolve("http://example.org/missing|4.0.1").is_none());
     }
 
     #[test]
