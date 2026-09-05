@@ -43,19 +43,11 @@ impl SmartScopePolicy {
 mod tests {
     use super::*;
     use crate::scope::ScopeSet;
-    use chrono::Utc;
 
     fn make_principal(scope_str: &str) -> Principal {
-        Principal {
-            subject: "test-client".to_string(),
-            issuer: "https://idp.example.com".to_string(),
-            fhir_user: None,
-            tenant_id: Some("tenant-1".to_string()),
-            scopes: ScopeSet::parse(scope_str),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub("test-client", ScopeSet::parse(scope_str))
+            .with_issuer("https://idp.example.com")
+            .with_tenant_id("tenant-1")
     }
 
     #[test]

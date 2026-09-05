@@ -138,7 +138,12 @@ impl AuthProvider for JwksBearerAuthProvider {
             .filter(|s| !s.is_empty())
             .map(str::to_string);
 
-        let jti = claims.get("jti").and_then(|v| v.as_str()).map(String::from);
+        let jti = claims
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
 
         let exp = claims
             .get("exp")
@@ -150,7 +155,12 @@ impl AuthProvider for JwksBearerAuthProvider {
 
         // 8. Reject revoked tokens (access tokens reuse jti until expiry; the BFF
         //    writes revoked JTIs on logout/refresh, so this is a deny-list check,
-        //    not a replay cache)
+        //    not a replay cache). A token with no jti cannot be named on that
+        //    list, so when the checker requires one we refuse it rather than
+        //    silently skipping the check.
+        if self.jti_revocation.requires_jti() && jti.is_none() {
+            return Err(AuthError::MissingJti);
+        }
         if let Some(ref jti_value) = jti
             && self.jti_revocation.is_revoked(jti_value).await?
         {
@@ -198,6 +208,7 @@ impl AuthProvider for JwksBearerAuthProvider {
             "Token validated successfully"
         );
 
+        // Same-crate literal is allowed under `#[non_exhaustive]`.
         Ok(Principal {
             subject,
             issuer,

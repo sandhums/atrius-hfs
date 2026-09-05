@@ -263,20 +263,12 @@ fn operation_outcome_information(diagnostics: &str) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Utc;
     use helios_auth::scope::ScopeSet;
 
     fn principal(scopes: &str) -> Principal {
-        Principal {
-            subject: "client-1".to_string(),
-            issuer: "https://idp.example.com".to_string(),
-            fhir_user: None,
-            tenant_id: Some("t1".to_string()),
-            scopes: ScopeSet::parse(scopes),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub("client-1", ScopeSet::parse(scopes))
+            .with_issuer("https://idp.example.com")
+            .with_tenant_id("t1")
     }
 
     /// Ordinary delete scope must NOT authorize a purge. A client that may

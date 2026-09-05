@@ -825,9 +825,13 @@ async fn init_auth_with_audit(
     jwks_cache.initial_fetch().await?;
 
     let jti_revocation = helios_auth::build_jti_revocation(&auth_config)
+        .await
         .map_err(|e| anyhow::anyhow!("JTI revocation init: {e}"))?;
     if auth_config.jti_revocation_enabled {
-        info!("JTI revocation blocklist ENABLED (shared Redis)");
+        info!(
+            timeout_ms = auth_config.jti_revocation_timeout_ms,
+            "JTI revocation blocklist ENABLED (shared Redis)"
+        );
     }
 
     // Create auth provider

@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum_test::TestServer;
-use chrono::Utc;
 use helios_audit::AuditSink;
 use helios_auth::Principal;
 use helios_auth::scope::ScopeSet;
@@ -206,16 +205,9 @@ fn server_with_principal(scopes: &str) -> (TestServer, Arc<SqliteBackend>) {
     .with_purge(backend.clone() as Arc<dyn PurgableStorage>)
     .with_reindex(reindex);
 
-    let principal = Principal {
-        subject: "client-1".to_string(),
-        issuer: "https://idp.example.com".to_string(),
-        fhir_user: None,
-        tenant_id: Some("test-tenant".to_string()),
-        scopes: ScopeSet::parse(scopes),
-        jti: None,
-        expires_at: Utc::now() + chrono::Duration::hours(1),
-        custom_claims: serde_json::Map::new(),
-    };
+    let principal = Principal::stub("client-1", ScopeSet::parse(scopes))
+        .with_issuer("https://idp.example.com")
+        .with_tenant_id("test-tenant");
 
     let app = helios_rest::routing::fhir_routes::create_routes(state).layer(
         axum::middleware::from_fn(move |mut request: axum::extract::Request, next: Next| {

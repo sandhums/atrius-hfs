@@ -6,7 +6,6 @@ use std::sync::Arc;
 use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum::middleware::Next;
 use axum_test::TestServer;
-use chrono::Utc;
 use helios_auth::{Principal, ScopeSet};
 use helios_persistence::backends::sqlite::{SqliteBackend, SqliteBackendConfig};
 use helios_rest::config::{MultitenancyConfig, TenantRoutingMode};
@@ -52,16 +51,9 @@ async fn server(
     );
     let app = helios_rest::routing::fhir_routes::create_routes(state);
     let app = if let Some(tenant_id) = principal_tenant {
-        let principal = Principal {
-            subject: "authenticated-client".to_string(),
-            issuer: "https://issuer.example".to_string(),
-            fhir_user: None,
-            tenant_id: Some(tenant_id.to_string()),
-            scopes: ScopeSet::parse("system/*.rs"),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        };
+        let principal = Principal::stub("authenticated-client", ScopeSet::parse("system/*.rs"))
+            .with_issuer("https://issuer.example")
+            .with_tenant_id(tenant_id);
         app.layer(axum::middleware::from_fn(
             move |mut request: axum::extract::Request, next: Next| {
                 let principal = principal.clone();

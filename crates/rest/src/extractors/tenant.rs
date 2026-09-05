@@ -486,15 +486,11 @@ mod tests {
 
         /// Builds a `Principal` with the given tenant claim and no scopes.
         fn make_principal(tenant_id: Option<&str>) -> Principal {
-            Principal {
-                subject: "test-subject".to_string(),
-                issuer: "https://issuer.example".to_string(),
-                fhir_user: None,
-                tenant_id: tenant_id.map(|t| t.to_string()),
-                scopes: ScopeSet::empty(),
-                jti: None,
-                expires_at: chrono::Utc::now(),
-                custom_claims: serde_json::Map::new(),
+            let p = Principal::stub("test-subject", ScopeSet::empty())
+                .with_issuer("https://issuer.example");
+            match tenant_id {
+                Some(t) => p.with_tenant_id(t),
+                None => p,
             }
         }
 

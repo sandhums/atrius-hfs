@@ -33,22 +33,12 @@ impl std::error::Error for ExportAuthError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Utc;
     use helios_auth::{Principal, ScopeSet};
     use helios_persistence::core::{ExportFileMetadata, ExportJobId, ExportPartKey};
     use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 
     fn make_principal(subject: &str, scopes: &str) -> Principal {
-        Principal {
-            subject: subject.to_string(),
-            issuer: "test-issuer".to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: ScopeSet::parse(scopes),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub(subject, ScopeSet::parse(scopes)).with_issuer("test-issuer")
     }
 
     fn make_file_meta(resource_type: &str, owner_sub: Option<&str>) -> ExportFileMetadata {

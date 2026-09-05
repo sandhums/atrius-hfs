@@ -7,8 +7,9 @@ Audit date: 3 Sep 2026. Reviewed state: `feat-clinical-reasoning` at `7d47ce1b3`
 Follow-up: **4 Sep 2026** on the same branch. §3.1 (env/scripts + package overlay)
 is in progress in the working tree; see **§6**. **§3.2** (Postgres write TX),
 **§3.3** (named `schema_migrations` ledger), **§3.4** (merge playbook keep-list),
-and **§3.5** (directory-layout regen + runbook, 5 Sep) are closed. Findings
-§3.6–§3.7 remain.
+and **§3.5** (directory-layout regen + runbook, 5 Sep), **§3.6**
+(`Principal::stub` / `#[non_exhaustive]`), and **§3.7** Redis JTI timeout /
+missing-`jti` (5 Sep) are closed. Remaining §3.7 bullets are outbox-only.
 
 Companion to *HELIOS vs Atrius.docx*, which records what each sync decided. This
 document asks a different question: **are those decisions still correct, and do
@@ -407,6 +408,13 @@ other crates, so future fork fields get a default in exactly one place. Upstream
 literals then need a one-time per-file conversion on sync instead of a
 field-by-field chase. Worth offering upstream behind a `test-utils` feature.
 
+**Closed 5 Sep 2026.** `Principal` is `#[non_exhaustive]`. Tests outside
+`helios-auth` use `Principal::stub(subject, scopes)` plus `with_issuer` /
+`with_tenant_id` / `with_fhir_user`. The JWT path in `jwks_bearer.rs` still
+uses a same-crate struct literal. On the next Helios sync, convert any new
+`Principal { .. }` in incoming tests to `stub` once per file instead of
+adding `fhir_user: None`.
+
 ### 3.7 Smaller items worth queueing
 
 - **No timeout on the Redis revocation call.** `RedisJtiRevocation::is_revoked`
@@ -419,6 +427,16 @@ rather than a slow one. Add a short timeout and decide explicitly what a
 - **Tokens with no** `jti` **skip revocation entirely** and are accepted
 (`provider/jwks_bearer.rs:151–159`). Correct given the BFF also no-ops in that
 case, but worth asserting the IdP always issues `jti`.
+
+**Closed 5 Sep 2026.** Redis uses a shared `ConnectionManager` (not a new
+multiplexed connection per request). Each `EXISTS` is bounded by
+`HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS` (default 500). Timeout and Redis errors
+both fail closed as `AuthError::RevocationUnavailable` → HTTP 503 (distinct
+from `TokenRevoked` → 401). When the Redis checker is enabled, a missing or
+blank `jti` is `MissingJti` → 401: the token cannot be named on the blocklist.
+`NoOpJtiRevocation` still accepts tokens without `jti`. Boot connects to Redis
+with a 5s cap. This is still a deny-list, not a replay cache.
+
 - **No dead-letter on the outbox.** After max retries a row is delayed 3600 s with
 `"max retries exceeded"` and retried hourly forever — never tombstoned
 (`subscriptions/src/outbox.rs:106–158`).
@@ -556,15 +574,16 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
 6. **~~Add schema provenance or an unconditional outbox-table reconciliation, plus
   the upstream-numbered heal test and Postgres schema tests~~** (§3.3). Named
   `schema_migrations` ledger on SQLite and Postgres.
-7. `#[non_exhaustive]` **+** `Principal::stub()` and migrate the ~17 test
-  literals (§3.6). Removes a trap that has cost time in 5 of 6 syncs.
+7. **~~`#[non_exhaustive]` + `Principal::stub()` and migrate the ~17 test
+  literals~~** (§3.6). Done 5 Sep.
 8. **~~Regenerate the directory-layout FHIR models from current specs~~** and
   write the regen runbook (§3.5, §4). Done 5 Sep: models match Helios
   signatures; [docs/fhir-model-regen.md](fhir-model-regen.md) +
   `scripts/diff-fhir-model-signatures.py`. Offering the generator upstream
   remains item 10.
-9. **Timeout the Redis revocation call**; decide timeout-vs-error semantics
-  (§3.7).
+9. **~~Timeout the Redis revocation call~~**; decide timeout-vs-error semantics
+  (§3.7). Done 5 Sep: 500ms `EXISTS` budget, fail-closed 503, require `jti`
+  when the Redis checker is on.
 10. **Offer upstream `ChannelDispatcherRegistry` and the directory-layout
   generator** (§2, §4) — the two changes that would delete the fork's largest
     recurring conflict sources.
@@ -603,8 +622,9 @@ package-overlay model, and the converter defects the first clean overlay boot
 exposed (§6.4). At time of writing it is in the working tree (not a single
 commit). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are closed
 (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
-(Postgres write TX; directory-layout regen + runbook). Findings §3.6–§3.7
-were not started.
+(Postgres write TX; directory-layout regen + runbook). **§3.6** closed 5 Sep
+(`Principal::stub`). **§3.7 Redis JTI** closed 5 Sep (timeout, ConnectionManager,
+require `jti`). Remaining §3.7 items are outbox-only.
 
 ### 6.1 Code and operator config
 
@@ -716,8 +736,9 @@ is used in Atrius Patient FSH and is **not** in that embedded pack; add
 instances of that extension need structural overlay.
 - **Startup still silent** on `HFS_PROFILE_`* if someone leaves them set
 (backlog item 2).
-- **§3.6–§3.7** (`Principal.fhir_user`, Redis JTI timeout) — no code in this
-follow-up. **§3.2**, **§3.3**, **§3.4**, and **§3.5** closed separately.
+- **§3.7 outbox** (dead-letter, zero-delivery signal, SQLite single-node docs) —
+no code in this follow-up. **§3.2**, **§3.3**, **§3.4**, **§3.5**, **§3.6**,
+and the Redis-JTI half of **§3.7** closed separately.
 
 
 

@@ -19,7 +19,8 @@
 //!
 //! ## Key Types
 //!
-//! - [`Principal`] — Authenticated identity extracted from a validated JWT
+//! - [`Principal`] — Authenticated identity extracted from a validated JWT.
+//!   Tests outside this crate construct one with [`Principal::stub`].
 //! - [`ScopeSet`] — Parsed SMART v2 scopes with permission checking
 //! - [`AuthProvider`] — Trait for token validation implementations
 //! - [`JwksBearerAuthProvider`] — JWKS-based JWT validation
@@ -39,7 +40,7 @@ pub mod provider;
 pub mod scope;
 
 // Re-export commonly used types
-pub use config::AuthConfig;
+pub use config::{AuthConfig, DEFAULT_JTI_REVOCATION_TIMEOUT_MS};
 pub use discovery::SmartConfiguration;
 pub use error::{AuthError, FhirOperation};
 pub use jti::{JtiRevocation, NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX, build_jti_revocation};

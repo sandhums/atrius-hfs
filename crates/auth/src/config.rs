@@ -3,6 +3,9 @@ use std::sync::Arc;
 
 use crate::outbound::{OutboundAuthProvider, provider_from_token};
 
+/// Default per-request budget for the Redis JTI deny-list `EXISTS` check.
+pub const DEFAULT_JTI_REVOCATION_TIMEOUT_MS: u64 = 500;
+
 /// Configuration for the authentication and authorization subsystem.
 #[derive(Debug, Clone)]
 pub struct AuthConfig {
@@ -27,6 +30,9 @@ pub struct AuthConfig {
     pub jti_revocation_enabled: bool,
     /// Redis connection URL (required when `jti_revocation_enabled` is true).
     pub redis_url: Option<String>,
+    /// Per-request budget for the Redis `EXISTS` check, in milliseconds.
+    /// Timeouts and Redis errors fail closed (`AuthError::RevocationUnavailable`).
+    pub jti_revocation_timeout_ms: u64,
     /// Minimum interval (seconds) between JWKS refreshes.
     pub jwks_min_refresh_interval: u64,
     /// Accept invalid TLS certificates when fetching JWKS (local dev only).
@@ -76,6 +82,11 @@ impl AuthConfig {
                 .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
                 .unwrap_or(false),
             redis_url: env::var("HFS_AUTH_REDIS_URL").ok(),
+            jti_revocation_timeout_ms: env::var("HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .filter(|&ms| ms > 0)
+                .unwrap_or(DEFAULT_JTI_REVOCATION_TIMEOUT_MS),
             jwks_min_refresh_interval: env::var("HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -145,6 +156,12 @@ impl AuthConfig {
         if self.allowed_algorithms.is_empty() {
             errors.push("HFS_AUTH_ALGORITHMS must list at least one signing algorithm".to_string());
         }
+        if self.jti_revocation_enabled && self.redis_url.as_deref().unwrap_or("").trim().is_empty()
+        {
+            errors.push(
+                "HFS_AUTH_REDIS_URL is required when HFS_AUTH_JTI_REVOCATION=true".to_string(),
+            );
+        }
 
         if errors.is_empty() {
             Ok(())
@@ -170,6 +187,7 @@ impl Default for AuthConfig {
             ],
             jti_revocation_enabled: false,
             redis_url: None,
+            jti_revocation_timeout_ms: DEFAULT_JTI_REVOCATION_TIMEOUT_MS,
             jwks_min_refresh_interval: 10,
             jwks_insecure_tls: false,
             smart_token_endpoint: None,
@@ -200,6 +218,7 @@ mod tests {
         "HFS_AUTH_ALGORITHMS",
         "HFS_AUTH_JTI_REVOCATION",
         "HFS_AUTH_REDIS_URL",
+        "HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS",
         "HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL",
         "HFS_SMART_TOKEN_ENDPOINT",
         "HFS_SMART_AUTHORIZE_ENDPOINT",
@@ -315,5 +334,19 @@ mod tests {
             ..enabled_config()
         };
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_requires_redis_url_when_jti_revocation_is_enabled() {
+        let config = AuthConfig {
+            jti_revocation_enabled: true,
+            redis_url: None,
+            ..enabled_config()
+        };
+        let errors = config.validate().unwrap_err();
+        assert!(
+            errors.iter().any(|e| e.contains("HFS_AUTH_REDIS_URL")),
+            "expected a redis-url error, got {errors:?}"
+        );
     }
 }

@@ -4057,16 +4057,9 @@ mod tests {
             "entry": entries,
         });
 
-        let principal = Principal {
-            subject: "client".to_string(),
-            issuer: "https://issuer.example".to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: helios_auth::ScopeSet::parse("system/Patient.rs"),
-            jti: None,
-            expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        };
+        let principal =
+            Principal::stub("client", helios_auth::ScopeSet::parse("system/Patient.rs"))
+                .with_issuer("https://issuer.example");
 
         let body = run_batch(&state, &bundle, Some(&principal)).await;
         let entries = body["entry"].as_array().expect("entry array");

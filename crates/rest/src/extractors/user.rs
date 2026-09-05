@@ -144,21 +144,11 @@ where
 mod tests {
     use super::*;
     use axum::http::Request;
-    use chrono::Utc;
     use helios_auth::Principal;
     use helios_auth::scope::ScopeSet;
 
     fn principal(issuer: &str, subject: &str) -> Principal {
-        Principal {
-            subject: subject.to_string(),
-            issuer: issuer.to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: ScopeSet::default(),
-            jti: None,
-            expires_at: Utc::now(),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub(subject, ScopeSet::default()).with_issuer(issuer)
     }
 
     async fn extract(req: Request<()>) -> UserKey {

@@ -658,6 +658,9 @@ impl From<helios_auth::AuthError> for RestError {
                 message: format!("Insufficient scope for {} on {}", operation, resource_type),
             },
             helios_auth::AuthError::InternalError(msg) => RestError::InternalError { message: msg },
+            helios_auth::AuthError::RevocationUnavailable => RestError::ServiceUnavailable {
+                message: "Authentication service temporarily unavailable".to_string(),
+            },
             other => RestError::Unauthorized {
                 message: other.to_string(),
             },
@@ -1300,6 +1303,22 @@ mod tests {
             outcome["issue"][0]["details"]["text"],
             "connection pool exhausted"
         );
+    }
+
+    #[test]
+    fn auth_revocation_unavailable_maps_to_503_transient() {
+        let err: RestError = helios_auth::AuthError::RevocationUnavailable.into();
+        let (status, code, message) = err.client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+        assert!(message.contains("temporarily unavailable"), "got {message}");
+    }
+
+    #[test]
+    fn auth_missing_jti_maps_to_401() {
+        let err: RestError = helios_auth::AuthError::MissingJti.into();
+        let (status, _, _) = err.client_response();
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
     }
 
     // ── From<BackendError> → RestError (all three arms) ────────────

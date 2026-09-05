@@ -859,16 +859,7 @@ mod tests {
     use helios_auth::ScopeSet;
 
     fn principal(subject: &str, scopes: &str) -> Principal {
-        Principal {
-            subject: subject.to_string(),
-            issuer: "https://issuer.example".to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: ScopeSet::parse(scopes),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub(subject, ScopeSet::parse(scopes)).with_issuer("https://issuer.example")
     }
 
     #[test]

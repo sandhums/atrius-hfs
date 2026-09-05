@@ -2,11 +2,22 @@ use chrono::{DateTime, Utc};
 
 use crate::scope::ScopeSet;
 
+/// Default `iss` used by [`Principal::stub`]. Override with
+/// [`Principal::with_issuer`] when a test asserts on the issuer.
+const STUB_ISSUER: &str = "https://idp.example/realms/fhir";
+
 /// Represents an authenticated identity extracted from a validated JWT.
 ///
 /// Injected into Axum request extensions by the auth middleware after
 /// successful token validation.
+///
+/// Marked `non_exhaustive` so fork-only fields (`fhir_user`, …) do not break
+/// Helios tests that construct a `Principal` with a struct literal. Outside
+/// this crate, build test principals with [`Principal::stub`]. Production
+/// tokens still come from `JwksBearerAuthProvider` (same crate, so the
+/// literal there is allowed).
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Principal {
     /// The `sub` (subject) claim from the JWT.
     pub subject: String,
@@ -28,6 +39,48 @@ pub struct Principal {
 }
 
 impl Principal {
+    /// Test helper: a principal with `subject` and `scopes`, and otherwise
+    /// empty optional claims.
+    ///
+    /// Defaults: issuer [`STUB_ISSUER`], no `fhir_user` / tenant / `jti`,
+    /// expiry one hour from now, empty custom claims. Chain
+    /// [`with_issuer`](Self::with_issuer), [`with_tenant_id`](Self::with_tenant_id),
+    /// or [`with_fhir_user`](Self::with_fhir_user) when a test needs those.
+    #[must_use]
+    pub fn stub(subject: impl Into<String>, scopes: ScopeSet) -> Self {
+        Self {
+            subject: subject.into(),
+            issuer: STUB_ISSUER.to_string(),
+            fhir_user: None,
+            tenant_id: None,
+            scopes,
+            jti: None,
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+            custom_claims: serde_json::Map::new(),
+        }
+    }
+
+    /// Override the token issuer (SMART `iss`).
+    #[must_use]
+    pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.issuer = issuer.into();
+        self
+    }
+
+    /// Set the tenant claim used by path/header resolution tests.
+    #[must_use]
+    pub fn with_tenant_id(mut self, tenant_id: impl Into<String>) -> Self {
+        self.tenant_id = Some(tenant_id.into());
+        self
+    }
+
+    /// Set the SMART `fhirUser` claim.
+    #[must_use]
+    pub fn with_fhir_user(mut self, fhir_user: impl Into<String>) -> Self {
+        self.fhir_user = Some(fhir_user.into());
+        self
+    }
+
     /// Returns the client/subject identifier.
     pub fn subject(&self) -> &str {
         &self.subject
@@ -85,18 +138,12 @@ pub fn is_fhir_relative_reference(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Utc;
 
     fn principal(subject: &str, fhir_user: Option<&str>) -> Principal {
-        Principal {
-            subject: subject.to_string(),
-            issuer: "https://idp.example/realms/fhir".to_string(),
-            fhir_user: fhir_user.map(str::to_string),
-            tenant_id: None,
-            scopes: ScopeSet::empty(),
-            jti: None,
-            expires_at: Utc::now(),
-            custom_claims: serde_json::Map::new(),
+        let p = Principal::stub(subject, ScopeSet::empty());
+        match fhir_user {
+            Some(fu) => p.with_fhir_user(fu),
+            None => p,
         }
     }
 
@@ -127,5 +174,17 @@ mod tests {
     #[test]
     fn is_fhir_relative_reference_rejects_lowercase_type() {
         assert!(!is_fhir_relative_reference("frontdesk/sweety"));
+    }
+
+    #[test]
+    fn stub_defaults_fhir_user_and_tenant_to_none() {
+        let p = Principal::stub("sub", ScopeSet::empty());
+        assert_eq!(p.subject(), "sub");
+        assert_eq!(p.issuer(), super::STUB_ISSUER);
+        assert_eq!(p.fhir_user(), None);
+        assert_eq!(p.tenant_id(), None);
+        let p = p.with_tenant_id("acme").with_fhir_user("Practitioner/1");
+        assert_eq!(p.tenant_id(), Some("acme"));
+        assert_eq!(p.fhir_user(), Some("Practitioner/1"));
     }
 }

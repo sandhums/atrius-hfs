@@ -72,16 +72,10 @@ async fn inject_test_principal(mut request: AxRequest, next: Next) -> Response {
         .and_then(|value| value.to_str().ok())
         .map(str::to_string)
     {
-        request.extensions_mut().insert(helios_auth::Principal {
-            subject,
-            issuer: "test".to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: helios_auth::scope::ScopeSet::empty(),
-            jti: None,
-            expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-            custom_claims: Default::default(),
-        });
+        request.extensions_mut().insert(
+            helios_auth::Principal::stub(subject, helios_auth::ScopeSet::empty())
+                .with_issuer("test"),
+        );
     }
     next.run(request).await
 }

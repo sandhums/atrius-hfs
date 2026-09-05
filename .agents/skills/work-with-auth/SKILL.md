@@ -46,10 +46,29 @@ byte-identical to a legitimate one. Real anti-replay needs sender-constrained
 tokens (DPoP/mTLS), where a fresh per-request proof — not the access token — is
 what gets checked. `crates/auth/tests/bearer_token_reuse.rs` pins this behavior.
 
+## JTI revocation (deny-list)
+
+Separate from replay: after BFF logout/refresh, the access token is still valid
+until `exp`. The BFF writes `SET hfs:revoked:jti:<jti> EX <ttl>` on the shared
+Redis; HFS/HIS reject that `jti` when `HFS_AUTH_JTI_REVOCATION=true`.
+
+- Requires `HFS_AUTH_REDIS_URL` and the `redis` feature on `helios-auth`.
+- Tokens with no usable `jti` are rejected (they cannot be named on the list).
+- Each `EXISTS` is bounded by `HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS` (default 500).
+  Timeout and Redis errors fail **closed** (`AuthError::RevocationUnavailable` →
+  HTTP 503). Do not fail open: a partition after a successful logout would
+  otherwise keep serving the revoked token.
+
+| Variable | Default | Description |
+|---|---|---|
+| `HFS_AUTH_JTI_REVOCATION` | `false` | Consult the Redis deny-list |
+| `HFS_AUTH_REDIS_URL` | none | Redis URL (required when revocation is enabled) |
+| `HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS` | `500` | Per-request Redis `EXISTS` budget |
+
 ## Key API
 
 `AuthConfig`, `AuthProvider` / `JwksBearerAuthProvider`, `Principal`, `ScopeSet` / `SmartPermissions`, `SmartScopePolicy`, `JwksCache`, `SmartConfiguration`.
 
 ## Code map
 
-`config.rs`, `provider/`, `jwks/` (cache, fetcher), `scope/` (smart_v2, permissions), `policy/`, `principal.rs`, `discovery.rs`, `outbound.rs`. Auth scopes are consumed by Bulk Data Submit (`system/bulk-submit`). Unit tests are inline in `src/`; integration tests live under `crates/auth/tests/`.
+`config.rs`, `provider/`, `jwks/` (cache, fetcher), `jti/` (deny-list), `scope/` (smart_v2, permissions), `policy/`, `principal.rs`, `discovery.rs`, `outbound.rs`. Auth scopes are consumed by Bulk Data Submit (`system/bulk-submit`). Unit tests are inline in `src/`; integration tests live under `crates/auth/tests/`.

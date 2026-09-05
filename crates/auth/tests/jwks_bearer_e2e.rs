@@ -82,6 +82,39 @@ async fn provider_with_audience() -> (JwksBearerAuthProvider, MockServer) {
     (provider, server)
 }
 
+async fn provider_with_revocation(
+    revocation: Arc<dyn helios_auth::JtiRevocation>,
+) -> (JwksBearerAuthProvider, MockServer) {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/jwks"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "keys": [{
+                "kty": "RSA",
+                "kid": KID,
+                "use": "sig",
+                "alg": "RS256",
+                "n": JWK_N,
+                "e": JWK_E,
+            }]
+        })))
+        .mount(&server)
+        .await;
+
+    let jwks_cache = Arc::new(JwksCache::new(&format!("{}/jwks", server.uri()), 0));
+    jwks_cache.initial_fetch().await.expect("JWKS fetch");
+
+    let config = AuthConfig {
+        enabled: true,
+        expected_audience: Some(AUDIENCE.to_string()),
+        expected_issuer: Some(ISSUER.to_string()),
+        ..AuthConfig::default()
+    };
+
+    let provider = JwksBearerAuthProvider::new(jwks_cache, revocation, &config);
+    (provider, server)
+}
+
 async fn authenticate(claims: &Value) -> Result<helios_auth::Principal, helios_auth::AuthError> {
     let (provider, _server) = provider_with_audience().await;
     provider
@@ -188,4 +221,108 @@ async fn token_with_a_bad_signature_is_rejected() {
         .authenticate(&format!("Bearer {tampered}"))
         .await
         .expect_err("must be rejected");
+}
+
+struct BlocklistRevocation {
+    ids: Vec<String>,
+}
+
+#[async_trait::async_trait]
+impl helios_auth::JtiRevocation for BlocklistRevocation {
+    fn requires_jti(&self) -> bool {
+        true
+    }
+
+    async fn is_revoked(&self, jti: &str) -> Result<bool, helios_auth::AuthError> {
+        Ok(self.ids.iter().any(|id| id == jti))
+    }
+}
+
+struct UnavailableRevocation;
+
+#[async_trait::async_trait]
+impl helios_auth::JtiRevocation for UnavailableRevocation {
+    fn requires_jti(&self) -> bool {
+        true
+    }
+
+    async fn is_revoked(&self, _jti: &str) -> Result<bool, helios_auth::AuthError> {
+        Err(helios_auth::AuthError::RevocationUnavailable)
+    }
+}
+
+#[tokio::test]
+async fn token_without_jti_is_accepted_when_revocation_is_off() {
+    let principal = authenticate(&valid_claims()).await.expect("accepted");
+    assert!(principal.jti.is_none());
+}
+
+#[tokio::test]
+async fn token_without_jti_is_rejected_when_revocation_requires_one() {
+    let (provider, _server) =
+        provider_with_revocation(Arc::new(BlocklistRevocation { ids: vec![] })).await;
+    let err = provider
+        .authenticate(&format!("Bearer {}", sign(&valid_claims())))
+        .await
+        .expect_err("must be rejected");
+    assert!(
+        matches!(err, helios_auth::AuthError::MissingJti),
+        "got {err:?}"
+    );
+}
+
+#[tokio::test]
+async fn token_with_blank_jti_is_rejected_when_revocation_requires_one() {
+    let mut claims = valid_claims();
+    claims["jti"] = json!("   ");
+    let (provider, _server) =
+        provider_with_revocation(Arc::new(BlocklistRevocation { ids: vec![] })).await;
+    let err = provider
+        .authenticate(&format!("Bearer {}", sign(&claims)))
+        .await
+        .expect_err("must be rejected");
+    assert!(matches!(err, helios_auth::AuthError::MissingJti));
+}
+
+#[tokio::test]
+async fn revoked_jti_is_rejected() {
+    let mut claims = valid_claims();
+    claims["jti"] = json!("revoked-1");
+    let (provider, _server) = provider_with_revocation(Arc::new(BlocklistRevocation {
+        ids: vec!["revoked-1".into()],
+    }))
+    .await;
+    let err = provider
+        .authenticate(&format!("Bearer {}", sign(&claims)))
+        .await
+        .expect_err("must be rejected");
+    assert!(matches!(
+        err,
+        helios_auth::AuthError::TokenRevoked { jti } if jti == "revoked-1"
+    ));
+}
+
+#[tokio::test]
+async fn unknown_jti_is_accepted_when_revocation_is_on() {
+    let mut claims = valid_claims();
+    claims["jti"] = json!("live-1");
+    let (provider, _server) =
+        provider_with_revocation(Arc::new(BlocklistRevocation { ids: vec![] })).await;
+    let principal = provider
+        .authenticate(&format!("Bearer {}", sign(&claims)))
+        .await
+        .expect("accepted");
+    assert_eq!(principal.jti.as_deref(), Some("live-1"));
+}
+
+#[tokio::test]
+async fn revocation_unavailable_fails_closed() {
+    let mut claims = valid_claims();
+    claims["jti"] = json!("any");
+    let (provider, _server) = provider_with_revocation(Arc::new(UnavailableRevocation)).await;
+    let err = provider
+        .authenticate(&format!("Bearer {}", sign(&claims)))
+        .await
+        .expect_err("must be rejected");
+    assert!(matches!(err, helios_auth::AuthError::RevocationUnavailable));
 }

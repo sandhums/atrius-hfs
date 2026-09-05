@@ -202,6 +202,8 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 | File | Atrius change |
 |------|----------------|
 | `src/discovery.rs` | Expanded SMART scopes/capabilities when authorize endpoint is configured |
+| `src/principal.rs` | Keep `fhir_user`. Struct is `#[non_exhaustive]`; Helios tests must use `Principal::stub(subject, scopes)` (then `.with_issuer` / `.with_tenant_id` as needed). Do not restore field-by-field literals. |
+| `src/jti/revocation.rs` | Keep Redis deny-list: `ConnectionManager`, per-request timeout, `requires_jti`, fail-closed `RevocationUnavailable`. Do not restore a replay cache. |
 
 ### `crates/subscriptions`
 

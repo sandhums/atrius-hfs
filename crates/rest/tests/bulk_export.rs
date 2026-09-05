@@ -94,16 +94,9 @@ async fn create_bulk_export_server_with(
     );
     let app = helios_rest::routing::fhir_routes::create_routes(state);
     let app = if let Some(tenant_id) = principal_tenant {
-        let principal = Principal {
-            subject: "bulk-export-client".to_string(),
-            issuer: "https://issuer.example".to_string(),
-            fhir_user: None,
-            tenant_id: Some(tenant_id.to_string()),
-            scopes: ScopeSet::parse("system/Patient.rs"),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        };
+        let principal = Principal::stub("bulk-export-client", ScopeSet::parse("system/Patient.rs"))
+            .with_issuer("https://issuer.example")
+            .with_tenant_id(tenant_id);
         app.layer(axum::middleware::from_fn(
             move |mut request: axum::extract::Request, next: Next| {
                 let principal = principal.clone();
@@ -122,16 +115,8 @@ async fn create_bulk_export_server_with(
 }
 
 fn inject_principal(app: axum::Router, subject: &str, scopes: &str) -> axum::Router {
-    let principal = Principal {
-        subject: subject.to_string(),
-        issuer: "https://issuer.example".to_string(),
-        fhir_user: None,
-        tenant_id: None,
-        scopes: ScopeSet::parse(scopes),
-        jti: None,
-        expires_at: Utc::now() + chrono::Duration::hours(1),
-        custom_claims: serde_json::Map::new(),
-    };
+    let principal =
+        Principal::stub(subject, ScopeSet::parse(scopes)).with_issuer("https://issuer.example");
     app.layer(axum::middleware::from_fn(
         move |mut request: axum::extract::Request, next: Next| {
             let principal = principal.clone();

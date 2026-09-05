@@ -1460,16 +1460,8 @@ mod tests {
     }
 
     fn principal_with(scope: &str, subject: &str) -> Principal {
-        Principal {
-            subject: subject.to_string(),
-            issuer: "https://issuer".to_string(),
-            fhir_user: None,
-            tenant_id: None,
-            scopes: helios_auth::scope::ScopeSet::parse(scope),
-            jti: None,
-            expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-        }
+        Principal::stub(subject, helios_auth::scope::ScopeSet::parse(scope))
+            .with_issuer("https://issuer")
     }
 
     #[test]

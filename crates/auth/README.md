@@ -79,7 +79,7 @@ The authentication flow follows the [SMART Backend Services](https://hl7.org/fhi
    - Rejects tokens using algorithms not in the allowed list
    - Fetches the public key from the cached JWKS keyset (refreshes on unknown `kid`)
    - Validates signature, expiration, issuer, and audience claims
-   - Checks the `jti` claim against the revocation blocklist (when enabled)
+   - Checks the `jti` claim against the Redis revocation blocklist when `HFS_AUTH_JTI_REVOCATION=true` (deny-list, not a replay cache). Tokens without `jti` are rejected in that mode. Redis `EXISTS` is bounded (`HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS`, default 500) and fails closed (`503`) on timeout or error.
    - Parses SMART v2 scopes from the `scope` or `scp` claim
    - Extracts the tenant ID from the configured claim
 5. **HFS enforces authorization** by checking scopes against the requested FHIR operation
@@ -129,8 +129,9 @@ All configuration is via environment variables. Auth is a runtime toggle — no 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HFS_AUTH_JTI_REVOCATION` | `false` | Reject tokens blocklisted in Redis (BFF writes on logout/refresh) |
+| `HFS_AUTH_JTI_REVOCATION` | `false` | Reject tokens blocklisted in Redis (BFF writes on logout/refresh). Tokens without `jti` are also rejected. |
 | `HFS_AUTH_REDIS_URL` | *(none)* | Redis URL (required when JTI revocation is enabled) |
+| `HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS` | `500` | Budget for each Redis `EXISTS`. Timeout and Redis errors fail closed (`503`). |
 | `HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL` | `10` | Min seconds between JWKS refreshes |
 | `HFS_AUTH_INSECURE_TLS` | `false` | Accept invalid TLS when fetching JWKS (**local dev only**; reqwest/rustls does not use the OS trust store) |
 
