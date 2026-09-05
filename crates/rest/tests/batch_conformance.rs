@@ -1803,10 +1803,10 @@ mod entry_methods {
         json!({ "resourceType": "Bundle", "type": "batch", "entry": entries })
     }
 
-    /// PATCH is declined at 501 — the status all three backends already return
-    /// from inside a transaction, and the one both READMEs already claimed.
+    /// PATCH applies a merge-patch-shaped Bundle resource and check_write
+    /// the patched representation.
     #[tokio::test]
-    async fn batch_patch_is_declined_at_501_and_changes_nothing() {
+    async fn batch_patch_applies_merge_and_updates_the_instance() {
         let (server, backend) = create_test_server().await;
         seed_patient(&backend, "p1", "Nguyen").await;
 
@@ -1819,16 +1819,13 @@ mod entry_methods {
         )
         .await;
 
-        assert_eq!(
-            body["entry"][0]["response"]["status"],
-            "501 Not Implemented"
-        );
+        assert_eq!(body["entry"][0]["response"]["status"], "200 OK", "{body}");
         let stored = backend
             .read(&test_tenant(), "Patient", "p1")
             .await
             .expect("read failed")
             .expect("patient must survive");
-        assert_eq!(stored.content()["name"][0]["family"], "Nguyen");
+        assert_eq!(stored.content()["name"][0]["family"], "Patched");
     }
 
     /// HEAD is a legal http-verb code this server does not accept in a Bundle.
@@ -1901,10 +1898,49 @@ mod entry_methods {
         );
     }
 
-    /// A PATCH transaction is declined before anything executes, so a sibling
-    /// create in the same bundle must not have landed.
+    /// A PATCH transaction applies when the instance exists; a sibling create
+    /// in the same bundle commits with it.
     #[tokio::test]
-    async fn a_transaction_patch_is_declined_intact_at_501() {
+    async fn a_transaction_patch_applies_and_commits_with_siblings() {
+        let (server, backend) = create_test_server().await;
+        seed_patient(&backend, "p1", "Nguyen").await;
+        let before = patient_count(&backend).await;
+
+        let response = post_bundle(
+            &server,
+            json!({
+                "resourceType": "Bundle",
+                "type": "transaction",
+                "entry": [
+                    {
+                        "request": { "method": "POST", "url": "Patient" },
+                        "resource": { "resourceType": "Patient", "name": [{"family": "Sibling"}] }
+                    },
+                    {
+                        "request": { "method": "PATCH", "url": "Patient/p1" },
+                        "resource": { "resourceType": "Patient", "name": [{"family": "Patched"}] }
+                    }
+                ]
+            }),
+        )
+        .await;
+
+        response.assert_status_ok();
+        let body: Value = response.json();
+        assert_eq!(body["type"], "transaction-response", "{body}");
+        assert_eq!(patient_count(&backend).await, before + 1);
+        let stored = backend
+            .read(&test_tenant(), "Patient", "p1")
+            .await
+            .expect("read failed")
+            .expect("p1");
+        assert_eq!(stored.content()["name"][0]["family"], "Patched");
+    }
+
+    /// PATCH of a missing instance fails the transaction, so a sibling create
+    /// does not land.
+    #[tokio::test]
+    async fn a_transaction_patch_of_a_missing_id_rolls_back_siblings() {
         let (server, backend) = create_test_server().await;
         let before = patient_count(&backend).await;
 
@@ -1920,23 +1956,42 @@ mod entry_methods {
                     },
                     {
                         "request": { "method": "PATCH", "url": "Patient/p1" },
-                        "resource": { "resourceType": "Patient" }
+                        "resource": { "resourceType": "Patient", "name": [{"family": "Patched"}] }
                     }
                 ]
             }),
         )
         .await;
 
-        response.assert_status(StatusCode::NOT_IMPLEMENTED);
-        let body: Value = response.json();
-        assert_eq!(body["resourceType"], "OperationOutcome");
-        assert_eq!(body["issue"][0]["code"], "not-supported");
-        assert!(
-            body["issue"][0]["details"]["text"]
-                .as_str()
-                .is_some_and(|t| t.contains("PATCH")),
-            "the outcome must name PATCH: {body}"
-        );
+        assert_ne!(response.status_code(), StatusCode::OK);
+        assert_eq!(patient_count(&backend).await, before);
+    }
+
+    /// DELETE of a missing instance is declined before anything executes.
+    #[tokio::test]
+    async fn a_transaction_delete_of_a_missing_id_is_declined_intact() {
+        let (server, backend) = create_test_server().await;
+        let before = patient_count(&backend).await;
+
+        let response = post_bundle(
+            &server,
+            json!({
+                "resourceType": "Bundle",
+                "type": "transaction",
+                "entry": [
+                    {
+                        "request": { "method": "POST", "url": "Patient" },
+                        "resource": { "resourceType": "Patient", "name": [{"family": "Sibling"}] }
+                    },
+                    {
+                        "request": { "method": "DELETE", "url": "Patient/does-not-exist" }
+                    }
+                ]
+            }),
+        )
+        .await;
+
+        response.assert_status(StatusCode::NOT_FOUND);
         assert_eq!(patient_count(&backend).await, before);
     }
 

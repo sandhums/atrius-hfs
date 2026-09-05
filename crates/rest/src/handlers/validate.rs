@@ -6,7 +6,7 @@
 //!   a `Parameters` wrapper carrying `resource`/`mode`/`profile` parts)
 //! - `GET  [base]/[type]/[id]/$validate` — validate the **stored** resource
 //! - `POST [base]/[type]/[id]/$validate` — validate the body in the context
-//!   of the addressed instance (update semantics)
+//!   of the addressed instance (update semantics when `mode` is omitted)
 //!
 //! Per the operation definition, validation **always returns `200 OK`**
 //! with an `OperationOutcome` — an invalid resource is a successful
@@ -14,8 +14,10 @@
 //! malformed requests (unknown type, missing body, bad `Parameters`,
 //! `mode=profile` without a profile).
 //!
-//! `mode=delete` performs no content validation (no referential-integrity
-//! checking yet) and reports the all-clear outcome.
+//! `mode` changes enforcement: `create` reports a duplicate id, `update`
+//! requires an existing id, `delete` checks existence and AuditEvent
+//! immutability (no referential integrity yet), `profile` ignores
+//! `meta.profile` and uses only the supplied profile canonicals.
 
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -29,9 +31,9 @@ use crate::error::{RestError, RestResult};
 use crate::extractors::{FhirResource, FhirVersionExtractor, TenantExtractor};
 use crate::middleware::content_type::negotiate_format;
 use crate::responses::format_resource_response;
-use crate::responses::operation_outcome::{IssueType, OperationOutcomeBuilder};
+use crate::responses::operation_outcome::{Issue, IssueType};
 use crate::state::AppState;
-use crate::validation::validation_outcome;
+use crate::validation::validation_outcome_from_parts;
 
 /// Query-string fallbacks for the operation inputs (GET, or POST without a
 /// `Parameters` wrapper).
@@ -146,24 +148,33 @@ fn unwrap_inputs(body: Option<Value>, query: &ValidateQuery) -> Result<ValidateI
 async fn respond<S>(
     state: &AppState<S>,
     fhir_version: helios_fhir::FhirVersion,
-    inputs: ValidateInputs,
+    mut inputs: ValidateInputs,
     resource_type: &str,
-    tenant_id: &str,
+    tenant: &TenantExtractor,
     req_headers: &HeaderMap,
+    instance_id: Option<String>,
+    instance_write: bool,
 ) -> RestResult<Response>
 where
     S: ResourceStorage + Send + Sync,
 {
     let negotiated = negotiate_format(req_headers, None);
+    let instance_id = instance_id.or_else(|| {
+        inputs
+            .resource
+            .as_ref()
+            .and_then(|r| r.get("id"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    });
+    if instance_write && inputs.mode == ValidateMode::General {
+        inputs.mode = ValidateMode::Update;
+    }
 
-    // Delete validation: no content checks yet (no referential integrity).
     if inputs.mode == ValidateMode::Delete {
-        let outcome = OperationOutcomeBuilder::new()
-            .information(
-                IssueType::Informational,
-                "Delete validation not performed: no checks configured",
-            )
-            .build();
+        let extra =
+            delete_mode_issues(state, tenant, resource_type, instance_id.as_deref()).await?;
+        let outcome = validation_outcome_from_parts(&[], extra);
         return format_resource_response(
             StatusCode::OK,
             HeaderMap::new(),
@@ -193,18 +204,46 @@ where
         });
     }
 
-    let issues = state
-        .validation()
-        .validate_resource(fhir_version, &resource, inputs.profiles, Some(tenant_id))
-        .await;
+    let issues = if inputs.mode == ValidateMode::Profile {
+        state
+            .validation()
+            .validate_resource_with(
+                fhir_version,
+                &resource,
+                inputs.profiles,
+                Some(tenant.tenant_id()),
+                false,
+            )
+            .await
+    } else {
+        state
+            .validation()
+            .validate_resource(
+                fhir_version,
+                &resource,
+                inputs.profiles,
+                Some(tenant.tenant_id()),
+            )
+            .await
+    };
+
+    let extra = match inputs.mode {
+        ValidateMode::Create => {
+            create_mode_issues(state, tenant, resource_type, instance_id.as_deref()).await?
+        }
+        ValidateMode::Update => {
+            update_mode_issues(state, tenant, resource_type, instance_id.as_deref()).await?
+        }
+        _ => Vec::new(),
+    };
 
     debug!(
         resource_type = %resource_type,
-        issue_count = issues.len(),
+        issue_count = issues.len() + extra.len(),
         "$validate completed"
     );
 
-    let outcome = validation_outcome(&issues);
+    let outcome = validation_outcome_from_parts(&issues, extra);
     format_resource_response(
         StatusCode::OK,
         HeaderMap::new(),
@@ -214,6 +253,96 @@ where
     .map_err(|_| RestError::InternalError {
         message: "Failed to serialize response".to_string(),
     })
+}
+
+async fn create_mode_issues<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    resource_type: &str,
+    instance_id: Option<&str>,
+) -> RestResult<Vec<Issue>>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    let Some(id) = instance_id.filter(|id| !id.is_empty()) else {
+        return Ok(Vec::new());
+    };
+    if state
+        .storage()
+        .read(tenant.context(), resource_type, id)
+        .await?
+        .is_some()
+    {
+        return Ok(vec![Issue::error(
+            IssueType::Duplicate,
+            format!("{resource_type}/{id} already exists; mode=create is not applicable"),
+        )]);
+    }
+    Ok(Vec::new())
+}
+
+async fn update_mode_issues<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    resource_type: &str,
+    instance_id: Option<&str>,
+) -> RestResult<Vec<Issue>>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    let Some(id) = instance_id.filter(|id| !id.is_empty()) else {
+        return Ok(vec![Issue::error(
+            IssueType::Required,
+            "mode=update requires a resource id (URL or body)",
+        )]);
+    };
+    if state
+        .storage()
+        .read(tenant.context(), resource_type, id)
+        .await?
+        .is_none()
+    {
+        return Ok(vec![Issue::error(
+            IssueType::NotFound,
+            format!("{resource_type}/{id} was not found"),
+        )]);
+    }
+    Ok(Vec::new())
+}
+
+async fn delete_mode_issues<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    resource_type: &str,
+    instance_id: Option<&str>,
+) -> RestResult<Vec<Issue>>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    let Some(id) = instance_id.filter(|id| !id.is_empty()) else {
+        return Ok(vec![Issue::error(
+            IssueType::Required,
+            "mode=delete requires a resource id (URL or body)",
+        )]);
+    };
+    if resource_type == "AuditEvent" {
+        return Ok(vec![Issue::error(
+            IssueType::NotSupported,
+            "AuditEvent resources cannot be deleted",
+        )]);
+    }
+    if state
+        .storage()
+        .read(tenant.context(), resource_type, id)
+        .await?
+        .is_none()
+    {
+        return Ok(vec![Issue::error(
+            IssueType::NotFound,
+            format!("{resource_type}/{id} was not found"),
+        )]);
+    }
+    Ok(Vec::new())
 }
 
 /// `POST [base]/[type]/$validate`
@@ -235,8 +364,10 @@ where
         version.storage_version_or(state.config().default_fhir_version),
         inputs,
         &resource_type,
-        tenant.tenant_id(),
+        &tenant,
         &req_headers,
+        None,
+        false,
     )
     .await
 }
@@ -269,8 +400,10 @@ where
         version.storage_version_or(state.config().default_fhir_version),
         inputs,
         &resource_type,
-        tenant.tenant_id(),
+        &tenant,
         &req_headers,
+        Some(id),
+        false,
     )
     .await
 }
@@ -279,7 +412,7 @@ where
 /// of the addressed instance (update semantics).
 pub async fn validate_instance_post_handler<S>(
     State(state): State<AppState<S>>,
-    Path((resource_type, _id)): Path<(String, String)>,
+    Path((resource_type, id)): Path<(String, String)>,
     tenant: TenantExtractor,
     version: FhirVersionExtractor,
     Query(query): Query<ValidateQuery>,
@@ -295,8 +428,10 @@ where
         version.storage_version_or(state.config().default_fhir_version),
         inputs,
         &resource_type,
-        tenant.tenant_id(),
+        &tenant,
         &req_headers,
+        Some(id),
+        true,
     )
     .await
 }

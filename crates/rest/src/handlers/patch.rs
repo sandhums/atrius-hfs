@@ -284,32 +284,7 @@ fn parse_patch_format(content_type: &str, body: &Bytes) -> RestResult<PatchForma
 
 /// Applies a patch to a resource.
 fn apply_patch(resource: &Value, patch: &PatchFormat) -> RestResult<Value> {
-    match patch {
-        PatchFormat::JsonPatch(operations) => {
-            let patch: json_patch::Patch =
-                serde_json::from_value(operations.clone()).map_err(|e| RestError::BadRequest {
-                    message: format!("Invalid JSON Patch: {}", e),
-                })?;
-
-            let mut resource = resource.clone();
-            json_patch::patch(&mut resource, &patch).map_err(|e| RestError::BadRequest {
-                message: format!("Failed to apply JSON Patch: {}", e),
-            })?;
-
-            Ok(resource)
-        }
-        PatchFormat::MergePatch(merge_doc) => {
-            let mut resource = resource.clone();
-            json_patch::merge(&mut resource, merge_doc);
-            Ok(resource)
-        }
-        PatchFormat::FhirPathPatch(_params) => {
-            // FHIRPath Patch is more complex and requires FHIRPath evaluation
-            Err(RestError::NotImplemented {
-                feature: "FHIRPath Patch".to_string(),
-            })
-        }
-    }
+    helios_persistence::core::apply_resource_patch(resource, patch).map_err(RestError::from)
 }
 
 /// Builds the response for a successful patch.

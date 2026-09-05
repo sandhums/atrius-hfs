@@ -7,8 +7,8 @@
 //! the mapping from validator issues onto FHIR `OperationOutcome` issues.
 //!
 //! The `$validate` operation uses [`ValidationService::validate_resource`]
-//! unconditionally; the write path (create/update/batch) goes through
-//! [`ValidationService::check_write`], which is gated by
+//! unconditionally; the write path (create/update/batch/transaction/bulk-submit)
+//! goes through [`ValidationService::check_write`], which is gated by
 //! `HFS_VALIDATION_MODE` (`off` | `log` | `enforce`).
 
 use crate::config::ValidationConfig;
@@ -168,11 +168,25 @@ impl ValidationService {
         profiles: Vec<String>,
         tenant: Option<&str>,
     ) -> Vec<ValidationError> {
+        self.validate_resource_with(version, resource, profiles, tenant, self.use_meta_profiles)
+            .await
+    }
+
+    /// Like [`Self::validate_resource`], with an explicit `meta.profile` switch
+    /// (`$validate` `mode=profile` ignores claimed profiles).
+    pub async fn validate_resource_with(
+        &self,
+        version: FhirVersion,
+        resource: &Value,
+        profiles: Vec<String>,
+        tenant: Option<&str>,
+        use_meta_profiles: bool,
+    ) -> Vec<ValidationError> {
         let resolver = self.resolver_for(version, tenant);
         let validator = Validator::new(resolver);
         let opts = ValidationOptions {
             profiles,
-            use_meta_profiles: self.use_meta_profiles,
+            use_meta_profiles,
             unknown_profile: self.unknown_profile,
             ..Default::default()
         };
@@ -510,12 +524,21 @@ pub fn to_outcome_issue(error: &ValidationError) -> Issue {
 /// Build the `$validate` OperationOutcome: the mapped issues, or the
 /// canonical all-clear information issue when there are none.
 pub fn validation_outcome(errors: &[ValidationError]) -> Value {
+    validation_outcome_from_parts(errors, Vec::new())
+}
+
+/// Structural validator issues plus extra OperationOutcome issues (mode
+/// checks). All-clear is emitted only when both are empty.
+pub fn validation_outcome_from_parts(errors: &[ValidationError], extra: Vec<Issue>) -> Value {
     let mut builder = OperationOutcomeBuilder::new();
-    if errors.is_empty() {
+    if errors.is_empty() && extra.is_empty() {
         builder = builder.information(IssueType::Informational, "Validation successful");
     } else {
         for error in errors {
             builder = builder.add_issue(to_outcome_issue(error));
+        }
+        for issue in extra {
+            builder = builder.add_issue(issue);
         }
     }
     builder.build()
@@ -525,4 +548,31 @@ pub fn validation_outcome(errors: &[ValidationError]) -> Value {
 /// enforce-mode rejection).
 pub fn has_errors(errors: &[ValidationError]) -> bool {
     errors.iter().any(|e| e.severity == Severity::Error)
+}
+
+#[async_trait]
+impl helios_persistence::core::IngestValidator for ValidationService {
+    async fn check(
+        &self,
+        tenant_id: &str,
+        fhir_version: FhirVersion,
+        resource_type: &str,
+        resource: &Value,
+    ) -> Result<(), Value> {
+        match self
+            .check_write(tenant_id, fhir_version, resource_type, resource)
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(RestError::ValidationFailed { outcome }) => Err(outcome),
+            Err(e) => Err(json!({
+                "resourceType": "OperationOutcome",
+                "issue": [{
+                    "severity": "error",
+                    "code": "processing",
+                    "diagnostics": e.to_string()
+                }]
+            })),
+        }
+    }
 }

@@ -1747,12 +1747,23 @@ async fn build_bulk_submit(
         .with_decryption_keys(decryption_keys),
     );
 
+    let ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>> = {
+        let svc = helios_rest::validation::ValidationService::from_config(
+            &config.validation,
+            config.terminology_server.as_deref(),
+            config.default_fhir_version,
+        )
+        .map_err(|e| anyhow::anyhow!("bulk-submit ingest validator: {e}"))?;
+        Some(Arc::new(svc))
+    };
+
     spawn_submit_workers(
         jobs.clone(),
         fetcher.clone(),
         output.clone(),
         &cfg,
         reindex_hook,
+        ingest_validator,
     );
 
     Ok(Some(helios_rest::BulkSubmitBundle {
@@ -1776,6 +1787,7 @@ fn spawn_submit_workers(
     output: Arc<dyn ExportOutputStore>,
     cfg: &helios_rest::config::BulkSubmitConfig,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
+    ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>>,
 ) {
     if cfg.disable_local_worker {
         info!("Bulk submit in-process worker pool is disabled");
@@ -1799,10 +1811,15 @@ fn spawn_submit_workers(
         let output = output.clone();
         let reindex_hook = reindex_hook.clone();
         let worker_id = WorkerId::new(format!("hfs-submit-worker-{i}"));
+        let ingest_validator = ingest_validator.clone();
         tokio::spawn(async move {
-            let worker = DefaultSubmitWorker::new(jobs.clone(), fetcher, output, worker_id.clone())
-                .with_deferred_indexing(defer_indexing, reindex_hook.clone())
-                .with_file_concurrency(file_concurrency);
+            let mut worker =
+                DefaultSubmitWorker::new(jobs.clone(), fetcher, output, worker_id.clone())
+                    .with_deferred_indexing(defer_indexing, reindex_hook.clone())
+                    .with_file_concurrency(file_concurrency);
+            if let Some(validator) = ingest_validator {
+                worker = worker.with_ingest_validator(validator);
+            }
             loop {
                 match jobs.claim_next_manifest(&worker_id, lease).await {
                     Ok(Some(claimed)) => {

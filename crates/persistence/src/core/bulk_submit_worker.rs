@@ -414,6 +414,8 @@ pub struct DefaultSubmitWorker<Js: ?Sized, Fetcher: ?Sized, Os: ?Sized> {
     /// (PostgreSQL) turns into near-linear throughput; SQLite's single writer
     /// caps the gain but still benefits from overlapped fetch and extraction.
     file_concurrency: usize,
+    /// Optional write-path validation for ingested resources.
+    ingest_validator: Option<Arc<dyn crate::core::bulk_submit::IngestValidator>>,
 }
 
 /// A pass-through [`AsyncBufRead`] that adds every consumed byte to a shared
@@ -554,6 +556,7 @@ where
             defer_indexing: false,
             reindex_hook: None,
             file_concurrency: 1,
+            ingest_validator: None,
         }
     }
 
@@ -573,6 +576,16 @@ where
     ) -> Self {
         self.defer_indexing = defer;
         self.reindex_hook = hook;
+        self
+    }
+
+    /// Validates each ingested resource through `check_write` (honouring
+    /// `HFS_VALIDATION_MODE`). Absent, ingest stays unvalidated.
+    pub fn with_ingest_validator(
+        mut self,
+        validator: Arc<dyn crate::core::bulk_submit::IngestValidator>,
+    ) -> Self {
+        self.ingest_validator = Some(validator);
         self
     }
 
@@ -634,10 +647,14 @@ where
             );
         }
         let progress = ByteProgress::default();
-        let opts = BulkProcessingOptions::new()
+        let mut opts = BulkProcessingOptions::new()
             .with_import_mode(import_mode)
             .with_defer_indexing(self.defer_indexing)
-            .with_byte_progress(progress.clone());
+            .with_byte_progress(progress.clone())
+            .with_fhir_version(view.fhir_version);
+        if let Some(validator) = &self.ingest_validator {
+            opts = opts.with_ingest_validator(Arc::clone(validator));
+        }
         // Pre-size the byte denominator: every output file's advertised size
         // up front, so the percentage never recomputes against a partial
         // total — learned lazily per file, each newly opened file yanked the

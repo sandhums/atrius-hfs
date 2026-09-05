@@ -2829,13 +2829,47 @@ impl MongoBackend {
                     }
                 }
             }
-            BundleMethod::Patch => Ok(BundleEntryResult::error(
-                501,
-                serde_json::json!({
-                    "resourceType": "OperationOutcome",
-                    "issue": [{"severity": "error", "code": "not-supported", "diagnostics": "PATCH not implemented in transaction bundles"}]
-                }),
-            )),
+            BundleMethod::Patch => {
+                let patch_doc = entry.resource.clone().ok_or_else(|| {
+                    StorageError::Validation(crate::error::ValidationError::MissingRequiredField {
+                        field: "resource".to_string(),
+                    })
+                })?;
+                let (resource_type, id) = self.parse_url(&entry.url)?;
+                match self
+                    .read_resource_in_bundle_transaction(db, session, tenant, &resource_type, &id)
+                    .await?
+                {
+                    Some(existing) => {
+                        if let Some(failure) = bundle_if_match_gate(
+                            entry.if_match.as_deref(),
+                            Some(existing.version_id()),
+                        ) {
+                            return Ok(failure);
+                        }
+                        let patched =
+                            crate::core::patched_from_bundle_entry(existing.content(), &patch_doc)?;
+                        let updated = self
+                            .update_resource_in_bundle_transaction(
+                                db,
+                                session,
+                                tenant,
+                                &existing,
+                                patched,
+                                pending_search_parameter_changes,
+                            )
+                            .await?;
+                        Ok(BundleEntryResult::ok(updated))
+                    }
+                    None => Ok(BundleEntryResult::error(
+                        404,
+                        serde_json::json!({
+                            "resourceType": "OperationOutcome",
+                            "issue": [{"severity": "error", "code": "not-found"}]
+                        }),
+                    )),
+                }
+            }
         }
     }
 

@@ -403,6 +403,17 @@ impl MongoBackend {
                 ));
             }
             let content = options.content_for_update(current.content(), &entry.resource);
+            if let Some(failed) = options
+                .ingest_validation_error(
+                    tenant.tenant_id().as_str(),
+                    entry.line_number,
+                    &entry.resource_type,
+                    &content,
+                )
+                .await
+            {
+                return Ok(failed);
+            }
             let updated = self.update(tenant, &current, content).await?;
             let change = SubmissionChange::update(
                 manifest_id,
@@ -419,6 +430,18 @@ impl MongoBackend {
                 updated.id(),
                 false,
             ));
+        }
+
+        if let Some(failed) = options
+            .ingest_validation_error(
+                tenant.tenant_id().as_str(),
+                entry.line_number,
+                &entry.resource_type,
+                &entry.resource,
+            )
+            .await
+        {
+            return Ok(failed);
         }
 
         let created = self

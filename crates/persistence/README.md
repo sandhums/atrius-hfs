@@ -1089,7 +1089,7 @@ FHIR [transaction](https://build.fhir.org/http.html#transaction) bundle processi
 | Gap                              | Description                                                          | Spec Reference                                                       |
 | -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Conditional reference resolution | References like `Patient?identifier=12345` should resolve via search | [Transaction](https://build.fhir.org/http.html#trules)               |
-| PATCH method                     | PATCH operations in bundle entries return 501                        | [Patch](https://build.fhir.org/http.html#patch)                      |
+| Conditional PATCH in a Bundle    | `[type]?[criteria]` PATCH is refused; instance-url PATCH is applied  | [Patch](https://build.fhir.org/http.html#patch)                      |
 | Duplicate resource detection     | Same resource appearing twice in transaction should fail             | [Transaction](https://build.fhir.org/http.html#trules)               |
 | Prefer header handling           | `return=minimal`, `return=representation`, `return=OperationOutcome` | [Prefer](https://build.fhir.org/http.html#return)                    |
 | History bundle acceptance        | Servers SHOULD accept history bundles for replay                     | [History](https://build.fhir.org/http.html#history)                  |

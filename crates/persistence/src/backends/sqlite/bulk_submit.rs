@@ -1017,6 +1017,17 @@ impl SqliteBackend {
 
                     // Update the resource, honoring the submission's import mode.
                     let content = options.content_for_update(current.content(), &entry.resource);
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &content,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None));
+                    }
                     let updated = txn.update(&current, content).await?;
 
                     Ok((
@@ -1033,6 +1044,17 @@ impl SqliteBackend {
                 // with AlreadyExists — the same outcome the storage-path
                 // create produced, recorded as this entry's error.
                 None => {
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &entry.resource,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None));
+                    }
                     let created = txn
                         .create(&entry.resource_type, entry.resource.clone())
                         .await?;
@@ -1055,6 +1077,17 @@ impl SqliteBackend {
                 }
             }
         } else {
+            if let Some(failed) = options
+                .ingest_validation_error(
+                    txn.tenant().tenant_id().as_str(),
+                    entry.line_number,
+                    &entry.resource_type,
+                    &entry.resource,
+                )
+                .await
+            {
+                return Ok((failed, None));
+            }
             let created = txn
                 .create(&entry.resource_type, entry.resource.clone())
                 .await?;

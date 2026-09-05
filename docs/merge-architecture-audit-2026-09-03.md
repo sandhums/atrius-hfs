@@ -8,8 +8,9 @@ Follow-up: **4 Sep 2026** on the same branch. §3.1 (env/scripts + package overl
 is in progress in the working tree; see **§6**. **§3.2** (Postgres write TX),
 **§3.3** (named `schema_migrations` ledger), **§3.4** (merge playbook keep-list),
 and **§3.5** (directory-layout regen + runbook, 5 Sep), **§3.6**
-(`Principal::stub` / `#[non_exhaustive]`), and **§3.7** Redis JTI timeout /
-missing-`jti` (5 Sep) are closed. Remaining §3.7 bullets are outbox-only.
+(`Principal::stub` / `#[non_exhaustive]`), and **§3.7** (Redis JTI, outbox
+dead-letter / zero-delivery, SQLite claim CAS, HTS per-instance system-id
+cache; 5 Sep) are closed.
 
 Companion to *HELIOS vs Atrius.docx*, which records what each sync decided. This
 document asks a different question: **are those decisions still correct, and do
@@ -311,25 +312,20 @@ reasoned against:
    on batch POST/PUT (batch.rs:995–1002, 1096–1102, 1184–1191) and on the
    transaction pre-flight loop (batch.rs:599–616).
 
-The real remaining gaps are different and currently undocumented:
+The real remaining gaps listed below were **closed 5 Sep 2026** in-repo:
 
-- **Bulk-submit ingest performs no FHIR validation** — it writes via
-`storage.create` / `update` directly (`persistence/.../bulk_submit.rs:668–785`),
-checking only `resourceType` mismatch. This is the largest genuine hole, and it
-is an ingestion path.
-- **Transaction** `DELETE` **entries are not validated** — the pre-flight loop skips
-non-POST/PUT (batch.rs:602–603).
-- **Bundle** `PATCH` **entries return 501** (batch.rs:1326–1333), though the instance
-PATCH endpoint does validate.
-- `$validate`'s `mode` parameter is parsed but does not alter enforcement
-semantics (only `delete` short-circuits).
-- The fork's slicing work in `fhir-validator` is **half-wired**:
-`converter/slicing.rs` builds `Match` IR for `type` / `profile` / `binding`
-discriminators (109–148), but `engine/slicing.rs::slice_matches` is unchanged
-from upstream and still only evaluates pattern matches (210–219). `lib.rs:46–50`
-claims these are evaluated while `engine/slicing.rs:22–26` says they are not.
-Docs are ahead of runtime; expect rework when upstream lands its own slice
-matchers.
+- Bulk-submit ingest calls `IngestValidator` / `check_write` before create/update
+  (honours `HFS_VALIDATION_MODE`; tests that omit a validator stay unvalidated).
+- Transaction `DELETE` entries fail the bundle at pre-flight if the instance is
+  missing; AuditEvent DELETE remains refused by `admit_bundle_mutation`.
+- Bundle `PATCH` entries apply (format inferred from the entry resource) and
+  run `check_write` on the patched representation in both batch and transaction.
+- `$validate` `mode` now changes enforcement: `create` (duplicate id), `update`
+  (id required / not found), `delete` (id, existence, AuditEvent), `profile`
+  (ignore `meta.profile`).
+- Slice `type` / `profile` / `binding` matchers are evaluated in
+  `engine/slicing.rs`. `resolve-ref` is still not; binding does not expand a
+  ValueSet at mark time.
 
 Stale references to the removed path survive in **13 files** across `deploy/` and
 `scripts/`, including two live env files — see §3.1, which is the operational
@@ -341,11 +337,10 @@ consequence and the most urgent item in this audit. Separately,
 
 **Closed 4 Sep 2026** in-repo (the Word keep-list is outside git).
 `docs/clinical-reasoning/upstream-merge.md` is the living keep-list: one engine,
-`HFS_FHIR_PACKAGES` overlay, `check_write` on batch/transaction POST/PUT, do not
-restore `fhir-validation*`. Real gaps are listed there and in
-`docs/validation-cutover.md`. The crate-doc claim in `fhir-validator` `lib.rs`
-that `type`/`profile`/`binding` slice matchers are evaluated is still ahead of
-`engine/slicing.rs` (item 11).
+`HFS_FHIR_PACKAGES` overlay, `check_write` on batch/transaction POST/PUT/PATCH
+and DELETE existence, bulk-submit ingest, and `$validate` modes. Do not restore
+`fhir-validation*`. Slice `type`/`profile`/`binding` matchers are evaluated;
+`resolve-ref` is not.
 
 ### 3.5 The FHIR directory-layout split: durable mechanism, stale content
 
@@ -444,12 +439,37 @@ with a 5s cap. This is still a deny-list, not a replay cache.
 when every channel dispatch failed permanently — `on_resource_event` returns
 `()`. `DeliveryStats` is then the only signal. Worth an explicit metric or log
 for "processed with zero successful deliveries".
+
+**Closed 5 Sep 2026.** Exhausted outbox claims set `dead_at` (`mark_dead`)
+instead of a 3600s retry. Claim skips `dead_at IS NOT NULL`; `$events` still
+reads only `processed_at IS NOT NULL`, so tombstones are not recovery events.
+Named step `subscription_outbox_dead_letter` (SQLite 22 / Postgres 39). When
+matches are non-empty and every dispatch fails, the engine still marks the row
+processed (to avoid re-incrementing `event_number`) and logs
+`Subscription event processed with zero successful deliveries`. HIS is
+untouched: its charge-trigger outbox already dead-letters.
+
 - **SQLite's claim query has no** `FOR UPDATE SKIP LOCKED` **equivalent** (Postgres
 does, `postgres/subscription_outbox.rs:189–207`); it SELECTs then per-row
 UPDATEs, so concurrent nodes can double-claim. Fine for single-node SQLite;
 document it as such.
+
+**Closed 5 Sep 2026.** SQLite claim takes a process-local mutex (shared-cache
+pools fail concurrent `BEGIN IMMEDIATE` with `SQLITE_LOCKED`, which
+`busy_timeout` does not cover), then `BEGIN IMMEDIATE` and a compare-and-swap
+`UPDATE` (`processed_at IS NULL AND dead_at IS NULL AND (locked_until IS NULL
+OR locked_until < now)`). Workers that share **one database file** cannot
+double-claim. Clustered dispatch still needs Postgres: do not point several
+HFS nodes at separate SQLite copies of the same logical outbox.
+
 - `HTS SYSTEM_ID_CACHE` **remains a process-wide static** in
 `crates/hts/src/backends/sqlite/value_set.rs` (already carried in the backlog).
+
+**Closed 5 Sep 2026.** `cs_system_id_cache` and `cs_language_cache` live on
+`SqliteTerminologyBackend` with the other iter3 memos. `invalidate_caches`
+clears them (exhaustive destructure). Parallel in-memory backends no longer
+leak `(url → system_id)`. Postgres `CLOSURE_*` process-wide caches were not
+part of this item.
 
 Delivery semantics are correct and single-pathed otherwise: with an outbox
 attached, `enqueue_resource_event` only notifies the worker and returns rather
@@ -569,8 +589,9 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
    staging actually runs.
 4. **~~Correct the docx keep-list and backlog~~** (§3.4). Done in-repo:
    `docs/clinical-reasoning/upstream-merge.md` (Word file is outside git).
-5. **Route bulk-submit ingest through** `check_write`, or record explicitly that
-  ingestion is unvalidated by design (§3.4).
+5. **~~Route bulk-submit ingest through~~** `check_write` ~~or record unvalidated-by-design~~
+  (§3.4). Done 5 Sep: `IngestValidator` on ingest writes; HFS workers share
+  `ValidationService::check_write`.
 6. **~~Add schema provenance or an unconditional outbox-table reconciliation, plus
   the upstream-numbered heal test and Postgres schema tests~~** (§3.3). Named
   `schema_migrations` ledger on SQLite and Postgres.
@@ -587,10 +608,11 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
 10. **Offer upstream `ChannelDispatcherRegistry` and the directory-layout
   generator** (§2, §4) — the two changes that would delete the fork's largest
     recurring conflict sources.
-11. Finish or revert the half-wired `type`/`profile`/`binding` slice matchers, and
-  fix the contradictory docs (§3.4).
-12. Outbox dead-lettering; "processed with zero deliveries" signal; document
-  SQLite outbox as single-node (§3.7).
+11. **~~Finish or revert the half-wired~~** `type`/`profile`/`binding` **~~slice matchers~~**
+  (§3.4). Done 5 Sep: `engine/slicing.rs::slice_matches` evaluates them;
+  `resolve-ref` remains unmatched. Binding does not expand a ValueSet.
+12. **~~Outbox dead-lettering; "processed with zero deliveries" signal; SQLite
+  claim CAS; HTS per-instance system-id cache~~** (§3.7). Done 5 Sep.
 13. Cosmetic: `migrate_v36_to_v37` error strings, Postgres migration doc comments,
   stale `HFS_AUTH_JTI_BACKEND` reference (§3.3, §3.4).
 14. **NDHM** `$validate` **at the ABDM boundary** (§6.2–§6.3): seed `ndhm.in` on an
@@ -624,7 +646,9 @@ commit). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are closed
 (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
 (Postgres write TX; directory-layout regen + runbook). **§3.6** closed 5 Sep
 (`Principal::stub`). **§3.7 Redis JTI** closed 5 Sep (timeout, ConnectionManager,
-require `jti`). Remaining §3.7 items are outbox-only.
+require `jti`). **§3.7 outbox dead-letter and zero-delivery log** closed 5 Sep.
+**§3.7 SQLite claim CAS and HTS `SYSTEM_ID_CACHE`** closed 5 Sep. No remaining
+§3.7 items.
 
 ### 6.1 Code and operator config
 
@@ -736,9 +760,9 @@ is used in Atrius Patient FSH and is **not** in that embedded pack; add
 instances of that extension need structural overlay.
 - **Startup still silent** on `HFS_PROFILE_`* if someone leaves them set
 (backlog item 2).
-- **§3.7 outbox** (dead-letter, zero-delivery signal, SQLite single-node docs) —
-no code in this follow-up. **§3.2**, **§3.3**, **§3.4**, **§3.5**, **§3.6**,
-and the Redis-JTI half of **§3.7** closed separately.
+- **§3.7** (Redis JTI, outbox dead-letter / zero-delivery, SQLite claim CAS,
+  HTS per-instance system-id cache) — closed 5 Sep. **§3.2**, **§3.3**,
+  **§3.4**, **§3.5**, **§3.6** closed separately.
 
 
 

@@ -48,8 +48,11 @@
 //! }
 //! ```
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use helios_fhir::FhirVersion;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::io::AsyncBufRead;
@@ -58,6 +61,39 @@ use uuid::Uuid;
 use crate::core::storage::ResourceStorage;
 use crate::error::StorageResult;
 use crate::tenant::TenantContext;
+
+/// FHIR validation invoked on each bulk-submit ingest write.
+///
+/// Persistence must not depend on the REST crate, so the write-path gate lives
+/// behind this trait. `helios-rest::ValidationService` implements it by calling
+/// `check_write` (honouring `HFS_VALIDATION_MODE`). `None` on
+/// [`BulkProcessingOptions`] keeps ingest unvalidated — the historical test
+/// default.
+#[async_trait]
+pub trait IngestValidator: Send + Sync {
+    /// `Ok(())` to write; `Err(operation_outcome)` to record a per-entry
+    /// validation failure without aborting the job (unless `max_errors`).
+    async fn check(
+        &self,
+        tenant_id: &str,
+        fhir_version: FhirVersion,
+        resource_type: &str,
+        resource: &Value,
+    ) -> Result<(), Value>;
+}
+
+/// Debug-friendly slot for an optional ingest validator (trait objects are not
+/// `Debug`).
+#[derive(Clone, Default)]
+pub struct IngestValidatorSlot(pub Option<Arc<dyn IngestValidator>>);
+
+impl std::fmt::Debug for IngestValidatorSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("IngestValidatorSlot")
+            .field(&self.0.is_some())
+            .finish()
+    }
+}
 
 /// Audit event helpers for bulk submit operations.
 pub mod audit {
@@ -722,6 +758,15 @@ pub struct BulkProcessingOptions {
     /// transactions on SQLite.
     #[serde(skip)]
     pub byte_progress: Option<ByteProgress>,
+    /// Optional FHIR validation for each ingest write. Skipped in serde so
+    /// stored options stay JSON; tests that leave this empty keep the
+    /// historical unvalidated path.
+    #[serde(skip)]
+    pub ingest_validator: IngestValidatorSlot,
+    /// FHIR version the worker is ingesting against. `None` uses
+    /// [`FhirVersion::default_enabled`].
+    #[serde(skip)]
+    pub fhir_version: Option<FhirVersion>,
 }
 
 fn default_submit_batch_size() -> u32 {
@@ -754,6 +799,8 @@ impl BulkProcessingOptions {
             file_url: None,
             defer_indexing: false,
             byte_progress: None,
+            ingest_validator: IngestValidatorSlot::default(),
+            fhir_version: None,
         }
     }
 
@@ -773,6 +820,77 @@ impl BulkProcessingOptions {
     pub fn with_byte_progress(mut self, byte_progress: ByteProgress) -> Self {
         self.byte_progress = Some(byte_progress);
         self
+    }
+
+    /// Attaches the write-path validator used on each ingest create/update.
+    pub fn with_ingest_validator(mut self, validator: Arc<dyn IngestValidator>) -> Self {
+        self.ingest_validator = IngestValidatorSlot(Some(validator));
+        self
+    }
+
+    /// Stamps the FHIR version ingest validation uses.
+    pub fn with_fhir_version(mut self, fhir_version: FhirVersion) -> Self {
+        self.fhir_version = Some(fhir_version);
+        self
+    }
+
+    /// FHIR version for ingest validation when the worker did not stamp one.
+    pub fn ingest_fhir_version(&self) -> FhirVersion {
+        self.fhir_version
+            .unwrap_or_else(FhirVersion::default_enabled)
+    }
+
+    /// Resource-type mismatch first, then the optional ingest validator.
+    /// `Err` is an OperationOutcome to store as a per-entry validation error.
+    pub async fn check_ingest(
+        &self,
+        tenant_id: &str,
+        resource_type: &str,
+        resource: &Value,
+    ) -> Result<(), Value> {
+        if let Some(payload_type) = resource.get("resourceType").and_then(Value::as_str)
+            && payload_type != resource_type
+        {
+            return Err(serde_json::json!({
+                "resourceType": "OperationOutcome",
+                "issue": [{
+                    "severity": "error",
+                    "code": "invalid",
+                    "diagnostics": format!(
+                        "resourceType mismatch: entry={resource_type}, payload={payload_type}"
+                    )
+                }]
+            }));
+        }
+        if let Some(validator) = &self.ingest_validator.0 {
+            validator
+                .check(
+                    tenant_id,
+                    self.ingest_fhir_version(),
+                    resource_type,
+                    resource,
+                )
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// `Some` when ingest validation failed, to record without writing.
+    pub async fn ingest_validation_error(
+        &self,
+        tenant_id: &str,
+        line_number: u64,
+        resource_type: &str,
+        resource: &Value,
+    ) -> Option<BulkEntryResult> {
+        match self.check_ingest(tenant_id, resource_type, resource).await {
+            Ok(()) => None,
+            Err(outcome) => Some(BulkEntryResult::validation_error(
+                line_number,
+                resource_type,
+                outcome,
+            )),
+        }
     }
 
     /// Sets the batch size.
@@ -1592,5 +1710,62 @@ mod tests {
         let merge = BulkProcessingOptions::new().with_import_mode(ImportMode::Merge);
         let merged = merge.content_for_update(&stored, &submitted);
         assert_eq!(merged["gender"], serde_json::json!("female"));
+    }
+
+    struct RejectingIngestValidator;
+
+    #[async_trait]
+    impl IngestValidator for RejectingIngestValidator {
+        async fn check(
+            &self,
+            _tenant_id: &str,
+            _fhir_version: FhirVersion,
+            _resource_type: &str,
+            _resource: &Value,
+        ) -> Result<(), Value> {
+            Err(serde_json::json!({
+                "resourceType": "OperationOutcome",
+                "issue": [{ "severity": "error", "code": "invalid" }]
+            }))
+        }
+    }
+
+    #[tokio::test]
+    async fn check_ingest_reports_resource_type_mismatch_without_a_validator() {
+        let options = BulkProcessingOptions::new();
+        let resource = serde_json::json!({"resourceType": "Observation", "id": "1"});
+        let err = options
+            .check_ingest("t", "Patient", &resource)
+            .await
+            .expect_err("type mismatch");
+        assert_eq!(err["resourceType"], "OperationOutcome");
+        assert!(
+            err["issue"][0]["diagnostics"]
+                .as_str()
+                .unwrap()
+                .contains("resourceType mismatch")
+        );
+    }
+
+    #[tokio::test]
+    async fn check_ingest_skips_the_engine_when_no_validator_is_wired() {
+        let options = BulkProcessingOptions::new();
+        let resource = serde_json::json!({"resourceType": "Patient", "id": "1"});
+        options
+            .check_ingest("t", "Patient", &resource)
+            .await
+            .expect("unvalidated default");
+    }
+
+    #[tokio::test]
+    async fn check_ingest_surfaces_the_wired_validator() {
+        let options =
+            BulkProcessingOptions::new().with_ingest_validator(Arc::new(RejectingIngestValidator));
+        let resource = serde_json::json!({"resourceType": "Patient", "id": "1"});
+        let err = options
+            .check_ingest("t", "Patient", &resource)
+            .await
+            .expect_err("validator");
+        assert_eq!(err["resourceType"], "OperationOutcome");
     }
 }

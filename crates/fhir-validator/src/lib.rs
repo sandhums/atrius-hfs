@@ -43,12 +43,12 @@
 //!
 //! ## Current limitations (hardening backlog)
 //!
-//! - Slice matchers: `pattern` is evaluated. `type`, `profile`, `binding`, and
-//!   `resolve-ref` are not (`engine/slicing.rs`). The converter emits Match IR
-//!   for `type` / `profile` / `binding`, but `slice_matches` still only does
-//!   pattern equality. Binding discriminators that name a ValueSet canonical
-//!   (rather than an inline code) would also need an expand at mark time. The
-//!   converter emits a warning when it cannot translate a discriminator.
+//! - Slice matchers: `pattern`, `type`, `profile`, and `binding` are evaluated
+//!   (`engine/slicing.rs`). `resolve-ref` is not. Binding discriminators that
+//!   name a ValueSet canonical cannot expand it at mark time; they match a
+//!   coding `system` equal to that canonical, or a collected `code` equal to a
+//!   non-URL value. The converter still emits a warning when it cannot
+//!   translate a discriminator (`exists`, `resolve()`, mixed kinds).
 //! - `refers` (reference target types) is carried but not enforced.
 //! - `extensible`-strength bindings are never checked (only `required`,
 //!   per the FHIR Schema spec); a warning mode may come later.

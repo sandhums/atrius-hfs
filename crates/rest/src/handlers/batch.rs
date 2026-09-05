@@ -504,18 +504,6 @@ where
                         },
                     )?;
                 }
-                // Decline PATCH before anything executes, at the same 501 the
-                // batch arm returns and all three backends already return from
-                // inside the transaction. Today such a bundle executes its
-                // earlier entries, hits the backend's 501, rolls back, and
-                // surfaces as a generic "Transaction failed at entry N" — the
-                // status the client sees never mentions PATCH. Raised here, the
-                // bundle is declined intact and says why.
-                if matches!(bundle_entry.method, BundleMethod::Patch) {
-                    return Err(RestError::NotImplemented {
-                        feature: format!("PATCH in a Bundle entry (transaction entry {index})"),
-                    });
-                }
 
                 indexed_entries.push((index, bundle_entry, full_url));
             }
@@ -535,7 +523,7 @@ where
     for (index, entry, _) in &indexed_entries {
         if !matches!(
             entry.method,
-            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete
+            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete | BundleMethod::Patch
         ) {
             continue;
         }
@@ -599,20 +587,69 @@ where
     // Write-path validation: transactions are atomic, so any invalid write
     // entry rejects the whole bundle before anything executes.
     for (index, entry, _) in &indexed_entries {
-        if !matches!(entry.method, BundleMethod::Post | BundleMethod::Put) {
-            continue;
-        }
-        let Some(resource) = &entry.resource else {
-            continue;
-        };
-        let (resource_type, _) =
+        let (resource_type, id) =
             parse_request_url(&entry.url).map_err(|e| RestError::BadRequest {
                 message: format!("Entry {}: {}", index, e),
             })?;
-        state
-            .validation()
-            .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
-            .await?;
+        match entry.method {
+            BundleMethod::Post | BundleMethod::Put => {
+                let Some(resource) = &entry.resource else {
+                    continue;
+                };
+                state
+                    .validation()
+                    .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
+                    .await?;
+            }
+            BundleMethod::Delete => {
+                if id.is_empty() {
+                    return Err(RestError::BadRequest {
+                        message: format!(
+                            "Entry {index}: DELETE request.url must address an instance ('[type]/[id]')"
+                        ),
+                    });
+                }
+                if state
+                    .storage()
+                    .read(tenant.context(), &resource_type, &id)
+                    .await?
+                    .is_none()
+                {
+                    return Err(RestError::NotFound { resource_type, id });
+                }
+            }
+            BundleMethod::Patch => {
+                let Some(patch_doc) = &entry.resource else {
+                    return Err(RestError::BadRequest {
+                        message: format!("Entry {index}: PATCH entry missing resource"),
+                    });
+                };
+                if id.is_empty() {
+                    return Err(RestError::BadRequest {
+                        message: format!(
+                            "Entry {index}: PATCH request.url must address an instance ('[type]/[id]')"
+                        ),
+                    });
+                }
+                // POST+PATCH in the same transaction: the target may not exist
+                // yet. Validate only when it already does.
+                if let Some(existing) = state
+                    .storage()
+                    .read(tenant.context(), &resource_type, &id)
+                    .await?
+                {
+                    let patched = helios_persistence::core::patched_from_bundle_entry(
+                        existing.content(),
+                        patch_doc,
+                    )?;
+                    state
+                        .validation()
+                        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &patched)
+                        .await?;
+                }
+            }
+            BundleMethod::Get => {}
+        }
     }
 
     // Sort by processing order: DELETE -> POST -> PUT/PATCH -> GET
@@ -1317,24 +1354,98 @@ where
                 }
             }
         }
-        // Declined rather than dispatched, matching the transaction arm and all
-        // three backends, which already return 501 for a bundle PATCH. A
-        // bundle entry carries no Content-Type, and `parse_patch_format`
-        // derives the patch format entirely from it, so there is nothing here
-        // to dispatch on; R4 designates FHIRPath Patch as the bundle format and
-        // `apply_patch` does not implement it. Tracked by #502's follow-up.
-        BundleMethod::Patch => create_error_result(
-            501,
-            &format!(
-                "Entry {index}: PATCH is not implemented in Bundle entries, so \
-                 nothing was applied. Send the patch to the instance endpoint \
-                 (PATCH [base]/[type]/[id])."
-            ),
-        ),
-        // No catch-all: the match is exhaustive over `BundleMethod`, so adding a
-        // variant is a compile error here rather than a silent 405. Codes
-        // outside the value set never reach this point — `parse_entry_method`
-        // refuses them at the top of this function.
+        BundleMethod::Patch => {
+            if id.is_empty() {
+                return create_error_result(
+                    400,
+                    "PATCH entry request.url must address an instance ('[type]/[id]')",
+                );
+            }
+            if criteria.is_some() {
+                return create_error_result(
+                    400,
+                    &format!(
+                        "Entry {index}: conditional PATCH in a Bundle is not supported; \
+                         address the instance directly ('[type]/[id]')"
+                    ),
+                );
+            }
+            let patch_doc = match entry.get("resource") {
+                Some(r) => r,
+                None => {
+                    return create_error_result(400, "PATCH entry missing resource");
+                }
+            };
+            if let Err(error) =
+                admit_bundle_mutation(&method, &resource_type, Some(patch_doc), fhir_version)
+            {
+                return entry_failure(error);
+            }
+            if let Some(failure) =
+                check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
+            {
+                return failure;
+            }
+            let existing = match state
+                .storage()
+                .read(tenant.context(), &resource_type, &id)
+                .await
+            {
+                Ok(Some(stored)) => stored,
+                Ok(None) => {
+                    return create_error_result(
+                        404,
+                        &format!("{resource_type}/{id} was not found"),
+                    );
+                }
+                Err(e) => {
+                    let (status, message) = entry_error(e);
+                    return create_error_result(status, &message);
+                }
+            };
+            let patched = match helios_persistence::core::patched_from_bundle_entry(
+                existing.content(),
+                patch_doc,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    let (status, message) = entry_error(e);
+                    return create_error_result(status, &message);
+                }
+            };
+            if let Err(e) = state
+                .validation()
+                .check_write(tenant.tenant_id(), fhir_version, &resource_type, &patched)
+                .await
+            {
+                return create_error_result(422, &validation_failure_message(&e));
+            }
+            match state
+                .storage()
+                .update(tenant.context(), &existing, patched)
+                .await
+            {
+                Ok(stored) => {
+                    record_stored_profile(state, tenant, fhir_version, &stored);
+                    #[cfg(feature = "subscriptions")]
+                    emit_bundle_event(
+                        state,
+                        tenant,
+                        fhir_version,
+                        &stored,
+                        helios_subscriptions::ResourceEventType::Update,
+                    );
+                    BundleEntryResult::ok(stored)
+                }
+                Err(e) => {
+                    let (status, message) = entry_error(e);
+                    create_error_result(status, &message)
+                }
+            }
+        } // No catch-all: the match is exhaustive over `BundleMethod`, so adding a
+          // variant is a compile error here rather than a silent 405. Codes
+          // outside the value set never reach this point — `parse_entry_method`
+          // refuses them at the top of this function.
     }
 }
 
@@ -1439,7 +1550,7 @@ fn admit_bundle_mutation(
     if resource_type == "AuditEvent"
         && matches!(
             method,
-            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete
+            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete | BundleMethod::Patch
         )
     {
         return Err(RestError::MethodNotAllowed {
@@ -3685,10 +3796,6 @@ mod tests {
             "resourceType": "Bundle",
             "type": "batch",
             "entry": [
-                {
-                    "request": { "method": "PATCH", "url": "Patient/p1" },
-                    "resource": { "resourceType": "Patient" }
-                },
                 { "request": { "method": "HEAD", "url": "Patient/p1" } },
                 {
                     "request": { "method": "post", "url": "Patient" },
@@ -3707,7 +3814,6 @@ mod tests {
         assert_eq!(
             statuses,
             vec![
-                "501 Not Implemented",
                 "405 Method Not Allowed",
                 "400 Bad Request",
                 "400 Bad Request",

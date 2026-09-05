@@ -19,11 +19,12 @@
 //! enforced (pinned by `tests/fixtures/extended/slicing_rules.json`), and a
 //! `max: 0` prohibited slice is enforced (the reference skips falsy bounds).
 //!
-//! Match types other than `pattern` (`type`, `profile`, `binding`,
-//! `resolve-ref`) are deliberately not evaluated yet — they arrive in a later
-//! phase alongside the converter's discriminator translation. A slice whose
-//! matcher we cannot evaluate matches nothing, and a slice with no `match`
-//! at all (a constraining slice) also matches nothing.
+//! `pattern`, `type`, `profile`, and `binding` matchers are evaluated.
+//! `resolve-ref` is not: a slice whose only matcher is `resolve-ref` matches
+//! nothing. A slice with no `match` at all (a constraining slice) also
+//! matches nothing. Binding discriminators that name a ValueSet canonical
+//! cannot expand that set at mark time; they match when a coding's `system`
+//! equals the canonical or a collected `code` equals a non-URL value.
 
 use super::errors::{self, ErrorKind};
 use super::walk::{SchemaSet, WalkCtx, add_schemas_to_set, is_partial_match, validate_node};
@@ -207,14 +208,26 @@ pub(super) fn validate_slices(
     consumed
 }
 
-/// Does an item belong to a slice? Only `pattern` matching is evaluated
-/// today; a missing `match` (constraining slice) matches nothing, and a
-/// `match` with no `value` matches everything (lodash `_.isMatch` semantics
-/// for an empty source).
+/// Does an item belong to a slice?
+///
+/// A missing `match` (constraining slice) matches nothing. A `match` with no
+/// `value` matches everything (lodash `_.isMatch` for an empty source).
+/// `pattern` is partial deep equality. `type` / `profile` / `binding` walk a
+/// nested value the converter built from the discriminator path. `resolve-ref`
+/// matches nothing.
 pub(crate) fn slice_matches(slice: &Slice, item: &Value) -> bool {
     if let Some(match_) = &slice.match_ {
+        let kind = match_.type_.as_deref().unwrap_or("pattern");
+        if kind == "resolve-ref" {
+            return false;
+        }
         return match match_.value.as_ref() {
-            Some(pattern) => is_partial_match(item, pattern),
+            Some(expected) => match kind {
+                "type" => typed_value_matches(item, expected, fhir_type_matches),
+                "profile" => typed_value_matches(item, expected, profile_matches),
+                "binding" => typed_value_matches(item, expected, binding_matches),
+                _ => is_partial_match(item, expected),
+            },
             None => true,
         };
     }
@@ -229,6 +242,121 @@ pub(crate) fn slice_matches(slice: &Slice, item: &Value) -> bool {
         }
     }
     false
+}
+
+/// Walk a converter-nested expected value (`{code: "CodeableConcept"}`) or a
+/// `$this` scalar, applying `leaf` at each focused node.
+fn typed_value_matches(data: &Value, expected: &Value, leaf: fn(&Value, &str) -> bool) -> bool {
+    match expected {
+        Value::String(want) => leaf(data, want),
+        Value::Object(map) => map.iter().all(|(key, nested)| {
+            data.get(key)
+                .is_some_and(|child| typed_value_matches(child, nested, leaf))
+        }),
+        _ => false,
+    }
+}
+
+fn fhir_type_matches(data: &Value, expected: &str) -> bool {
+    if let Some(rt) = data.get("resourceType").and_then(Value::as_str) {
+        return rt == expected;
+    }
+    if let Some(t) = data.get("type") {
+        let type_code = t.as_str().or_else(|| t.get("code").and_then(Value::as_str));
+        if type_code == Some(expected) {
+            return true;
+        }
+    }
+    match expected {
+        "boolean" => data.is_boolean(),
+        "integer" | "unsignedInt" | "positiveInt" => data.as_i64().is_some(),
+        "decimal" => data.is_number(),
+        "string" | "code" | "id" | "uri" | "url" | "canonical" | "oid" | "uuid" | "markdown"
+        | "base64Binary" | "date" | "dateTime" | "instant" | "time" | "xhtml" => data.is_string(),
+        "Extension" => data.get("url").is_some(),
+        "Reference" => {
+            data.get("reference").is_some()
+                || data.get("identifier").is_some()
+                || data.get("display").is_some()
+        }
+        "Quantity" | "Age" | "Distance" | "Duration" | "Count" | "Money" => {
+            data.get("value").is_some() || data.get("unit").is_some() || data.get("code").is_some()
+        }
+        "CodeableConcept" => data.get("coding").is_some() || data.get("text").is_some(),
+        "Coding" => data.get("system").is_some() || data.get("code").is_some(),
+        "Identifier" => data.get("system").is_some() || data.get("value").is_some(),
+        "Period" => data.get("start").is_some() || data.get("end").is_some(),
+        "Range" => data.get("low").is_some() || data.get("high").is_some(),
+        "Ratio" => data.get("numerator").is_some() || data.get("denominator").is_some(),
+        "HumanName" => {
+            data.get("family").is_some()
+                || data.get("given").is_some()
+                || data.get("text").is_some()
+        }
+        "Address" => {
+            data.get("line").is_some() || data.get("city").is_some() || data.get("use").is_some()
+        }
+        "Attachment" => {
+            data.get("contentType").is_some()
+                || data.get("data").is_some()
+                || data.get("url").is_some()
+        }
+        "Annotation" => data.get("text").is_some(),
+        "ContactPoint" => data.get("system").is_some() || data.get("value").is_some(),
+        "Timing" => data.get("repeat").is_some() || data.get("event").is_some(),
+        _ => false,
+    }
+}
+
+fn profile_matches(data: &Value, canonical: &str) -> bool {
+    if data.get("url").and_then(Value::as_str) == Some(canonical) {
+        return true;
+    }
+    if let Some(profiles) = data.pointer("/meta/profile").and_then(Value::as_array) {
+        if profiles.iter().any(|p| p.as_str() == Some(canonical)) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Binding discriminator without a terminology expand: a coding `system` that
+/// equals the ValueSet/system canonical, or a primitive/code equal to a
+/// non-URL expected value.
+fn binding_matches(data: &Value, expected: &str) -> bool {
+    if !expected.contains("://") {
+        return collected_codes(data).iter().any(|c| c == expected);
+    }
+    if data.get("system").and_then(Value::as_str) == Some(expected) {
+        return true;
+    }
+    if let Some(codings) = data.get("coding").and_then(Value::as_array) {
+        if codings
+            .iter()
+            .any(|c| c.get("system").and_then(Value::as_str) == Some(expected))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn collected_codes(data: &Value) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(s) = data.as_str() {
+        out.push(s.to_string());
+    }
+    if let Some(s) = data.get("code").and_then(Value::as_str) {
+        out.push(s.to_string());
+    }
+    if let Some(codings) = data.get("coding").and_then(Value::as_array) {
+        for c in codings {
+            if let Some(code) = c.get("code").and_then(Value::as_str) {
+                out.push(code.to_string());
+            }
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -279,5 +407,66 @@ mod slice_match_tests {
     fn a_schema_with_neither_pattern_nor_fixed_matches_nothing() {
         let s = slice(json!({ "schema": { "type": "Identifier" } }));
         assert!(!slice_matches(&s, &json!({ "system": "http://x" })));
+    }
+
+    #[test]
+    fn type_matcher_uses_resource_type() {
+        let s = slice(json!({ "match": { "type": "type", "value": "Patient" } }));
+        assert!(slice_matches(&s, &json!({ "resourceType": "Patient" })));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "resourceType": "Observation" })
+        ));
+    }
+
+    #[test]
+    fn type_matcher_walks_a_nested_discriminator_path() {
+        let s = slice(json!({
+            "match": { "type": "type", "value": { "valueQuantity": "Quantity" } }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "valueQuantity": { "value": 1.0, "unit": "mg" } })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "valueCodeableConcept": { "text": "x" } })
+        ));
+    }
+
+    #[test]
+    fn profile_matcher_uses_extension_url() {
+        let s = slice(json!({
+            "match": { "type": "profile", "value": "http://example.org/ext" }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "url": "http://example.org/ext" })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "url": "http://example.org/other" })
+        ));
+    }
+
+    #[test]
+    fn binding_matcher_uses_coding_system() {
+        let s = slice(json!({
+            "match": { "type": "binding", "value": "http://loinc.org" }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "coding": [{ "system": "http://loinc.org", "code": "123" }] })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "coding": [{ "system": "http://snomed.info/sct", "code": "123" }] })
+        ));
+    }
+
+    #[test]
+    fn resolve_ref_matches_nothing() {
+        let s = slice(json!({ "match": { "type": "resolve-ref", "value": "Patient" } }));
+        assert!(!slice_matches(&s, &json!({ "reference": "Patient/1" })));
     }
 }

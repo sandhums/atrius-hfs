@@ -99,6 +99,7 @@ pub mod bulk_submit_input;
 pub mod bulk_submit_worker;
 pub mod capabilities;
 pub mod history;
+pub mod patch;
 pub mod preconditions;
 pub mod schema_ledger;
 pub mod search;
@@ -130,9 +131,9 @@ pub use bulk_provider::{BulkProviderStore, StoredProviderSubmission};
 pub use bulk_submit::{
     BulkEntryOutcome, BulkEntryResult, BulkProcessingOptions, BulkSubmitProvider,
     BulkSubmitRollbackProvider, ChangeType, EntryCountSummary, IMPORT_MODE_PARAMETER_URL,
-    ImportMode, ManifestStatus, NdjsonEntry, StreamProcessingResult, StreamingBulkSubmitProvider,
-    SubmissionChange, SubmissionId, SubmissionManifest, SubmissionStatus, SubmissionSummary,
-    merge_resource,
+    ImportMode, IngestValidator, ManifestStatus, NdjsonEntry, StreamProcessingResult,
+    StreamingBulkSubmitProvider, SubmissionChange, SubmissionId, SubmissionManifest,
+    SubmissionStatus, SubmissionSummary, merge_resource,
 };
 pub use bulk_submit_input::{
     FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher, submission_output_job_id,
@@ -150,6 +151,9 @@ pub use capabilities::{
 pub use history::{
     DifferentialHistoryProvider, HistoryEntry, HistoryMethod, HistoryPage, HistoryParams,
     InstanceHistoryProvider, SystemHistoryProvider, TypeHistoryProvider,
+};
+pub use patch::{
+    apply_resource_patch, patch_format_from_bundle_resource, patched_from_bundle_entry,
 };
 pub use preconditions::{
     EntityTag, EntityTagPrecondition, MalformedPrecondition, bundle_if_match_gate,

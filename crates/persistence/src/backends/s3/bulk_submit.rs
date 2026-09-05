@@ -712,6 +712,17 @@ impl S3Backend {
 
                     // Update the resource, honoring the submission's import mode.
                     let content = options.content_for_update(current.content(), &entry.resource);
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            tenant.tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &content,
+                        )
+                        .await
+                    {
+                        return Ok(failed);
+                    }
                     let updated = self.update(tenant, &current, content).await?;
 
                     let change = SubmissionChange::update(
@@ -732,6 +743,17 @@ impl S3Backend {
                     ))
                 }
                 Ok(None) | Err(StorageError::Resource(ResourceError::Gone { .. })) => {
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            tenant.tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &entry.resource,
+                        )
+                        .await
+                    {
+                        return Ok(failed);
+                    }
                     let created = self
                         .create(
                             tenant,
@@ -759,6 +781,17 @@ impl S3Backend {
                 Err(err) => Err(err),
             }
         } else {
+            if let Some(failed) = options
+                .ingest_validation_error(
+                    tenant.tenant_id().as_str(),
+                    entry.line_number,
+                    &entry.resource_type,
+                    &entry.resource,
+                )
+                .await
+            {
+                return Ok(failed);
+            }
             let created = self
                 .create(
                     tenant,

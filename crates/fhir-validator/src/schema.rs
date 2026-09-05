@@ -252,8 +252,8 @@ pub struct Slice {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Match {
-    /// `pattern` | `binding` | `profile` | `type` (the reference validator
-    /// only implements `pattern`; we start there too).
+    /// `pattern` | `binding` | `profile` | `type`. The engine evaluates all
+    /// four; `resolve-ref` is still deferred.
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub type_: Option<String>,
     /// The pattern / binding / profile / type payload.

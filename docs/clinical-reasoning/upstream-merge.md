@@ -147,29 +147,40 @@ One engine. Writes go through `ValidationService::check_write` (`HFS_VALIDATION_
 | `src/config.rs` | `HFS_FHIR_PACKAGE_CACHE`, `HFS_FHIR_PACKAGES` (Helios already owns `HFS_VALIDATION_MODE`) |
 | `src/state.rs` | `validation: Arc<ValidationService>` — **not** a `profile_validation` field |
 | `src/handlers/create.rs` / `update.rs` / `patch.rs` | `state.validation().check_write(...)` before persist |
-| `src/handlers/batch.rs` | `check_write` on batch POST/PUT and on the transaction pre-flight loop for POST/PUT |
-| `src/handlers/validate.rs` | Helios `$validate` (keep upstream; do not restore the deleted Atrius handler) |
+| `src/handlers/batch.rs` | `check_write` on batch POST/PUT/PATCH; transaction pre-flight for POST/PUT/PATCH and DELETE existence |
+| `src/handlers/validate.rs` | `$validate` `mode` enforcement (create/update/delete/profile); do not restore the deleted Atrius handler |
 | `tests/validation_enforcement_tests.rs` | Write-path `HFS_VALIDATION_MODE` tests |
 
-`check_write` **does** run on batch and transaction POST/PUT. The obsolete backlog line “Atrius profile-manifest enforcement does not run on batch or transaction entries” is false since 1 Aug 2026.
+`check_write` **does** run on batch and transaction POST/PUT/PATCH. Transaction
+DELETE entries fail the bundle if the instance is missing. Bulk-submit ingest
+calls `IngestValidator` (`check_write`) when the worker is wired with
+`ValidationService`. Do not restore the old crates.
 
-Real remaining validation gaps (do not “fix” them by restoring the old crates):
+`$validate` `mode` changes enforcement: `create` (duplicate id), `update` (id
+required / not found), `delete` (id, existence, AuditEvent immutability; no
+referential integrity), `profile` (ignore `meta.profile`).
 
-- Bulk-submit ingest writes via `storage.create` / `update` and does not call `check_write`.
-- Transaction `DELETE` entries are skipped by the pre-flight loop (`batch.rs` continues unless POST/PUT).
-- Bundle `PATCH` entries return 501; the instance PATCH endpoint does validate.
-- `$validate` `mode` is parsed; only `delete` short-circuits. Other modes do not change enforcement.
-- Fork slicing: `converter/slicing.rs` builds `Match` IR for `type` / `profile` / `binding`, but `engine/slicing.rs::slice_matches` still evaluates pattern only.
+Slice `type` / `profile` / `binding` matchers are evaluated. Remaining
+limitations (not a second engine):
+
+- `resolve-ref` slice discriminators match nothing.
+- Binding discriminators do not expand a ValueSet at mark time.
+- Conditional PATCH inside a Bundle is refused (instance PATCH and Bundle
+  instance-url PATCH are implemented).
 
 ### `crates/persistence`
 
 | File | Atrius change |
 |------|----------------|
 | `src/core/schema_ledger.rs` | Named `schema_migrations` ledger; fork vs upstream integer classification |
-| `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`. Do not restore a pure integer `migrate_schema` loop |
-| `src/backends/*/subscription_outbox.rs` | Durable outbox store |
+| `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`; `subscription_outbox_dead_letter` is the tip step. Do not restore a pure integer `migrate_schema` loop |
+| `src/backends/*/subscription_outbox.rs` | Durable outbox store (`mark_dead` / `dead_at`; claim skips dead rows; SQLite process mutex + `BEGIN IMMEDIATE` + CAS so one file cannot double-claim — not a cluster outbox) |
 
-`SCHEMA_VERSION` (21 SQLite / 38 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20).
+`SCHEMA_VERSION` (22 SQLite / 39 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20). SQLite 22 / Postgres 39 add `subscription_outbox.dead_at` (`OUTBOX_DEAD_LETTER_STEP`). Do not restore hourly retry of exhausted outbox rows.
+
+### `crates/hts`
+
+SQLite URL→`system_id` and CodeSystem language memos live on `SqliteTerminologyBackend` (`cs_system_id_cache`, `cs_language_cache`). `invalidate_caches` is exhaustive. Do not restore process-wide `OnceLock` maps.
 
 ### `crates/fhirpath`
 
@@ -187,7 +198,7 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 | File | Atrius change |
 |------|----------------|
 | `src/packages/resolve.rs` | Listed `HFS_FHIR_PACKAGES` only — do not walk `package.json` dependencies (that pulls `ndhm.in` and fails offline) |
-| `src/converter/slicing.rs` | Extra `Match` IR for `type` / `profile` / `binding` (runtime still pattern-only until engine catches up) |
+| `src/converter/slicing.rs` | Extra `Match` IR for `type` / `profile` / `binding`; engine evaluates those kinds |
 
 ### `crates/cds-hooks`
 
@@ -215,7 +226,7 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 |------|----------------|
 | `Cargo.toml` | Keep Atrius `default-members` (`fhir-valueset-gen`, `fhir-terminology`, `cds-server` is a workspace member via `crates/*` but not a default member). Helios version / serde pins from `main` |
 
-**Note:** `ValidationService` is wired in `helios-rest` `build_app()` from `ServerConfig` — **`crates/hfs/src/main.rs` does not need Atrius patches**.
+**Note:** `ValidationService` is wired in `helios-rest` `AppState` from `ServerConfig`. `crates/hfs/src/main.rs` also constructs one for bulk-submit workers (`IngestValidator`). Do not restore a second engine.
 
 ---
 

@@ -113,7 +113,7 @@ fn build_match(
         let type_code = target.schema.type_.as_ref()?;
         return Some(Match {
             type_: Some("type".to_string()),
-            value: Some(Value::String(type_code.clone())),
+            value: Some(nested_or_this(&disc.path, Value::String(type_code.clone()))),
             resolve_ref: None,
         });
     }
@@ -133,7 +133,7 @@ fn build_match(
             })?;
         return Some(Match {
             type_: Some("profile".to_string()),
-            value: Some(Value::String(profile)),
+            value: Some(nested_or_this(&disc.path, Value::String(profile))),
             resolve_ref: None,
         });
     }
@@ -143,7 +143,7 @@ fn build_match(
         let vs = target.schema.binding.as_ref()?.value_set.clone();
         return Some(Match {
             type_: Some("binding".to_string()),
-            value: Some(Value::String(vs)),
+            value: Some(nested_or_this(&disc.path, Value::String(vs))),
             resolve_ref: None,
         });
     }
@@ -205,6 +205,17 @@ fn constant_at(node: &super::tree::Node, path: &str) -> Option<Value> {
         .fixed
         .clone()
         .or_else(|| target.schema.pattern.clone())
+}
+
+/// Discriminator path `$this` is the slice item; any other path is nested
+/// under the item so the engine can walk it the same way as a pattern match.
+fn nested_or_this(path: &str, value: Value) -> Value {
+    if path == "$this" {
+        return value;
+    }
+    let mut pattern = Map::new();
+    insert_nested(&mut pattern, path, value);
+    Value::Object(pattern)
 }
 
 /// `insert_nested(map, "a.b", v)` → `{a: {b: v}}` (merging siblings).

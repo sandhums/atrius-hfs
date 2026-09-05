@@ -203,9 +203,9 @@ async fn validate_accepts_parameters_wrapper() {
 }
 
 #[tokio::test]
-async fn validate_mode_delete_skips_content_validation() {
+async fn validate_mode_delete_requires_an_id() {
     let (server, _backend) = create_test_server().await;
-    // Delete validation needs no resource at all.
+    // Type-level delete with no instance id cannot check existence.
     let response = server
         .post("/Patient/$validate?mode=delete")
         .json(&json!({
@@ -215,9 +215,80 @@ async fn validate_mode_delete_skips_content_validation() {
         .await;
     response.assert_status_ok();
     let outcome: Value = response.json();
-    assert_eq!(
-        outcome["issue"][0]["severity"], "information",
-        "{outcome:#}"
+    assert!(
+        issue_codes(&outcome)
+            .iter()
+            .any(|(sev, code)| sev == "error" && code == "required"),
+        "mode=delete without an id reports required: {outcome:#}"
+    );
+}
+
+#[tokio::test]
+async fn validate_mode_delete_reports_not_found() {
+    let (server, _backend) = create_test_server().await;
+    let response = server
+        .post("/Patient/missing/$validate?mode=delete")
+        .json(&json!({
+            "resourceType": "Parameters",
+            "parameter": []
+        }))
+        .await;
+    response.assert_status_ok();
+    let outcome: Value = response.json();
+    assert!(
+        issue_codes(&outcome)
+            .iter()
+            .any(|(sev, code)| sev == "error" && code == "not-found"),
+        "mode=delete of a missing id reports not-found: {outcome:#}"
+    );
+}
+
+#[tokio::test]
+async fn validate_mode_create_reports_duplicate_when_the_id_exists() {
+    let (server, backend) = create_test_server().await;
+    let tenant = test_tenant();
+    backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({ "resourceType": "Patient", "id": "p1", "active": true }),
+            FhirVersion::R4,
+        )
+        .await
+        .expect("seed");
+
+    let response = server
+        .post("/Patient/$validate?mode=create")
+        .json(&json!({ "resourceType": "Patient", "id": "p1", "active": true }))
+        .await;
+    response.assert_status_ok();
+    let outcome: Value = response.json();
+    assert!(
+        issue_codes(&outcome)
+            .iter()
+            .any(|(sev, code)| sev == "error" && code == "duplicate"),
+        "mode=create of an existing id reports duplicate: {outcome:#}"
+    );
+}
+
+#[tokio::test]
+async fn validate_mode_profile_ignores_meta_profile() {
+    let (server, _backend) = create_test_server().await;
+    let response = server
+        .post("/Patient/$validate?mode=profile&profile=http://hl7.org/fhir/StructureDefinition/Patient")
+        .json(&json!({
+            "resourceType": "Patient",
+            "meta": { "profile": ["http://example.org/StructureDefinition/nope"] },
+            "active": true
+        }))
+        .await;
+    response.assert_status_ok();
+    let outcome: Value = response.json();
+    assert!(
+        !issue_codes(&outcome)
+            .iter()
+            .any(|(sev, code)| sev == "warning" && code == "not-supported"),
+        "mode=profile must not warn on meta.profile: {outcome:#}"
     );
 }
 
@@ -363,5 +434,11 @@ async fn validate_instance_post_validates_body() {
             .iter()
             .any(|i| i["expression"][0] == "Patient.oops"),
         "{outcome:#}"
+    );
+    assert!(
+        issue_codes(&outcome)
+            .iter()
+            .any(|(sev, code)| sev == "error" && code == "not-found"),
+        "mode=update of a missing instance reports not-found: {outcome:#}"
     );
 }
