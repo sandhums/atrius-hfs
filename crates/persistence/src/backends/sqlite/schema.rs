@@ -10,7 +10,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 19;
+pub const SCHEMA_VERSION: i32 = 21;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -34,6 +34,8 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     (OUTBOX_STEP, migrate_v16_to_v17),
     ("bulk_provider_submissions", migrate_v17_to_v18),
     ("bulk_manifests_byte_progress", migrate_v18_to_v19),
+    ("resources_reindex_keyset", migrate_v19_to_v20),
+    ("search_index_partial_family_indexes", migrate_v20_to_v21),
 ];
 
 const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
@@ -417,25 +419,26 @@ fn create_indexes(conn: &Connection) -> StorageResult<()> {
         // Resources table indexes
         "CREATE INDEX IF NOT EXISTS idx_resources_type ON resources(tenant_id, resource_type)",
         "CREATE INDEX IF NOT EXISTS idx_resources_updated ON resources(tenant_id, last_updated)",
+        "CREATE INDEX IF NOT EXISTS idx_resources_reindex ON resources(tenant_id, resource_type, last_updated, id)",
         // History table indexes
         "CREATE INDEX IF NOT EXISTS idx_history_resource ON resource_history(tenant_id, resource_type, id)",
         "CREATE INDEX IF NOT EXISTS idx_history_updated ON resource_history(tenant_id, last_updated)",
         // Search index indexes
-        "CREATE INDEX IF NOT EXISTS idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string)",
-        "CREATE INDEX IF NOT EXISTS idx_search_token ON search_index(tenant_id, resource_type, param_name, value_token_system, value_token_code)",
-        "CREATE INDEX IF NOT EXISTS idx_search_date ON search_index(tenant_id, resource_type, param_name, value_date)",
-        "CREATE INDEX IF NOT EXISTS idx_search_number ON search_index(tenant_id, resource_type, param_name, value_number)",
-        "CREATE INDEX IF NOT EXISTS idx_search_quantity ON search_index(tenant_id, resource_type, param_name, value_quantity_value, value_quantity_unit)",
-        "CREATE INDEX IF NOT EXISTS idx_search_reference ON search_index(tenant_id, resource_type, param_name, value_reference)",
-        "CREATE INDEX IF NOT EXISTS idx_search_uri ON search_index(tenant_id, resource_type, param_name, value_uri)",
+        "CREATE INDEX IF NOT EXISTS idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_token ON search_index(tenant_id, resource_type, param_name, value_token_system, value_token_code) WHERE value_token_system IS NOT NULL OR value_token_code IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_date ON search_index(tenant_id, resource_type, param_name, value_date) WHERE value_date IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_number ON search_index(tenant_id, resource_type, param_name, value_number) WHERE value_number IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_quantity ON search_index(tenant_id, resource_type, param_name, value_quantity_value, value_quantity_unit) WHERE value_quantity_value IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_reference ON search_index(tenant_id, resource_type, param_name, value_reference) WHERE value_reference IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_search_uri ON search_index(tenant_id, resource_type, param_name, value_uri) WHERE value_uri IS NOT NULL",
         // Index for composite parameter matching
         "CREATE INDEX IF NOT EXISTS idx_search_composite ON search_index(tenant_id, resource_type, resource_id, param_name, composite_group)",
         // Index for resource-based lookups
         "CREATE INDEX IF NOT EXISTS idx_search_resource ON search_index(tenant_id, resource_type, resource_id)",
         // Index for :text modifier searches (token display text)
-        "CREATE INDEX IF NOT EXISTS idx_search_token_display ON search_index(tenant_id, resource_type, param_name, value_token_display)",
+        "CREATE INDEX IF NOT EXISTS idx_search_token_display ON search_index(tenant_id, resource_type, param_name, value_token_display) WHERE value_token_display IS NOT NULL",
         // Index for :of-type modifier searches (identifier type)
-        "CREATE INDEX IF NOT EXISTS idx_search_identifier_type ON search_index(tenant_id, resource_type, param_name, value_identifier_type_system, value_identifier_type_code)",
+        "CREATE INDEX IF NOT EXISTS idx_search_identifier_type ON search_index(tenant_id, resource_type, param_name, value_identifier_type_system, value_identifier_type_code) WHERE value_identifier_type_system IS NOT NULL OR value_identifier_type_code IS NOT NULL",
     ];
 
     for index_sql in &indexes {
@@ -1617,6 +1620,64 @@ fn migrate_v18_to_v19(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// v19 → v20: keyset-pagination index for reindex page fetches (Helios
+/// numbered this v18→v19).
+///
+/// fetch_resources_page orders by (last_updated, id) within a
+/// (tenant_id, resource_type) — with no covering index every page pays a
+/// sort of the whole type, which turns a 5.7M-row Observation reindex
+/// quadratic (#903).
+fn migrate_v19_to_v20(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_resources_reindex          ON resources(tenant_id, resource_type, last_updated, id)",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create idx_resources_reindex: {e}")))?;
+    Ok(())
+}
+
+/// v20 → v21: rebuild the nine per-family `search_index` indexes as partial
+/// indexes (Helios numbered this v19→v20).
+/// Every index row populates exactly one value-column family for its
+/// parameter type, but each INSERT maintained all fifteen secondary indexes —
+/// NULL columns included, so a token row still paid the date, number,
+/// quantity, string, and uri B-trees. Instrumentation on the bulk-import
+/// benchmark put those inserts at 53% of total import time; with the partial
+/// predicates each row maintains only its own family's structures, measured
+/// at 1.67x end-to-end on the same benchmark with identical row counts.
+///
+/// Search plans are unaffected: every family's query predicates compare its
+/// value column (`value_date >= ?`, `value_token_code = ?`), which implies
+/// the index's `IS NOT NULL` (or OR-of-columns) predicate. `:missing` never
+/// scans value columns for NULL — it resolves from entry presence.
+fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
+    let statements = [
+        "DROP INDEX IF EXISTS idx_search_string",
+        "CREATE INDEX idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_token",
+        "CREATE INDEX idx_search_token ON search_index(tenant_id, resource_type, param_name, value_token_system, value_token_code) WHERE value_token_system IS NOT NULL OR value_token_code IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_date",
+        "CREATE INDEX idx_search_date ON search_index(tenant_id, resource_type, param_name, value_date) WHERE value_date IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_number",
+        "CREATE INDEX idx_search_number ON search_index(tenant_id, resource_type, param_name, value_number) WHERE value_number IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_quantity",
+        "CREATE INDEX idx_search_quantity ON search_index(tenant_id, resource_type, param_name, value_quantity_value, value_quantity_unit) WHERE value_quantity_value IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_reference",
+        "CREATE INDEX idx_search_reference ON search_index(tenant_id, resource_type, param_name, value_reference) WHERE value_reference IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_uri",
+        "CREATE INDEX idx_search_uri ON search_index(tenant_id, resource_type, param_name, value_uri) WHERE value_uri IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_token_display",
+        "CREATE INDEX idx_search_token_display ON search_index(tenant_id, resource_type, param_name, value_token_display) WHERE value_token_display IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_identifier_type",
+        "CREATE INDEX idx_search_identifier_type ON search_index(tenant_id, resource_type, param_name, value_identifier_type_system, value_identifier_type_code) WHERE value_identifier_type_system IS NOT NULL OR value_identifier_type_code IS NOT NULL",
+    ];
+    for sql in &statements {
+        conn.execute(sql, [])
+            .map_err(|e| migration_err(format!("v20 partial index rebuild: {e}")))?;
+    }
+    Ok(())
+}
+
 /// Drop all tables (for testing).
 #[cfg(test)]
 #[allow(dead_code)]
@@ -1847,6 +1908,16 @@ mod tests {
         assert!(applied.contains(OUTBOX_STEP));
         assert!(applied.contains("bulk_provider_submissions"));
         assert!(applied.contains("bulk_manifests_byte_progress"));
+        assert!(applied.contains("resources_reindex_keyset"));
+        assert!(applied.contains("search_index_partial_family_indexes"));
+        let has_reindex: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_resources_reindex'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(has_reindex, 1, "v20 must create idx_resources_reindex");
     }
 
     #[test]

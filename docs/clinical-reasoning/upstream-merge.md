@@ -169,7 +169,7 @@ Real remaining validation gaps (do not “fix” them by restoring the old crate
 | `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`. Do not restore a pure integer `migrate_schema` loop |
 | `src/backends/*/subscription_outbox.rs` | Durable outbox store |
 
-`SCHEMA_VERSION` (19 SQLite / 38 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder.
+`SCHEMA_VERSION` (21 SQLite / 38 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20).
 
 ### `crates/fhirpath`
 
