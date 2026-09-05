@@ -22,59 +22,56 @@ pub enum GuidanceResponseModule {
 }
 
 /// FHIR GuidanceResponse type
-///
+/// 
 /// A guidance response is the formal response to a guidance request, including
 /// any output parameters returned by the evaluation, as well as the description
 /// of any proposed actions to be taken.
-///
+/// 
 /// ## Purpose
 /// The GuidanceResponse resource supports recording the results of decision support interactions, reportability determination for public health, as well as the communication of additional data requirements for subsequent interactions.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [GuidanceResponse](http://hl7.org/fhir/StructureDefinition/GuidanceResponse)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "module",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,request_identifier,identifier,module,status,subject,encounter,occurrence_date_time,location,reason"
-)]
+#[fhir_resource(choice_elements = "module", summary_fields = "id,meta,implicit_rules,modifier_extension,request_identifier,identifier,module,status,subject,encounter,occurrence_date_time,location,reason,indicator")]
 pub struct GuidanceResponse {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -82,7 +79,7 @@ pub struct GuidanceResponse {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -92,22 +89,22 @@ pub struct GuidanceResponse {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -118,27 +115,27 @@ pub struct GuidanceResponse {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -146,27 +143,27 @@ pub struct GuidanceResponse {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -174,41 +171,41 @@ pub struct GuidanceResponse {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -218,11 +215,11 @@ pub struct GuidanceResponse {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -230,54 +227,54 @@ pub struct GuidanceResponse {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The identifier of the request associated with this response, if any
-    ///
+    /// 
     /// The identifier of the request associated with this response. If an identifier
     /// was given as part of the request, it will be reproduced here to enable the
     /// requester to more easily identify the response in a multi-request scenario.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "requestIdentifier")]
     pub request_identifier: Option<Identifier>,
     /// Business identifier for guidance response
-    ///
+    /// 
     /// Business identifiers assigned to this guidance response by the performer
     /// and/or other systems. These identifiers remain constant as the resource is
     /// updated and propagates from server to server.
-    ///
+    /// 
     /// ## Requirements
     /// Allows identification of the guidance response as it is known by various
     /// participating systems and in a way that remains consistent across servers.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note: This is a business identifier, not a resource identifier (see
     /// [discussion](resource.html#identifiers)). It is best practice for the
@@ -286,37 +283,63 @@ pub struct GuidanceResponse {
     /// same identifier can exist - possibly even with different resource types. For
     /// example, multiple Patient and a Person resource instance might share the same
     /// social insurance number.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// What guidance was requested
-    ///
+    /// 
     /// An identifier, CodeableConcept or canonical reference to the guidance that
     /// was requested.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/guidance-module-code-example
     #[fhir_serde(flatten)]
     pub module: Option<GuidanceResponseModule>,
+    /// E.g. Education, Treatment, Assessment, etc
+    /// 
+    /// Descriptive topics related to the guidance. Topics provide a high-level
+    /// categorization of the guidance that can be useful for filtering and
+    /// searching.
+    /// 
+    /// ## Requirements
+    /// Repositories must be able to determine how to categorize the guidance so that
+    /// it can be found by topical searches.
+    /// 
+    /// ## Implementation Notes
+    /// When the guidance response was produced by an artifact that has a topic
+    /// element, the topics from the artifact may be added to the guidance response
+    /// as appropriate.
+    /// 
+    /// ## Cardinality: Optional, Multiple (0..*)
+    /// 
+    /// ## Constraints
+    /// - **ele-1**: All FHIR elements must have a @value or children (error)
+    ///   Expression: `hasValue() or (children().count() > id.count())`
+    /// 
+    /// ## Binding
+    /// - **Strength**: example
+    /// - **Description**: High-level categorization of the definition, used for searching, sorting, and filtering.
+    /// - **ValueSet**: http://hl7.org/fhir/ValueSet/definition-topic
+    pub topic: Option<Vec<CodeableConcept>>,
     /// success | data-requested | data-required | in-progress | failure | entered-in-error
-    ///
+    /// 
     /// The status of the response. If the evaluation is completed successfully, the
     /// status will indicate success. However, in order to complete the evaluation,
     /// the engine may require more information. In this case, the status will be
@@ -325,7 +348,7 @@ pub struct GuidanceResponse {
     /// engine determines that a potentially more accurate response could be provided
     /// if more data was available, the status will be data-requested, and the
     /// response will contain a description of the additional requested information.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element is labeled as a modifier because the status contains codes that
     /// mark the resource as not currently valid. Note that as an event resource, the
@@ -335,113 +358,113 @@ pub struct GuidanceResponse {
     /// produce the guidance (i.e. the output of the rule engine or AI), not the
     /// ability to deliver or display that guidance, nor of the acceptance of that
     /// guidance by the user.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The status of a guidance response.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/guidance-response-status|6.0.0-ballot4
     pub status: Code,
     /// Individual service was done for/to
-    ///
+    /// 
     /// The individual or set of individuals the action is being or was performed on.
-    ///
+    /// 
     /// ## Requirements
     /// Links the guidance response to the Patient context. May also affect access
     /// control.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Option<Reference>,
     /// Encounter the guidance response is part of
-    ///
+    /// 
     /// The Encounter during which this guidance response was created or to which the
     /// creation of this record is tightly associated.
-    ///
+    /// 
     /// ## Requirements
     /// Links the guidance response to the Encounter context. May also affect access
     /// control.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This will typically be the encounter the guidance response was created
     /// during, but some guidance responses may be initiated prior to or after the
     /// official completion of an encounter but still be tied to the context of the
     /// encounter (e.g. pre-admission lab tests).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// When the guidance response was processed
-    ///
+    /// 
     /// Indicates when the guidance response was processed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "occurrenceDateTime")]
     pub occurrence_date_time: Option<DateTime>,
     /// Device returning the guidance
-    ///
+    /// 
     /// Provides a reference to the device that performed the guidance.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub performer: Option<Reference>,
     /// Where guidance response occurred
-    ///
+    /// 
     /// The principal physical location where the guidance response was performed.
-    ///
+    /// 
     /// ## Requirements
     /// Ties the event to where the records are likely kept and provides context
     /// around the event occurrence (e.g. if it occurred inside or outside a
     /// dedicated healthcare setting).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub location: Option<Reference>,
     /// Why guidance is needed
-    ///
+    /// 
     /// Describes the reason for the guidance response in coded or textual form, or
     /// Indicates the reason the request was initiated. This is typically provided as
     /// a parameter to the evaluation and echoed by the service, although for some
     /// use cases, such as subscription- or event-based scenarios, it may provide an
     /// indication of the cause for the response.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Although this reference can be used to point to any resource, it is typically
     /// expected to refer to subject-specific data appropriate to the subject of the
@@ -453,82 +476,114 @@ pub struct GuidanceResponse {
     /// path](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-targetPath.html)
     /// extensions to indicate the specific elements relevant to providing the reason
     /// for the guidance.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reason: Option<Vec<CodeableReference>>,
     /// Additional notes about the response
-    ///
+    /// 
     /// Provides a mechanism to communicate additional information about the
     /// response.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Messages resulting from the evaluation of the artifact or artifacts
-    ///
+    /// 
     /// Messages resulting from the evaluation of the artifact or artifacts. As part
     /// of evaluating the request, the engine may produce informational or warning
     /// messages. These messages will be provided by this element.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note that the element is multiple cardinality to allow for the possibility of
     /// responses from multiple steps in the processing to be provided directly,
     /// rather than having to collapse them into a single OperationOutcome.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "evaluationMessage")]
     pub evaluation_message: Option<Vec<Reference>>,
+    /// What parameters
+    /// 
+    /// The parameters that were provided as input to the operation that provided the
+    /// guidance response. This is typically a reference to a contained Parameters
+    /// resource.
+    /// 
+    /// ## Cardinality: Optional (0..1)
+    /// 
+    /// ## Constraints
+    /// - **ele-1**: All FHIR elements must have a @value or children (error)
+    ///   Expression: `hasValue() or (children().count() > id.count())`
+    #[fhir_serde(rename = "inputParameters")]
+    pub input_parameters: Option<Reference>,
     /// The output parameters of the evaluation, if any
-    ///
+    /// 
     /// The output parameters of the evaluation, if any. Many modules will result in
     /// the return of specific resources such as procedure or communication requests
     /// that are returned as part of the operation result. However, modules may
     /// define specific outputs that would be returned as the result of the
     /// evaluation, and these would be returned in this element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "outputParameters")]
     pub output_parameters: Option<Reference>,
+    /// Urgency/importance of the response
+    /// 
+    /// An indicator of the urgency or importance of the guidance response.
+    /// 
+    /// ## Cardinality: Optional (0..1)
+    /// 
+    /// ## Special Semantics
+    /// - Included in summary
+    /// 
+    /// ## Constraints
+    /// - **ele-1**: All FHIR elements must have a @value or children (error)
+    ///   Expression: `hasValue() or (children().count() > id.count())`
+    /// 
+    /// ## Binding
+    /// - **Strength**: extensible
+    /// - **Description**: An indicator code communicating urgency or importance.
+    /// - **ValueSet**: http://hl7.org/fhir/ValueSet/cdshooks-indicator
+    pub indicator: Option<CodeableConcept>,
     /// Proposed actions, if any
-    ///
+    /// 
     /// The actions, if any, produced by the evaluation of the artifact.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub result: Option<Vec<Reference>>,
     /// Additional required data
-    ///
+    /// 
     /// If the evaluation could not be completed due to lack of information, or
     /// additional information would potentially result in a more accurate response,
     /// this element will a description of the data required in order to proceed with
     /// the evaluation. A subsequent request to the service should include this data.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "dataRequirement")]
     pub data_requirement: Option<Vec<DataRequirement>>,
 }
+

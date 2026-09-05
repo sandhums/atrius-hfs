@@ -38,11 +38,19 @@ cargo build -p helios-fhir-gen --features R4,R4B,R5,R6
 ./target/debug/helios-fhir-gen --all
 ```
 
-This reads HL7 StructureDefinition JSON files for each version and writes:
-- `crates/fhir/src/r4.rs`
-- `crates/fhir/src/r4b.rs`
-- `crates/fhir/src/r5.rs`
-- `crates/fhir/src/r6.rs`
+This reads HL7 StructureDefinition JSON files for each version and writes
+**directories** (this fork), not Helios's flat files:
+
+- `crates/fhir/src/r4/` (`mod.rs`, `primitives/`, `complex_types/`, `resources/`)
+- `crates/fhir/src/r4b/`
+- `crates/fhir/src/r5/`
+- `crates/fhir/src/r6/`
+
+See [fhir-model-regen.md](../../docs/fhir-model-regen.md). After regen:
+
+```bash
+./scripts/diff-fhir-model-signatures.py
+```
 
 > **R6 auto-download:** When `R6` is enabled, the generator automatically downloads the R6 StructureDefinition files from `https://build.fhir.org/` at build time. Internet access is required.
 
@@ -78,7 +86,7 @@ cargo test --features R4,R4B,R5,R6
 1. **Reads StructureDefinition JSON** for each requested FHIR version from the `data/` directory (R4, R4B, R5) or downloaded from `build.fhir.org` (R6)
 2. **Parses the schema** to extract resource types, data types, primitive types, and choice element patterns
 3. **Generates Rust structs** with appropriate field types, option wrapping, and serde attributes
-4. **Writes output files** to `crates/fhir/src/` — one file per FHIR version
+4. **Writes** `crates/fhir/src/r4/` (and `r4b/`, `r5/`, `r6/`) — one **directory** per FHIR version. Helios still writes `r4.rs`.
 5. **Feature flags** in `crates/fhir/Cargo.toml` control which generated files are compiled
 
 ### What is generated vs. hand-coded

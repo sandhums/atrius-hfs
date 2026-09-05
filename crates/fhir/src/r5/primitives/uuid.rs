@@ -7,8 +7,9 @@ use crate::r5::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for Universally Unique Identifiers (UUIDs)
-///
+/// 
 /// uuid type: A UUID, represented as a URI
-///
+/// 
 /// See: [uuid](http://hl7.org/fhir/StructureDefinition/uuid)
 pub type Uuid = Element<std::string::String, Extension>;
+

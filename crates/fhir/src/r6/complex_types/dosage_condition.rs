@@ -178,59 +178,56 @@ pub enum DosageConditionValue {
 }
 
 /// FHIR DosageCondition type
-///
+/// 
 /// DosageCondition Type: DosageCondition expresses a time or time period as
 /// relative to the time of an event defined in data types other than dateTime.
-///
+/// 
 /// ## Type: Complex-type type
 /// Base type: http://hl7.org/fhir/StructureDefinition/BackboneType
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [DosageCondition](http://hl7.org/fhir/StructureDefinition/DosageCondition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "value",
-    summary_fields = "modifier_extension,code,details,operation,value,text"
-)]
+#[fhir_resource(choice_elements = "value", summary_fields = "modifier_extension,code,details,operation,value,text")]
 pub struct DosageCondition {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -240,11 +237,11 @@ pub struct DosageCondition {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -252,109 +249,110 @@ pub struct DosageCondition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The specific event occurrence or resource context used as a base point (reference point) in time
-    ///
+    /// 
     /// The specific event occurrence or resource context used as a base point
     /// (reference point) in time. This establishes the context in which the 'path'
     /// is evaluated.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The specific event occurrence or resource context used as a base point (reference point) in time.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/dosage-condition-code
     pub code: CodeableConcept,
     /// Additional details about the event - depends on the code
-    ///
+    /// 
     /// Additional details about the event - depends on the code.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Additional details about the event - depends on the code.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/dosage-condition-details
     pub details: Option<CodeableConcept>,
     /// eq | ne | in | nin | gt | lt | ge | le | sa | eb | ap
-    ///
+    /// 
     /// How the value is tested.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: How the criteria value is tested.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/comparison-operation|6.0.0-ballot4
     pub operation: Option<Code>,
     /// The value for this critera
-    ///
+    /// 
     /// The value for this critera.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub value: Option<DosageConditionValue>,
     /// Free-text description
-    ///
+    /// 
     /// Free-text (human-readable) description.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub text: Option<String>,
 }
+

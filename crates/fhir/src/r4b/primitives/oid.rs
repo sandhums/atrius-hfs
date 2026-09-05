@@ -7,8 +7,9 @@ use crate::r4b::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for Object Identifiers (OIDs)
-///
+/// 
 /// Base StructureDefinition for oid type: An OID represented as a URI
-///
+/// 
 /// See: [oid](http://hl7.org/fhir/StructureDefinition/oid)
 pub type Oid = Element<std::string::String, Extension>;
+

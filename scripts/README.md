@@ -94,3 +94,12 @@ Paths in `deploy/env/hfs-clinical.env` are relative to the repo root
 
 - `lib/common.sh` — env sourcing + release-binary checks for `run-*.sh`
 - `cds_manifest_common.py` — helpers for CDS catalog Python tools
+
+## FHIR model regen
+
+This fork emits `crates/fhir/src/r4/` (a directory), not Helios's `r4.rs`.
+Runbook: `docs/fhir-model-regen.md`.
+
+| Script | Role |
+|--------|------|
+| `diff-fhir-model-signatures.py` | Compare struct/enum shape to Helios flat files |

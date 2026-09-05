@@ -19,60 +19,57 @@ pub enum ImplementationGuideVersionAlgorithm {
 }
 
 /// FHIR ImplementationGuide type
-///
+/// 
 /// A set of rules of how a particular interoperability or standards problem is
 /// solved - typically through the use of FHIR resources. This resource is used
 /// to gather all the parts of an implementation guide into a logical whole and
 /// to publish a computable definition of all the parts.
-///
+/// 
 /// ## Purpose
 /// An implementation guide is able to define default profiles that must apply to any use of a resource, so validation services may need to take one or more implementation guide resources when validating.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [ImplementationGuide](http://hl7.org/fhir/StructureDefinition/ImplementationGuide)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "versionAlgorithm",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction,package_id,license,fhir_version,depends_on,global"
-)]
+#[fhir_resource(choice_elements = "versionAlgorithm", summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction,package_id,license,fhir_version,depends_on,global")]
 pub struct ImplementationGuide {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -80,7 +77,7 @@ pub struct ImplementationGuide {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -90,22 +87,22 @@ pub struct ImplementationGuide {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -116,27 +113,27 @@ pub struct ImplementationGuide {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -144,27 +141,27 @@ pub struct ImplementationGuide {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -172,41 +169,41 @@ pub struct ImplementationGuide {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -216,11 +213,11 @@ pub struct ImplementationGuide {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -228,30 +225,30 @@ pub struct ImplementationGuide {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this implementation guide, represented as a URI (globally unique)
-    ///
+    /// 
     /// An absolute URI that is used to identify this implementation guide when it is
     /// referenced in a specification, model, design or an instance; also called its
     /// canonical identifier. This SHOULD be globally unique and SHOULD be a literal
@@ -259,188 +256,188 @@ pub struct ImplementationGuide {
     /// (or will be) published. This URL can be the target of a canonical reference.
     /// It SHALL remain the same when the implementation guide is stored on different
     /// servers.
-    ///
+    /// 
     /// ## Requirements
     /// Allows the implementation guide to be referenced by a single globally unique
     /// identifier. This is required to allow hosting Implementation Guides on
     /// multiple different servers, and to allow for the editorial process.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    ///
+    /// 
     /// The determination of when to create a new version of a resource (same url,
     /// new version) vs. defining a new artifact is up to the author. Considerations
     /// for making this decision are found in [Technical and Business
     /// Versions](resource.html#versions).
-    ///
+    /// 
     /// In some cases, the resource can no longer be found at the stated url, but the
     /// url itself cannot change. Implementations can use the
     /// [meta.source](resource.html#meta) element to indicate where the current
     /// master source of the resource can be found.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **cnl-1**: URL should not contain | or # - these characters make processing canonical references problematic (warning)
     ///   Expression: `exists() implies matches('^[^|# ]+$')`
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// url, authoritative-url, destination, identity
     pub url: Uri,
     /// Additional identifier for the implementation guide (business identifier)
-    ///
+    /// 
     /// A formal identifier that is used to identify this implementation guide when
     /// it is represented in other formats, or referenced in a specification, model,
     /// design or an instance.
-    ///
+    /// 
     /// ## Requirements
     /// Allows externally provided and/or usable business identifiers to be easily
     /// associated with the module.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Business version of the implementation guide
-    ///
+    /// 
     /// The identifier that is used to identify this version of the implementation
     /// guide when it is referenced in a specification, model, design or instance.
     /// This is an arbitrary value managed by the implementation guide author and is
     /// not expected to be globally unique. For example, it might be a timestamp
     /// (e.g. yyyymmdd) if a managed version is not available. There is also no
     /// expectation that versions can be placed in a lexicographical sequence.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There may be different implementation guide instances that have the same
     /// identifier but different versions. The version can be appended to the url in
     /// a reference to allow a reference to a particular business version of the
     /// implementation guide with the format [url]|[version]. The version SHOULD NOT
     /// contain a '#' - see [Business Version](resource.html#bv-format).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// How to compare versions
-    ///
+    /// 
     /// Indicates the mechanism used to compare versions to determine which is more
     /// current.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If set as a string, this is a FHIRPath expression that has two additional
     /// context variables passed in - %version1 and %version2 and will return a
     /// negative number if version1 is newer, a positive number if version2 and a 0
     /// if the version ordering can't be successfully be determined.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/version-algorithm
     #[fhir_serde(flatten)]
     pub version_algorithm: Option<ImplementationGuideVersionAlgorithm>,
     /// Name for this implementation guide (computer friendly)
-    ///
+    /// 
     /// A natural language name identifying the implementation guide. This name
     /// should be usable as an identifier for the module by machine processing
     /// applications such as code generation.
-    ///
+    /// 
     /// ## Requirements
     /// Support human navigation and code generation.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. The name should be a simple
     /// alphanumeric type name to ensure that it is machine-processing friendly.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: cnl-0
     pub name: String,
     /// Name for this implementation guide (human friendly)
-    ///
+    /// 
     /// A short, descriptive, user-friendly title for the implementation guide.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This name does not need to be machine-processing friendly and may contain
     /// punctuation, white-space, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// draft | active | retired | unknown
-    ///
+    /// 
     /// The status of this implementation guide. Enables tracking the life-cycle of
     /// the content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Allows filtering of implementation guides that are appropriate for use versus
     /// not.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This is labeled as "Is Modifier" because applications should not use a retired {{title}} without due consideration
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4
     pub status: Code,
     /// For testing only - never for real usage
-    ///
+    /// 
     /// A Boolean value to indicate that this implementation guide is authored for
     /// testing purposes (or education/evaluation/marketing) and no version of this
     /// resource will ever be intended for genuine usage.
-    ///
+    /// 
     /// ## Requirements
     /// Enables experimental content to be developed following the same lifecycle
     /// that would be used for a production-level implementation guide.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Allows filtering of implementation guides that are appropriate for use versus
     /// not. Experimental resources might include example instances in implementation
@@ -449,27 +446,27 @@ pub struct ImplementationGuide {
     /// of the resource. (If experimental changes, then it is being misused or a
     /// resource that was never intended for real-world use has unexpectedly changed
     /// its purpose.).
-    ///
+    /// 
     /// Experimental resources are not expected to be stable and may well have
     /// breaking changes without a corresponding change to the 'version' element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If absent, this resource is treated as though it is not experimental.
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub experimental: Option<Boolean>,
     /// Date last changed
-    ///
+    /// 
     /// The date (and optionally time) when the implementation guide was last
     /// significantly changed. The date must change when the business version changes
     /// and it must change if the status code changes. In addition, it should change
     /// when the substantive content of the implementation guide changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The date is often not tracked until the resource is published, but may be
     /// present on draft content. Note that this is not the same as the resource
@@ -477,31 +474,31 @@ pub struct ImplementationGuide {
     /// the implementation guide. Additional specific dates may be added as
     /// extensions or be found by consulting Provenances associated with past
     /// versions of the resource.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Revision Date
     pub date: Option<DateTime>,
     /// Name of the publisher/steward (organization or individual)
-    ///
+    /// 
     /// The name of the organization or individual responsible for the release and
     /// ongoing maintenance of the implementation guide.
-    ///
+    /// 
     /// ## Requirements
     /// Helps establish the "authority/credibility" of the implementation guide. May
     /// also allow for contact.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Usually an organization but may be an individual. The publisher (or steward)
     /// of the implementation guide is the organization or individual primarily
@@ -510,41 +507,41 @@ pub struct ImplementationGuide {
     /// initially authored the content. The publisher is the primary point of contact
     /// for questions or issues with the implementation guide. This item SHOULD be
     /// populated unless the information is available from context.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    ///
+    /// 
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May be a web site, an email address, a telephone number, etc.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub contact: Option<Vec<ContactDetail>>,
     /// Natural language description of the implementation guide
-    ///
+    /// 
     /// A free text natural language description of the implementation guide from a
     /// consumer's perspective.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This description can be used to capture details such as why the
     /// implementation guide was built, comments about misuse, instructions for
@@ -554,174 +551,174 @@ pub struct ImplementationGuide {
     /// populated unless the information is available from context (e.g. the language
     /// of the implementation guide is presumed to be the predominant language in the
     /// place the implementation guide was created).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// The context that the content is intended to support
-    ///
+    /// 
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate
     /// implementation guide instances.
-    ///
+    /// 
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// any of the contexts apply.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Jurisdiction of the authority that maintains the implementation guide (if applicable)
-    ///
+    /// 
     /// A legal or geographic region in which the authority that maintains the
     /// resource is operating. In general, the jurisdiction is also found in the
     /// useContext. The useContext may reference additional jurisdictions because the
     /// defining jurisdiction does not necessarily limit the jurisdictions of use.
-    ///
+    /// 
     /// ## Implementation Notes
     /// It may be possible for the implementation guide to be used in jurisdictions
     /// other than those for which it was originally designed or intended.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Countries and regions within which this artifact is targeted for use.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// Why this implementation guide is defined
-    ///
+    /// 
     /// Explanation of why this implementation guide is needed and why it has been
     /// designed as it has.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element does not describe the usage of the implementation guide.
     /// Instead, it provides traceability of ''why'' the resource is either needed or
     /// ''why'' it is defined as it is. This may be used to point to source materials
     /// or specifications that drove the structure of this implementation guide.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub purpose: Option<Markdown>,
     /// Notice about intellectual property ownership, can include restrictions on use
-    ///
+    /// 
     /// A copyright statement relating to the implementation guide and/or its
     /// contents. Copyright statements are notices of intellectual property ownership
     /// and can include restrictions on the use and publishing of the implementation
     /// guide.
-    ///
+    /// 
     /// ## Requirements
     /// Consumers must be able to determine any legal restrictions on the use of the
     /// implementation guide and/or its content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// ...
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// License, Restrictions
     pub copyright: Option<Markdown>,
     /// Copyright holder and year(s)
-    ///
+    /// 
     /// A short string (<50 characters), suitable for inclusion in a page footer that
     /// identifies the copyright holder, effective period, and optionally whether
     /// rights are restricted. (e.g. 'All rights reserved', 'Some rights reserved').
-    ///
+    /// 
     /// ## Requirements
     /// Defines the content expected to be rendered in all representations of the
     /// artifact.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The copyright symbol and the '(c)' textual representation SHOULD NOT be
     /// included in this string. It will be added by software when rendering the
     /// notation. Full details about licensing, restrictions, warrantees, etc. goes
     /// in the more general 'copyright' element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "copyrightLabel")]
     pub copyright_label: Option<String>,
     /// NPM Package name for IG
-    ///
+    /// 
     /// The NPM package name for this Implementation Guide, used in the NPM package
     /// distribution, which is the primary mechanism by which FHIR based tooling
     /// manages IG dependencies. This value must be globally unique, and should be
     /// assigned with care.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Many (if not all) IG publishing tools will require that this element be
     /// present. For implementation guides published through HL7 or the FHIR
     /// foundation, the FHIR product director assigns package IDs.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "packageId")]
     pub package_id: Id,
     /// SPDX license code for this IG (or not-open-source)
-    ///
+    /// 
     /// The license that applies to this Implementation Guide, using an SPDX license
     /// code, or 'not-open-source'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The license that applies to an Implementation Guide (using an SPDX license Identifiers, or 'not-open-source'). The binding is required but new SPDX license Identifiers are allowed to be used (https://spdx.org/licenses/).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/spdx-license|6.0.0-ballot4
     pub license: Option<Code>,
     /// FHIR Version(s) this Implementation Guide targets
-    ///
+    /// 
     /// The version(s) of the FHIR specification that this ImplementationGuide
     /// targets - e.g. describes how to use. The value of this element is the formal
     /// version of the specification, without the revision number, e.g.
     /// [publication].[major].[minor], which is 4.6.0. for this version.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Most implementation guides target a single version - e.g. they describe how
     /// to use a particular version, and the profiles and examples etc. are valid for
@@ -730,86 +727,87 @@ pub struct ImplementationGuide {
     /// other. Typically, the requirement to support multiple versions arises as
     /// implementation matures and different implementation communities are stuck at
     /// different versions by regulation or market dynamics.
-    ///
+    /// 
     /// ## Cardinality: Required, Multiple (1..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: All published FHIR Versions.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot4
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-2
     #[fhir_serde(rename = "fhirVersion")]
     pub fhir_version: Option<Vec<Code>>,
     /// Another Implementation guide this depends on
-    ///
+    /// 
     /// Another implementation guide that this implementation depends on. Typically,
     /// an implementation guide uses value sets, profiles etc.defined in other
     /// implementation guides.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "dependsOn")]
     pub depends_on: Option<Vec<ImplementationGuideDependsOn>>,
-    /// Profiles that apply globally
-    ///
+    /// Set of profiles that apply globally
+    /// 
     /// A set of profiles that all resources covered by this implementation guide
-    /// must conform to.
-    ///
+    /// must conform to. If there is more than one profile for a type, then resources
+    /// SHALL conform to one of them.
+    /// 
     /// ## Implementation Notes
     /// See [Default Profiles](implementationguide.html#default) for a discussion of
     /// which resources are 'covered' by an implementation guide.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub global: Option<Vec<ImplementationGuideGlobal>>,
     /// Information needed to build the IG
-    ///
+    /// 
     /// The information needed by an IG publisher tool to publish the whole
     /// implementation guide.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Principally, this consists of information abuot source resource and file
     /// locations, and build parameters and templates.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ig-1**: If a resource has a groupingId, it must refer to a grouping defined in the Implementation Guide (error)
     ///   Expression: `resource.groupingId.all(%context.grouping.id contains $this)`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-2
     pub definition: Option<ImplementationGuideDefinition>,
     /// Information about an assembled IG
-    ///
+    /// 
     /// Information about an assembled implementation guide, created by the
     /// publication tooling.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -817,62 +815,62 @@ pub struct ImplementationGuide {
 }
 
 /// Information needed to build the IG
-///
+/// 
 /// The information needed by an IG publisher tool to publish the whole
 /// implementation guide.
-///
+/// 
 /// ## Implementation Notes
 /// Principally, this consists of information abuot source resource and file
 /// locations, and build parameters and templates.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 /// - **ig-1**: If a resource has a groupingId, it must refer to a grouping defined in the Implementation Guide (error)
 ///   Expression: `resource.groupingId.all(%context.grouping.id contains $this)`
-///
+/// 
 /// ## Conditions
 /// Used when: ig-2
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDefinition {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -882,11 +880,11 @@ pub struct ImplementationGuideDefinition {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -894,99 +892,99 @@ pub struct ImplementationGuideDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Grouping used to present related resources in the IG
-    ///
+    /// 
     /// A logical group of resources. Logical groups can be used when building pages.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Groupings are arbitrary sub-divisions of content. Typically, they are used to
     /// help build Table of Contents automatically.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-1
     pub grouping: Option<Vec<ImplementationGuideDefinitionGrouping>>,
     /// Resource in the implementation guide
-    ///
+    /// 
     /// A resource that is part of the implementation guide. Conformance resources
     /// (value set, structure definition, capability statements etc.) are obvious
     /// candidates for inclusion, but any kind of resource can be included as an
     /// example resource.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-2, ig-1
     pub resource: Option<Vec<ImplementationGuideDefinitionResource>>,
     /// Page/Section in the Guide
-    ///
+    /// 
     /// A page / section in the implementation guide. The root page is the
     /// implementation guide home page.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Pages automatically become sections if they have sub-pages. By convention,
     /// the home page is called index.html.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub page: Option<ImplementationGuideDefinitionPage>,
     /// Defines how IG is built by tools
-    ///
+    /// 
     /// A set of parameters that defines how the implementation guide is built. The
     /// parameters are defined by the relevant tools that build the implementation
     /// guides.
-    ///
+    /// 
     /// ## Implementation Notes
     /// see
     /// [confluence](https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters)
     /// for the parameters defined by the HL7 IG publisher.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub parameter: Option<Vec<ImplementationGuideDefinitionParameter>>,
     /// A template for building resources
-    ///
+    /// 
     /// A template for building resources.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -994,59 +992,59 @@ pub struct ImplementationGuideDefinition {
 }
 
 /// Grouping used to present related resources in the IG
-///
+/// 
 /// A logical group of resources. Logical groups can be used when building pages.
-///
+/// 
 /// ## Implementation Notes
 /// Groupings are arbitrary sub-divisions of content. Typically, they are used to
 /// help build Table of Contents automatically.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Conditions
 /// Used when: ig-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDefinitionGrouping {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1056,11 +1054,11 @@ pub struct ImplementationGuideDefinitionGrouping {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1068,45 +1066,45 @@ pub struct ImplementationGuideDefinitionGrouping {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Descriptive name for the package
-    ///
+    /// 
     /// The human-readable title to display for the package of resources when
     /// rendering the implementation guide.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: String,
     /// Human readable text describing the package
-    ///
+    /// 
     /// Human readable text describing the package.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1129,16 +1127,16 @@ pub enum ImplementationGuideDefinitionPageSource {
 }
 
 /// Page/Section in the Guide
-///
+/// 
 /// A page / section in the implementation guide. The root page is the
 /// implementation guide home page.
-///
+/// 
 /// ## Implementation Notes
 /// Pages automatically become sections if they have sub-pages. By convention,
 /// the home page is called index.html.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1146,41 +1144,41 @@ pub enum ImplementationGuideDefinitionPageSource {
 #[fhir_resource(choice_elements = "source")]
 pub struct ImplementationGuideDefinitionPage {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1190,11 +1188,11 @@ pub struct ImplementationGuideDefinitionPage {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1202,98 +1200,98 @@ pub struct ImplementationGuideDefinitionPage {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Source for page
-    ///
+    /// 
     /// Indicates the URL or the actual content to provide for the page.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If absent and the page isn't a generated page, this may be inferred from the
     /// page name by checking input locations. String is used for XHTML content -
     /// sent as an escaped string. FHIR tooling can't support 'direct' XHTML anywhere
     /// other than in narrative.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub source: Option<ImplementationGuideDefinitionPageSource>,
     /// Name of the page when published
-    ///
+    /// 
     /// The url by which the page should be known when published.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This SHALL be a local reference, expressed with respect to the root of the IG
     /// output folder. No suffix is required. If no suffix is specified, .html will
     /// be appended.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Url,
     /// Short title shown for navigational assistance
-    ///
+    /// 
     /// A short title used to represent this page in navigational structures such as
     /// table of contents, bread crumbs, etc.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: String,
     /// html | markdown | xml | generated
-    ///
+    /// 
     /// A code that indicates how the page is generated. If an implementation guide
     /// adopts a future or alternate generation capability not represented directly
     /// by this value set, use 'generated' and an extension to describe the specific
     /// mechanism used to create the page.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A code that indicates how the page is generated.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/guide-page-generation|6.0.0-ballot4
     pub generation: Code,
     /// Nested Pages / Sections
-    ///
+    /// 
     /// Nested Pages/Sections under this page.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The implementation guide breadcrumbs may be generated from this structure.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1301,59 +1299,59 @@ pub struct ImplementationGuideDefinitionPage {
 }
 
 /// Defines how IG is built by tools
-///
+/// 
 /// A set of parameters that defines how the implementation guide is built. The
 /// parameters are defined by the relevant tools that build the implementation
 /// guides.
-///
+/// 
 /// ## Implementation Notes
 /// see
 /// [confluence](https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters)
 /// for the parameters defined by the HL7 IG publisher.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDefinitionParameter {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1363,11 +1361,11 @@ pub struct ImplementationGuideDefinitionParameter {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1375,48 +1373,48 @@ pub struct ImplementationGuideDefinitionParameter {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Code that identifies parameter
-    ///
+    /// 
     /// A tool-specific code that defines the parameter.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/guide-parameter-code
     pub code: Coding,
     /// Value for named type
-    ///
+    /// 
     /// Value for named type.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1424,58 +1422,58 @@ pub struct ImplementationGuideDefinitionParameter {
 }
 
 /// Resource in the implementation guide
-///
+/// 
 /// A resource that is part of the implementation guide. Conformance resources
 /// (value set, structure definition, capability statements etc.) are obvious
 /// candidates for inclusion, but any kind of resource can be included as an
 /// example resource.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Conditions
 /// Used when: ig-2, ig-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDefinitionResource {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1485,11 +1483,11 @@ pub struct ImplementationGuideDefinitionResource {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1497,51 +1495,51 @@ pub struct ImplementationGuideDefinitionResource {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Location of the resource
-    ///
+    /// 
     /// Where this resource is found.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Usually this is a relative URL that locates the resource within the
     /// implementation guide. If you authoring an implementation guide, and will
     /// publish it using the FHIR publication tooling, use a URI that may point to a
     /// resource, or to one of various alternative representations (e.g.
     /// spreadsheet). The tooling will convert this when it publishes it.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reference: Reference,
     /// Versions this applies to (if different to IG)
-    ///
+    /// 
     /// Indicates the FHIR Version(s) this artifact is intended to apply to. If no
     /// versions are specified, the resource is assumed to apply to all the versions
     /// stated in ImplementationGuide.fhirVersion.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The resource SHALL be valid against all the versions it is specified to apply
     /// to. If the resource referred to is a StructureDefinition, the fhirVersion
@@ -1551,87 +1549,87 @@ pub struct ImplementationGuideDefinitionResource {
     /// [StructureDefinition Applicable
     /// Version](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-applicable-version.html)
     /// extension.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: All published FHIR Versions.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/FHIR-version|6.0.0-ballot4
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-2
     #[fhir_serde(rename = "fhirVersion")]
     pub fhir_version: Option<Vec<Code>>,
     /// Human readable name for the resource
-    ///
+    /// 
     /// A human assigned name for the resource. All resources SHOULD have a name, but
     /// the name may be extracted from the resource (e.g. ValueSet.name).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Reason why included in guide
-    ///
+    /// 
     /// A description of the reason that a resource has been included in the
     /// implementation guide.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is mostly used with examples to explain why it is present (though they
     /// can have extensive comments in the examples).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Is this an example
-    ///
+    /// 
     /// If true, indicates the resource is an example instance.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "isExample")]
     pub is_example: Option<Boolean>,
     /// Profile(s) this resource is valid against
-    ///
+    /// 
     /// If present, indicates profile(s) the instance is valid against.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This can be used for both example and non-example resources to indicate
     /// profiles they are expected to be valid against. E.g. a non-example ValueSet
     /// might be declared to be a valid 'ShareableValueSet'
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub profile: Option<Vec<Canonical>>,
     /// Grouping this is part of
-    ///
+    /// 
     /// Reference to the id of the grouping this resource appears in.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This must correspond to a group.id element within this implementation guide.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ig-1
     #[fhir_serde(rename = "groupingId")]
@@ -1639,52 +1637,52 @@ pub struct ImplementationGuideDefinitionResource {
 }
 
 /// A template for building resources
-///
+/// 
 /// A template for building resources.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDefinitionTemplate {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1694,11 +1692,11 @@ pub struct ImplementationGuideDefinitionTemplate {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1706,54 +1704,54 @@ pub struct ImplementationGuideDefinitionTemplate {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of template specified
-    ///
+    /// 
     /// Type of template specified.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub code: Code,
     /// The source location for the template
-    ///
+    /// 
     /// The source location for the template.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub source: String,
     /// The scope in which the template applies
-    ///
+    /// 
     /// The scope in which the template applies.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1761,57 +1759,57 @@ pub struct ImplementationGuideDefinitionTemplate {
 }
 
 /// Another Implementation guide this depends on
-///
+/// 
 /// Another implementation guide that this implementation depends on. Typically,
 /// an implementation guide uses value sets, profiles etc.defined in other
 /// implementation guides.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideDependsOn {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1821,11 +1819,11 @@ pub struct ImplementationGuideDependsOn {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1833,149 +1831,150 @@ pub struct ImplementationGuideDependsOn {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Identity of the IG that this depends on
-    ///
+    /// 
     /// A canonical reference to the Implementation guide for the dependency.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Usually, A canonical reference to the implementation guide is the same as the
     /// master location at which the implementation guide is published.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub uri: Canonical,
     /// NPM Package name for IG this depends on
-    ///
+    /// 
     /// The NPM package name for the Implementation Guide that this IG depends on.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "packageId")]
     pub package_id: Option<Id>,
     /// Version of the IG
-    ///
+    /// 
     /// The version of the IG that is depended on, when the correct version is
     /// required to understand the IG correctly.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This follows the syntax of the NPM packaging version field - see
     /// [[reference]].
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Why dependency exists
-    ///
+    /// 
     /// A description explaining the nature of the dependency on the listed IG.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This doesn't need to enumerate every resource used, but should give some
     /// sense of why the dependency exists. It will be used in the rendered list of
     /// dependencies
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reason: Option<Markdown>,
 }
 
-/// Profiles that apply globally
-///
+/// Set of profiles that apply globally
+/// 
 /// A set of profiles that all resources covered by this implementation guide
-/// must conform to.
-///
+/// must conform to. If there is more than one profile for a type, then resources
+/// SHALL conform to one of them.
+/// 
 /// ## Implementation Notes
 /// See [Default Profiles](implementationguide.html#default) for a discussion of
 /// which resources are 'covered' by an implementation guide.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideGlobal {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1985,11 +1984,11 @@ pub struct ImplementationGuideGlobal {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1997,66 +1996,67 @@ pub struct ImplementationGuideGlobal {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type this profile applies to
-    ///
-    /// The type of resource that all instances must conform to. This must be a
-    /// resource, or a type with a [Structure Type Characterstics (Constraint
+    /// 
+    /// The type of resource for the profile that instances must conform to. This
+    /// must be a resource, or a type with a [Structure Type Characterstics
+    /// (Constraint
     /// Control)](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-structuredefinition-type-characteristics.html)
     /// of [can-be-target (Can Be
     /// Target)](https://build.fhir.org/ig/HL7/fhir-extensions/CodeSystem-type-characteristics-code.html#type-characteristics-code-can-be-target).
-    ///
+    /// 
     /// ## Implementation Notes
     /// The type must match that of the profile that is referred to but is made
     /// explicit here as a denormalization so that a system processing the
     /// implementation guide resource knows which resources the profile applies to
     /// even if the profile itself is not available.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Either a resource or a data type, including logical model types.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/version-independent-resource-types
     #[fhir_serde(rename = "type")]
     pub r#type: Uri,
-    /// Profile that all resources must conform to
-    ///
-    /// A reference to the profile that all instances must conform to.
-    ///
+    /// A profile that all resources must conform to
+    /// 
+    /// A reference to the profile that instances must conform to.
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2064,53 +2064,53 @@ pub struct ImplementationGuideGlobal {
 }
 
 /// Information about an assembled IG
-///
+/// 
 /// Information about an assembled implementation guide, created by the
 /// publication tooling.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideManifest {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2120,11 +2120,11 @@ pub struct ImplementationGuideManifest {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2132,98 +2132,98 @@ pub struct ImplementationGuideManifest {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Location of rendered implementation guide
-    ///
+    /// 
     /// A pointer to official web page, PDF or other rendering of the implementation
     /// guide.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub rendering: Option<Url>,
     /// Resource in the implementation guide
-    ///
+    /// 
     /// A resource that is part of the implementation guide. Conformance resources
     /// (value set, structure definition, capability statements etc.) are obvious
     /// candidates for inclusion, but any kind of resource can be included as an
     /// example resource.
-    ///
+    /// 
     /// ## Cardinality: Required, Multiple (1..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub resource: Option<Vec<ImplementationGuideManifestResource>>,
     /// HTML page within the parent IG
-    ///
+    /// 
     /// Information about a page within the IG.
-    ///
+    /// 
     /// ## Requirements
     /// Allows validation of hyperlinks from a derived IG to this IG without a local
     /// copy of the IG.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub page: Option<Vec<ImplementationGuideManifestPage>>,
     /// Image within the IG
-    ///
+    /// 
     /// Indicates a relative path to an image that exists within the IG.
-    ///
+    /// 
     /// ## Requirements
     /// Allows validation of image links from a derived IG to this IG without a local
     /// copy of the IG.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub image: Option<Vec<String>>,
     /// Additional linkable file in IG
-    ///
+    /// 
     /// Indicates the relative path of an additional non-page, non-image file that is
     /// part of the IG - e.g. zip, jar and similar files that could be the target of
     /// a hyperlink in a derived IG.
-    ///
+    /// 
     /// ## Requirements
     /// Allows validation of links from a derived IG to this IG without a local copy
     /// of the IG.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2231,56 +2231,56 @@ pub struct ImplementationGuideManifest {
 }
 
 /// HTML page within the parent IG
-///
+/// 
 /// Information about a page within the IG.
-///
+/// 
 /// ## Requirements
 /// Allows validation of hyperlinks from a derived IG to this IG without a local
 /// copy of the IG.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideManifestPage {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2290,11 +2290,11 @@ pub struct ImplementationGuideManifestPage {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2302,68 +2302,68 @@ pub struct ImplementationGuideManifestPage {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// HTML page name
-    ///
+    /// 
     /// Relative path to the page.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Appending 'rendering' + "/" + this should resolve to the page.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: String,
     /// Title of the page, for references
-    ///
+    /// 
     /// Label for the page intended for human display.
-    ///
+    /// 
     /// ## Requirements
     /// Allows generation of labels for markdown-generated hyperlinks.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// Anchor available on the page
-    ///
+    /// 
     /// The name of an anchor available on the page.
-    ///
+    /// 
     /// ## Requirements
     /// Allows validation of hyperlinks from a derived IG to this IG without a local
     /// copy of the IG.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Appending 'rendering' + "/" + page.name + "#" + page.anchor should resolve to
     /// the anchor.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2371,58 +2371,58 @@ pub struct ImplementationGuideManifestPage {
 }
 
 /// Resource in the implementation guide
-///
+/// 
 /// A resource that is part of the implementation guide. Conformance resources
 /// (value set, structure definition, capability statements etc.) are obvious
 /// candidates for inclusion, but any kind of resource can be included as an
 /// example resource.
-///
+/// 
 /// ## Cardinality: Required, Multiple (1..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ImplementationGuideManifestResource {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2432,11 +2432,11 @@ pub struct ImplementationGuideManifestResource {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2444,89 +2444,90 @@ pub struct ImplementationGuideManifestResource {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Location of the resource
-    ///
+    /// 
     /// Where this resource is found.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Usually this is a relative URL that locates the resource within the
     /// implementation guide. If you authoring an implementation guide, and will
     /// publish it using the FHIR publication tooling, use a URI that may point to a
     /// resource, or to one of various alternative representations (e.g.
     /// spreadsheet). The tooling will convert this when it publishes it.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reference: Reference,
     /// Is this an example
-    ///
+    /// 
     /// If true, indicates the resource is an example instance.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "isExample")]
     pub is_example: Option<Boolean>,
     /// Profile(s) this is an example of
-    ///
+    /// 
     /// If present, indicates profile(s) the instance is valid against.
-    ///
+    /// 
     /// ## Implementation Notes
-    /// Examples:
-    ///
-    /// * StructureDefinition -> Any
-    /// * ValueSet -> expansion
-    /// * OperationDefinition -> Parameters
+    /// Examples: 
+    /// 
+    /// * StructureDefinition -> Any 
+    /// * ValueSet -> expansion 
+    /// * OperationDefinition -> Parameters 
     /// * Questionnaire -> QuestionnaireResponse.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub profile: Option<Vec<Canonical>>,
     /// Relative path for page in IG
-    ///
+    /// 
     /// The relative path for primary page for this resource within the IG.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Appending 'rendering' + "/" + this should resolve to the resource page.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "relativePath")]
     pub relative_path: Option<Url>,
 }
+

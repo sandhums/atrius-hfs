@@ -7,8 +7,9 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for XHTML-formatted text with limited subset
-///
+/// 
 /// xhtml Type definition
-///
+/// 
 /// See: [xhtml](http://hl7.org/fhir/StructureDefinition/xhtml)
 pub type Xhtml = Element<std::string::String, Extension>;
+

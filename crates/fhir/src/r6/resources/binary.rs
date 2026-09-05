@@ -7,56 +7,56 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR Binary type
-///
+/// 
 /// A resource that represents the data of a single raw artifact as digital
 /// content accessible in its native format. A Binary resource can contain any
 /// content, whether text, image, pdf, zip archive, etc.
-///
+/// 
 /// ## Purpose
 /// There are situations where it is useful or required to handle pure binary content using the same framework as other resources.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/Resource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [Binary](http://hl7.org/fhir/StructureDefinition/Binary)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(summary_fields = "id,meta,implicit_rules,content_type,security_context")]
 pub struct Binary {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -64,7 +64,7 @@ pub struct Binary {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -74,22 +74,22 @@ pub struct Binary {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -100,31 +100,31 @@ pub struct Binary {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// MimeType of the binary content
-    ///
+    /// 
     /// MimeType of the binary content represented as a standard MimeType (BCP 13).
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The mime type of an attachment. Any valid mime type is allowed.
@@ -132,7 +132,7 @@ pub struct Binary {
     #[fhir_serde(rename = "contentType")]
     pub content_type: Code,
     /// Identifies another resource to use as proxy when enforcing access control
-    ///
+    /// 
     /// This element identifies another resource that can be used as a proxy of the
     /// security sensitivity to use when deciding and enforcing access control rules
     /// for the Binary resource. Given that the Binary resource contains very few
@@ -143,7 +143,7 @@ pub struct Binary {
     /// as a security proxy. E.g. to identify that the binary resource relates to a
     /// patient, and access should only be granted to applications that have access
     /// to the patient.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Very often, a server will also know of a resource that references the binary,
     /// and can automatically apply the appropriate access rules based on that
@@ -152,30 +152,31 @@ pub struct Binary {
     /// linking resource, the binary is referred to from multiple different
     /// resources, and/or the binary is content such as an application logo that has
     /// less protection than any of the resources that reference it.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "securityContext")]
     pub security_context: Option<Reference>,
     /// The actual content
-    ///
+    /// 
     /// The actual content, base64 encoded.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If the content type is itself base64 encoding, then this will be base64
     /// encoded twice - what is created by un-base64ing the content must be the
     /// specified content type.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub data: Option<Base64Binary>,
 }
+

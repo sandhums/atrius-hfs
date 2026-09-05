@@ -19,54 +19,51 @@ pub enum SpecimenDefinitionVersionAlgorithm {
 }
 
 /// FHIR SpecimenDefinition type
-///
+/// 
 /// A kind of specimen with associated set of requirements.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [SpecimenDefinition](http://hl7.org/fhir/StructureDefinition/SpecimenDefinition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "versionAlgorithm",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,derived_from_canonical,derived_from_uri,status,experimental,subject_reference,date,publisher,contact,jurisdiction,effective_period,type_collected,patient_preparation,time_aspect,collection"
-)]
+#[fhir_resource(choice_elements = "versionAlgorithm", summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,derived_from_canonical,derived_from_uri,status,experimental,subject_reference,date,publisher,contact,jurisdiction,effective_period,type_collected,patient_preparation,time_aspect,collection")]
 pub struct SpecimenDefinition {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -74,7 +71,7 @@ pub struct SpecimenDefinition {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -84,22 +81,22 @@ pub struct SpecimenDefinition {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -110,27 +107,27 @@ pub struct SpecimenDefinition {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -138,27 +135,27 @@ pub struct SpecimenDefinition {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -166,41 +163,41 @@ pub struct SpecimenDefinition {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -210,11 +207,11 @@ pub struct SpecimenDefinition {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -222,292 +219,292 @@ pub struct SpecimenDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Logical canonical URL to reference this SpecimenDefinition (globally unique)
-    ///
+    /// 
     /// An absolute URL that is used to identify this SpecimenDefinition when it is
     /// referenced in a specification, model, design or an instance. This SHALL be a
     /// URL, SHOULD be globally unique, and SHOULD be an address at which this
     /// SpecimenDefinition is (or will be) published. The URL SHOULD include the
     /// major version of the SpecimenDefinition. For more information see Technical
     /// and Business Versions.
-    ///
+    /// 
     /// ## Requirements
     /// Allows the SpecimenDefinition to be referenced by a single globally unique
     /// identifier.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid:, but real http: addresses are preferred.
     /// This is the URI that will be used when making canonical references to this
     /// resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Option<Uri>,
     /// Business identifiers of the SpecimenDefinition
-    ///
+    /// 
     /// Business identifiers assigned to this SpecimenDefinition.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Business version of the SpecimenDefinition
-    ///
+    /// 
     /// The identifier that is used to identify this version of the
     /// SpecimenDefinition when it is referenced in a specification, model, design or
     /// instance. This is an arbitrary value managed by the SpecimenDefinition author
     /// and is not expected to be globally unique.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There may be multiple different instances of a SpecimenDefinition that have
     /// the same identifier but different versions.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// How to compare versions
-    ///
+    /// 
     /// Indicates the mechanism used to compare versions to determine which is more
     /// current.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If set as a string, this is a FHIRPath expression that has two additional
     /// context variables passed in - %version1 and %version2 and will return a
     /// negative number if version1 is newer, a positive number if version2 and a 0
     /// if the version ordering can't be successfully be determined.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/version-algorithm
     #[fhir_serde(flatten)]
     pub version_algorithm: Option<SpecimenDefinitionVersionAlgorithm>,
     /// Name for this {{title}} (computer friendly)
-    ///
+    /// 
     /// A natural language name identifying the {{title}}. This name should be usable
     /// as an identifier for the module by machine processing applications such as
     /// code generation.
-    ///
+    /// 
     /// ## Requirements
     /// Support human navigation and code generation.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. The name should be a simple
     /// alphanumeric type name to ensure that it is machine-processing friendly.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Name for this SpecimenDefinition (Human friendly)
-    ///
+    /// 
     /// A short, descriptive, user-friendly title for the SpecimenDefinition.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// Based on FHIR definition of another SpecimenDefinition
-    ///
+    /// 
     /// The canonical URL pointing to another FHIR-defined SpecimenDefinition that is
     /// adhered to in whole or in part by this definition.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "derivedFromCanonical")]
     pub derived_from_canonical: Option<Vec<Canonical>>,
     /// Based on external definition
-    ///
+    /// 
     /// The URL pointing to an externally-defined type of specimen, guideline or
     /// other definition that is adhered to in whole or in part by this definition.
-    ///
+    /// 
     /// ## Requirements
     /// Specimen definitions may be refinements of other definitions.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "derivedFromUri")]
     pub derived_from_uri: Option<Vec<Uri>>,
     /// draft | active | retired | unknown
-    ///
+    /// 
     /// The current state of theSpecimenDefinition.
-    ///
+    /// 
     /// ## Implementation Notes
     /// A nominal state-transition diagram can be found in the [Definition
     /// pattern](definition.html#statemachine) documentation
     /// Unknown does not represent "other" - one of the defined statuses must apply.
     /// Unknown is used when the authoring system is not sure what the current status
     /// is.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Not known why this is labelled a modifier
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes identifying the status of a SpecimenDefinition resource.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4
     pub status: Code,
     /// If this SpecimenDefinition is not for real usage
-    ///
+    /// 
     /// A flag to indicate that this SpecimenDefinition is not authored for genuine
     /// usage.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Allows filtering of SpecimenDefinition that are appropriate for use vs. not..
     /// Experimental resources might include example instances in implementation
     /// guides, instances created solely for testing purposes, etc
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If absent, this resource is treated as though it is not experimental.
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub experimental: Option<Boolean>,
     /// Type of subject for specimen collection
-    ///
+    /// 
     /// Defines the intended subject type(s) from which this kind of specimen is to
     /// be collected.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Use the Group.type code: 'person' if the subject is human; 'animal' if the
     /// subject is animal; a choice of 'location', 'medication', 'substance',
     /// 'biologicallyDerivedProduct', or 'nutritionProduct' if the subject is
     /// environmental.
-    ///
+    /// 
     /// For more detailed descriptions of the kind of subjects, use
     /// Group.characteristic.value to indicate included (or, if
     /// Group.characteristic.exclude = true, excluded) subjects based on specific
     /// Group.characteristic.code.
-    ///
+    /// 
     /// For example, to indicate child or adult, use descendants of [410598002 |
     /// Person categorized by age
     /// (person)](https://browser.ihtsdotools.org/?perspective=full&conceptId1=410598002&edition=MAIN&release=&languages=en)
     /// in Group.characteristic.valueCodeableConcept, where .code =
     /// https://loinc.org/46251-5/, or report age range in .valueRange where .code =
     /// https://loinc.org/35659-2/.
-    ///
+    /// 
     /// For example, to indicate allowable species or breed, use descendants of
     /// [387961004 | Kingdom Animalia
     /// (organism)](https://browser.ihtsdotools.org/?perspective=full&conceptId1=387961004&edition=MAIN&release=&languages=en)
     /// when Group.type is 'animal'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "subjectReference")]
     pub subject_reference: Option<Reference>,
     /// Date status first applied
-    ///
+    /// 
     /// For draft definitions, indicates the date of initial creation. For active
     /// definitions, represents the date of activation. For withdrawn definitions,
     /// indicates the date of withdrawal.
-    ///
+    /// 
     /// ## Implementation Notes
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub date: Option<DateTime>,
     /// The name of the individual or organization that published the SpecimenDefinition
-    ///
+    /// 
     /// Helps establish the "authority/credibility" of the SpecimenDefinition. May
     /// also allow for contact.
-    ///
+    /// 
     /// ## Requirements
     /// Usually an organization, but may be an individual. The publisher (or steward)
     /// of the SpecimenDefinition is the organization or individual primarily
@@ -516,230 +513,230 @@ pub struct SpecimenDefinition {
     /// initially authored the content. The publisher is the primary point of contact
     /// for questions or issues with the SpecimenDefinition. This item SHOULD be
     /// populated unless the information is available from context.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    ///
+    /// 
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May be a web site, an email address, a telephone number, etc.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub contact: Option<Vec<ContactDetail>>,
     /// Natural language description of the SpecimenDefinition
-    ///
+    /// 
     /// A free text natural language description of the SpecimenDefinition from the
     /// consumer's perspective.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This description can be used to capture details such as comments about
     /// misuse, instructions for clinical use and interpretation, literature
     /// references, examples from the paper world, etc. It is not a rendering of the
     /// module as conveyed in the text field of the resource itself. This item SHOULD
     /// be populated unless the information is available from context.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Content intends to support these contexts
-    ///
+    /// 
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These terms may be used to assist with indexing and
     /// searching of specimen definitions.
-    ///
+    /// 
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When multiple usageContexts are specified, there is no expectation for
     /// whether all or any of the contexts apply.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Jurisdiction of the authority that maintains the this SpecimenDefinition (if applicable)
-    ///
+    /// 
     /// A jurisdiction in which the SpecimenDefinition is intended to be used.
-    ///
+    /// 
     /// ## Implementation Notes
     /// DEPRECATION NOTE: For consistency, implementations are encouraged to migrate
     /// to using the new 'jurisdiction' code in the useContext element. (I.e.
     /// useContext.code indicating
     /// http://terminology.hl7.org/CodeSystem/usage-context-type#jurisdiction and
     /// useContext.valueCodeableConcept indicating the jurisdiction.)
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Codes for country, country subdivision and region for indicating where a resource is intended to be used.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// Why this SpecimenDefinition is defined
-    ///
+    /// 
     /// Explains why this SpecimeDefinition is needed and why it has been designed as
     /// it has.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element does not describe the usage of the SpecimenDefinition. Rather it
     /// is for traceability of ''why'' the resource is either needed or ''why'' it is
     /// defined as it is. This may be used to point to source materials or
     /// specifications that drove the structure of this SpecimenDefinition.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub purpose: Option<Markdown>,
     /// Notice about intellectual property ownership, can include restrictions on use
-    ///
+    /// 
     /// Copyright statement relating to the SpecimenDefinition and/or its contents.
     /// Copyright statements are notices of intellectual property ownership and can
     /// include restrictions on the use and publishing of the SpecimenDefinition.
-    ///
+    /// 
     /// ## Requirements
     /// Consumers of the SpecimenDefinition must be able to determine any legal
     /// restrictions on the use of the artifact and/or its content.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// License, Restrictions
     pub copyright: Option<Markdown>,
     /// Copyright holder and year(s)
-    ///
+    /// 
     /// A short string (<50 characters), suitable for inclusion in a page footer that
     /// identifies the copyright holder, effective period, and optionally whether
     /// rights are restricted. (e.g. 'All rights reserved', 'Some rights reserved').
-    ///
+    /// 
     /// ## Requirements
     /// Defines the content expected to be rendered in all representations of the
     /// artifact.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The copyright symbol and the '(c)' textual representation SHOULD NOT be
     /// included in this string. It will be added by software when rendering the
     /// notation. Full details about licensing, restrictions, warrantees, etc. goes
     /// in the more general 'copyright' element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "copyrightLabel")]
     pub copyright_label: Option<String>,
     /// When SpecimenDefinition was approved by publisher
-    ///
+    /// 
     /// The date on which the asset content was approved by the publisher. Approval
     /// happens once when the content is officially approved for usage.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The date may be more recent than the approval date because of minor changes /
     /// editorial corrections.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "approvalDate")]
     pub approval_date: Option<Date>,
     /// The date on which the asset content was last reviewed by the publisher
-    ///
+    /// 
     /// The date on which the asset content was last reviewed. Review happens
     /// periodically after that, but doesn't change the original approval date.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If specified, this is usually after the approval date.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "lastReviewDate")]
     pub last_review_date: Option<Date>,
     /// The effective date range for the SpecimenDefinition
-    ///
+    /// 
     /// The period during which the SpecimenDefinition content was or is planned to
     /// be effective.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The effective period for a SpecimenDefinition determines when the content is
     /// applicable for usage and is independent of publication and review dates.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "effectivePeriod")]
     pub effective_period: Option<Period>,
     /// Kind of material to collect
-    ///
+    /// 
     /// The kind of material to be collected.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type of the specimen to be collected.
@@ -747,18 +744,18 @@ pub struct SpecimenDefinition {
     #[fhir_serde(rename = "typeCollected")]
     pub type_collected: Option<CodeableConcept>,
     /// Patient preparation for collection
-    ///
+    /// 
     /// Preparation of the patient for specimen collection.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: SCT descendants of 703763000 |Precondition value (qualifier value)|
@@ -766,46 +763,46 @@ pub struct SpecimenDefinition {
     #[fhir_serde(rename = "patientPreparation")]
     pub patient_preparation: Option<Vec<CodeableConcept>>,
     /// Time aspect for collection
-    ///
+    /// 
     /// Time aspect of specimen collection (duration or offset).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Examples
     /// - General: None
     #[fhir_serde(rename = "timeAspect")]
     pub time_aspect: Option<String>,
     /// Specimen collection procedure
-    ///
+    /// 
     /// The action to be performed for collecting the specimen.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: SCT actions and procedures for specimen collection
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/specimen-collection
     pub collection: Option<Vec<CodeableConcept>>,
     /// Specimen in container intended for testing by lab
-    ///
+    /// 
     /// Specimen conditioned in a container as expected by the testing laboratory.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -814,52 +811,52 @@ pub struct SpecimenDefinition {
 }
 
 /// Specimen in container intended for testing by lab
-///
+/// 
 /// Specimen conditioned in a container as expected by the testing laboratory.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SpecimenDefinitionTypeTested {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -869,11 +866,11 @@ pub struct SpecimenDefinitionTypeTested {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -881,52 +878,52 @@ pub struct SpecimenDefinitionTypeTested {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Primary or secondary specimen
-    ///
+    /// 
     /// Primary of secondary specimen.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Examples
     /// - General: None
     #[fhir_serde(rename = "isDerived")]
     pub is_derived: Option<Boolean>,
     /// Type of intended specimen
-    ///
+    /// 
     /// The kind of specimen conditioned for testing expected by lab.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type of specimen conditioned in a container for lab testing.
@@ -934,77 +931,77 @@ pub struct SpecimenDefinitionTypeTested {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// preferred | alternate
-    ///
+    /// 
     /// The preference for this type of conditioned specimen.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Examples
     /// - General: None
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Degree of preference of a type of conditioned specimen.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/specimen-contained-preference|6.0.0-ballot4
     pub preference: Code,
     /// The specimen's container
-    ///
+    /// 
     /// The specimen's container.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub container: Option<SpecimenDefinitionTypeTestedContainer>,
     /// Requirements for specimen delivery and special handling
-    ///
+    /// 
     /// Requirements for delivery and special handling of this kind of conditioned
     /// specimen.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub requirement: Option<Markdown>,
     /// The usual time for retaining this kind of specimen
-    ///
+    /// 
     /// The usual time that a specimen of this kind is retained after the ordered
     /// tests are completed, for the purpose of additional testing.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "retentionTime")]
     pub retention_time: Option<Duration>,
     /// Specimen for single use only
-    ///
+    /// 
     /// Specimen can be used by only one test or panel if the value is "true".
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "singleUse")]
     pub single_use: Option<Boolean>,
     /// Criterion specified for specimen rejection
-    ///
+    /// 
     /// Criterion for rejection of the specimen in its container by the laboratory.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Criterion for rejection of the specimen by laboratory.
@@ -1012,27 +1009,27 @@ pub struct SpecimenDefinitionTypeTested {
     #[fhir_serde(rename = "rejectionCriterion")]
     pub rejection_criterion: Option<Vec<CodeableConcept>>,
     /// Specimen handling before testing
-    ///
+    /// 
     /// Set of instructions for preservation/transport of the specimen at a defined
     /// temperature interval, prior the testing process.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub handling: Option<Vec<SpecimenDefinitionTypeTestedHandling>>,
     /// Where the specimen will be tested
-    ///
+    /// 
     /// Where the specimen will be tested: e.g., lab, sector, device or any
     /// combination of these.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes specifying where the specimen will be tested.
@@ -1066,11 +1063,11 @@ pub enum SpecimenDefinitionTypeTestedContainerMinimumVolume {
 }
 
 /// The specimen's container
-///
+/// 
 /// The specimen's container.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1078,41 +1075,41 @@ pub enum SpecimenDefinitionTypeTestedContainerMinimumVolume {
 #[fhir_resource(choice_elements = "device,minimumVolume")]
 pub struct SpecimenDefinitionTypeTestedContainer {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1122,11 +1119,11 @@ pub struct SpecimenDefinitionTypeTestedContainer {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1134,40 +1131,40 @@ pub struct SpecimenDefinitionTypeTestedContainer {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Container kind as a code, or a DeviceDefinition describing the container
-    ///
+    /// 
     /// The type of container used to contain this kind of specimen, expressed either
     /// as a code or as a reference to a DeviceDefinition that describes the
     /// container (including its material, type, cap, description and capacity).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for specimen container devices.
@@ -1175,34 +1172,34 @@ pub struct SpecimenDefinitionTypeTestedContainer {
     #[fhir_serde(flatten)]
     pub device: Option<SpecimenDefinitionTypeTestedContainerDevice>,
     /// Minimum volume
-    ///
+    /// 
     /// The minimum volume to be conditioned in the container.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub minimum_volume: Option<SpecimenDefinitionTypeTestedContainerMinimumVolume>,
     /// Additive associated with container
-    ///
+    /// 
     /// Substance introduced in the kind of container to preserve, maintain or
     /// enhance the specimen. Examples: Formalin, Citrate, EDTA.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub additive: Option<Vec<SpecimenDefinitionTypeTestedContainerAdditive>>,
     /// Special processing applied to the container for this specimen type
-    ///
+    /// 
     /// Special processing that should be applied to the container for this kind of
     /// specimen.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1210,53 +1207,53 @@ pub struct SpecimenDefinitionTypeTestedContainer {
 }
 
 /// Additive associated with container
-///
+/// 
 /// Substance introduced in the kind of container to preserve, maintain or
 /// enhance the specimen. Examples: Formalin, Citrate, EDTA.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SpecimenDefinitionTypeTestedContainerAdditive {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1266,11 +1263,11 @@ pub struct SpecimenDefinitionTypeTestedContainerAdditive {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1278,39 +1275,39 @@ pub struct SpecimenDefinitionTypeTestedContainerAdditive {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The additive substance
-    ///
+    /// 
     /// The type of substance introduced in the kind of container to preserve,
     /// maintain or enhance the specimen. Examples: Formalin, Citrate, EDTA.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Substance added to specimen container.
@@ -1318,13 +1315,13 @@ pub struct SpecimenDefinitionTypeTestedContainerAdditive {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableReference,
     /// Quantity of additive substance within container
-    ///
+    /// 
     /// The quantity of the additive substance in the container; may be volume,
     /// dimensions, or other appropriate measurements, depending on the container and
     /// additive substance type.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1332,53 +1329,53 @@ pub struct SpecimenDefinitionTypeTestedContainerAdditive {
 }
 
 /// Specimen handling before testing
-///
+/// 
 /// Set of instructions for preservation/transport of the specimen at a defined
 /// temperature interval, prior the testing process.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct SpecimenDefinitionTypeTestedHandling {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1388,11 +1385,11 @@ pub struct SpecimenDefinitionTypeTestedHandling {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1400,40 +1397,40 @@ pub struct SpecimenDefinitionTypeTestedHandling {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Qualifies the interval of temperature
-    ///
+    /// 
     /// It qualifies the interval of temperature, which characterizes an occurrence
     /// of handling. Conditions that are not related to temperature may be handled in
     /// the instruction element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Set of handling instructions prior testing of the specimen.
@@ -1441,40 +1438,41 @@ pub struct SpecimenDefinitionTypeTestedHandling {
     #[fhir_serde(rename = "temperatureQualifier")]
     pub temperature_qualifier: Option<CodeableConcept>,
     /// Temperature range for these handling instructions
-    ///
+    /// 
     /// The temperature interval for this set of handling instructions.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "temperatureRange")]
     pub temperature_range: Option<Range>,
     /// Maximum preservation time
-    ///
+    /// 
     /// The maximum time interval of preservation of the specimen with these
     /// conditions.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "maxDuration")]
     pub max_duration: Option<Duration>,
     /// Preservation instruction
-    ///
+    /// 
     /// Additional textual instructions for the preservation or transport of the
     /// specimen. For instance, 'Protect from light exposure'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Examples
     /// - General: None
     pub instruction: Option<Markdown>,
 }
+

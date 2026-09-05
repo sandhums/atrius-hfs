@@ -9,7 +9,7 @@
 //! ## Architecture
 //!
 //! The FHIR crate is organized as follows:
-//! - **Generated modules** (`r4.rs`, `r4b.rs`, `r5.rs`, `r6.rs`): Complete FHIR type implementations
+//! - **Generated modules** (`r4/`, `r4b/`, `r5/`, `r6/` directories): Complete FHIR type implementations
 //! - **Infrastructure module** (`lib.rs`): Foundational types used by generated code
 //! - **Test modules**: Validation against official FHIR examples
 //!

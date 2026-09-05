@@ -5,9 +5,10 @@ Audit date: 3 Sep 2026. Reviewed state: `feat-clinical-reasoning` at `7d47ce1b3`
 `upstream/main`, whose tip `fa33d5ddc` is fully contained).
 
 Follow-up: **4 Sep 2026** on the same branch. §3.1 (env/scripts + package overlay)
-is in progress in the working tree; see **§6**. **§3.3** (named `schema_migrations`
-ledger) and **§3.4** (merge playbook keep-list) are closed. Findings §3.2,
-§3.5–§3.7 remain.
+is in progress in the working tree; see **§6**. **§3.2** (Postgres write TX),
+**§3.3** (named `schema_migrations` ledger), **§3.4** (merge playbook keep-list),
+and **§3.5** (directory-layout regen + runbook, 5 Sep) are closed. Findings
+§3.6–§3.7 remain.
 
 Companion to *HELIOS vs Atrius.docx*, which records what each sync decided. This
 document asks a different question: **are those decisions still correct, and do
@@ -366,6 +367,14 @@ still carrying pre-ballot backbone wrapper fields; and the sql-expressions
 invariant still in its pre-ballot form
 (`crates/fhir/src/r4/resources/view_definition.rs:27–38, 671–683, 939–940`).
 
+**Closed 5 Sep 2026.** Models were regenerated from current specs into
+`crates/fhir/src/{r4,r4b,r5,r6}/` (directories, not `r4.rs`). ViewDefinition is
+`DomainResource` with `effective_period` in `summary_fields` on all four
+versions. `./scripts/diff-fhir-model-signatures.py` matches Helios flat-file
+shape (853 / 882 / 1098 / 884 types). Runbook:
+[docs/fhir-model-regen.md](fhir-model-regen.md). Option A (offer the generator
+upstream) is still open.
+
 Upstream touched the flat model files in 11 commits since January, several
 carrying real model-shape changes beyond buildId churn — `4bfb2f597`
 (ViewDefinition → DomainResource), `c2ce8a6f5` (boxed `Resource` enum variants),
@@ -518,13 +527,10 @@ judged to dominate, which the evidence does not currently support.
 ### Recommendation
 
 **A, with B as the interim.** Attempt to upstream it, because it is the only
-option that ends the divergence, and the pitch is easy. Regardless of the outcome,
-do the B work now — the immediate need is not a layout change but a **regen to
-close the existing staleness**, starting with `ViewDefinition`, plus the runbook.
-C is not recommended: the ergonomics benefit is real and no Atrius crate depends
-on the layout, so the delta is cheap to keep *provided* staleness is actively
-managed. Note that the priority here is correctness, not merge cost — the
-conflicts are mechanical; the silently-dropped model changes are not.
+option that ends the divergence, and the pitch is easy. **B is done (5 Sep
+2026):** models regenerated into `crates/fhir/src/r4/` (and r4b/r5/r6);
+runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
+`scripts/diff-fhir-model-signatures.py` matches Helios. C is not recommended.
 
 ---
 
@@ -552,8 +558,11 @@ conflicts are mechanical; the silently-dropped model changes are not.
   `schema_migrations` ledger on SQLite and Postgres.
 7. `#[non_exhaustive]` **+** `Principal::stub()` and migrate the ~17 test
   literals (§3.6). Removes a trap that has cost time in 5 of 6 syncs.
-8. **Regenerate the directory-layout FHIR models from current specs** and write
-  the regen runbook (§3.5, §4).
+8. **~~Regenerate the directory-layout FHIR models from current specs~~** and
+  write the regen runbook (§3.5, §4). Done 5 Sep: models match Helios
+  signatures; [docs/fhir-model-regen.md](fhir-model-regen.md) +
+  `scripts/diff-fhir-model-signatures.py`. Offering the generator upstream
+  remains item 10.
 9. **Timeout the Redis revocation call**; decide timeout-vs-error semantics
   (§3.7).
 10. **Offer upstream `ChannelDispatcherRegistry` and the directory-layout
@@ -593,8 +602,9 @@ Work on `feat-clinical-reasoning` after this audit, addressing §3.1, the
 package-overlay model, and the converter defects the first clean overlay boot
 exposed (§6.4). At time of writing it is in the working tree (not a single
 commit). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are closed
-(named schema ledger; merge playbook). Findings §3.2, §3.5–§3.7 were not
-started.
+(named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
+(Postgres write TX; directory-layout regen + runbook). Findings §3.6–§3.7
+were not started.
 
 ### 6.1 Code and operator config
 
@@ -706,9 +716,8 @@ is used in Atrius Patient FSH and is **not** in that embedded pack; add
 instances of that extension need structural overlay.
 - **Startup still silent** on `HFS_PROFILE_`* if someone leaves them set
 (backlog item 2).
-- **§3.2, §3.5–§3.7** (Postgres outbox transaction, FHIR directory-layout regen,
-`Principal.fhir_user`, Redis JTI timeout) — no code in this follow-up. **§3.3**
-and **§3.4** closed separately.
+- **§3.6–§3.7** (`Principal.fhir_user`, Redis JTI timeout) — no code in this
+follow-up. **§3.2**, **§3.3**, **§3.4**, and **§3.5** closed separately.
 
 
 

@@ -79,56 +79,53 @@ pub enum ActivityDefinitionProduct {
 }
 
 /// FHIR ActivityDefinition type
-///
+/// 
 /// This resource allows for the definition of some activity to be performed,
 /// independent of a particular patient, practitioner, or other performance
 /// context.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [ActivityDefinition](http://hl7.org/fhir/StructureDefinition/ActivityDefinition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "versionAlgorithm,subject,timing,asNeeded,product",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,description,use_context,jurisdiction,effective_period,kind,code,do_not_perform,as_needed"
-)]
+#[fhir_resource(choice_elements = "versionAlgorithm,subject,timing,asNeeded,product", summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,description,use_context,jurisdiction,effective_period,kind,code,do_not_perform,as_needed")]
 pub struct ActivityDefinition {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -136,7 +133,7 @@ pub struct ActivityDefinition {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -146,22 +143,22 @@ pub struct ActivityDefinition {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -172,27 +169,27 @@ pub struct ActivityDefinition {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -200,27 +197,27 @@ pub struct ActivityDefinition {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -228,41 +225,41 @@ pub struct ActivityDefinition {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -272,11 +269,11 @@ pub struct ActivityDefinition {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -284,30 +281,30 @@ pub struct ActivityDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this activity definition, represented as a URI (globally unique)
-    ///
+    /// 
     /// An absolute URI that is used to identify this activity definition when it is
     /// referenced in a specification, model, design or an instance; also called its
     /// canonical identifier. This SHOULD be globally unique and SHOULD be a literal
@@ -315,30 +312,30 @@ pub struct ActivityDefinition {
     /// will be) published. This URL can be the target of a canonical reference. It
     /// SHALL remain the same when the activity definition is stored on different
     /// servers.
-    ///
+    /// 
     /// ## Requirements
     /// Allows the activity definition to be referenced by a single globally unique
     /// identifier.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    ///
+    /// 
     /// The determination of when to create a new version of a resource (same url,
     /// new version) vs. defining a new artifact is up to the author. Considerations
     /// for making this decision are found in [Technical and Business
     /// Versions](resource.html#versions).
-    ///
+    /// 
     /// In some cases, the resource can no longer be found at the stated url, but the
     /// url itself cannot change. Implementations can use the
     /// [meta.source](resource.html#meta) element to indicate where the current
     /// master source of the resource can be found.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **cnl-1**: URL should not contain | or # - these characters make processing canonical references problematic (warning)
     ///   Expression: `exists() implies matches('^[^|# ]+$')`
@@ -346,26 +343,26 @@ pub struct ActivityDefinition {
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Option<Uri>,
     /// Additional identifier for the activity definition
-    ///
+    /// 
     /// A formal identifier that is used to identify this activity definition when it
     /// is represented in other formats, or referenced in a specification, model,
     /// design or an instance.
-    ///
+    /// 
     /// ## Requirements
     /// Allows externally provided and/or usable business identifiers to be easily
     /// associated with the module.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Business version of the activity definition
-    ///
+    /// 
     /// The identifier that is used to identify this version of the activity
     /// definition when it is referenced in a specification, model, design or
     /// instance. This is an arbitrary value managed by the activity definition
@@ -376,138 +373,138 @@ pub struct ActivityDefinition {
     /// the Canonical Resource Management Infrastructure (CRMI) implementation guide
     /// artifact versioning discussion
     /// (http://hl7.org/fhir/uv/crmi/artifact-lifecycle.html#artifact-versioning).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There may be different activity definition instances that have the same
     /// identifier but different versions. The version can be appended to the url in
     /// a reference to allow a reference to a particular business version of the
     /// activity definition with the format [url]|[version]. The version SHOULD NOT
     /// contain a '#' - see [Business Version](resource.html#bv-format).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// How to compare versions
-    ///
+    /// 
     /// Indicates the mechanism used to compare versions to determine which is more
     /// current.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If set as a string, this is a FHIRPath expression that has two additional
     /// context variables passed in - %version1 and %version2 and will return a
     /// negative number if version1 is newer, a positive number if version2 and a 0
     /// if the version ordering can't be successfully be determined.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/version-algorithm
     #[fhir_serde(flatten)]
     pub version_algorithm: Option<ActivityDefinitionVersionAlgorithm>,
     /// Name for this activity definition (computer friendly)
-    ///
+    /// 
     /// A natural language name identifying the activity definition. This name should
     /// be usable as an identifier for the module by machine processing applications
     /// such as code generation.
-    ///
+    /// 
     /// ## Requirements
     /// Support human navigation and code generation.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. The name should be a simple
     /// alphanumeric type name to ensure that it is machine-processing friendly.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: cnl-0
     pub name: Option<String>,
     /// Name for this activity definition (human friendly)
-    ///
+    /// 
     /// A short, descriptive, user-friendly title for the activity definition.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This name does not need to be machine-processing friendly and may contain
     /// punctuation, white-space, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// Subordinate title of the activity definition
-    ///
+    /// 
     /// An explanatory or alternate title for the activity definition giving
     /// additional information about its content.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subtitle: Option<String>,
     /// draft | active | retired | unknown
-    ///
+    /// 
     /// The status of this activity definition. Enables tracking the life-cycle of
     /// the content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Allows filtering of activity definitions that are appropriate for use versus
     /// not.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This is labeled as "Is Modifier" because applications should not use a retired {{title}} without due consideration
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status|6.0.0-ballot4
     pub status: Code,
     /// For testing only - never for real usage
-    ///
+    /// 
     /// A Boolean value to indicate that this activity definition is authored for
     /// testing purposes (or education/evaluation/marketing) and no version of this
     /// resource will ever be intended for genuine usage.
-    ///
+    /// 
     /// ## Requirements
     /// Enables experimental content to be developed following the same lifecycle
     /// that would be used for a production-level activity definition.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Allows filtering of activity definitions that are appropriate for use versus
     /// not.. Experimental resources might include example instances in
@@ -516,44 +513,44 @@ pub struct ActivityDefinition {
     /// all versions of the resource. (If experimental changes, then it is being
     /// misused or a resource that was never intended for real-world use has
     /// unexpectedly changed its purpose.).
-    ///
+    /// 
     /// Experimental resources are not expected to be stable and may well have
     /// breaking changes without a corresponding change to the 'version' element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If absent, this resource is treated as though it is not experimental.
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub experimental: Option<Boolean>,
     /// Type of individual the activity definition is intended for
-    ///
+    /// 
     /// A code, group definition, or canonical reference that describes or identifies
     /// the intended subject of the activity being defined. Canonical references are
     /// allowed to support the definition of protocols for drug and substance quality
     /// specifications, and is allowed to reference a MedicinalProductDefinition,
     /// SubstanceDefinition, AdministrableProductDefinition,
     /// ManufacturedItemDefinition, or PackagedProductDefinition resource.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note that the choice of canonical for the subject element was introduced in
     /// R4B to support pharmaceutical quality use cases. To ensure as much
     /// backwards-compatibility as possible, it is recommended to only use the new
     /// canonical type with these use cases.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - When missing: Patient
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The possible types of subjects for an activity (E.g. Patient, Practitioner, Organization, Location, etc.).
@@ -561,12 +558,12 @@ pub struct ActivityDefinition {
     #[fhir_serde(flatten)]
     pub subject: Option<ActivityDefinitionSubject>,
     /// Date last changed
-    ///
+    /// 
     /// The date (and optionally time) when the activity definition was last
     /// significantly changed. The date must change when the business version changes
     /// and it must change if the status code changes. In addition, it should change
     /// when the substantive content of the activity definition changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The date is often not tracked until the resource is published, but may be
     /// present on draft content. Note that this is not the same as the resource
@@ -574,31 +571,31 @@ pub struct ActivityDefinition {
     /// the activity definition. Additional specific dates may be added as extensions
     /// or be found by consulting Provenances associated with past versions of the
     /// resource.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Revision Date
     pub date: Option<DateTime>,
     /// Name of the publisher/steward (organization or individual)
-    ///
+    /// 
     /// The name of the organization or individual responsible for the release and
     /// ongoing maintenance of the activity definition.
-    ///
+    /// 
     /// ## Requirements
     /// Helps establish the "authority/credibility" of the activity definition. May
     /// also allow for contact.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Usually an organization but may be an individual. The publisher (or steward)
     /// of the activity definition is the organization or individual primarily
@@ -607,41 +604,41 @@ pub struct ActivityDefinition {
     /// initially authored the content. The publisher is the primary point of contact
     /// for questions or issues with the activity definition. This item SHOULD be
     /// populated unless the information is available from context.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    ///
+    /// 
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May be a web site, an email address, a telephone number, etc.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub contact: Option<Vec<ContactDetail>>,
     /// Natural language description of the activity definition
-    ///
+    /// 
     /// A free text natural language description of the activity definition from a
     /// consumer's perspective.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This description can be used to capture details such as comments about
     /// misuse, instructions for clinical use and interpretation, literature
@@ -650,308 +647,308 @@ pub struct ActivityDefinition {
     /// This item SHOULD be populated unless the information is available from
     /// context (e.g. the language of the activity definition is presumed to be the
     /// predominant language in the place the activity definition was created).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// The context that the content is intended to support
-    ///
+    /// 
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate activity
     /// definition instances.
-    ///
+    /// 
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// any of the contexts apply.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Jurisdiction of the authority that maintains the activity definition (if applicable)
-    ///
+    /// 
     /// A legal or geographic region in which the authority that maintains the
     /// resource is operating. In general, the jurisdiction is also found in the
     /// useContext. The useContext may reference additional jurisdictions because the
     /// defining jurisdiction does not necessarily limit the jurisdictions of use.
-    ///
+    /// 
     /// ## Implementation Notes
     /// It may be possible for the activity definition to be used in jurisdictions
     /// other than those for which it was originally designed or intended.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Countries and regions within which this artifact is targeted for use.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// Why this activity definition is defined
-    ///
+    /// 
     /// Explanation of why this activity definition is needed and why it has been
     /// designed as it has.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element does not describe the usage of the activity definition. Instead,
     /// it provides traceability of ''why'' the resource is either needed or ''why''
     /// it is defined as it is. This may be used to point to source materials or
     /// specifications that drove the structure of this activity definition.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub purpose: Option<Markdown>,
     /// Describes the clinical usage of the activity definition
-    ///
+    /// 
     /// A detailed description of how the activity definition is used from a clinical
     /// perspective.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub usage: Option<Markdown>,
     /// Notice about intellectual property ownership, can include restrictions on use
-    ///
+    /// 
     /// A copyright statement relating to the activity definition and/or its
     /// contents. Copyright statements are notices of intellectual property ownership
     /// and can include restrictions on the use and publishing of the activity
     /// definition.
-    ///
+    /// 
     /// ## Requirements
     /// Consumers must be able to determine any legal restrictions on the use of the
     /// activity definition and/or its content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The short copyright declaration (e.g. (c) '2015+ xyz organization') should be
     /// sent in the copyrightLabel element without the copyright prefix (i.e., do not
     /// include '(c)' or the symbol).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// License, Restrictions
     pub copyright: Option<Markdown>,
     /// Copyright holder and year(s)
-    ///
+    /// 
     /// A short string (<50 characters), suitable for inclusion in a page footer that
     /// identifies the copyright holder, effective period, and optionally whether
     /// rights are restricted. (e.g. 'All rights reserved', 'Some rights reserved').
-    ///
+    /// 
     /// ## Requirements
     /// Defines the content expected to be rendered in all representations of the
     /// artifact.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The copyright symbol and the '(c)' textual representation SHOULD NOT be
     /// included in this string. It will be added by software when rendering the
     /// notation. Full details about licensing, restrictions, warrantees, etc. goes
     /// in the more general 'copyright' element.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "copyrightLabel")]
     pub copyright_label: Option<String>,
     /// When the activity definition was approved by publisher
-    ///
+    /// 
     /// The date on which the resource content was approved by the publisher.
     /// Approval happens once when the content is officially approved for usage.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The 'date' element may be more recent than the approval date because of minor
     /// changes or editorial corrections.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "approvalDate")]
     pub approval_date: Option<Date>,
     /// When the activity definition was last reviewed by the publisher
-    ///
+    /// 
     /// The date on which the resource content was last reviewed. Review happens
     /// periodically after approval but does not change the original approval date.
-    ///
+    /// 
     /// ## Requirements
     /// Gives a sense of how "current" the content is. Resources that have not been
     /// reviewed in a long time may have a risk of being less appropriate/relevant.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If specified, this date follows the original approval date.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "lastReviewDate")]
     pub last_review_date: Option<Date>,
     /// When the activity definition is expected to be used
-    ///
+    /// 
     /// The period during which the activity definition content was or is planned to
     /// be in active use.
-    ///
+    /// 
     /// ## Requirements
     /// Allows establishing a transition before a resource comes into effect and also
     /// allows for a sunsetting process when new versions of the activity definition
     /// are or are expected to be used instead.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The effective period for an activity definition determines when the content
     /// is applicable for usage and is independent of publication and review dates.
     /// For example, a activity intended to be used for the year 2016 might be
     /// published in 2015.
-    ///
+    /// 
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "effectivePeriod")]
     pub effective_period: Option<Period>,
     /// E.g. Education, Treatment, Assessment, etc
-    ///
+    /// 
     /// Descriptive topics related to the content of the activity. Topics provide a
     /// high-level categorization of the activity that can be useful for filtering
     /// and searching.
-    ///
+    /// 
     /// ## Requirements
     /// Repositories must be able to determine how to categorize the activity
     /// definition so that it can be found by topical searches.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: High-level categorization of the definition, used for searching, sorting, and filtering.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/definition-topic
     pub topic: Option<Vec<CodeableConcept>>,
     /// Who authored the content
-    ///
-    /// An individiual or organization primarily involved in the creation and
+    /// 
+    /// An individual or organization primarily involved in the creation and
     /// maintenance of the content.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Vec<ContactDetail>>,
     /// Who edited the content
-    ///
+    /// 
     /// An individual or organization primarily responsible for internal coherence of
     /// the content.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub editor: Option<Vec<ContactDetail>>,
     /// Who reviewed the content
-    ///
+    /// 
     /// An individual or organization asserted by the publisher to be primarily
     /// responsible for review of some aspect of the content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reviewer: Option<Vec<ContactDetail>>,
     /// Who endorsed the content
-    ///
+    /// 
     /// An individual or organization asserted by the publisher to be responsible for
     /// officially endorsing the content for use in some setting.
-    ///
+    /// 
     /// ## Implementation Notes
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub endorser: Option<Vec<ContactDetail>>,
     /// Additional documentation, citations, etc
-    ///
+    /// 
     /// Related artifacts such as additional documentation, justification, or
     /// bibliographic references.
-    ///
+    /// 
     /// ## Requirements
     /// Activity definitions must be able to provide enough information for consumers
     /// of the content (and/or interventions or results produced by the content) to
     /// be able to determine and understand the justification for and evidence in
     /// support of the content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Each related artifact is either an attachment, or a reference to another
     /// resource, but not both. In addition, the successor or predecessor of an
     /// ActivityDefinition SHOULD be an ActivityDefinition, dependencies of an
     /// ActivityDefinition SHOULD reference a resource, and ActivityDefinition
     /// resources SHOULD NOT have components.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **adf-2**: Dependencies of an ActivityDefinition should reference a resource (warning)
-    ///   Expression: `type in ('depends-on' | 'part-of') implies ((resource.exists() xor resourceReference.exists()) or (artifact is canonical xor artifact is Reference))`
+    ///   Expression: `type in ('depends-on' | 'part-of') implies ((resource.exists() xor resourceReference.exists()))`
     /// - **adf-3**: ActivityDefinition should not have components (warning)
     ///   Expression: `type != 'composed-of'`
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
@@ -959,22 +956,22 @@ pub struct ActivityDefinition {
     #[fhir_serde(rename = "relatedArtifact")]
     pub related_artifact: Option<Vec<RelatedArtifact>>,
     /// Logic used by the activity definition
-    ///
+    /// 
     /// A reference to a Library resource containing any formal logic used by the
     /// activity definition.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub library: Option<Vec<Canonical>>,
     /// Kind of resource
-    ///
+    /// 
     /// A description of the kind of resource the activity definition is
     /// representing. For example, a MedicationRequest, a ServiceRequest, or a
     /// CommunicationRequest.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The kind element may only specify Request resource types to facilitate
     /// considering user input as part of processing the result of any automated
@@ -983,123 +980,123 @@ pub struct ActivityDefinition {
     /// the focus of the task set to the event resource to be created. Note that the
     /// kind of resource to be created may determine what types of extensions are
     /// permitted.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The kind of activity the definition is describing.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-resource-types|6.0.0-ballot4
     pub kind: Option<Code>,
     /// What profile the resource needs to conform to
-    ///
+    /// 
     /// A profile to which the target of the activity definition is expected to
     /// conform.
-    ///
+    /// 
     /// ## Requirements
     /// Allows profiles to be used to describe the types of activities that can be
     /// performed within a workflow, protocol, or order set.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub profile: Option<Canonical>,
     /// Detail type of activity
-    ///
+    /// 
     /// Detailed description of the type of activity; e.g. What lab test, what
     /// procedure, what kind of encounter.
-    ///
+    /// 
     /// ## Requirements
     /// Allows matching performed to planned as well as validation against protocols.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Tends to be less relevant for activities involving particular products.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Detailed type of the activity; e.g. CBC.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/procedure-code
     pub code: Option<CodeableConcept>,
     /// proposal | solicit-offer | offer-response | plan | directive | order | original-order | reflex-order | filler-order | instance-order | option
-    ///
+    /// 
     /// Indicates the level of authority/intentionality associated with the activity
     /// and where the request should fit into the workflow chain.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes indicating the degree of authority/intentionality associated with a request.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4
     pub intent: Option<Code>,
     /// routine | urgent | asap | stat
-    ///
+    /// 
     /// Indicates how quickly the activity should be addressed with respect to other
     /// requests.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Identifies the level of importance to be assigned to actioning the request.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4
     pub priority: Option<Code>,
     /// True if the activity should not be performed
-    ///
+    /// 
     /// Set this to true if the definition is to indicate that a particular activity
     /// should NOT be performed. If true, this element should be interpreted to
     /// reinforce a negative coding. For example NPO as a code with a doNotPerform of
     /// true would still indicate to NOT perform the action.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element is not intended to be used to communicate a decision support
     /// response to cancel an order in progress. That should be done with the
     /// "remove" type of a PlanDefinition or RequestOrchestration.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - If true this element negates the specified action. For Example,  instead of a request for a procedure, it is a request for the procedure to not occur.
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "doNotPerform")]
     pub do_not_perform: Option<Boolean>,
     /// When activity is to occur
-    ///
+    /// 
     /// The timing or frequency upon which the described activity is to occur.
-    ///
+    /// 
     /// ## Requirements
     /// Allows prompting for activities and detection of missed planned activities.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The intent of the timing element is to provide timing when the action should
     /// be performed. As a definitional resource, this timing is interpreted as part
@@ -1113,28 +1110,28 @@ pub struct ActivityDefinition {
     /// Range, it may be a range of Ages or Durations, providing a range for the
     /// expected timing of the resulting activity. When the timing is a Timing, it is
     /// establishing a schedule for the timing of the resulting activity.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub timing: Option<ActivityDefinitionTiming>,
     /// Preconditions for service
-    ///
+    /// 
     /// If a CodeableConcept is present, it indicates the pre-condition for
     /// performing the service. For example "pain", "on flare-up", etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying the pre-condition that should hold prior to performing a procedure.  For example "pain", "on flare-up", etc.
@@ -1142,47 +1139,47 @@ pub struct ActivityDefinition {
     #[fhir_serde(flatten)]
     pub as_needed: Option<ActivityDefinitionAsNeeded>,
     /// Where it should happen
-    ///
+    /// 
     /// Identifies the facility where the activity will occur; e.g. home, hospital,
     /// specific clinic, etc.
-    ///
+    /// 
     /// ## Requirements
     /// Helps in planning of activity.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May reference a specific clinical location or may just identify a type of
     /// location.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// facility
     pub location: Option<CodeableReference>,
     /// Who should participate in the action
-    ///
+    /// 
     /// Indicates who should participate in performing the action described.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub participant: Option<Vec<ActivityDefinitionParticipant>>,
     /// What's administered/supplied
-    ///
+    /// 
     /// Identifies the food, drug or other product being consumed or supplied in the
     /// activity.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Code describing the type of substance or medication.
@@ -1190,53 +1187,53 @@ pub struct ActivityDefinition {
     #[fhir_serde(flatten)]
     pub product: Option<ActivityDefinitionProduct>,
     /// How much is administered/consumed/supplied
-    ///
+    /// 
     /// Identifies the quantity expected to be consumed at once (per dose, per meal,
     /// etc.).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// dose
     pub quantity: Option<Quantity>,
     /// Detailed dosage instructions
-    ///
+    /// 
     /// Provides detailed dosage instructions in the same way that they are described
     /// for MedicationRequest resources.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If a dosage instruction is used, the definition should not specify timing or
     /// quantity.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "dosageInstruction")]
     pub dosage_instruction: Option<DosageDetails>,
     /// What part of body to perform on
-    ///
+    /// 
     /// Indicates the sites on the subject's body where the procedure should be
     /// performed (I.e. the target sites).
-    ///
+    /// 
     /// ## Requirements
     /// Knowing where the procedure is made is important for tracking if multiple
     /// sites are possible.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Only used if not implicit in the code found in ServiceRequest.type.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A code that identifies the anatomical location.
@@ -1244,77 +1241,77 @@ pub struct ActivityDefinition {
     #[fhir_serde(rename = "bodySite")]
     pub body_site: Option<Vec<CodeableConcept>>,
     /// What specimens are required to perform this action
-    ///
+    /// 
     /// Defines specimen requirements for the action to be performed, such as
     /// required specimens for a lab test.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to represent lab order definitions.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "specimenRequirement")]
     pub specimen_requirement: Option<Vec<Canonical>>,
     /// What observations are required to perform this action
-    ///
+    /// 
     /// Defines observation requirements for the action to be performed, such as body
     /// weight or surface area.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to represent observation definitions.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "observationRequirement")]
     pub observation_requirement: Option<Vec<Canonical>>,
     /// What observations must be produced by this action
-    ///
+    /// 
     /// Defines the observations that are expected to be produced by the action.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "observationResultRequirement")]
     pub observation_result_requirement: Option<Vec<Canonical>>,
     /// Transform to apply the template
-    ///
+    /// 
     /// A reference to a StructureMap resource that defines a transform that can be
     /// executed to produce the intent resource using the ActivityDefinition instance
     /// as the input.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note that if both a transform and dynamic values are specified, the dynamic
     /// values will be applied to the result of the transform.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub transform: Option<Canonical>,
     /// Dynamic aspects of the definition
-    ///
+    /// 
     /// Dynamic values that will be evaluated to produce values for elements of the
     /// resulting resource. For example, if the dosage of a medication must be
     /// computed based on the patient's weight, a dynamic value would be used to
     /// specify an expression that calculated the weight, and the path on the request
     /// resource that would contain the result.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Dynamic values are applied in the order in which they are defined in the
     /// ActivityDefinition. Note that if both a transform and dynamic values are
     /// specified, the dynamic values will be applied to the result of the transform.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1323,61 +1320,61 @@ pub struct ActivityDefinition {
 }
 
 /// Dynamic aspects of the definition
-///
+/// 
 /// Dynamic values that will be evaluated to produce values for elements of the
 /// resulting resource. For example, if the dosage of a medication must be
 /// computed based on the patient's weight, a dynamic value would be used to
 /// specify an expression that calculated the weight, and the path on the request
 /// resource that would contain the result.
-///
+/// 
 /// ## Implementation Notes
 /// Dynamic values are applied in the order in which they are defined in the
 /// ActivityDefinition. Note that if both a transform and dynamic values are
 /// specified, the dynamic values will be applied to the result of the transform.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ActivityDefinitionDynamicValue {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1387,11 +1384,11 @@ pub struct ActivityDefinitionDynamicValue {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1399,30 +1396,30 @@ pub struct ActivityDefinitionDynamicValue {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The path to the element to be set dynamically
-    ///
+    /// 
     /// The path to the element to be customized. This is the path on the resource
     /// that will hold the result of the calculation defined by the expression. The
     /// specified path SHALL be a FHIRPath resolvable on the specified target type of
@@ -1431,27 +1428,27 @@ pub struct ActivityDefinitionDynamicValue {
     /// contain qualifiers (.) to traverse sub-elements, as well as indexers ([x]) to
     /// traverse multiple-cardinality sub-elements (see the [Simple FHIRPath
     /// Profile](fhirpath.html#simple) for full details).
-    ///
+    /// 
     /// ## Implementation Notes
     /// The path attribute contains a [Simple FHIRPath Subset](fhirpath.html#simple)
     /// that allows path traversal, but not calculation.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub path: String,
     /// An expression that provides the dynamic value for the customization
-    ///
+    /// 
     /// An expression specifying the value of the customized element.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The expression may be inlined, or may be a reference to a named expression
     /// within a logic library referenced by the library element.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1459,52 +1456,52 @@ pub struct ActivityDefinitionDynamicValue {
 }
 
 /// Who should participate in the action
-///
+/// 
 /// Indicates who should participate in performing the action described.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ActivityDefinitionParticipant {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1514,11 +1511,11 @@ pub struct ActivityDefinitionParticipant {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1526,38 +1523,38 @@ pub struct ActivityDefinitionParticipant {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// careteam | device | group | healthcareservice | location | organization | patient | practitioner | practitionerrole | relatedperson
-    ///
+    /// 
     /// The type of participant in the action.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of participant in the activity.
@@ -1565,62 +1562,63 @@ pub struct ActivityDefinitionParticipant {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<Code>,
     /// Who or what can participate
-    ///
+    /// 
     /// The type of participant in the action.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "typeCanonical")]
     pub type_canonical: Option<Canonical>,
     /// Who or what can participate
-    ///
+    /// 
     /// The type of participant in the action.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When this element is a reference, it SHOULD be a reference to a definitional
     /// resource (for example, a location type, rather than a specific location).
     /// Note that specimen as a participant in cell-line research is acceptable, but
     /// specimen in clinical research would typically be represented as the focus
     /// rather the subject.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "typeReference")]
     pub type_reference: Option<Reference>,
     /// E.g. Nurse, Surgeon, Parent, etc
-    ///
+    /// 
     /// The role the participant should play in performing the described action.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Defines roles played by participants for the action.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/action-participant-role
     pub role: Option<CodeableConcept>,
     /// E.g. Author, Reviewer, Witness, etc
-    ///
+    /// 
     /// Indicates how the actor will be involved in the action - author, reviewer,
     /// witness, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/action-participant-function-example
     pub function: Option<CodeableConcept>,
 }
+

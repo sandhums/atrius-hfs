@@ -221,7 +221,7 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 
 | Conflict location | Resolution |
 |-------------------|------------|
-| `crates/fhir/src/r4.rs` or `crates/fhir/src/r4/**` (generated models) | Take **`main`** if Helios is still flat-file; this fork emits directory layout — see §3.5 of the merge audit. Do **not** look for `r4/terminology/**` (that tree is gone) |
+| `crates/fhir/src/r4.rs` (Helios) vs `crates/fhir/src/r4/` (this fork) | Keep the **directory**. Do not take Helios's flat `r4.rs` (E0761 if it sits beside `r4/`). There is no `r4/terminology/`. If Helios's `r*.rs` changed more than buildId, regenerate — [fhir-model-regen.md](../fhir-model-regen.md) |
 | `crates/rest/**` | Take **`main`**, re-apply [REST touch points](#cratesrest) |
 | `crates/persistence/**` | Take **`main`**, re-apply named ledger + outbox |
 | `crates/hfs/**` | Take **`main`** |

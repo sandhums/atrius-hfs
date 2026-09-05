@@ -22,7 +22,7 @@ pub enum MedicationStatementEffective {
 }
 
 /// FHIR MedicationStatement type
-///
+/// 
 /// A record of a medication consumed by a patient. A MedicationStatement may
 /// indicate that the patient may be taking the medication now or has taken the
 /// medication in the past or will be taking the medication in the future. The
@@ -44,52 +44,49 @@ pub enum MedicationStatementEffective {
 /// the patient's memory, from a prescription bottle or from a list of
 /// medications the patient, clinician or other party. MedicationAdministration
 /// is more formal and is not missing detailed information.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [MedicationStatement](http://hl7.org/fhir/StructureDefinition/MedicationStatement)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "effective",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,category,medication,subject,encounter,effective,date_asserted,author,adherence"
-)]
+#[fhir_resource(choice_elements = "effective", summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,category,medication,subject,encounter,effective,date_asserted,author,adherence")]
 pub struct MedicationStatement {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -97,7 +94,7 @@ pub struct MedicationStatement {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -107,22 +104,22 @@ pub struct MedicationStatement {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -133,27 +130,27 @@ pub struct MedicationStatement {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -161,27 +158,27 @@ pub struct MedicationStatement {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -189,41 +186,41 @@ pub struct MedicationStatement {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -233,11 +230,11 @@ pub struct MedicationStatement {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -245,117 +242,117 @@ pub struct MedicationStatement {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// External identifier
-    ///
+    /// 
     /// Identifiers associated with this Medication Statement that are defined by
     /// business processes and/or used to refer to it when a direct URL reference to
     /// the resource itself is not appropriate. They are business identifiers
     /// assigned to this resource by the performer or other systems and remain
     /// constant as the resource is updated and propagates from server to server.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is a business identifier, not a resource identifier.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Part of referenced event
-    ///
+    /// 
     /// A larger event of which this particular MedicationStatement is a component or
     /// step.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "partOf")]
     pub part_of: Option<Vec<Reference>>,
     /// recorded | entered-in-error | draft
-    ///
+    /// 
     /// A code representing the status of recording the medication statement.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This status concerns just the recording of the medication statement.
     /// MedicationStatement.adherence should be used for indicating a patient's
     /// adherence to the information in this resource. Note, the statuses are
     /// different than in previous releases for MedicationStatement or
     /// MedicationStatement.
-    ///
+    /// 
     /// This element is labeled as a modifier because the status contains codes that
     /// mark the resource as not currently valid.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A coded concept indicating the current status of a MedicationStatement.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medication-statement-status|6.0.0-ballot4
     pub status: Code,
     /// Type of medication statement
-    ///
+    /// 
     /// Type of medication statement.  
-    ///
+    /// 
     /// The committee will revisit these codes, expecting to use a codesystem from
     /// [terminology.hl7.org](http://terminology.hl7.org).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying where the medication included in the MedicationStatement is expected to be consumed or administered.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medicationrequest-category
     pub category: Option<Vec<CodeableConcept>>,
     /// The medication that is/was taken (or not taken)
-    ///
+    /// 
     /// Identifies the medication taken (or not taken). This is either a link to a
     /// resource representing the details of the medication or a simple attribute
     /// carrying a code that identifies the medication from a known list of
     /// medications.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If only a code is specified, then it should be a code for a product. If more
     /// information is required, then the use of the medication resource is
@@ -363,53 +360,53 @@ pub struct MedicationStatement {
     /// done using a reference to a Medication resource. In cases where the statement
     /// is for 'no known medications', this element can contain a code indicating
     /// that situation.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying the substance or product being taken (or that there are no known medications).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medication-statement-medication-codes
     pub medication: CodeableReference,
     /// Who is/was taking  the medication
-    ///
+    /// 
     /// The person, animal or group who is/was taking the medication.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Reference,
     /// Encounter associated with MedicationStatement
-    ///
+    /// 
     /// The encounter that establishes the context for this MedicationStatement.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// The date/time or interval when the medication is/was/will be taken
-    ///
+    /// 
     /// The interval of time during which it is being asserted that the patient
     /// is/was/will be taking the medication (or was not taking, when the
     /// MedicationStatement.adherence element is Not Taking).
-    ///
+    /// 
     /// ## Implementation Notes
     /// This attribute reflects the period over which the patient consumed the
     /// medication and is expected to be populated on the majority of Medication
@@ -419,65 +416,65 @@ pub struct MedicationStatement {
     /// The date/time attribute supports a variety of dates - year, year/month and
     /// exact date. If something more than this is required, this should be conveyed
     /// as text.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub effective: Option<MedicationStatementEffective>,
     /// When the usage was asserted?
-    ///
+    /// 
     /// The date when the Medication Statement was asserted by the information
     /// source.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "dateAsserted")]
     pub date_asserted: Option<DateTime>,
     /// Who/What authored the statement
-    ///
+    /// 
     /// The individual, organization, or device that created the statement and has
     /// responsibility for its content.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Reference>,
     /// Person or organization that provided the information about the taking of this medication
-    ///
+    /// 
     /// The person or organization that provided the information about the taking of
     /// this medication. Note: Use derivedFrom when a MedicationStatement is derived
     /// from other resources, e.g. Claim or MedicationRequest.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "informationSource")]
     pub information_source: Option<Vec<Reference>>,
     /// Link to information used to derive the MedicationStatement
-    ///
+    /// 
     /// Allows linking the MedicationStatement to the underlying MedicationRequest,
     /// or to other information that supports or is used to derive the
     /// MedicationStatement.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Likely references would be to MedicationRequest, MedicationDispense, Claim,
     /// Observation or QuestionnaireAnswers. The most common use cases for deriving a
@@ -485,63 +482,63 @@ pub struct MedicationStatement {
     /// MedicationRequest or from a lab observation or a claim. it should be noted
     /// that the amount of information that is available varies from the type
     /// resource that you derive the MedicationStatement from.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "derivedFrom")]
     pub derived_from: Option<Vec<Reference>>,
     /// Reason for why the medication is being/was taken
-    ///
+    /// 
     /// The concept(s), Condition(s) or observation(s) that lead to the medication
     /// being taken (or not taken).
-    ///
+    /// 
     /// ## Implementation Notes
     /// This could be a diagnosis code. If a full condition record exists or
     /// additional detail is needed, use reasonForUseReference.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying why the medication is being taken.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/condition-code
     pub reason: Option<Vec<CodeableReference>>,
     /// Further information about the usage
-    ///
+    /// 
     /// Provides extra information about the Medication Statement that is not
     /// conveyed by the other attributes.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Link to information relevant to the usage of a medication
-    ///
+    /// 
     /// Link to information that is relevant to a medication statement, for example,
     /// illicit drug use, gestational age, etc. This is normally not the actual
     /// indication for the medication being used - that indication would be
     /// represented with .reason.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "relatedClinicalInformation")]
     pub related_clinical_information: Option<Vec<Reference>>,
     /// Details of how medication is/was taken or should be taken
-    ///
+    /// 
     /// Indicates how the medication is/was or should be taken by the patient.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The dates included in the dosage on a Medication Statement reflect the dates
     /// for a given dose. For example, "from November 1, 2016 to November 3, 2016,
@@ -549,29 +546,29 @@ pub struct MedicationStatement {
     /// tablets daily." It is expected that this specificity may only be populated
     /// where the patient brings in their labeled container or where the Medication
     /// Statement is derived from a MedicationRequest.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub dosage: Option<DosageDetails>,
     /// Indicates whether the medication is or is not being consumed or administered
-    ///
+    /// 
     /// Indicates whether the medication is or is not being consumed or administered.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element can be used to indicate whether a patient is following a course
     /// of treatment as instructed/prescribed or whether they are taking medications
     /// of their own volition. It can also be used to indicate that a patient is not
     /// taking a medication, either because they were told not to or because they
     /// decided on their own.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -579,62 +576,62 @@ pub struct MedicationStatement {
 }
 
 /// Indicates whether the medication is or is not being consumed or administered
-///
+/// 
 /// Indicates whether the medication is or is not being consumed or administered.
-///
+/// 
 /// ## Implementation Notes
 /// This element can be used to indicate whether a patient is following a course
 /// of treatment as instructed/prescribed or whether they are taking medications
 /// of their own volition. It can also be used to indicate that a patient is not
 /// taking a medication, either because they were told not to or because they
 /// decided on their own.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct MedicationStatementAdherence {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -644,11 +641,11 @@ pub struct MedicationStatementAdherence {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -656,62 +653,63 @@ pub struct MedicationStatementAdherence {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of adherence
-    ///
+    /// 
     /// Type of the adherence for the medication.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medication-statement-adherence
     pub code: CodeableConcept,
     /// Details of the reason for the current use of the medication
-    ///
+    /// 
     /// Captures the reason for the current use or adherence of a medication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is generally only used for "exception" statuses such as
     /// "entered-in-error". The reason for performing the event at all is captured in
     /// reasonCode, not here.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/reason-medication-status-codes
     pub reason: Option<CodeableConcept>,
 }
+

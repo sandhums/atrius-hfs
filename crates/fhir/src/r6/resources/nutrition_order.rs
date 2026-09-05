@@ -7,54 +7,52 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR NutritionOrder type
-///
+/// 
 /// A request to supply a diet, formula feeding (enteral) or oral nutritional
 /// supplement to an individual or group.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [NutritionOrder](http://hl7.org/fhir/StructureDefinition/NutritionOrder)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    summary_fields = "id,meta,implicit_rules,modifier_extension,group_identifier,status,intent,subject,date_time,requester"
-)]
+#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,group_identifier,status,intent,subject,date_time,requester")]
 pub struct NutritionOrder {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -62,7 +60,7 @@ pub struct NutritionOrder {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -72,22 +70,22 @@ pub struct NutritionOrder {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -98,27 +96,27 @@ pub struct NutritionOrder {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -126,27 +124,27 @@ pub struct NutritionOrder {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -154,41 +152,41 @@ pub struct NutritionOrder {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -198,11 +196,11 @@ pub struct NutritionOrder {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -210,259 +208,259 @@ pub struct NutritionOrder {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Identifiers assigned to this order
-    ///
+    /// 
     /// Identifiers assigned to this order by the order sender or by the order
     /// receiver.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The Identifier.type element can be to indicate filler vs. placer if needed.
     /// This is explained in further detail [here](servicerequest.html#notes).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// What this order fulfills
-    ///
+    /// 
     /// A plan or request that is fulfilled in whole or in part by this nutrition
     /// order.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "basedOn")]
     pub based_on: Option<Vec<Reference>>,
     /// Composite Request ID
-    ///
+    /// 
     /// A shared identifier common to all nutrition orders that were authorized more
     /// or less simultaneously by a single author, representing the composite or
     /// group identifier.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// grouperId, groupIdentifier
     #[fhir_serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
     /// draft | active | on-hold | entered-in-error | ended | completed | revoked | unknown
-    ///
+    /// 
     /// The workflow status of the nutrition order/request.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Typically the system placing the order sets the status to "requested".
     /// Thereafter, the order is maintained by the receiver that updates the status
     /// as the request is handled. This element is labeled as a modifier because the
     /// status contains codes that mark the resource as not currently valid.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes identifying the lifecycle stage of the nutrition order.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4
     pub status: Code,
     /// proposal | solicit-offer | offer-response | plan | directive | order | original-order | reflex-order | filler-order | instance-order | option
-    ///
+    /// 
     /// Indicates the level of authority/intentionality associated with the
     /// NutrionOrder and where the request fits into the workflow chain.
-    ///
+    /// 
     /// ## Requirements
     /// Proposals/recommendations, plans and orders all use the same structure and
     /// can exist in the same fulfillment chain.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When resources map to this element, they are free to define as many codes as
     /// necessary to cover their space and will map to "proposal, plan or order". Can
     /// have multiple codes that map to one of these. E.g. "original order", "encoded
     /// order", "reflex order" would all map to "order". Expectation is that the set
     /// of codes is mutually exclusive or a strict all-encompassing hierarchy.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element changes the interpretation of all descriptive attributes. For example "the time the request is recommended to occur" vs. "the time the request is authorized to occur" or "who is recommended to perform the request" vs. "who is authorized to perform the request
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes indicating the degree of authority/intentionality associated with a nutrition order.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4
-    ///
+    /// 
     /// ## Aliases
     /// category
     pub intent: Code,
     /// routine | urgent | asap | stat
-    ///
+    /// 
     /// Indicates how quickly the Nutrition Order should be addressed with respect to
     /// other requests.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Identifies the level of importance to be assigned to actioning the request.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-priority|6.0.0
     pub priority: Option<Code>,
     /// Who requires the diet, formula or nutritional supplement
-    ///
+    /// 
     /// The person or set of individuals who needs the nutrition order for an oral
     /// diet, nutritional supplement and/or enteral or formula feeding.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Reference,
     /// The encounter associated with this nutrition order
-    ///
+    /// 
     /// An encounter that provides additional information about the healthcare
     /// context in which this request is made.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// Information to support fulfilling of the nutrition order
-    ///
+    /// 
     /// Information to support fulfilling (i.e. dispensing or administering) of the
     /// nutrition, for example, patient height and weight).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "supportingInformation")]
     pub supporting_information: Option<Vec<Reference>>,
     /// Date and time the nutrition order was requested
-    ///
+    /// 
     /// The date and time that this nutrition order was requested.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "dateTime")]
     pub date_time: DateTime,
     /// Who ordered the diet, formula or nutritional supplement
-    ///
+    /// 
     /// The practitioner that holds legal responsibility for ordering the diet,
     /// nutritional supplement, or formula feedings.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub requester: Option<Reference>,
     /// Who is intended to perform the administration of the nutrition order
-    ///
+    /// 
     /// The specified desired performer of the nutrition order.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub performer: Option<Vec<CodeableReference>>,
     /// List of the patient's food and nutrition-related allergies and intolerances
-    ///
+    /// 
     /// A link to a record of allergies or intolerances which should be included in
     /// the nutrition order.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Information on a patient's food allergies and intolerances to inform
     /// healthcare personnel about the type of foods that the patient shouldn't
     /// receive or consume.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "allergyIntolerance")]
     pub allergy_intolerance: Option<Vec<Reference>>,
     /// Order-specific modifier about the type of food that should be given
-    ///
+    /// 
     /// This modifier is used to convey order-specific modifiers about the type of
     /// food (i.e. solid and/or liquid) that should be given. These can be derived
     /// from patient allergies, intolerances, or preferences such as Halal, Vegan or
     /// Kosher. This modifier applies to the entire nutrition order inclusive of the
     /// oral diet, nutritional supplements and enteral formula feedings.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Information on a patient's preferences that informs the healthcare personnel
     /// about what the patient should receive or consume.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Medical, cultural or ethical food preferences to help with catering requirements.
@@ -470,7 +468,7 @@ pub struct NutritionOrder {
     #[fhir_serde(rename = "foodPreferenceModifier")]
     pub food_preference_modifier: Option<Vec<CodeableConcept>>,
     /// Food that should not be given
-    ///
+    /// 
     /// This modifier is used to convey Order-specific modifiers that should not be
     /// given. These can be derived from patient allergies, intolerances, or
     /// preferences such as No Red Meat, No Soy or No Wheat or Gluten-Free. While it
@@ -480,16 +478,16 @@ pub struct NutritionOrder {
     /// should be eliminated from the patient’s diet for any reason. This modifier
     /// applies to the entire nutrition order inclusive of the oral diet, nutritional
     /// supplements and enteral formula feedings.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Specific types of oral food (solid/liquid) to avoid.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes used to indicate the type of food that should NOT be given to the patient.
@@ -497,21 +495,21 @@ pub struct NutritionOrder {
     #[fhir_serde(rename = "excludeFoodModifier")]
     pub exclude_food_modifier: Option<Vec<CodeableConcept>>,
     /// Capture if patient is permitted to consume food from outside of current setting brought by the patient, family, and/or caregiver
-    ///
+    /// 
     /// This modifier is used to convey whether a food item, brought in by the
     /// patient, family, and/or caregiver, can be consumed by the patient. If set to
     /// true, indicates that the receiving system does not need to supply the food
     /// item.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "outsideFoodAllowed")]
     pub outside_food_allowed: Option<Boolean>,
     /// Oral diet components
-    ///
+    /// 
     /// Diet given orally that may include texture modification, such as
     /// International Dysphagia Diet Standardisation Initiative Framework - Slightly
     /// Thick Level 1 drinks and Minced and International Dysphagia Diet
@@ -519,70 +517,70 @@ pub struct NutritionOrder {
     /// as, for example, Decreased potassium diet (ie, nutrient modification), Halal
     /// diet (ie, cultural modification), and/or Low microbial diet (eg, other
     /// modification).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: nor-1
     #[fhir_serde(rename = "oralDiet")]
     pub oral_diet: Option<NutritionOrderOralDiet>,
     /// Supplement components
-    ///
+    /// 
     /// Oral nutritional products given in order to add further nutritional value to
     /// the patient's diet.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: nor-1
     pub supplement: Option<Vec<NutritionOrderSupplement>>,
     /// Enteral formula product
-    ///
+    /// 
     /// Feeding provided through the gastrointestinal tract via a tube, catheter, or
     /// stoma that delivers nutrition distal to the oral cavity.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: nor-1
     #[fhir_serde(rename = "enteralFormula")]
     pub enteral_formula: Option<NutritionOrderEnteralFormula>,
     /// Modular additive to add to the oral diet, supplement, and/or enteral feeding
-    ///
+    /// 
     /// Indicates modular components to be provided in addition or mixed with the
     /// oral diet, supplement, and/or enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub additive: Option<Vec<NutritionOrderAdditive>>,
     /// Comments
-    ///
+    /// 
     /// Comments made about the nutrition order by the requester, performer, subject
     /// or other participants.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element SHALL NOT be used to supply free text instructions for the diet
     /// which are represented in the `.oralDiet.instruction`,
     /// `supplement.instruction`, or `enteralFormula.administrationInstruction`
     /// elements.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -590,53 +588,53 @@ pub struct NutritionOrder {
 }
 
 /// Modular additive to add to the oral diet, supplement, and/or enteral feeding
-///
+/// 
 /// Indicates modular components to be provided in addition or mixed with the
 /// oral diet, supplement, and/or enteral feeding.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderAdditive {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -646,11 +644,11 @@ pub struct NutritionOrderAdditive {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -658,40 +656,40 @@ pub struct NutritionOrderAdditive {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of modular component to add to the oral diet, supplement, and/or enteral feeding
-    ///
+    /// 
     /// Indicates the type of modular component such as protein, carbohydrate, fat or
     /// fiber to be provided in addition to or mixed with the oral diet, supplement,
     /// and/or enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes for the type of modular component such as protein, carbohydrate or fiber to be provided in addition to or mixed with the base formula.
@@ -699,39 +697,39 @@ pub struct NutritionOrderAdditive {
     #[fhir_serde(rename = "modularType")]
     pub modular_type: Option<CodeableReference>,
     /// Product or brand name of the modular additive
-    ///
+    /// 
     /// The product or brand name of the type of modular additive to be added to the
     /// oral diet, supplement, and/or enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "productName")]
     pub product_name: Option<String>,
     /// Amount of additive to be given or mixed in with the oral diet, supplement, and/or enteral feeding
-    ///
+    /// 
     /// The amount of additive to be given in addition or to be mixed in with the
     /// oral diet, supplement, and/or enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// How the additive should enter the patient's gastrointestinal tract
-    ///
+    /// 
     /// The administration into the patient's gastrointestinal tract for purposes of
     /// providing the additive, e.g. nasogastric tube, oral.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes specifying the route of administration of additive.
@@ -753,57 +751,57 @@ pub enum NutritionOrderEnteralFormulaDeliveryDevice {
 }
 
 /// Enteral formula product
-///
+/// 
 /// Feeding provided through the gastrointestinal tract via a tube, catheter, or
 /// stoma that delivers nutrition distal to the oral cavity.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Conditions
 /// Used when: nor-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "deliveryDevice")]
 pub struct NutritionOrderEnteralFormula {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -813,11 +811,11 @@ pub struct NutritionOrderEnteralFormula {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -825,42 +823,42 @@ pub struct NutritionOrderEnteralFormula {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of patient enteral feeding
-    ///
+    /// 
     /// The type of adult or pediatric enteral feeding such as an adult standard
     /// formula with fiber or a soy-based infant feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes for type of enteral formula to be administered to patient.
@@ -868,28 +866,28 @@ pub struct NutritionOrderEnteralFormula {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableReference>,
     /// Product or brand name of the enteral feeding
-    ///
+    /// 
     /// The product or brand name of the enteral feeding product such as "ACME Adult
     /// Standard Formula".
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "productName")]
     pub product_name: Option<String>,
     /// Intended type of device for the enteral feeding administration
-    ///
+    /// 
     /// The intended type of device that is to be used for the administration of the
     /// enteral formula.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for devices used for enteral formula delivery.
@@ -897,30 +895,30 @@ pub struct NutritionOrderEnteralFormula {
     #[fhir_serde(flatten)]
     pub delivery_device: Option<NutritionOrderEnteralFormulaDeliveryDevice>,
     /// Amount of energy per specified volume of feeding that is required
-    ///
+    /// 
     /// The amount of energy (calories or kilojoules) that the feeding should provide
     /// per specified volume, typically per mL or fluid oz. For example, an infant
     /// may require a formula that provides 24 calories per fluid ounce or an adult
     /// may require an enteral formula that provides 1.5 calorie/mL.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "caloricDensity")]
     pub caloric_density: Option<Quantity>,
     /// How the enteral feeding should enter the patient's gastrointestinal tract
-    ///
+    /// 
     /// The administration into the patient's gastrointestinal tract for purposes of
     /// providing the formula feeding, e.g. nasogastric tube, oral.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes specifying the route of administration of enteral formula.
@@ -928,48 +926,48 @@ pub struct NutritionOrderEnteralFormula {
     #[fhir_serde(rename = "routeOfAdministration")]
     pub route_of_administration: Option<Vec<CodeableConcept>>,
     /// Formula feeding instruction as structured data
-    ///
+    /// 
     /// Formula feeding administration instructions as structured data. This
     /// repeating structure allows for changing the administration rate or volume
     /// over time for both bolus and continuous feeding. An example of this would be
     /// an instruction to increase the rate of continuous feeding every 2 hours.
-    ///
+    /// 
     /// ## Implementation Notes
     /// See implementation notes below for further discussion on how to order
     /// continuous vs bolus enteral feeding using this resource.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub administration: Option<Vec<NutritionOrderEnteralFormulaAdministration>>,
     /// Upper limit on formula feeding volume per unit of time
-    ///
+    /// 
     /// The maximum total quantity of formula feeding that may be administered to a
     /// subject over the period of time, e.g. 1440 mL over 24 hours.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "maxVolumeToAdminister")]
     pub max_volume_to_administer: Option<Quantity>,
     /// Formula feeding instructions expressed as text
-    ///
+    /// 
     /// Free text formula administration, feeding instructions or additional
     /// instructions or information.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Free text dosage instructions can be used for cases where the instructions
     /// are too complex to code.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -990,18 +988,18 @@ pub enum NutritionOrderEnteralFormulaAdministrationRate {
 }
 
 /// Formula feeding instruction as structured data
-///
+/// 
 /// Formula feeding administration instructions as structured data. This
 /// repeating structure allows for changing the administration rate or volume
 /// over time for both bolus and continuous feeding. An example of this would be
 /// an instruction to increase the rate of continuous feeding every 2 hours.
-///
+/// 
 /// ## Implementation Notes
 /// See implementation notes below for further discussion on how to order
 /// continuous vs bolus enteral feeding using this resource.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1009,41 +1007,41 @@ pub enum NutritionOrderEnteralFormulaAdministrationRate {
 #[fhir_resource(choice_elements = "rate")]
 pub struct NutritionOrderEnteralFormulaAdministration {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1053,11 +1051,11 @@ pub struct NutritionOrderEnteralFormulaAdministration {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1065,61 +1063,61 @@ pub struct NutritionOrderEnteralFormulaAdministration {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Scheduling information for enteral feeding products
-    ///
+    /// 
     /// Schedule information for an enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub schedule: Option<NutritionOrderEnteralFormulaAdministrationSchedule>,
     /// The volume of formula feeding to provide
-    ///
+    /// 
     /// The volume of formula feeding to provide to the patient per the specified
     /// administration schedule.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Speed with which the formula feeding is provided per period of time
-    ///
+    /// 
     /// The rate of administration of formula feeding via a feeding pump, e.g. 60 mL
     /// per hour, according to the specified schedule.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Ratio is used when the quantity value in the denominator is not "1",
     /// otherwise use Quantity. For example, the Ratio datatype is used for "200 mL/4
     /// hrs" versus the Quantity datatype for "50 mL/hr".
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1128,52 +1126,52 @@ pub struct NutritionOrderEnteralFormulaAdministration {
 }
 
 /// Scheduling information for enteral feeding products
-///
+/// 
 /// Schedule information for an enteral feeding.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderEnteralFormulaAdministrationSchedule {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1183,11 +1181,11 @@ pub struct NutritionOrderEnteralFormulaAdministrationSchedule {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1195,66 +1193,66 @@ pub struct NutritionOrderEnteralFormulaAdministrationSchedule {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Scheduled frequency of enteral feeding
-    ///
+    /// 
     /// The time period and frequency at which the enteral feeding should be given.
     /// The enteral feeding should be given for the combination of all schedules if
     /// more than one schedule is present.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Frequency
     pub timing: Option<Vec<Timing>>,
     /// Take 'as needed'
-    ///
+    /// 
     /// Indicates whether the enteral feeding is only taken when needed within a
     /// specific dosing schedule.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "asNeeded")]
     pub as_needed: Option<Boolean>,
     /// Take 'as needed' for x
-    ///
+    /// 
     /// Indicates whether the enteral feeding is only taken based on a precondition
     /// for taking the enteral feeding.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying the precondition that should be met or evaluated prior to       consuming an enteral formula.
@@ -1264,7 +1262,7 @@ pub struct NutritionOrderEnteralFormulaAdministrationSchedule {
 }
 
 /// Oral diet components
-///
+/// 
 /// Diet given orally that may include texture modification, such as
 /// International Dysphagia Diet Standardisation Initiative Framework - Slightly
 /// Thick Level 1 drinks and Minced and International Dysphagia Diet
@@ -1272,53 +1270,53 @@ pub struct NutritionOrderEnteralFormulaAdministrationSchedule {
 /// as, for example, Decreased potassium diet (ie, nutrient modification), Halal
 /// diet (ie, cultural modification), and/or Low microbial diet (eg, other
 /// modification).
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Conditions
 /// Used when: nor-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderOralDiet {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1328,11 +1326,11 @@ pub struct NutritionOrderOralDiet {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1340,42 +1338,42 @@ pub struct NutritionOrderOralDiet {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of oral diet or diet restrictions that can be consumed orally
-    ///
+    /// 
     /// The kind of diet or dietary restriction such as fiber restricted diet or diet
     /// for diabetes.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes used to indicate the type of diet being ordered for a patient.
@@ -1383,64 +1381,64 @@ pub struct NutritionOrderOralDiet {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<Vec<CodeableConcept>>,
     /// Scheduling information for oral diets
-    ///
+    /// 
     /// Schedule information for an oral diet.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub schedule: Option<NutritionOrderOralDietSchedule>,
     /// The nutrient that is modified and the quantity in the diet
-    ///
+    /// 
     /// Defines the quantity and the nutrient modified (for example carbohydrate,
     /// fiber or sodium) in the oral diet.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub nutrient: Option<Vec<NutritionOrderOralDietNutrient>>,
     /// Texture modifications in addition to the oral diet type
-    ///
+    /// 
     /// Class that describes any texture modifications in addition to the oral diet
     /// type required for the patient to safely consume various types of foods (i.e.
     /// solid and/or liquid).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub texture: Option<Vec<NutritionOrderOralDietTexture>>,
     /// Instructions or additional information about the oral diet
-    ///
+    /// 
     /// Free text or additional instructions or information pertaining to the oral
     /// diet.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Free text diet instructions can be used for cases where the instructions are
     /// too complex to code.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub instruction: Option<String>,
     /// Amount of energy per specified volume of oral diet
-    ///
+    /// 
     /// The amount of energy (calories or kilojoules) that the oral diet should
     /// provide. For example, an infant formula feeding of 30 ounces of 20 kcal/ounce
     /// (67 kcal/100 mL) formula per day.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1449,53 +1447,53 @@ pub struct NutritionOrderOralDiet {
 }
 
 /// The nutrient that is modified and the quantity in the diet
-///
+/// 
 /// Defines the quantity and the nutrient modified (for example carbohydrate,
 /// fiber or sodium) in the oral diet.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderOralDietNutrient {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1505,11 +1503,11 @@ pub struct NutritionOrderOralDietNutrient {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1517,49 +1515,49 @@ pub struct NutritionOrderOralDietNutrient {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Nutrient modified in the oral diet type
-    ///
+    /// 
     /// The nutrient that is being modified such as carbohydrate or sodium.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes for types of nutrients that are being modified such as carbohydrate or sodium.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/nutrient-code
     pub modifier: Option<CodeableConcept>,
     /// Quantity of the specified nutrient
-    ///
+    /// 
     /// The quantity of the specified nutrient to include in diet.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1567,52 +1565,52 @@ pub struct NutritionOrderOralDietNutrient {
 }
 
 /// Scheduling information for oral diets
-///
+/// 
 /// Schedule information for an oral diet.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderOralDietSchedule {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1622,11 +1620,11 @@ pub struct NutritionOrderOralDietSchedule {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1634,66 +1632,66 @@ pub struct NutritionOrderOralDietSchedule {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Scheduled frequency of diet
-    ///
+    /// 
     /// The time period and frequency at which the diet should be given. The diet
     /// should be given for the combination of all schedules if more than one
     /// schedule is present.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Frequency
     pub timing: Option<Vec<Timing>>,
     /// Take 'as needed'
-    ///
+    /// 
     /// Indicates whether the diet is only taken when needed within a specific
     /// administration schedule.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "asNeeded")]
     pub as_needed: Option<Boolean>,
     /// Take 'as needed' for x
-    ///
+    /// 
     /// Indicates whether the diet is only taken based on a precondition for taking
     /// the diet.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying the precondition that should be met or evaluated prior to       consuming a nutrition product.
@@ -1703,54 +1701,54 @@ pub struct NutritionOrderOralDietSchedule {
 }
 
 /// Texture modifications in addition to the oral diet type
-///
+/// 
 /// Class that describes any texture modifications in addition to the oral diet
 /// type required for the patient to safely consume various types of foods (i.e.
 /// solid and/or liquid).
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderOralDietTexture {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1760,11 +1758,11 @@ pub struct NutritionOrderOralDietTexture {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1772,58 +1770,58 @@ pub struct NutritionOrderOralDietTexture {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Food (i.e. solid and/or liquid) texture modifications in addition to those in the oral diet type
-    ///
+    /// 
     /// Texture modifications in the addition to the oral diet type that should be
     /// made, e.g. easy to chew, chopped, ground, and pureed.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Coupled with the foodType (Meat).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Texture modifications for oral diets.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/texture-code
     pub modifier: Option<CodeableConcept>,
     /// Food (i.e. solid and/or liquid) types that undergo texture alteration
-    ///
+    /// 
     /// The food (i.e. solid and/or liquid) type(s) (e.g. meats, all foods) that the
     /// texture modification applies to.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes identifying food types that undergo texture modification.
@@ -1833,56 +1831,56 @@ pub struct NutritionOrderOralDietTexture {
 }
 
 /// Supplement components
-///
+/// 
 /// Oral nutritional products given in order to add further nutritional value to
 /// the patient's diet.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Conditions
 /// Used when: nor-1
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderSupplement {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1892,11 +1890,11 @@ pub struct NutritionOrderSupplement {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1904,42 +1902,42 @@ pub struct NutritionOrderSupplement {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of supplement product requested
-    ///
+    /// 
     /// The kind of nutritional supplement product required such as a high protein or
     /// pediatric clear liquid supplement.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes for nutritional supplements to be provided to the patient.
@@ -1947,63 +1945,63 @@ pub struct NutritionOrderSupplement {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableReference>,
     /// Product or brand name of the nutritional supplement
-    ///
+    /// 
     /// The product or brand name of the nutritional supplement such as "Acme Protein
     /// Shake".
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "productName")]
     pub product_name: Option<String>,
     /// Scheduling information for supplements
-    ///
+    /// 
     /// Schedule information for a supplement.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub schedule: Option<NutritionOrderSupplementSchedule>,
     /// Amount of the nutritional supplement
-    ///
+    /// 
     /// The amount of the nutritional supplement to be given.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Instructions or additional information about the oral supplement
-    ///
+    /// 
     /// Free text or additional instructions or information pertaining to the oral
     /// supplement.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Free text dosage instructions can be used for cases where the instructions
     /// are too complex to code.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub instruction: Option<String>,
     /// Amount of energy per specified volume of supplement that is required
-    ///
+    /// 
     /// The amount of energy (calories or kilojoules) that the supplement should
     /// provide per specified volume, typically per ml or fluid oz. For example, a
     /// patient may required a supplement that provides 24 calories per fluid ounce.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2012,52 +2010,52 @@ pub struct NutritionOrderSupplement {
 }
 
 /// Scheduling information for supplements
-///
+/// 
 /// Schedule information for a supplement.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct NutritionOrderSupplementSchedule {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2067,11 +2065,11 @@ pub struct NutritionOrderSupplementSchedule {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2079,66 +2077,66 @@ pub struct NutritionOrderSupplementSchedule {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Scheduled frequency of supplement
-    ///
+    /// 
     /// The time period and frequency at which the supplement should be given. The
     /// supplement should be given for the combination of all schedules if more than
     /// one schedule is present.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Frequency
     pub timing: Option<Vec<Timing>>,
     /// Take 'as needed'
-    ///
+    /// 
     /// Indicates whether the supplement is only taken when needed within a specific
     /// dosing schedule.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "asNeeded")]
     pub as_needed: Option<Boolean>,
     /// Take 'as needed' for x
-    ///
+    /// 
     /// Indicates whether the supplement is only taken based on a precondition for
     /// taking the supplement.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A coded concept identifying the precondition that should be met or evaluated prior to       consuming a supplement.
@@ -2146,3 +2144,4 @@ pub struct NutritionOrderSupplementSchedule {
     #[fhir_serde(rename = "asNeededFor")]
     pub as_needed_for: Option<CodeableConcept>,
 }
+

@@ -19,57 +19,54 @@ pub enum GoalStart {
 }
 
 /// FHIR Goal type
-///
+/// 
 /// Describes the intended objective(s) for a patient, group, or organizational
 /// care. Examples include a patient's weight loss, restoration of an activity of
 /// daily living for a patient, obtaining herd immunity via immunization for a
 /// group, meeting a process improvement objective for an organization, etc.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [Goal](http://hl7.org/fhir/StructureDefinition/Goal)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "start",
-    summary_fields = "id,meta,implicit_rules,modifier_extension,lifecycle_status,achievement_status,achievement_status_date,category,priority,description,subject,start,recorder,source"
-)]
+#[fhir_resource(choice_elements = "start", summary_fields = "id,meta,implicit_rules,modifier_extension,lifecycle_status,achievement_status,achievement_status_date,category,priority,description,subject,start,recorder,source")]
 pub struct Goal {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -77,7 +74,7 @@ pub struct Goal {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -87,22 +84,22 @@ pub struct Goal {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -113,27 +110,27 @@ pub struct Goal {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -141,27 +138,27 @@ pub struct Goal {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -169,41 +166,41 @@ pub struct Goal {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -213,11 +210,11 @@ pub struct Goal {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -225,38 +222,38 @@ pub struct Goal {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// External Ids for this goal
-    ///
+    /// 
     /// Business identifiers assigned to this goal by the performer or other systems
     /// which remain constant as the resource is updated and propagates from server
     /// to server.
-    ///
+    /// 
     /// ## Requirements
     /// Allows identification of the goal as it is known by various participating
     /// systems and in a way that remains consistent across servers.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is a business identifier, not a resource identifier (see
     /// [discussion](resource.html#identifiers)). It is best practice for the
@@ -265,36 +262,36 @@ pub struct Goal {
     /// same identifier can exist - possibly even with different resource types. For
     /// example, multiple Patient and a Person resource instance might share the same
     /// social insurance number.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// proposed | planned | accepted | active | on-hold | completed | cancelled | entered-in-error | rejected | unknown
-    ///
+    /// 
     /// The state of the goal throughout its lifecycle.
-    ///
+    /// 
     /// ## Requirements
     /// Allows knowing whether goal needs to be further tracked.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element is labeled as a modifier because the lifecycleStatus contains
     /// codes that mark the resource as not currently valid. It would be unusual for
     /// a recorder of a goal to not know this value; it is included to support legacy
     /// data and is strongly discouraged.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes that reflect the current state of a goal and whether the goal is still being targeted.
@@ -302,19 +299,19 @@ pub struct Goal {
     #[fhir_serde(rename = "lifecycleStatus")]
     pub lifecycle_status: Code,
     /// Reason for current lifecycle status
-    ///
+    /// 
     /// Captures the reason for the current lifecycle status.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This will typically be captured for statuses such as rejected, on-hold or
     /// cancelled, but could be present for others.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify the reason for current lifecycle status.
@@ -322,19 +319,19 @@ pub struct Goal {
     #[fhir_serde(rename = "lifecycleStatusReason")]
     pub lifecycle_status_reason: Option<Vec<CodeableConcept>>,
     /// in-progress | improving | worsening | no-change | achieved | sustaining | not-achieved | no-progress | not-attainable
-    ///
+    /// 
     /// Describes the progression, or lack thereof, towards the goal against the
     /// target.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Indicates the progression, or lack thereof, towards the goal against the target.
@@ -342,156 +339,156 @@ pub struct Goal {
     #[fhir_serde(rename = "achievementStatus")]
     pub achievement_status: Option<CodeableConcept>,
     /// When goal achievement status took effect
-    ///
+    /// 
     /// Identifies when the current achievement status took effect. I.e. When
     /// achieved, when improving, etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// To see the date for past statuses, query history.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "achievementStatusDate")]
     pub achievement_status_date: Option<Date>,
     /// E.g. Treatment, dietary, behavioral, etc
-    ///
+    /// 
     /// Indicates a category the goal falls within.
-    ///
+    /// 
     /// ## Requirements
     /// Allows goals to be filtered and sorted.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for grouping and sorting goals.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/goal-category
     pub category: Option<Vec<CodeableConcept>>,
     /// After meeting the goal, ongoing activity is needed to sustain the goal objective
-    ///
+    /// 
     /// After meeting the goal, ongoing activity is needed to sustain the goal
     /// objective.
-    ///
+    /// 
     /// ## Requirements
     /// Allows for a system to programmatically update achievementStatus upon finding
     /// evidence the goal has been met.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example, getting a yellow fever vaccination for a planned trip is a goal
     /// that is designed to be completed (continuous = false). A goal to sustain
     /// HbA1c levels would not be a one-time goal (continuous = true).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub continuous: Option<Boolean>,
     /// high-priority | medium-priority | low-priority
-    ///
+    /// 
     /// Identifies the mutually agreed level of importance associated with
     /// reaching/sustaining the goal.
-    ///
+    /// 
     /// ## Requirements
     /// Used for sorting and presenting goals.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Extensions are available to track priorities as established by each
     /// participant (i.e. Priority from the patient's perspective, different
     /// practitioners' perspectives, family member's perspectives)
-    ///
+    /// 
     /// The ordinal extension on Coding can be used to convey a numerically
     /// comparable ranking to priority. (Keep in mind that different coding systems
     /// may use a "low value=important".
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The level of importance associated with a goal.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/goal-priority
     pub priority: Option<CodeableConcept>,
     /// Code or text describing goal
-    ///
+    /// 
     /// Human-readable and/or coded description of a specific desired objective of
     /// care, such as "control blood pressure" or "negotiate an obstacle course" or
     /// "dance with child at wedding".
-    ///
+    /// 
     /// ## Requirements
     /// Without a description of what's trying to be achieved, element has no
     /// purpose.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If no code is available, use CodeableConcept.text.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes providing the details of a particular goal.  This will generally be system or implementation guide-specific.  In many systems, only the text element will be used.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/goal-description
     pub description: CodeableConcept,
     /// Who this goal is intended for
-    ///
+    /// 
     /// Identifies the patient, group or organization for whom the goal is being
     /// established.
-    ///
+    /// 
     /// ## Requirements
     /// Subject is optional to support annonymized reporting.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Reference,
     /// When goal pursuit begins
-    ///
+    /// 
     /// The date or event after which the goal should begin being pursued.
-    ///
+    /// 
     /// ## Requirements
     /// Goals can be established prior to there being an intention to start pursuing
     /// them; e.g. Goals for post-surgical recovery established prior to surgery.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing events that can trigger the initiation of a goal.
@@ -499,31 +496,31 @@ pub struct Goal {
     #[fhir_serde(flatten)]
     pub start: Option<GoalStart>,
     /// Individual acceptance of goal
-    ///
+    /// 
     /// Information about the acceptance and relative priority assigned to the goal
     /// by the patient, practitioners and other stakeholders.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub acceptance: Option<Vec<GoalAcceptance>>,
     /// Target outcome for the goal
-    ///
+    /// 
     /// Indicates what should be done by when.
-    ///
+    /// 
     /// ## Requirements
     /// Allows the progress of the goal to be monitored against an observation or due
     /// date. Target is 0..* to support Observations with multiple components, such
     /// as blood pressure goals with both a systolic and diastolic target.
-    ///
+    /// 
     /// ## Implementation Notes
     /// When multiple targets are present for a single goal instance, all targets
     /// must be met for the overall goal to be met.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -531,73 +528,73 @@ pub struct Goal {
     ///   Expression: `(detail.exists() and measure.exists()) or detail.exists().not()`
     pub target: Option<Vec<GoalTarget>>,
     /// Who recorded the goal
-    ///
+    /// 
     /// Individual who recorded the record and takes responsibility for its content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Because the recorder takes responsibility for accurately recording
     /// information in the record, the recorder is the most recent author. The
     /// recorder might or might not be the source who established the goal. Using
     /// Group is only allowed when the group represents a family or a household and
     /// should not represent groups of Practitioners.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub recorder: Option<Reference>,
     /// Who's responsible for creating Goal?
-    ///
+    /// 
     /// Indicates whose goal this is - patient goal, practitioner goal, etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is the individual or team responsible for establishing the goal, not
     /// necessarily who recorded it. Using Group is only allowed when the group
     /// represents a family or a household and should not represent groups of
     /// Practitioners.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub source: Option<Reference>,
     /// Issues addressed by this goal
-    ///
+    /// 
     /// The identified conditions and other resources that provide the context for
     /// why the goal exists.
-    ///
+    /// 
     /// ## Requirements
     /// Allows specific goals to explicitly linked to the concerns they're dealing
     /// with - makes the goal more understandable.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub addresses: Option<Vec<Reference>>,
     /// Comments about the goal
-    ///
+    /// 
     /// Any comments related to the goal.
-    ///
+    /// 
     /// ## Requirements
     /// There's a need to capture information about the goal that doesn't actually
     /// describe the goal.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May be used for progress notes, concerns or other related information that
     /// doesn't actually describe the goal itself.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -605,53 +602,53 @@ pub struct Goal {
 }
 
 /// Individual acceptance of goal
-///
+/// 
 /// Information about the acceptance and relative priority assigned to the goal
 /// by the patient, practitioners and other stakeholders.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct GoalAcceptance {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -661,11 +658,11 @@ pub struct GoalAcceptance {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -673,67 +670,67 @@ pub struct GoalAcceptance {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Individual or organization whose acceptance is reflected
-    ///
+    /// 
     /// The person ororganization whose acceptance/priority is being reflected.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Using Group is only allowed when the group represents a family or a household
     /// and should not represent groups of Practitioners.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub participant: Reference,
     /// agree | disagree | pending
-    ///
+    /// 
     /// Indicates whether the specified individual has accepted the goal or not.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes that identify whether the goal has been accepted or not.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/goal-accept-status|6.0.0-ballot4
     pub status: Option<Code>,
     /// Priority of goal for individual
-    ///
+    /// 
     /// Indicates the relative priority assigned to the goal by the stakeholder.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify the level of importance associated with reaching or sustaining a goal.
@@ -781,20 +778,20 @@ pub enum GoalTargetDue {
 }
 
 /// Target outcome for the goal
-///
+/// 
 /// Indicates what should be done by when.
-///
+/// 
 /// ## Requirements
 /// Allows the progress of the goal to be monitored against an observation or due
 /// date. Target is 0..* to support Observations with multiple components, such
 /// as blood pressure goals with both a systolic and diastolic target.
-///
+/// 
 /// ## Implementation Notes
 /// When multiple targets are present for a single goal instance, all targets
 /// must be met for the overall goal to be met.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -804,41 +801,41 @@ pub enum GoalTargetDue {
 #[fhir_resource(choice_elements = "detail,due")]
 pub struct GoalTarget {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -848,11 +845,11 @@ pub struct GoalTarget {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -860,52 +857,52 @@ pub struct GoalTarget {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The parameter whose value is being tracked
-    ///
+    /// 
     /// The parameter whose value is being tracked, e.g. body weight, blood pressure,
     /// or hemoglobin A1c level.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify the value being tracked, e.g. body weight, blood pressure, or hemoglobin A1c level.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/observation-codes
-    ///
+    /// 
     /// ## Conditions
     /// Used when: gol-1
     pub measure: Option<CodeableConcept>,
     /// The target value to be achieved
-    ///
+    /// 
     /// The target value of the focus to be achieved to signify the fulfillment of
     /// the goal, e.g. 150 pounds, 7.0%. Either the high or low or both values of the
     /// range can be specified. When a low value is missing, it indicates that the
@@ -913,41 +910,42 @@ pub struct GoalTarget {
     /// the high value is missing, it indicates that the goal is achieved at any
     /// focus value at or above the low value. A CodeableConcept target value could
     /// be Positive, Negative, Abnormal, Normal, Present, Absent, Yes, No.
-    ///
+    /// 
     /// ## Implementation Notes
     /// A CodeableConcept with just a text would be used instead of a string if the
     /// field was usually coded, or if the type associated with the
     /// Goal.target.measure defines a coded value.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: gol-1
     #[fhir_serde(flatten)]
     pub detail: Option<GoalTargetDetail>,
     /// Reach goal on or before
-    ///
+    /// 
     /// Indicates either the date or the duration after start by which the goal
     /// should be met.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies when the goal should be evaluated.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub due: Option<GoalTargetDue>,
 }
+

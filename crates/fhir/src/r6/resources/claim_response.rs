@@ -7,54 +7,52 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR ClaimResponse type
-///
+/// 
 /// This resource provides the adjudication details from the processing of a
 /// Claim resource.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [ClaimResponse](http://hl7.org/fhir/StructureDefinition/ClaimResponse)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    summary_fields = "id,meta,implicit_rules,modifier_extension,status,status_reason,r#type,r#use,subject,created,insurer,request,outcome,decision,total"
-)]
+#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,status,status_reason,r#type,r#use,subject,created,insurer,request,outcome,decision,total")]
 pub struct ClaimResponse {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -62,7 +60,7 @@ pub struct ClaimResponse {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -72,22 +70,22 @@ pub struct ClaimResponse {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -98,27 +96,27 @@ pub struct ClaimResponse {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -126,27 +124,27 @@ pub struct ClaimResponse {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -154,41 +152,41 @@ pub struct ClaimResponse {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -198,11 +196,11 @@ pub struct ClaimResponse {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -210,127 +208,127 @@ pub struct ClaimResponse {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Business Identifier for a claim response
-    ///
+    /// 
     /// A unique identifier assigned to this claim response.
-    ///
+    /// 
     /// ## Requirements
     /// Allows claim responses to be distinguished and referenced.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// active | cancelled | draft | entered-in-error
-    ///
+    /// 
     /// The status of the resource instance.
-    ///
+    /// 
     /// ## Requirements
     /// Need to track the status of the resource as 'draft' resources may undergo
     /// further edits while 'active' resources are immutable and may only have their
     /// status changed to 'cancelled'.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element is labeled as a modifier because the status contains codes that
     /// mark the resource as not currently valid.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A code specifying the state of the resource instance.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/fm-status|6.0.0-ballot4
     pub status: Code,
     /// Reason for status change
-    ///
+    /// 
     /// Used to indicate why the status has changed.
-    ///
+    /// 
     /// ## Requirements
     /// This is used to implement conformance on other elements.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Implementation guides may consider adding invariants such that if status =
     /// cancelled, statusReason SHALL be supplied.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "statusReason")]
     pub status_reason: Option<String>,
     /// More granular claim type
-    ///
+    /// 
     /// A finer grained suite of claim type codes which may convey additional
     /// information such as Inpatient vs Outpatient and/or a specialty service.
-    ///
+    /// 
     /// ## Requirements
     /// Some jurisdictions need a finer grained claim type for routing and
     /// adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This may contain the local bill type codes, for example the US UB-04 bill
     /// type code or the CMS bill type.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type or discipline-style of the claim.
@@ -338,24 +336,24 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// More granular claim type
-    ///
+    /// 
     /// A finer grained suite of claim type codes which may convey additional
     /// information such as Inpatient vs Outpatient and/or a specialty service.
-    ///
+    /// 
     /// ## Requirements
     /// Some jurisdictions need a finer grained claim type for routing and
     /// adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This may contain the local bill type codes, for example the US UB-04 bill
     /// type code or the CMS bill type.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A more granular claim typecode.
@@ -363,7 +361,7 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "subType")]
     pub sub_type: Option<CodeableConcept>,
     /// claim | preauthorization | predetermination
-    ///
+    /// 
     /// A code to indicate whether the nature of the request is: Claim - A request to
     /// an Insurer to adjudicate the supplied charges for health care goods and
     /// services under the identified policy and to pay the determined Benefit
@@ -375,20 +373,20 @@ pub struct ClaimResponse {
     /// - A request to an Insurer to adjudicate the supplied 'what if' charges for
     /// health care goods and services under the identified policy and report back
     /// what the Benefit payable would be had the services actually been provided.
-    ///
+    /// 
     /// ## Requirements
     /// This element is required to understand the nature of the request for
     /// adjudication.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Claim, preauthorization, predetermination.
@@ -396,100 +394,100 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "use")]
     pub r#use: Code,
     /// The recipient(s) of the products and services
-    ///
+    /// 
     /// The party/group to whom the professional services and/or products have been
     /// supplied or are being considered and for whom actual for facast reimbursement
     /// is sought.
-    ///
+    /// 
     /// ## Requirements
     /// The patient must be supplied to the insurer so that confirmation of coverage
     /// and service hstory may be considered as part of the authorization and/or
     /// adjudiction.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// patient
     pub subject: Reference,
     /// Response creation date
-    ///
+    /// 
     /// The date this resource was created.
-    ///
+    /// 
     /// ## Requirements
     /// Need to record a timestamp for use by both the recipient and the issuer.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub created: DateTime,
     /// Party responsible for reimbursement
-    ///
+    /// 
     /// The party responsible for authorization, adjudication and reimbursement.
-    ///
+    /// 
     /// ## Requirements
     /// To be a valid claim, preauthorization or predetermination there must be a
     /// party who is responsible for adjudicating the contents against a policy which
     /// provides benefits for the patient.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub insurer: Option<Reference>,
     /// Party responsible for the claim
-    ///
+    /// 
     /// The provider which is responsible for the claim, predetermination or
     /// preauthorization.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Typically this field would be 1..1 where this party is accountable for the
     /// data content within the claim but is not necessarily the facility, provider
     /// group or practitioner who provided the products and services listed within
     /// this claim resource. This field is the Billing Provider, for example, a
     /// facility, provider group, lab or practitioner..
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub requestor: Option<Reference>,
     /// Id of resource triggering adjudication
-    ///
+    /// 
     /// Original request resource reference.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub request: Option<Reference>,
     /// queued | complete | error | partial
-    ///
+    /// 
     /// The outcome of the claim, predetermination, or preauthorization processing.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor of an overall processing outcome.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The resource may be used to indicate that the
     /// Claim/Preauthorization/Pre-determination has been received but processing has
@@ -497,28 +495,28 @@ pub struct ClaimResponse {
     /// been detected (error); no errors were detected and some of the adjudication
     /// processing has been performed (partial); or all of the adjudication
     /// processing has completed without errors (complete).
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The result of the claim processing.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-outcome|6.0.0-ballot4
     pub outcome: Code,
     /// Result of the adjudication
-    ///
+    /// 
     /// The result of the claim, predetermination, or preauthorization adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor of the result of the adjudication process.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The element is used to indicate the current state of the adjudication overall
     /// for the claim resource, for example: the request has been held (pended) for
@@ -526,92 +524,92 @@ pub struct ClaimResponse {
     /// processed and will be paid, or the outstanding paid, as submitted (approved);
     /// that no amount will be paid (denied); or that some amount between zero and
     /// the submitted amount will be paid (partial).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The overall result of the claim adjudication.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-decision
     pub decision: Option<CodeableConcept>,
     /// Disposition Message
-    ///
+    /// 
     /// A human readable description of the status of the adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// Provided for user display.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub disposition: Option<String>,
     /// Preauthorization reference
-    ///
+    /// 
     /// Reference from the Insurer which is used in later communications which refers
     /// to this adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// On subsequent claims, the insurer may require the provider to quote this
     /// value.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This value is only present on preauthorization adjudications.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "preAuthRef")]
     pub pre_auth_ref: Option<String>,
     /// Preauthorization reference effective period
-    ///
+    /// 
     /// The time frame during which this authorization is effective.
-    ///
+    /// 
     /// ## Requirements
     /// To convey to the provider when the authorized products and services must be
     /// supplied for the authorized adjudication to apply.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "preAuthPeriod")]
     pub pre_auth_period: Option<Period>,
     /// Event information
-    ///
+    /// 
     /// Information code for an event with a corresponding date or period.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub event: Option<Vec<ClaimResponseEvent>>,
     /// Party to be paid any benefits payable
-    ///
+    /// 
     /// Type of Party to be reimbursed: subscriber, billing provider, other.
-    ///
+    /// 
     /// ## Requirements
     /// Need to know who should receive payment with the most common situations being
     /// the billing Provider (assignment of benefits) or the Subscriber.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: A code for the party to be reimbursed.
@@ -619,70 +617,70 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "payeeType")]
     pub payee_type: Option<CodeableConcept>,
     /// Encounters associated with the listed treatments
-    ///
+    /// 
     /// Healthcare encounters related to this claim.
-    ///
+    /// 
     /// ## Requirements
     /// Used in some jurisdictions to link clinical events to claim items.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This will typically be the encounter the event occurred within, but some
     /// activities may be initiated prior to or after the official completion of an
     /// encounter but still be tied to the context of the encounter.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Vec<Reference>>,
     /// Package billing code
-    ///
+    /// 
     /// A package billing code or bundle code used to group products and services to
     /// a particular health condition (such as heart attack) which is based on a
     /// predetermined grouping code system.
-    ///
+    /// 
     /// ## Requirements
     /// Required to relate the current diagnosis to a package billing code that is
     /// then referenced on the individual claim items which are specific to the
     /// health condition covered by the package code.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example DRG (Diagnosis Related Group) or a bundled billing code. A
     /// patient may have a diagnosis of a Myocardial Infarction and a DRG for
     /// HeartAttack would be assigned. The Claim item (and possible subsequent
     /// claims) would refer to the DRG for those line items that were for services
     /// related to the heart attack event.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-diagnosisrelatedgroup
     #[fhir_serde(rename = "diagnosisRelatedGroup")]
     pub diagnosis_related_group: Option<CodeableConcept>,
     /// Supporting information
-    ///
+    /// 
     /// Additional information codes regarding exceptions, special considerations,
     /// the condition, situation, prior or concurrent issues.
-    ///
+    /// 
     /// ## Requirements
     /// Typically these information codes are required to support the services
     /// rendered or the adjudication of the services rendered.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Often there are multiple jurisdiction specific valuesets which are required.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Attachments
     /// Exception Codes
@@ -691,24 +689,24 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "supportingInfo")]
     pub supporting_info: Option<Vec<ClaimResponseSupportingInfo>>,
     /// Adjudication for claim line items
-    ///
+    /// 
     /// A claim line. Either a simple (a product or service) or a 'group' of details
     /// which can also be a simple items or groups of sub-details.
-    ///
+    /// 
     /// ## Requirements
     /// The adjudication for items provided on the claim.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub item: Option<Vec<ClaimResponseItem>>,
     /// Insurer added line items
-    ///
+    /// 
     /// The first-tier service adjudications for payer added product or service
     /// lines.
-    ///
+    /// 
     /// ## Requirements
     /// Insurers may redefine the provided product or service or may package and/or
     /// decompose groups of products and services. The addItems allows the insurer to
@@ -716,82 +714,82 @@ pub struct ClaimResponse {
     /// items/details/sub-details. In a preauthorization the insurer may use the
     /// addItem structure to provide additional information on authorized products
     /// and services.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "addItem")]
     pub add_item: Option<Vec<ClaimResponseAddItem>>,
     /// Header-level adjudication
-    ///
+    /// 
     /// The adjudication results which are presented at the header level rather than
     /// at the line-item or add-item levels.
-    ///
+    /// 
     /// ## Requirements
     /// Some insurers will receive line-items but provide the adjudication only at a
     /// summary or header-level.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjudication: Option<Vec<ClaimResponseItemAdjudication>>,
     /// Adjudication totals
-    ///
+    /// 
     /// Categorized monetary totals for the adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// To provide the requestor with financial totals by category for the
     /// adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Totals for amounts submitted, co-pays, benefits payable etc.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub total: Option<Vec<ClaimResponseTotal>>,
     /// Payment Details
-    ///
+    /// 
     /// Payment details for the adjudication of the claim.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to convey references to the financial instrument that has been used if
     /// payment has been made.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub payment: Option<ClaimResponsePayment>,
     /// Funds reserved status
-    ///
+    /// 
     /// A code, used only on a response to a preauthorization, to indicate whether
     /// the benefits payable have been reserved and for whom.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to advise the submitting provider on whether the request for
     /// reservation of funds has been honored.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Fund would be release by a future claim quoting the preAuthRef of this
     /// response. Examples of values include: provider, patient, none.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: For whom funds are to be reserved: (Patient, Provider, None).
@@ -799,22 +797,22 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "fundsReserve")]
     pub funds_reserve: Option<CodeableConcept>,
     /// Printed form identifier
-    ///
+    /// 
     /// A code for the form to be used for printing the content.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to specify the specific form used for producing output for this
     /// response.
-    ///
+    /// 
     /// ## Implementation Notes
     /// May be needed to identify specific jurisdictional forms.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The forms codes.
@@ -822,66 +820,66 @@ pub struct ClaimResponse {
     #[fhir_serde(rename = "formCode")]
     pub form_code: Option<CodeableConcept>,
     /// Printed reference or actual form
-    ///
+    /// 
     /// The actual form, by reference or inclusion, for printing the content or an
     /// EOB.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to include the specific form used for producing output for this
     /// response.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Needed to permit insurers to include the actual form.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub form: Option<Attachment>,
     /// Note concerning adjudication
-    ///
+    /// 
     /// A note that describes or explains adjudication results in a human readable
     /// form.
-    ///
+    /// 
     /// ## Requirements
     /// Provides the insurer specific textual explanations associated with the
     /// processing.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "processNote")]
     pub process_note: Option<Vec<ClaimResponseProcessNote>>,
     /// Request for additional information
-    ///
+    /// 
     /// Request for additional supporting or authorizing information.
-    ///
+    /// 
     /// ## Requirements
     /// Need to communicate insurer request for additional information required to
     /// support the adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: professional reports, documents, images, clinical resources, or
     /// accident reports.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "communicationRequest")]
     pub communication_request: Option<Vec<Reference>>,
     /// Patient insurance information
-    ///
+    /// 
     /// Financial instruments for reimbursement for the health care products and
     /// services specified on the claim.
-    ///
+    /// 
     /// ## Requirements
     /// At least one insurer is required for a claim to be a claim.
-    ///
+    /// 
     /// ## Implementation Notes
     /// All insurance coverages for the patient which may be applicable for
     /// reimbursement, of the products and services listed in the claim, are
@@ -891,27 +889,27 @@ pub struct ClaimResponse {
     /// adjudication of this claim. Coverages appearing before the focal Coverage in
     /// the list, and where 'subrogation=false', should provide a reference to the
     /// ClaimResponse containing the adjudication results of the prior claim.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub insurance: Option<Vec<ClaimResponseInsurance>>,
     /// Processing errors
-    ///
+    /// 
     /// Errors encountered during the processing of the adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// Need to communicate processing issues to the requestor.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If the request contains errors then an error element should be provided and
     /// no adjudication related sections (item, addItem, or payment) should be
     /// present.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -946,10 +944,10 @@ pub enum ClaimResponseAddItemLocation {
 }
 
 /// Insurer added line items
-///
+/// 
 /// The first-tier service adjudications for payer added product or service
 /// lines.
-///
+/// 
 /// ## Requirements
 /// Insurers may redefine the provided product or service or may package and/or
 /// decompose groups of products and services. The addItems allows the insurer to
@@ -957,9 +955,9 @@ pub enum ClaimResponseAddItemLocation {
 /// items/details/sub-details. In a preauthorization the insurer may use the
 /// addItem structure to provide additional information on authorized products
 /// and services.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -967,41 +965,41 @@ pub enum ClaimResponseAddItemLocation {
 #[fhir_resource(choice_elements = "serviced,location")]
 pub struct ClaimResponseAddItem {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1011,11 +1009,11 @@ pub struct ClaimResponseAddItem {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1023,199 +1021,199 @@ pub struct ClaimResponseAddItem {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Item sequence number
-    ///
+    /// 
     /// Claim items which this service line is intended to replace.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim items.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "itemSequence")]
     pub item_sequence: Option<Vec<PositiveInt>>,
     /// Detail sequence number
-    ///
+    /// 
     /// The sequence number of the details within the claim item which this line is
     /// intended to replace.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim details within the claim item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "detailSequence")]
     pub detail_sequence: Option<Vec<PositiveInt>>,
     /// Subdetail sequence number
-    ///
+    /// 
     /// The sequence number of the sub-details within the details within the claim
     /// item which this line is intended to replace.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim sub-details within the claim detail.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "subdetailSequence")]
     pub subdetail_sequence: Option<Vec<PositiveInt>>,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// The recipient of the products and services
-    ///
+    /// 
     /// The party to whom the professional services and/or products have been
     /// supplied or are being considered and for whom actual for facast reimbursement
     /// is sought.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Profilers should consider making this element required when the backbone
     /// .subject is a group.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Option<Reference>,
     /// Applicable exception and supporting information
-    ///
+    /// 
     /// Exceptions, special conditions and supporting information applicable for this
     /// service or product.
-    ///
+    /// 
     /// ## Requirements
     /// Need to reference the supporting information items that relate directly to
     /// this product or service.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "informationSequence")]
     pub information_sequence: Option<Vec<PositiveInt>>,
     /// Authorized providers
-    ///
+    /// 
     /// The providers who are authorized for the services rendered to the patient.
-    ///
+    /// 
     /// ## Requirements
     /// Insurer may provide authorization specifically to a restricted set of
     /// providers rather than an open authorization.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub provider: Option<Vec<Reference>>,
     /// Revenue or cost center code
-    ///
+    /// 
     /// The type of revenue or cost center providing the product and/or service.
-    ///
+    /// 
     /// ## Requirements
     /// Needed in the processing of institutional claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for the revenue or cost centers supplying the service and/or products.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-revenue-center
     pub revenue: Option<CodeableConcept>,
     /// Benefit classification
-    ///
+    /// 
     /// Code to identify the general type of benefits under which products and
     /// services are provided.
-    ///
+    /// 
     /// ## Requirements
     /// Needed in the processing of institutional claims as this allows the insurer
     /// to determine whether a facial X-Ray is for dental, orthopedic, or facial
     /// surgery purposes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Examples include Medical Care, Periodontics, Renal Dialysis, Vision Coverage.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Benefit categories such as: oral-basic, major, glasses.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-benefitcategory
     pub category: Option<CodeableConcept>,
     /// Billing, service, product, or drug code
-    ///
+    /// 
     /// When the value is a group code then this item collects a set of related item
     /// details, otherwise this contains the product, service, drug or other billing
     /// code for the item. This element may be the start of a range of
     /// .productOrService codes used in conjunction with .productOrServiceEnd or it
     /// may be a solo element where .productOrServiceEnd is not used.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to state what was provided or done.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If this is an actual service or product line, i.e. not a Group, then use code
     /// to indicate the Professional Service or Product supplied (e.g. CTP, HCPCS,
     /// USCLS, ICD10, NCPDP, DIN, RxNorm, ACHI, CCI). If a grouping item then use a
     /// group code to indicate the type of thing being grouped e.g. 'glasses' or
     /// 'compound'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Allowable service and product codes.
@@ -1223,84 +1221,84 @@ pub struct ClaimResponseAddItem {
     #[fhir_serde(rename = "productOrService")]
     pub product_or_service: Option<CodeableConcept>,
     /// End of a range of codes
-    ///
+    /// 
     /// This contains the end of a range of product, service, drug or other billing
     /// codes for the item. This element is not used when the .productOrService is a
     /// group code. This value may only be present when a .productOfService code has
     /// been provided to convey the start of the range. Typically this value may be
     /// used only with preauthorizations and not with claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/service-uscls
-    ///
+    /// 
     /// ## Aliases
     /// End of a range of Drug Code; Bill Code; Service Code
     #[fhir_serde(rename = "productOrServiceEnd")]
     pub product_or_service_end: Option<CodeableConcept>,
     /// Request or Referral for Service
-    ///
+    /// 
     /// Request or Referral for Goods or Service to be rendered.
-    ///
+    /// 
     /// ## Requirements
     /// May identify the service to be provided or provider authorization for the
     /// service.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub request: Option<Vec<Reference>>,
     /// Service/Product billing modifiers
-    ///
+    /// 
     /// Item typification or modifiers codes to convey additional context for the
     /// product or service.
-    ///
+    /// 
     /// ## Requirements
     /// To support inclusion of the item for adjudication or to charge an elevated
     /// fee.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example in Oral whether the treatment is cosmetic or associated with TMJ,
     /// or for Medical whether the treatment was outside the clinic or outside of
     /// office hours.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-modifiers
     pub modifier: Option<Vec<CodeableConcept>>,
     /// Program the product or service is provided under
-    ///
+    /// 
     /// Identifies the program under which this may be recovered.
-    ///
+    /// 
     /// ## Requirements
     /// Commonly used in in the identification of publicly provided program focused
     /// on population segments or disease classifications.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: Neonatal program, child dental program or drug users recovery
     /// program.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Program specific reason codes.
@@ -1308,35 +1306,35 @@ pub struct ClaimResponseAddItem {
     #[fhir_serde(rename = "programCode")]
     pub program_code: Option<Vec<CodeableConcept>>,
     /// Date or dates of service or product delivery
-    ///
+    /// 
     /// The date or dates when the service or product was supplied, performed or
     /// completed.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to determine whether the service or product was provided during the
     /// term of the insurance coverage.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub serviced: Option<ClaimResponseAddItemServiced>,
     /// Place of service or where product was supplied
-    ///
+    /// 
     /// Where the product or service was provided.
-    ///
+    /// 
     /// ## Requirements
     /// The location can alter whether the item was acceptable for insurance purposes
     /// or impact the determination of the benefit amount.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Place of service: pharmacy, school, prison, etc.
@@ -1344,142 +1342,142 @@ pub struct ClaimResponseAddItem {
     #[fhir_serde(flatten)]
     pub location: Option<ClaimResponseAddItemLocation>,
     /// Count of products or services
-    ///
+    /// 
     /// The number of repetitions of a service or product.
-    ///
+    /// 
     /// ## Requirements
     /// Required when the product or service code does not convey the quantity
     /// provided.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Fee, charge or cost per item
-    ///
+    /// 
     /// If the item is not a group then this is the fee for the product or service,
     /// otherwise this is the total of the fees for the details of the group.
-    ///
+    /// 
     /// ## Requirements
     /// The amount charged to the patient by the provider for a single unit.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "unitPrice")]
     pub unit_price: Option<Money>,
     /// Price scaling factor
-    ///
+    /// 
     /// A real number that represents a multiplier used in determining the overall
     /// value of services delivered and/or goods received. The concept of a Factor
     /// allows for a discount or surcharge multiplier to be applied to a monetary
     /// amount.
-    ///
+    /// 
     /// ## Requirements
     /// When discounts are provided to a patient (example: Senior's discount) then
     /// this must be documented for adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// To show a 10% senior's discount, the value entered is: 0.90 (1.00 - 0.10).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub factor: Option<Decimal>,
     /// Total tax
-    ///
+    /// 
     /// The total of taxes applicable for this product or service.
-    ///
+    /// 
     /// ## Requirements
     /// Required when taxes are not embedded in the unit price or provided as a
     /// separate service.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub tax: Option<Money>,
     /// Total item cost
-    ///
+    /// 
     /// The total amount claimed for the group (if a grouper) or the addItem. Net =
     /// unit price * quantity * factor.
-    ///
+    /// 
     /// ## Requirements
     /// Provides the total amount claimed for the group (if a grouper) or the line
     /// item.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example, the formula: quantity * unitPrice * factor = net. Quantity and
     /// factor are assumed to be 1 if not supplied.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub net: Option<Money>,
     /// Anatomical location
-    ///
+    /// 
     /// Physical location where the service is performed or applies.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "bodySite")]
     pub body_site: Option<Vec<ClaimResponseAddItemBodySite>>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Added items adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Added items adjudication
-    ///
+    /// 
     /// The adjudication results.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjudication: Option<Vec<ClaimResponseItemAdjudication>>,
     /// Insurer added line details
-    ///
+    /// 
     /// The second-tier service adjudications for payer added services.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1487,52 +1485,52 @@ pub struct ClaimResponseAddItem {
 }
 
 /// Anatomical location
-///
+/// 
 /// Physical location where the service is performed or applies.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseAddItemBodySite {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1542,11 +1540,11 @@ pub struct ClaimResponseAddItemBodySite {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1554,62 +1552,62 @@ pub struct ClaimResponseAddItemBodySite {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Location
-    ///
+    /// 
     /// Physical service site on the patient (limb, tooth, etc.).
-    ///
+    /// 
     /// ## Requirements
     /// Allows insurer to validate specific procedures.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: Providing a tooth code allows an insurer to identify a provider
     /// performing a filling on a tooth that was previously removed.
-    ///
+    /// 
     /// ## Cardinality: Required, Multiple (1..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/tooth
     pub site: Option<Vec<CodeableReference>>,
     /// Sub-location
-    ///
+    /// 
     /// A region or surface of the bodySite, e.g. limb region or tooth surface(s).
-    ///
+    /// 
     /// ## Requirements
     /// Allows insurer to validate specific procedures.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/surface
@@ -1618,52 +1616,52 @@ pub struct ClaimResponseAddItemBodySite {
 }
 
 /// Insurer added line details
-///
+/// 
 /// The second-tier service adjudications for payer added services.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseAddItemDetail {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1673,11 +1671,11 @@ pub struct ClaimResponseAddItemDetail {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1685,85 +1683,85 @@ pub struct ClaimResponseAddItemDetail {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// Revenue or cost center code
-    ///
+    /// 
     /// The type of revenue or cost center providing the product and/or service.
-    ///
+    /// 
     /// ## Requirements
     /// Needed in the processing of institutional claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for the revenue or cost centers supplying the service and/or products.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-revenue-center
     pub revenue: Option<CodeableConcept>,
     /// Billing, service, product, or drug code
-    ///
+    /// 
     /// When the value is a group code then this item collects a set of related item
     /// details, otherwise this contains the product, service, drug or other billing
     /// code for the item. This element may be the start of a range of
     /// .productOrService codes used in conjunction with .productOrServiceEnd or it
     /// may be a solo element where .productOrServiceEnd is not used.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to state what was provided or done.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If this is an actual service or product line, i.e. not a Group, then use code
     /// to indicate the Professional Service or Product supplied (e.g. CTP, HCPCS,
     /// USCLS, ICD10, NCPDP, DIN, RxNorm, ACHI, CCI). If a grouping item then use a
     /// group code to indicate the type of thing being grouped e.g. 'glasses' or
     /// 'compound'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Allowable service and product codes.
@@ -1771,178 +1769,178 @@ pub struct ClaimResponseAddItemDetail {
     #[fhir_serde(rename = "productOrService")]
     pub product_or_service: Option<CodeableConcept>,
     /// End of a range of codes
-    ///
+    /// 
     /// This contains the end of a range of product, service, drug or other billing
     /// codes for the item. This element is not used when the .productOrService is a
     /// group code. This value may only be present when a .productOfService code has
     /// been provided to convey the start of the range. Typically this value may be
     /// used only with preauthorizations and not with claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/service-uscls
-    ///
+    /// 
     /// ## Aliases
     /// End of a range of Drug Code; Bill Code; Service Code
     #[fhir_serde(rename = "productOrServiceEnd")]
     pub product_or_service_end: Option<CodeableConcept>,
     /// Service/Product billing modifiers
-    ///
+    /// 
     /// Item typification or modifiers codes to convey additional context for the
     /// product or service.
-    ///
+    /// 
     /// ## Requirements
     /// To support inclusion of the item for adjudication or to charge an elevated
     /// fee.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example in Oral whether the treatment is cosmetic or associated with TMJ,
     /// or for Medical whether the treatment was outside the clinic or outside of
     /// office hours.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-modifiers
     pub modifier: Option<Vec<CodeableConcept>>,
     /// Count of products or services
-    ///
+    /// 
     /// The number of repetitions of a service or product.
-    ///
+    /// 
     /// ## Requirements
     /// Required when the product or service code does not convey the quantity
     /// provided.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Fee, charge or cost per item
-    ///
+    /// 
     /// If the item is not a group then this is the fee for the product or service,
     /// otherwise this is the total of the fees for the details of the group.
-    ///
+    /// 
     /// ## Requirements
     /// The amount charged to the patient by the provider for a single unit.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "unitPrice")]
     pub unit_price: Option<Money>,
     /// Price scaling factor
-    ///
+    /// 
     /// A real number that represents a multiplier used in determining the overall
     /// value of services delivered and/or goods received. The concept of a Factor
     /// allows for a discount or surcharge multiplier to be applied to a monetary
     /// amount.
-    ///
+    /// 
     /// ## Requirements
     /// When discounts are provided to a patient (example: Senior's discount) then
     /// this must be documented for adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// To show a 10% senior's discount, the value entered is: 0.90 (1.00 - 0.10).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub factor: Option<Decimal>,
     /// Total tax
-    ///
+    /// 
     /// The total of taxes applicable for this product or service.
-    ///
+    /// 
     /// ## Requirements
     /// Required when taxes are not embedded in the unit price or provided as a
     /// separate service.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub tax: Option<Money>,
     /// Total item cost
-    ///
+    /// 
     /// The total amount claimed for the group (if a grouper) or the addItem.detail.
     /// Net = unit price * quantity * factor.
-    ///
+    /// 
     /// ## Requirements
     /// Provides the total amount claimed for the group (if a grouper) or the line
     /// item.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example, the formula: quantity * unitPrice * factor = net. Quantity and
     /// factor are assumed to be 1 if not supplied.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub net: Option<Money>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Added items detail level adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Added items detail adjudication
-    ///
+    /// 
     /// The adjudication results.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjudication: Option<Vec<ClaimResponseItemAdjudication>>,
     /// Insurer added line items
-    ///
+    /// 
     /// The third-tier service adjudications for payer added services.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1951,52 +1949,52 @@ pub struct ClaimResponseAddItemDetail {
 }
 
 /// Insurer added line items
-///
+/// 
 /// The third-tier service adjudications for payer added services.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseAddItemDetailSubDetail {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2006,11 +2004,11 @@ pub struct ClaimResponseAddItemDetailSubDetail {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2018,85 +2016,85 @@ pub struct ClaimResponseAddItemDetailSubDetail {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// Revenue or cost center code
-    ///
+    /// 
     /// The type of revenue or cost center providing the product and/or service.
-    ///
+    /// 
     /// ## Requirements
     /// Needed in the processing of institutional claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for the revenue or cost centers supplying the service and/or products.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/ex-revenue-center
     pub revenue: Option<CodeableConcept>,
     /// Billing, service, product, or drug code
-    ///
+    /// 
     /// When the value is a group code then this item collects a set of related item
     /// details, otherwise this contains the product, service, drug or other billing
     /// code for the item. This element may be the start of a range of
     /// .productOrService codes used in conjunction with .productOrServiceEnd or it
     /// may be a solo element where .productOrServiceEnd is not used.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to state what was provided or done.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If this is an actual service or product line, i.e. not a Group, then use code
     /// to indicate the Professional Service or Product supplied (e.g. CTP, HCPCS,
     /// USCLS, ICD10, NCPDP, DIN, RxNorm, ACHI, CCI). If a grouping item then use a
     /// group code to indicate the type of thing being grouped e.g. 'glasses' or
     /// 'compound'.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Allowable service and product codes.
@@ -2104,168 +2102,168 @@ pub struct ClaimResponseAddItemDetailSubDetail {
     #[fhir_serde(rename = "productOrService")]
     pub product_or_service: Option<CodeableConcept>,
     /// End of a range of codes
-    ///
+    /// 
     /// This contains the end of a range of product, service, drug or other billing
     /// codes for the item. This element is not used when the .productOrService is a
     /// group code. This value may only be present when a .productOfService code has
     /// been provided to convey the start of the range. Typically this value may be
     /// used only with preauthorizations and not with claims.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/service-uscls
-    ///
+    /// 
     /// ## Aliases
     /// End of a range of Drug Code; Bill Code; Service Code
     #[fhir_serde(rename = "productOrServiceEnd")]
     pub product_or_service_end: Option<CodeableConcept>,
     /// Service/Product billing modifiers
-    ///
+    /// 
     /// Item typification or modifiers codes to convey additional context for the
     /// product or service.
-    ///
+    /// 
     /// ## Requirements
     /// To support inclusion of the item for adjudication or to charge an elevated
     /// fee.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example in Oral whether the treatment is cosmetic or associated with TMJ,
     /// or for Medical whether the treatment was outside the clinic or outside of
     /// office hours.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Item type or modifiers codes, eg for Oral whether the treatment is cosmetic or associated with TMJ, or an appliance was lost or stolen.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-modifiers
     pub modifier: Option<Vec<CodeableConcept>>,
     /// Count of products or services
-    ///
+    /// 
     /// The number of repetitions of a service or product.
-    ///
+    /// 
     /// ## Requirements
     /// Required when the product or service code does not convey the quantity
     /// provided.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Fee, charge or cost per item
-    ///
+    /// 
     /// If the item is not a group then this is the fee for the product or service,
     /// otherwise this is the total of the fees for the details of the group.
-    ///
+    /// 
     /// ## Requirements
     /// The amount charged to the patient by the provider for a single unit.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "unitPrice")]
     pub unit_price: Option<Money>,
     /// Price scaling factor
-    ///
+    /// 
     /// A real number that represents a multiplier used in determining the overall
     /// value of services delivered and/or goods received. The concept of a Factor
     /// allows for a discount or surcharge multiplier to be applied to a monetary
     /// amount.
-    ///
+    /// 
     /// ## Requirements
     /// When discounts are provided to a patient (example: Senior's discount) then
     /// this must be documented for adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// To show a 10% senior's discount, the value entered is: 0.90 (1.00 - 0.10).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub factor: Option<Decimal>,
     /// Total tax
-    ///
+    /// 
     /// The total of taxes applicable for this product or service.
-    ///
+    /// 
     /// ## Requirements
     /// Required when taxes are not embedded in the unit price or provided as a
     /// separate service.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub tax: Option<Money>,
     /// Total item cost
-    ///
+    /// 
     /// The total amount claimed for the addItem.detail.subDetail. Net = unit price *
     /// quantity * factor.
-    ///
+    /// 
     /// ## Requirements
     /// Provides the total amount claimed for the group (if a grouper) or the line
     /// item.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example, the formula: quantity * unitPrice * factor = net. Quantity and
     /// factor are assumed to be 1 if not supplied.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub net: Option<Money>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Added items subdetail level adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Added items subdetail adjudication
-    ///
+    /// 
     /// The adjudication results.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2273,60 +2271,60 @@ pub struct ClaimResponseAddItemDetailSubDetail {
 }
 
 /// Processing errors
-///
+/// 
 /// Errors encountered during the processing of the adjudication.
-///
+/// 
 /// ## Requirements
 /// Need to communicate processing issues to the requestor.
-///
+/// 
 /// ## Implementation Notes
 /// If the request contains errors then an error element should be provided and
 /// no adjudication related sections (item, addItem, or payment) should be
 /// present.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseError {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2336,11 +2334,11 @@ pub struct ClaimResponseError {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2348,116 +2346,116 @@ pub struct ClaimResponseError {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Item sequence number
-    ///
+    /// 
     /// The sequence number of the line item submitted which contains the error. This
     /// value is omitted when the error occurs outside of the item structure.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim items.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "itemSequence")]
     pub item_sequence: Option<PositiveInt>,
     /// Detail sequence number
-    ///
+    /// 
     /// The sequence number of the detail within the line item submitted which
     /// contains the error. This value is omitted when the error occurs outside of
     /// the item structure.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim details within the claim item.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "detailSequence")]
     pub detail_sequence: Option<PositiveInt>,
     /// Subdetail sequence number
-    ///
+    /// 
     /// The sequence number of the sub-detail within the detail within the line item
     /// submitted which contains the error. This value is omitted when the error
     /// occurs outside of the item structure.
-    ///
+    /// 
     /// ## Requirements
     /// Provides references to the claim sub-details within the claim detail.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "subDetailSequence")]
     pub sub_detail_sequence: Option<PositiveInt>,
     /// Error code detailing processing issues
-    ///
+    /// 
     /// An error code, from a specified code system, which details why the claim
     /// could not be adjudicated.
-    ///
+    /// 
     /// ## Requirements
     /// Required to convey processing errors.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The adjudication error codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adjudication-error
     pub code: CodeableConcept,
     /// FHIRPath of element(s) related to issue
-    ///
+    /// 
     /// A [simple subset of FHIRPath](fhirpath.html#simple) limited to element names,
     /// repetition indicators and the default child accessor that identifies one of
     /// the elements in the resource that caused this issue to be raised.
-    ///
+    /// 
     /// ## Requirements
     /// Allows systems to highlight or otherwise guide users to elements implicated
     /// in issues to allow them to be fixed more easily.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The root of the FHIRPath is the resource or bundle that generated
     /// OperationOutcome. Each FHIRPath SHALL resolve to a single node.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2477,11 +2475,11 @@ pub enum ClaimResponseEventWhen {
 }
 
 /// Event information
-///
+/// 
 /// Information code for an event with a corresponding date or period.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2489,41 +2487,41 @@ pub enum ClaimResponseEventWhen {
 #[fhir_resource(choice_elements = "when")]
 pub struct ClaimResponseEvent {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2533,11 +2531,11 @@ pub struct ClaimResponseEvent {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2545,50 +2543,50 @@ pub struct ClaimResponseEvent {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Specific event
-    ///
+    /// 
     /// A coded event such as when a service is expected or a card printed.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/datestype
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Occurance date or period
-    ///
+    /// 
     /// A date or period in the past or future indicating when the event occurred or
     /// is expectd to occur.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2597,13 +2595,13 @@ pub struct ClaimResponseEvent {
 }
 
 /// Patient insurance information
-///
+/// 
 /// Financial instruments for reimbursement for the health care products and
 /// services specified on the claim.
-///
+/// 
 /// ## Requirements
 /// At least one insurer is required for a claim to be a claim.
-///
+/// 
 /// ## Implementation Notes
 /// All insurance coverages for the patient which may be applicable for
 /// reimbursement, of the products and services listed in the claim, are
@@ -2613,50 +2611,50 @@ pub struct ClaimResponseEvent {
 /// adjudication of this claim. Coverages appearing before the focal Coverage in
 /// the list, and where 'subrogation=false', should provide a reference to the
 /// ClaimResponse containing the adjudication results of the prior claim.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseInsurance {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2666,11 +2664,11 @@ pub struct ClaimResponseInsurance {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2678,51 +2676,51 @@ pub struct ClaimResponseInsurance {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Insurance instance identifier
-    ///
+    /// 
     /// A number to uniquely identify insurance entries and provide a sequence of
     /// coverages to convey coordination of benefit order.
-    ///
+    /// 
     /// ## Requirements
     /// To maintain order of the coverages.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub sequence: PositiveInt,
     /// Coverage to be used for adjudication
-    ///
+    /// 
     /// A flag to indicate that this Coverage is to be used for adjudication of this
     /// claim when set to true.
-    ///
+    /// 
     /// ## Requirements
     /// To identify which coverage in the list is being used to adjudicate this
     /// claim.
-    ///
+    /// 
     /// ## Implementation Notes
     /// A patient may (will) have multiple insurance policies which provide
     /// reimbursement for healthcare services and products. For example a person may
@@ -2731,59 +2729,59 @@ pub struct ClaimResponseInsurance {
     /// listed policies and that policy will be used for adjudicating this claim.
     /// Other claims would be created to request adjudication against the other
     /// listed policies.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub focal: Boolean,
     /// Insurance information
-    ///
+    /// 
     /// Reference to the insurance card level information contained in the Coverage
     /// resource. The coverage issuing insurer will use these details to locate the
     /// patient's actual coverage within the insurer's information system.
-    ///
+    /// 
     /// ## Requirements
     /// Required to allow the adjudicator to locate the correct policy and history
     /// within their information system.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub coverage: Reference,
     /// Additional provider contract number
-    ///
+    /// 
     /// A business agreement number established between the provider and the insurer
     /// for special business processing purposes.
-    ///
+    /// 
     /// ## Requirements
     /// Providers may have multiple business arrangements with a given insurer and
     /// must supply the specific contract number for adjudication.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "businessArrangement")]
     pub business_arrangement: Option<String>,
     /// Adjudication results
-    ///
+    /// 
     /// The result of the adjudication of the line items for the Coverage specified
     /// in this insurance.
-    ///
+    /// 
     /// ## Requirements
     /// An insurer need the adjudication results from prior insurers to determine the
     /// outstanding balance remaining by item for the items in the curent claim.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Must not be specified when 'focal=true' for this insurance.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2792,56 +2790,56 @@ pub struct ClaimResponseInsurance {
 }
 
 /// Adjudication for claim line items
-///
+/// 
 /// A claim line. Either a simple (a product or service) or a 'group' of details
 /// which can also be a simple items or groups of sub-details.
-///
+/// 
 /// ## Requirements
 /// The adjudication for items provided on the claim.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseItem {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2851,11 +2849,11 @@ pub struct ClaimResponseItem {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2863,128 +2861,128 @@ pub struct ClaimResponseItem {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Claim item instance identifier
-    ///
+    /// 
     /// A number to uniquely reference the claim item entries.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to provide a mechanism to link the adjudication result to the
     /// submitted claim item.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "itemSequence")]
     pub item_sequence: PositiveInt,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// Applicable exception and supporting information
-    ///
+    /// 
     /// Exceptions, special conditions and supporting information applicable for this
     /// service or product.
-    ///
+    /// 
     /// ## Requirements
     /// Need to reference the supporting information items that relate directly to
     /// this product or service.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "informationSequence")]
     pub information_sequence: Option<Vec<PositiveInt>>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Adjudication details
-    ///
+    /// 
     /// If this item is a group then the values here are a summary of the
     /// adjudication of the detail items. If this item is a simple product or service
     /// then this is the result of the adjudication of this item.
-    ///
+    /// 
     /// ## Requirements
     /// The adjudication results conveys the insurer's assessment of the item
     /// provided in the claim under the terms of the patient's insurance coverage.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjudication: Option<Vec<ClaimResponseItemAdjudication>>,
     /// Adjudication for claim details
-    ///
+    /// 
     /// A claim detail. Either a simple (a product or service) or a 'group' of
     /// sub-details which are simple items.
-    ///
+    /// 
     /// ## Requirements
     /// The adjudication for details provided on the claim.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2992,58 +2990,58 @@ pub struct ClaimResponseItem {
 }
 
 /// Adjudication details
-///
+/// 
 /// If this item is a group then the values here are a summary of the
 /// adjudication of the detail items. If this item is a simple product or service
 /// then this is the result of the adjudication of this item.
-///
+/// 
 /// ## Requirements
 /// The adjudication results conveys the insurer's assessment of the item
 /// provided in the claim under the terms of the patient's insurance coverage.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseItemAdjudication {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3053,11 +3051,11 @@ pub struct ClaimResponseItemAdjudication {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3065,122 +3063,122 @@ pub struct ClaimResponseItemAdjudication {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of adjudication information
-    ///
+    /// 
     /// A code to indicate the information type of this adjudication record.
     /// Information types may include the value submitted, maximum values or
     /// percentages allowed or payable under the plan, amounts that: the patient is
     /// responsible for in aggregate or pertaining to this item; amounts paid by
     /// other coverages; and, the benefit payable for this item.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to enable understanding of the context of the other information in the
     /// adjudication.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example codes indicating: Co-Pay, deductible, eligible, benefit, tax,
     /// etc.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The adjudication codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adjudication
     pub category: CodeableConcept,
     /// Explanation of adjudication outcome
-    ///
+    /// 
     /// A code supporting the understanding of the adjudication result and explaining
     /// variance from expected amount.
-    ///
+    /// 
     /// ## Requirements
     /// To support understanding of variance from adjudication expectations.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example may indicate that the funds for this benefit type have been
     /// exhausted.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The adjudication reason codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adjudication-reason
     pub reason: Option<CodeableConcept>,
     /// Monetary amount
-    ///
+    /// 
     /// Monetary amount associated with the category.
-    ///
+    /// 
     /// ## Requirements
     /// Most adjudication categories convey a monetary amount.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: amount submitted, eligible amount, co-payment, and benefit
     /// payable.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub amount: Option<Money>,
     /// Non-monetary value
-    ///
+    /// 
     /// A non-monetary value associated with the category. Mutually exclusive to the
     /// amount element above.
-    ///
+    /// 
     /// ## Requirements
     /// Some adjudication categories convey a percentage or a fixed value.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: eligible percentage or co-payment percentage.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// When was adjudication performed
-    ///
+    /// 
     /// The date and time the adjudication decision occured.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Implementation Guide authors may choose to require this element based on
     /// local regulatory requirements.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3189,56 +3187,56 @@ pub struct ClaimResponseItemAdjudication {
 }
 
 /// Adjudication for claim details
-///
+/// 
 /// A claim detail. Either a simple (a product or service) or a 'group' of
 /// sub-details which are simple items.
-///
+/// 
 /// ## Requirements
 /// The adjudication for details provided on the claim.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseItemDetail {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3248,11 +3246,11 @@ pub struct ClaimResponseItemDetail {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3260,105 +3258,105 @@ pub struct ClaimResponseItemDetail {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Claim detail instance identifier
-    ///
+    /// 
     /// A number to uniquely reference the claim detail entry.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to provide a mechanism to link the adjudication result to the
     /// submitted claim detail.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "detailSequence")]
     pub detail_sequence: PositiveInt,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Detail level adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Detail level adjudication details
-    ///
+    /// 
     /// The adjudication results.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjudication: Option<Vec<ClaimResponseItemAdjudication>>,
     /// Adjudication for claim sub-details
-    ///
+    /// 
     /// A sub-detail adjudication of a simple product or service.
-    ///
+    /// 
     /// ## Requirements
     /// The adjudication for sub-details provided on the claim.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3367,55 +3365,55 @@ pub struct ClaimResponseItemDetail {
 }
 
 /// Adjudication for claim sub-details
-///
+/// 
 /// A sub-detail adjudication of a simple product or service.
-///
+/// 
 /// ## Requirements
 /// The adjudication for sub-details provided on the claim.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseItemDetailSubDetail {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3425,11 +3423,11 @@ pub struct ClaimResponseItemDetailSubDetail {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3437,92 +3435,92 @@ pub struct ClaimResponseItemDetailSubDetail {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Claim sub-detail instance identifier
-    ///
+    /// 
     /// A number to uniquely reference the claim sub-detail entry.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to provide a mechanism to link the adjudication result to the
     /// submitted claim sub-detail.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "subDetailSequence")]
     pub sub_detail_sequence: PositiveInt,
     /// Number for tracking
-    ///
+    /// 
     /// Trace number for tracking purposes. May be defined at the jurisdiction level
     /// or between trading partners.
-    ///
+    /// 
     /// ## Requirements
     /// Allows partners to uniquely identify components for tracking.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "traceNumber")]
     pub trace_number: Option<Vec<Identifier>>,
     /// Applicable note numbers
-    ///
+    /// 
     /// The numbers associated with notes below which apply to the adjudication of
     /// this item.
-    ///
+    /// 
     /// ## Requirements
     /// Provides a condensed manner for associating human readable descriptive
     /// explanations for adjudications on the line item.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "noteNumber")]
     pub note_number: Option<Vec<PositiveInt>>,
     /// Subdetail level adjudication results
-    ///
+    /// 
     /// The high-level results of the adjudication if adjudication has been
     /// performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "reviewOutcome")]
     pub review_outcome: Option<ClaimResponseItemReviewOutcome>,
     /// Subdetail level adjudication details
-    ///
+    /// 
     /// The adjudication results.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3530,53 +3528,53 @@ pub struct ClaimResponseItemDetailSubDetail {
 }
 
 /// Adjudication results
-///
+/// 
 /// The high-level results of the adjudication if adjudication has been
 /// performed.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseItemReviewOutcome {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3586,11 +3584,11 @@ pub struct ClaimResponseItemReviewOutcome {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3598,35 +3596,35 @@ pub struct ClaimResponseItemReviewOutcome {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Result of the adjudication
-    ///
+    /// 
     /// The result of the claim, predetermination, or preauthorization adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor of the result of the adjudication process.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The element is used to indicate the current state of the adjudication overall
     /// for the claim resource, for example: the request has been held (pended) for
@@ -3634,65 +3632,65 @@ pub struct ClaimResponseItemReviewOutcome {
     /// processed and will be paid, or the outstanding paid, as submitted (approved);
     /// that no amount will be paid (denied); or that some amount between zero and
     /// the submitted amount will be paid (partial).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-decision
     pub decision: Option<CodeableConcept>,
     /// Reason for result of the adjudication
-    ///
+    /// 
     /// The reasons for the result of the claim, predetermination, or
     /// preauthorization adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor of the contributors to the result of the adjudication
     /// process.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-decision-reason
     pub reason: Option<Vec<CodeableConcept>>,
     /// Preauthorization reference
-    ///
+    /// 
     /// Reference from the Insurer which is used in later communications which refers
     /// to this adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// On subsequent claims, the insurer may require the provider to quote this
     /// value.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This value is only present on preauthorization adjudications.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "preAuthRef")]
     pub pre_auth_ref: Option<String>,
     /// Preauthorization reference effective period
-    ///
+    /// 
     /// The time frame during which this authorization is effective.
-    ///
+    /// 
     /// ## Requirements
     /// To convey to the provider when the authorized products and services must be
     /// supplied for the authorized adjudication to apply.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3701,56 +3699,56 @@ pub struct ClaimResponseItemReviewOutcome {
 }
 
 /// Payment Details
-///
+/// 
 /// Payment details for the adjudication of the claim.
-///
+/// 
 /// ## Requirements
 /// Needed to convey references to the financial instrument that has been used if
 /// payment has been made.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponsePayment {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3760,11 +3758,11 @@ pub struct ClaimResponsePayment {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3772,42 +3770,42 @@ pub struct ClaimResponsePayment {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Partial or complete payment
-    ///
+    /// 
     /// Whether this represents partial or complete payment of the benefits payable.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor when the insurer believes all payments to have been
     /// completed.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The type (partial, complete) of the payment.
@@ -3815,37 +3813,37 @@ pub struct ClaimResponsePayment {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Payment adjustment for non-claim issues
-    ///
+    /// 
     /// Total amount of all adjustments to this payment included in this transaction
     /// which are not related to this claim's adjudication.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the requestor of adjustments applied to the payment.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Insurers will deduct amounts owing from the provider (adjustment), such as a
     /// prior overpayment, from the amount owing to the provider (benefits payable)
     /// when payment is made to the provider.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub adjustment: Option<Money>,
     /// Explanation for the adjustment
-    ///
+    /// 
     /// Reason for the payment adjustment.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to clarify the monetary adjustment.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Payment Adjustment reason codes.
@@ -3853,44 +3851,44 @@ pub struct ClaimResponsePayment {
     #[fhir_serde(rename = "adjustmentReason")]
     pub adjustment_reason: Option<CodeableConcept>,
     /// Expected date of payment
-    ///
+    /// 
     /// Estimated date the payment will be issued or the actual issue date of
     /// payment.
-    ///
+    /// 
     /// ## Requirements
     /// To advise the payee when payment can be expected.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub date: Option<Date>,
     /// Payable amount after adjustment
-    ///
+    /// 
     /// Benefits payable less any payment adjustment.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to provide the actual payment amount.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub amount: Money,
     /// Business identifier for the payment
-    ///
+    /// 
     /// Issuer's unique identifier for the payment instrument.
-    ///
+    /// 
     /// ## Requirements
     /// Enable the receiver to reconcile when payment received.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: EFT number or check number.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3898,57 +3896,57 @@ pub struct ClaimResponsePayment {
 }
 
 /// Note concerning adjudication
-///
+/// 
 /// A note that describes or explains adjudication results in a human readable
 /// form.
-///
+/// 
 /// ## Requirements
 /// Provides the insurer specific textual explanations associated with the
 /// processing.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseProcessNote {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3958,11 +3956,11 @@ pub struct ClaimResponseProcessNote {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3970,73 +3968,73 @@ pub struct ClaimResponseProcessNote {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Business kind of note
-    ///
+    /// 
     /// A code to indicate the business purpose of the note.
-    ///
+    /// 
     /// ## Requirements
     /// Process Notes may encompass a significant number of kinds of notes. These
     /// could be disclaimers (particularly useful for predetermination), a statement
     /// about adjudication, a conditional statement, or others.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Business class of the process note.
     pub class: Option<CodeableConcept>,
     /// Note instance identifier
-    ///
+    /// 
     /// A number to uniquely identify a note entry.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to provide a mechanism to link from adjudications.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub number: Option<PositiveInt>,
     /// Note purpose
-    ///
+    /// 
     /// The business purpose of the note text.
-    ///
+    /// 
     /// ## Requirements
     /// To convey the expectation for when the text is used.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The presentation types of notes.
@@ -4044,34 +4042,34 @@ pub struct ClaimResponseProcessNote {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Note explanatory text
-    ///
+    /// 
     /// The explanation or description associated with the processing.
-    ///
+    /// 
     /// ## Requirements
     /// Required to provide human readable explanation.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub text: Markdown,
     /// Language of the text
-    ///
+    /// 
     /// A code to define the language used in the text of the note.
-    ///
+    /// 
     /// ## Requirements
     /// Note text may vary from the resource defined language.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Only required if the language is different from the resource language.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
@@ -4266,23 +4264,23 @@ pub enum ClaimResponseSupportingInfoValue {
 }
 
 /// Supporting information
-///
+/// 
 /// Additional information codes regarding exceptions, special considerations,
 /// the condition, situation, prior or concurrent issues.
-///
+/// 
 /// ## Requirements
 /// Typically these information codes are required to support the services
 /// rendered or the adjudication of the services rendered.
-///
+/// 
 /// ## Implementation Notes
 /// Often there are multiple jurisdiction specific valuesets which are required.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Aliases
 /// Attachments
 /// Exception Codes
@@ -4292,41 +4290,41 @@ pub enum ClaimResponseSupportingInfoValue {
 #[fhir_resource(choice_elements = "timing,value")]
 pub struct ClaimResponseSupportingInfo {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -4336,11 +4334,11 @@ pub struct ClaimResponseSupportingInfo {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -4348,153 +4346,153 @@ pub struct ClaimResponseSupportingInfo {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Information instance identifier
-    ///
+    /// 
     /// A number to uniquely identify supporting information entries.
-    ///
+    /// 
     /// ## Requirements
     /// Necessary to maintain the order of the supporting information items and
     /// provide a mechanism to link to claim details.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub sequence: PositiveInt,
     /// Classification of the supplied information
-    ///
+    /// 
     /// The general class of the information supplied: information; exception;
     /// accident, employment; onset, etc.
-    ///
+    /// 
     /// ## Requirements
     /// Required to group or associate information items with common characteristics.
     /// For example: admission information or prior treatments.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This may contain a category for the local bill type codes.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The valuset used for additional information category codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-informationcategory
     pub category: CodeableConcept,
     /// Finer-grained classification of the supplied information
-    ///
+    /// 
     /// A finer classification within the more general category.
-    ///
+    /// 
     /// ## Requirements
     /// Required to provide more detailed categorization, for example lab-test
     /// grouping: blood, tissue etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The valuset used for additional information subcategory codes.
     #[fhir_serde(rename = "subCategory")]
     pub sub_category: Option<CodeableConcept>,
     /// Type of information
-    ///
+    /// 
     /// System and code pertaining to the specific information regarding special
     /// conditions relating to the setting, treatment or patient for which care is
     /// sought.
-    ///
+    /// 
     /// ## Requirements
     /// Required to identify the kind of additional information.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The valuset used for additional information codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/claim-exception
     pub code: Option<CodeableConcept>,
     /// When it occurred
-    ///
+    /// 
     /// The date when or period to which this information refers.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub timing: Option<ClaimResponseSupportingInfoTiming>,
     /// Data to be provided
-    ///
+    /// 
     /// Additional data or information such as resources, documents, images etc.
     /// including references to the data or the actual inclusion of the data.
-    ///
+    /// 
     /// ## Requirements
     /// To convey the data content to be provided when the information is more than a
     /// simple code or period.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Could be used to provide references to other resources, document. For example
     /// could contain a PDF in an Attachment of the Police Report for an Accident.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub value: Option<ClaimResponseSupportingInfoValue>,
     /// Explanation for the information
-    ///
+    /// 
     /// Provides the reason in the situation where a reason code is required in
     /// addition to the content.
-    ///
+    /// 
     /// ## Requirements
     /// Needed when the supporting information has both a date and amount/value and
     /// requires explanation.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example: the reason for the additional stay, or why a tooth is  missing.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Reason codes for the missing teeth.
@@ -4503,62 +4501,62 @@ pub struct ClaimResponseSupportingInfo {
 }
 
 /// Adjudication totals
-///
+/// 
 /// Categorized monetary totals for the adjudication.
-///
+/// 
 /// ## Requirements
 /// To provide the requestor with financial totals by category for the
 /// adjudication.
-///
+/// 
 /// ## Implementation Notes
 /// Totals for amounts submitted, co-pays, benefits payable etc.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ClaimResponseTotal {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -4568,11 +4566,11 @@ pub struct ClaimResponseTotal {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -4580,71 +4578,72 @@ pub struct ClaimResponseTotal {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of adjudication information
-    ///
+    /// 
     /// A code to indicate the information type of this adjudication record.
     /// Information types may include: the value submitted, maximum values or
     /// percentages allowed or payable under the plan, amounts that the patient is
     /// responsible for in aggregate or pertaining to this item, amounts paid by
     /// other coverages, and the benefit payable for this item.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to convey the type of total provided.
-    ///
+    /// 
     /// ## Implementation Notes
     /// For example codes indicating: Co-Pay, deductible, eligible, benefit, tax,
     /// etc.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The adjudication codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adjudication
     pub category: CodeableConcept,
     /// Financial total for the category
-    ///
+    /// 
     /// Monetary total amount associated with the category.
-    ///
+    /// 
     /// ## Requirements
     /// Needed to convey the total monetary amount.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub amount: Money,
 }
+

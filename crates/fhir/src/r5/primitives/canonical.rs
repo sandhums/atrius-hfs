@@ -7,8 +7,9 @@ use crate::r5::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for canonical URLs that reference FHIR resources
-///
+/// 
 /// canonical type: A URI that is a reference to a canonical URL on a FHIR resource
-///
+/// 
 /// See: [canonical](http://hl7.org/fhir/StructureDefinition/canonical)
 pub type Canonical = Element<std::string::String, Extension>;
+

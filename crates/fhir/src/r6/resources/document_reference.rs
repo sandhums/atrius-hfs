@@ -7,7 +7,7 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR DocumentReference type
-///
+/// 
 /// A reference to a document of any kind for any purpose. While the term
 /// “document” implies a more narrow focus, for this resource this
 /// “document” encompasses *any* serialized object with a mime-type, it
@@ -17,51 +17,49 @@ use crate::{DecimalElement, Element};
 /// DocumentReference resource provides metadata about the document so that the
 /// document can be discovered and managed. The actual content may be inline
 /// base64 encoded data or provided by direct reference.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-///
+/// 
 /// See: [DocumentReference](http://hl7.org/fhir/StructureDefinition/DocumentReference)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,version,status,doc_status,modality,r#type,category,subject,context,body_structure,practice_setting,period,date,author,relates_to,description,security_label,content"
-)]
+#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,version,status,doc_status,modality,r#type,category,subject,context,body_structure,practice_setting,period,date,author,relates_to,description,security_label,content")]
 pub struct DocumentReference {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -69,7 +67,7 @@ pub struct DocumentReference {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -79,22 +77,22 @@ pub struct DocumentReference {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -105,27 +103,27 @@ pub struct DocumentReference {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -133,27 +131,27 @@ pub struct DocumentReference {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -161,41 +159,41 @@ pub struct DocumentReference {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -205,11 +203,11 @@ pub struct DocumentReference {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -217,137 +215,137 @@ pub struct DocumentReference {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Business identifiers for the document
-    ///
+    /// 
     /// Business identifiers assigned to this document reference by the performer
     /// and/or other systems. These identifiers remain constant as the resource is
     /// updated and propagates from server to server.
-    ///
+    /// 
     /// ## Requirements
     /// Document identifiers usually assigned by the source of the document, or other
     /// business identifiers such as XDS DocumentEntry.uniqueId and
     /// DocumentEntry.entryUUID. These identifiers are specific to this instance of
     /// the document.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The structure and format of this identifier would be consistent with the
     /// specification corresponding to the format of the document. (e.g. for a DICOM
     /// standard document, a 64-character numeric UID; for an HL7 CDA format, the CDA
     /// Document Id root and extension).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// An explicitly assigned identifier of a variation of the content in the DocumentReference
-    ///
+    /// 
     /// An explicitly assigned identifier of a variation of the content in the
     /// DocumentReference.
-    ///
+    /// 
     /// ## Implementation Notes
     /// While each resource, including the DocumentReference itself, has its own
     /// version identifier, this is a formal identifier for the logical version of
     /// the DocumentReference as a whole. It would remain constant if the resources
     /// were moved to a new server, and all got new individual resource versions, for
     /// example.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Activity that caused this document to be created
-    ///
+    /// 
     /// An activity that is fulfilled in whole or in part by the creation of this
     /// document.
-    ///
+    /// 
     /// ## Requirements
     /// Allows tracing of authorization for the event and tracking whether
     /// proposals/recommendations were acted upon.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// fulfills
     #[fhir_serde(rename = "basedOn")]
     pub based_on: Option<Vec<Reference>>,
     /// current | superseded | entered-in-error | unknown
-    ///
+    /// 
     /// The current state of the document reference.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This is the status of the DocumentReference object, which might be
     /// independent from the docStatus element.
-    ///
+    /// 
     /// This element is labeled as a modifier because the status contains the codes
     /// that mark the document or reference as not currently valid.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The status of the document reference.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/document-reference-status|6.0.0-ballot4
     pub status: Code,
     /// registered | partial | preliminary | final | amended | corrected | appended | cancelled | entered-in-error | deprecated | unknown
-    ///
+    /// 
     /// The status of the underlying document.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The document that is pointed to might be in various lifecycle states.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Status of the underlying document.
@@ -355,44 +353,44 @@ pub struct DocumentReference {
     #[fhir_serde(rename = "docStatus")]
     pub doc_status: Option<Code>,
     /// Imaging modality used
-    ///
+    /// 
     /// Imaging modality used. This may include both acquisition and non-acquisition
     /// modalities.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Type of acquired data in the instance.
     /// - **ValueSet**: http://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_CID_33.html
     pub modality: Option<Vec<CodeableConcept>>,
     /// Kind of document (LOINC if possible)
-    ///
+    /// 
     /// Specifies the particular kind of document referenced (e.g. History and
     /// Physical, Discharge Summary, Progress Note). This usually equates to the
     /// purpose of making the document referenced.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Key metadata element describing the document that describes he exact type of
     /// document. Helps humans to assess whether the document is of interest when
     /// viewing a list of documents.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Precise type of clinical document.
@@ -400,129 +398,129 @@ pub struct DocumentReference {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Categorization of document
-    ///
+    /// 
     /// A categorization for the type of document referenced - helps for indexing and
     /// searching. This may be implied by or derived from the code specified in the
     /// DocumentReference.type.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Key metadata element describing the category or classification of the
     /// document. This is a broader perspective that groups similar documents based
     /// on how they would be used. This is a primary key used in searching.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: High-level kind of document at a macro level.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/referenced-item-category
-    ///
+    /// 
     /// ## Aliases
     /// class, classCode
     pub category: Option<Vec<CodeableConcept>>,
     /// Who/what is the subject of the document
-    ///
+    /// 
     /// Who or what the document is about. The document can be about a person,
     /// (patient or healthcare practitioner), a device (e.g. a machine) or even a
     /// group of subjects (such as a document about a herd of farm animals, or a set
     /// of patients that share a common exposure).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Option<Reference>,
     /// Encounter the document reference is part of
-    ///
+    /// 
     /// The encounter or other triggering event during which this DocumentReference
     /// was created or to which the creation of this record is tightly associated.
-    ///
+    /// 
     /// ## Requirements
     /// Links the document reference to the Encounter context. May also affect access
     /// control.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This will typically be the encounter the document reference was created
     /// during, but some document references may be initiated prior to or after the
     /// official completion of an encounter but still be tied to the context of the
     /// encounter (e.g. pre-admission lab tests).
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Conditions
     /// Used when: docRef-1, docRef-2
     pub context: Option<Vec<Reference>>,
     /// Main clinical acts documented
-    ///
+    /// 
     /// This list of codes represents the main clinical acts, such as a colonoscopy
     /// or an appendectomy, being documented. In some cases, the event is inherent in
     /// the type Code, such as a "History and Physical Report" in which the procedure
     /// being documented is necessarily a "History and Physical" act.
-    ///
+    /// 
     /// ## Implementation Notes
     /// An event can further specialize the act inherent in the type, such as where
     /// it is simply "Procedure Report" and the procedure was a "colonoscopy". If one
     /// or more event codes are included, they shall not conflict with the values
     /// inherent in the class or type elements as such a conflict would create an
     /// ambiguous situation.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: This list of codes represents the main clinical acts being documented.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/v3-ActCode
     pub event: Option<Vec<CodeableReference>>,
     /// Related resources with this document reference not represented elsewhere
-    ///
+    /// 
     /// Any resource to which the creation of this record is tightly associated not
     /// involving document reference lifecycle.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Use only for references not covered by other document reference lifecycle
     /// elements, for example references at the data or workflow level.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub related: Option<Vec<DocumentReferenceRelated>>,
     /// Body structure included
-    ///
+    /// 
     /// The anatomic structures included in the document.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: SNOMED CT Body Structures
@@ -530,180 +528,180 @@ pub struct DocumentReference {
     #[fhir_serde(rename = "bodyStructure")]
     pub body_structure: Option<Vec<CodeableReference>>,
     /// Kind of facility where patient was seen
-    ///
+    /// 
     /// The kind of facility where the patient was seen.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: XDS Facility Type.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/c80-facilitycodes
-    ///
+    /// 
     /// ## Conditions
     /// Used when: docRef-1
     #[fhir_serde(rename = "facilityType")]
     pub facility_type: Option<CodeableConcept>,
     /// Additional details about where the content was created (e.g. clinical specialty)
-    ///
+    /// 
     /// This property may convey specifics about the practice setting where the
     /// content was created, often reflecting the clinical specialty.
-    ///
+    /// 
     /// ## Requirements
     /// This is an important piece of metadata that providers often rely upon to
     /// quickly sort and/or filter out to find specific content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element should be based on a coarse classification system for the class
     /// of specialty practice. Recommend the use of the classification system for
     /// Practice Setting, such as that described by the Subject Matter Domain in
     /// LOINC.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Additional details about where the content was created (e.g. clinical specialty).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/c80-practice-codes
-    ///
+    /// 
     /// ## Conditions
     /// Used when: docRef-2
     #[fhir_serde(rename = "practiceSetting")]
     pub practice_setting: Option<CodeableConcept>,
     /// Time of service that is being documented
-    ///
+    /// 
     /// The time period over which the service that is described by the document was
     /// provided.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub period: Option<Period>,
     /// When this document reference was created
-    ///
+    /// 
     /// When the document reference was created.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Referencing/indexing time is used for tracking, organizing versions and
     /// searching. Provide the most precise timestamp available.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// indexed
     pub date: Option<DateTime>,
     /// Who and/or what authored the document
-    ///
+    /// 
     /// Identifies who is responsible for adding the information to the document.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Not necessarily who did the actual data entry (i.e. typist) or who was the
     /// source (informant). Using Group is only allowed in the circumstance where the
     /// group represents a family or a household, and should not represent groups of
     /// Practitioners.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Vec<Reference>>,
     /// Attests to accuracy of the document
-    ///
+    /// 
     /// A participant who has authenticated the accuracy of the document.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies responsibility for the accuracy of the document content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Only list each attester once.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub attester: Option<Vec<DocumentReferenceAttester>>,
     /// Organization which maintains the document
-    ///
+    /// 
     /// Identifies the organization who is responsible for ongoing maintenance of and
     /// access to the document.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Identifies the logical organization (software system, vendor, or department)
     /// to go to find the current version, where to report issues, etc. This is
     /// different from the physical location (URL, disk drive, or server) of the
     /// document, which is the technical location of the document, which host may be
     /// delegated to the management of some other organization.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub custodian: Option<Reference>,
     /// Relationships to other document references and their lifecycle changes
-    ///
+    /// 
     /// Relationships that this document reference has with other document references
     /// that already exist.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "relatesTo")]
     pub relates_to: Option<Vec<DocumentReferenceRelatesTo>>,
     /// Human-readable description
-    ///
+    /// 
     /// Human-readable description of the source document.
-    ///
+    /// 
     /// ## Requirements
     /// Helps humans to assess whether the document is of interest.
-    ///
+    /// 
     /// ## Implementation Notes
     /// What the document is about,  a terse summary of the document.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Document security-tags
-    ///
+    /// 
     /// A set of Security-Tag codes specifying the level of privacy/security of the
     /// Document found at DocumentReference.content.attachment.url. Note that
     /// DocumentReference.meta.security contains the security labels of the data
@@ -714,11 +712,11 @@ pub struct DocumentReference {
     /// sensitive as the document. For example: a psychotherapy episode may contain
     /// highly sensitive information, while the metadata may simply indicate that
     /// some episode happened.
-    ///
+    /// 
     /// ## Requirements
     /// Use of the Health Care Privacy/Security Classification (HCS) system of
     /// security-tag use is recommended.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The confidentiality codes can carry multiple vocabulary items. HL7 has
     /// developed an understanding of security and privacy tags that might be
@@ -729,21 +727,21 @@ pub struct DocumentReference {
     /// policy domain such as the XDS Affinity Domain or other Trust Domain where all
     /// parties including sender and recipients are trusted to appropriately tag and
     /// enforce.
-    ///
+    /// 
     /// In the HL7 Healthcare Privacy and Security Classification (HCS) there are
     /// code systems specific to Confidentiality, Sensitivity, Integrity, and
     /// Handling Caveats. Some values would come from a local vocabulary as they are
     /// related to workflow roles and special projects.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Example Security Labels from the Healthcare Privacy and Security Classification System.
@@ -751,25 +749,25 @@ pub struct DocumentReference {
     #[fhir_serde(rename = "securityLabel")]
     pub security_label: Option<Vec<CodeableConcept>>,
     /// Document referenced
-    ///
+    /// 
     /// The document and format referenced. If there are multiple content element
     /// repetitions, these must all represent the same document in different format,
     /// or attachment metadata.
-    ///
+    /// 
     /// ## Requirements
     /// Note that .relatesTo may also include references to other DocumentReference
     /// with a transforms relationship to represent the same document in multiple
     /// formats.
-    ///
+    /// 
     /// ## Implementation Notes
     /// content element shall not contain different versions of the same content. For
     /// version handling use multiple DocumentReference with .relatesTo.
-    ///
+    /// 
     /// ## Cardinality: Required, Multiple (1..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -777,58 +775,58 @@ pub struct DocumentReference {
 }
 
 /// Attests to accuracy of the document
-///
+/// 
 /// A participant who has authenticated the accuracy of the document.
-///
+/// 
 /// ## Requirements
 /// Identifies responsibility for the accuracy of the document content.
-///
+/// 
 /// ## Implementation Notes
 /// Only list each attester once.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct DocumentReferenceAttester {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -838,11 +836,11 @@ pub struct DocumentReferenceAttester {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -850,74 +848,74 @@ pub struct DocumentReferenceAttester {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// personal | professional | legal | official
-    ///
+    /// 
     /// The type of attestation the authenticator offers.
-    ///
+    /// 
     /// ## Requirements
     /// Indicates the level of authority of the attestation.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The way in which a person authenticated a document.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/composition-attestation-mode
     pub mode: CodeableConcept,
     /// When the document was attested
-    ///
+    /// 
     /// When the document was attested by the party.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies when the information in the document was deemed accurate. (Things
     /// may have changed since then.).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub time: Option<DateTime>,
     /// Who attested the document
-    ///
+    /// 
     /// Who attested the document in the specified way.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies who has taken on the responsibility for accuracy of the document
     /// content.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Using Group is only allowed in the circumstance where the group represents a
     /// family or a household, and should not represent groups of Practitioners.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -925,66 +923,66 @@ pub struct DocumentReferenceAttester {
 }
 
 /// Document referenced
-///
+/// 
 /// The document and format referenced. If there are multiple content element
 /// repetitions, these must all represent the same document in different format,
 /// or attachment metadata.
-///
+/// 
 /// ## Requirements
 /// Note that .relatesTo may also include references to other DocumentReference
 /// with a transforms relationship to represent the same document in multiple
 /// formats.
-///
+/// 
 /// ## Implementation Notes
 /// content element shall not contain different versions of the same content. For
 /// version handling use multiple DocumentReference with .relatesTo.
-///
+/// 
 /// ## Cardinality: Required, Multiple (1..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct DocumentReferenceContent {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -994,11 +992,11 @@ pub struct DocumentReferenceContent {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1006,64 +1004,64 @@ pub struct DocumentReferenceContent {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Where to access the document
-    ///
+    /// 
     /// The document or URL of the document along with critical metadata to prove
     /// content has integrity.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub attachment: Attachment,
     /// Content profile rules for the document
-    ///
+    /// 
     /// An identifier of the document constraints, encoding, structure, and template
     /// that the document conforms to beyond the base format indicated in the
     /// mimeType.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note that IHE often issues URNs for formatCode codes, not all documents can
     /// be identified by a URI.
-    ///
+    /// 
     /// For FHIR content, .profile should indicate the structureDefinition profile
     /// canonical URI(s) that the content complies with.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// format, formatCode
     pub profile: Option<Vec<DocumentReferenceContentProfile>>,
@@ -1085,68 +1083,68 @@ pub enum DocumentReferenceContentProfileValue {
 }
 
 /// Content profile rules for the document
-///
+/// 
 /// An identifier of the document constraints, encoding, structure, and template
 /// that the document conforms to beyond the base format indicated in the
 /// mimeType.
-///
+/// 
 /// ## Implementation Notes
 /// Note that IHE often issues URNs for formatCode codes, not all documents can
 /// be identified by a URI.
-///
+/// 
 /// For FHIR content, .profile should indicate the structureDefinition profile
 /// canonical URI(s) that the content complies with.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Aliases
 /// format, formatCode
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "value")]
 pub struct DocumentReferenceContentProfile {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1156,11 +1154,11 @@ pub struct DocumentReferenceContentProfile {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1168,41 +1166,41 @@ pub struct DocumentReferenceContentProfile {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Code|uri|canonical
-    ///
+    /// 
     /// Code|uri|canonical.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Document Format Codes.
@@ -1212,57 +1210,57 @@ pub struct DocumentReferenceContentProfile {
 }
 
 /// Related resources with this document reference not represented elsewhere
-///
+/// 
 /// Any resource to which the creation of this record is tightly associated not
 /// involving document reference lifecycle.
-///
+/// 
 /// ## Implementation Notes
 /// Use only for references not covered by other document reference lifecycle
 /// elements, for example references at the data or workflow level.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct DocumentReferenceRelated {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1272,11 +1270,11 @@ pub struct DocumentReferenceRelated {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1284,50 +1282,50 @@ pub struct DocumentReferenceRelated {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of relationship to target resource
-    ///
+    /// 
     /// Type of the relationship between the document reference and the related
     /// resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The type of relationship between the documents.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/document-related-artifact-type
     pub code: Option<CodeableConcept>,
     /// Target of the reference
-    ///
+    /// 
     /// The target document of the related resource.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1335,56 +1333,56 @@ pub struct DocumentReferenceRelated {
 }
 
 /// Relationships to other document references and their lifecycle changes
-///
+/// 
 /// Relationships that this document reference has with other document references
 /// that already exist.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Special Semantics
 /// - Included in summary
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct DocumentReferenceRelatesTo {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1394,11 +1392,11 @@ pub struct DocumentReferenceRelatesTo {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1406,61 +1404,62 @@ pub struct DocumentReferenceRelatesTo {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The relationship type with another document
-    ///
+    /// 
     /// The type of relationship that this document has with anther document.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If this document appends another document, then the document cannot be fully
     /// understood without also accessing the referenced document.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type of relationship between the documents.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/document-relationship-type
     pub code: CodeableConcept,
     /// Target of the relationship
-    ///
+    /// 
     /// The target document of this relationship.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub target: Reference,
 }
+

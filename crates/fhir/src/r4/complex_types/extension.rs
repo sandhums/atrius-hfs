@@ -163,78 +163,79 @@ pub enum ExtensionValue {
 }
 
 /// FHIR Extension type
-///
+/// 
 /// Base StructureDefinition for Extension Type: Optional Extension Element -
 /// found in all resources.
-///
+/// 
 /// ## Purpose
 /// The ability to add extensions in a structured way is what keeps FHIR resources simple.
-///
+/// 
 /// ## Type: Complex-type type
 /// Base type: http://hl7.org/fhir/StructureDefinition/Element
-///
+/// 
 /// ## Status: active
 /// FHIR Version: 4.0.1
-///
+/// 
 /// See: [Extension](http://hl7.org/fhir/StructureDefinition/Extension)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "value")]
 pub struct Extension {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// identifies the meaning of the extension
-    ///
+    /// 
     /// Source of the definition for the extension code - a logical name or a URL.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The definition may point directly to a computable or human-readable
     /// definition of the extensibility codes, or it may be a logical URI as declared
     /// in some other specification. The definition SHALL be a URI for the Structure
     /// Definition defining the extension.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
     pub url: String,
     /// Value of extension
-    ///
+    /// 
     /// Value of extension - must be one of a constrained set of the data types (see
     /// [Extensibility](extensibility.html) for a list).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub value: Option<ExtensionValue>,
 }
+

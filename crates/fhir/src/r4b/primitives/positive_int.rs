@@ -7,8 +7,9 @@ use crate::r4b::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for positive whole number values (> 0)
-///
+/// 
 /// Base StructureDefinition for positiveInt type: An integer with a value that is positive (e.g. >0)
-///
+/// 
 /// See: [positiveInt](http://hl7.org/fhir/StructureDefinition/positiveInt)
 pub type PositiveInt = Element<std::primitive::i32, Extension>;
+

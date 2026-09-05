@@ -38,7 +38,7 @@ These hand-coded types are the absolute minimum required to read and process the
 2. **Definition Parsing**: Uses the minimal bootstrap model to parse StructureDefinitions
 3. **Type Analysis**: Extracts type hierarchies, properties, and constraints
 4. **Code Generation**: Generates idiomatic Rust code with proper derive macros
-5. **Output Writing**: Creates version-specific modules (e.g., `r4.rs`, `r5.rs`)
+5. **Output Writing**: Creates version-specific module directories (e.g., `r4/`, `r5/`)
 
 ### Supported FHIR Versions
 
@@ -118,11 +118,16 @@ helios-fhir-gen --all
 
 ### Output Location
 
-Generated code is written to `crates/fhir/src/` with version-specific modules:
-- `crates/fhir/src/r4.rs` - R4 generated types
-- `crates/fhir/src/r4b.rs` - R4B generated types  
-- `crates/fhir/src/r5.rs` - R5 generated types
-- `crates/fhir/src/r6.rs` - R6 generated types
+Generated code is written to `crates/fhir/src/` as **directories** (this fork),
+not Helios's flat `r4.rs` files. Run from the workspace root.
+
+- `crates/fhir/src/r4/` — `mod.rs` plus `primitives/`, `complex_types/`, `resources/`
+- `crates/fhir/src/r4b/`
+- `crates/fhir/src/r5/`
+- `crates/fhir/src/r6/`
+
+See [docs/fhir-model-regen.md](../../docs/fhir-model-regen.md) for when to
+regenerate, what to commit, and `scripts/diff-fhir-model-signatures.py`.
 
 ## Integration with Build Process
 

@@ -333,9 +333,6 @@ pub use specimen_definition::*;
 pub mod structure_definition;
 pub use structure_definition::*;
 
-pub mod structure_map;
-pub use structure_map::*;
-
 pub mod subscription;
 pub use subscription::*;
 
@@ -365,3 +362,4 @@ pub use view_definition::*;
 
 pub mod vision_prescription;
 pub use vision_prescription::*;
+
