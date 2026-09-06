@@ -86,6 +86,7 @@ git log --oneline HEAD..origin/main | wc -l    # commits behind main — keep th
 These paths rarely conflict with Helios and should stay on feature branches:
 
 ```
+.github/workflows/atrius-ci.yml
 crates/cds-server/
 crates/fhir-valueset-gen/
 crates/fhir-terminology/

@@ -25,6 +25,7 @@ env:
 jobs:
   build:
     name: Build HFS
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -55,6 +56,7 @@ jobs:
 
   inferno-stack-up:
     name: Start Shared Inferno Stack
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       port: ${{ steps.up.outputs.port }}
@@ -140,6 +142,7 @@ jobs:
 
   inferno-test:
     name: Inferno US Core ${{ matrix.version_label }} Tests (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [build, inferno-stack-up]
     runs-on: [self-hosted, Linux]
     env:
@@ -870,7 +873,7 @@ jobs:
   inferno-stack-down:
     name: Stop Shared Inferno Stack
     needs: [inferno-stack-up, inferno-test]
-    if: always() && needs.inferno-stack-up.result != 'skipped'
+    if: github.repository_owner == 'HeliosSoftware' && (always() && needs.inferno-stack-up.result != 'skipped')
     runs-on: [self-hosted, Linux]
     steps:
       - name: Tear down Inferno stack by compose project label

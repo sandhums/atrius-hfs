@@ -40,6 +40,7 @@ env:
 jobs:
   build:
     name: Build HFS (all backends + ui)
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -81,6 +82,7 @@ jobs:
 
   ui-matrix:
     name: helios-ui browser suite (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: build
     runs-on: [self-hosted, Linux]
     permissions:

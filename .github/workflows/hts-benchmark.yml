@@ -136,6 +136,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   setup:
     name: Resolve backend matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -170,6 +171,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   build:
     name: Build HTS binary (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -252,6 +254,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   benchmark:
     name: Benchmark (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [setup, build]
     runs-on: [self-hosted, Linux]
     strategy:

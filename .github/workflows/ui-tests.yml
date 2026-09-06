@@ -39,6 +39,7 @@ env:
 jobs:
   ui-tests:
     name: helios-ui browser suite
+    if: github.repository_owner == 'HeliosSoftware'
     # Linux only: the pool also has Windows runners where dtolnay/rust-toolchain
     # fails (it runs through bash/WSL), and the Playwright image is Linux.
     runs-on: [self-hosted, Linux]
@@ -152,6 +153,7 @@ jobs:
   # artifact-handed-off, like ui-tests-matrix.yml's backend matrix.
   ui-multiversion-build:
     name: Build HFS (multi-version + ui)
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -197,6 +199,7 @@ jobs:
 
   ui-multiversion-tests:
     name: search + Resources (${{ matrix.fhir_version }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: ui-multiversion-build
     runs-on: [self-hosted, Linux]
     strategy:

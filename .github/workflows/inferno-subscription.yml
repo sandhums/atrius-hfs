@@ -14,6 +14,7 @@ env:
 jobs:
   build:
     name: Build HFS with subscriptions
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -46,6 +47,7 @@ jobs:
 
   inferno-stack-up:
     name: Start Shared Inferno Subscriptions Stack
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       port: ${{ steps.up.outputs.port }}
@@ -141,6 +143,7 @@ jobs:
 
   inferno-subscription-test:
     name: Inferno Subscriptions R4 Server Workflow (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [build, inferno-stack-up]
     runs-on: [self-hosted, Linux]
     permissions:
@@ -778,7 +781,7 @@ jobs:
   inferno-stack-down:
     name: Stop Shared Inferno Subscriptions Stack
     needs: [inferno-stack-up, inferno-subscription-test]
-    if: always() && needs.inferno-stack-up.result != 'skipped'
+    if: github.repository_owner == 'HeliosSoftware' && (always() && needs.inferno-stack-up.result != 'skipped')
     runs-on: [self-hosted, Linux]
     steps:
       - name: Tear down Inferno stack by compose project label

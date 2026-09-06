@@ -40,6 +40,7 @@ env:
 jobs:
   differential-spike:
     name: Differential spike (our engine vs HL7 reference validator)
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     timeout-minutes: 90
     steps:

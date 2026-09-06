@@ -43,6 +43,7 @@ env:
 jobs:
   build:
     name: Build HFS with Bulk Data support
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout HFS
@@ -73,6 +74,7 @@ jobs:
 
   inferno-stack-up:
     name: Start Shared Inferno Bulk Data Stack
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       port: ${{ steps.up.outputs.port }}
@@ -178,6 +180,7 @@ jobs:
 
   inferno-bulk-data-test:
     name: Inferno Bulk Data v2.0.0 Tests
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [build, inferno-stack-up]
     runs-on: [self-hosted, Linux]
     timeout-minutes: 90
@@ -791,7 +794,7 @@ jobs:
   inferno-stack-down:
     name: Stop Shared Inferno Bulk Data Stack
     needs: [inferno-stack-up, inferno-bulk-data-test]
-    if: always() && needs.inferno-stack-up.result != 'skipped'
+    if: github.repository_owner == 'HeliosSoftware' && (always() && needs.inferno-stack-up.result != 'skipped')
     runs-on: [self-hosted, Linux]
     steps:
       - name: Tear down Inferno stack by compose project label

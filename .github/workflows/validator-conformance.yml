@@ -47,6 +47,7 @@ env:
 jobs:
   validator-conformance:
     name: Pack smoke + spec example corpus
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     timeout-minutes: 90
     steps:

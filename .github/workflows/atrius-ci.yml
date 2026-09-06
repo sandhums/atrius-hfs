@@ -1,0 +1,76 @@
+name: Atrius CI
+
+# GitHub-hosted gate for the Atrius fork. Helios's self-hosted workflows are
+# skipped unless repository_owner is HeliosSoftware (see those files' job `if`).
+# This is not a clone of ci.yml: no --all-features, Inferno, ES/S3, or R6 packs.
+
+on:
+  push:
+    branches: [feat-clinical-reasoning]
+  pull_request:
+    branches: [feat-clinical-reasoning, main]
+  workflow_dispatch:
+
+concurrency:
+  group: atrius-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+jobs:
+  test:
+    name: fmt + R4/sqlite tests
+    if: github.repository_owner != 'HeliosSoftware'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install clang and lld
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.90"
+          components: rustfmt
+
+      - name: Cargo linker (lld)
+        run: |
+          mkdir -p ~/.cargo
+          rm -f ~/.cargo/config.toml
+          echo '[target.x86_64-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "clang"' >> ~/.cargo/config.toml
+          echo 'rustflags = ["-C", "link-arg=-fuse-ld=lld"]' >> ~/.cargo/config.toml
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: atrius-ci-r4-sqlite
+
+      - name: rustfmt
+        run: |
+          cargo fmt -p helios-fhir-validator -p helios-rest \
+            -p helios-persistence -p helios-hts -- --check
+
+      - name: helios-fhir-validator
+        run: cargo test -p helios-fhir-validator --features R4,fhirpath
+
+      - name: helios-rest
+        run: cargo test -p helios-rest --features R4,sqlite
+
+      - name: helios-persistence (sqlite)
+        run: cargo test -p helios-persistence --features R4,sqlite
+
+      - name: helios-hts (lib, sqlite)
+        run: cargo test -p helios-hts --features R4,sqlite --lib
+
+      - name: helios-hfs check (R4 sqlite, no UI)
+        run: cargo check -p helios-hfs --no-default-features --features R4,sqlite

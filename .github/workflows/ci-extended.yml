@@ -16,6 +16,7 @@ env:
 jobs:
   test-rust:
     name: Test Rust (${{ matrix.rust }})
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     strategy:
       fail-fast: false
@@ -44,7 +45,7 @@ jobs:
     name: Cleanup Test Containers
     runs-on: [self-hosted, Linux]
     needs: [test-rust]
-    if: always()
+    if: github.repository_owner == 'HeliosSoftware' && (always())
     env:
       MAX_CONTAINER_AGE_MIN: 90
     steps:

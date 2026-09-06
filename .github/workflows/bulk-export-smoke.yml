@@ -18,6 +18,7 @@ env:
 jobs:
   matrix-setup:
     name: Generate matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       smoke-matrix: ${{ steps.gen.outputs.smoke-matrix }}
@@ -59,6 +60,7 @@ jobs:
 
   build:
     name: Build HFS for bulk export smoke
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     steps:
@@ -92,6 +94,7 @@ jobs:
 
   bulk-export-smoke:
     name: Smoke (${{ matrix.fhir_version }} / ${{ matrix.backend }} / ${{ matrix.output }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [matrix-setup, build]
     runs-on: [self-hosted, Linux]
     strategy:

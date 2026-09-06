@@ -24,6 +24,7 @@ env:
 jobs:
   matrix-setup:
     name: Generate matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       build-matrix: ${{ steps.gen.outputs.build-matrix }}
@@ -65,6 +66,7 @@ jobs:
 
   build:
     name: Build HFS (${{ matrix.build_key }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -103,6 +105,7 @@ jobs:
 
   subscriptions-smoke:
     name: Smoke (${{ matrix.build_key }} / ${{ matrix.fhir_version }} / ${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [matrix-setup, build]
     runs-on: [self-hosted, Linux]
     permissions:

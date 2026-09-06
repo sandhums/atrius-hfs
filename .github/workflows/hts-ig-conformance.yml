@@ -62,6 +62,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   setup:
     name: Resolve backend matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       backends: ${{ steps.matrix.outputs.backends }}
@@ -82,6 +83,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   check:
     name: Check helios-hts (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -126,6 +128,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   build:
     name: Build HTS binary (${{ matrix.backend }} / ${{ matrix.label }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [setup, check]
     runs-on: [self-hosted, Linux]
     strategy:
@@ -169,6 +172,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   tx-ecosystem-test:
     name: IG conformance — ${{ matrix.backend }} / FHIR ${{ matrix.label }}
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [setup, build]
     runs-on: [self-hosted, Linux]
     env:

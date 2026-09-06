@@ -22,6 +22,7 @@ env:
 jobs:
   matrix-setup:
     name: Generate matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       build-matrix: ${{ steps.gen.outputs.build-matrix }}
@@ -61,6 +62,7 @@ jobs:
 
   unit-tests:
     name: Unit tests (${{ matrix.build_key }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -99,6 +101,7 @@ jobs:
 
   rest-hook-integration:
     name: Rest-Hook (${{ matrix.build_key }} / ${{ matrix.fhir_version }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -134,6 +137,7 @@ jobs:
 
   websocket-integration:
     name: WebSocket (${{ matrix.build_key }} / ${{ matrix.fhir_version }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -169,6 +173,7 @@ jobs:
 
   email-integration:
     name: Email (${{ matrix.build_key }} / ${{ matrix.fhir_version }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:
@@ -204,6 +209,7 @@ jobs:
 
   messaging-integration:
     name: Messaging (${{ matrix.build_key }} / ${{ matrix.fhir_version }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: matrix-setup
     runs-on: [self-hosted, Linux]
     strategy:

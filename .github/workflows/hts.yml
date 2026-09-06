@@ -22,6 +22,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   check:
     name: Check helios-hts
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -53,6 +54,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   build:
     name: Build HTS binary (R4)
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     needs: check
     steps:
@@ -95,6 +97,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   integration-test:
     name: Integration tests — FHIR ${{ matrix.label }}
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     needs: build
     strategy:
@@ -681,7 +684,7 @@ jobs:
     # the backstop for that case (this workflow runs nightly on its own cron, so
     # it cannot rely on ci.yml's sweep to clean up after it).
     needs: [check]
-    if: always()
+    if: github.repository_owner == 'HeliosSoftware' && (always())
     env:
       # Orphan sweep only. Must comfortably exceed the longest CI job runtime so
       # a *concurrent* run's live containers on the shared docker host are never

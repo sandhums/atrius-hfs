@@ -16,6 +16,7 @@ env:
 jobs:
   build:
     name: Build HFS
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -46,6 +47,7 @@ jobs:
 
   cors-preflight:
     name: CORS Preflight Test
+    if: github.repository_owner == 'HeliosSoftware'
     needs: build
     runs-on: [self-hosted, Linux]
     steps:
@@ -171,6 +173,7 @@ jobs:
 
   audit-test:
     name: Audit External Test (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: build
     runs-on: [self-hosted, Linux]
     permissions:
@@ -775,6 +778,7 @@ jobs:
 
   audit-database-smoke:
     name: Audit DB Sink Smoke (${{ matrix.backend }} / ${{ matrix.mode }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: build
     runs-on: [self-hosted, Linux]
     permissions:

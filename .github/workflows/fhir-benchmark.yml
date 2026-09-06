@@ -138,6 +138,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   setup:
     name: Resolve backend matrix
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -163,6 +164,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   build:
     name: Build HFS binary
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
 
     steps:
@@ -214,6 +216,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   benchmark:
     name: Benchmark (${{ matrix.backend }})
+    if: github.repository_owner == 'HeliosSoftware'
     needs: [setup, build]
     # UNPINNED, deliberately. This job used to carry a third `runs-on` entry
     # naming one agent, to keep HFS and k6 — which run natively on the runner,
