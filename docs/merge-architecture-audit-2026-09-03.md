@@ -14,8 +14,11 @@ cache; 5 Sep) are closed.
 
 Follow-up: **6 Sep 2026.** The five write-path / `$validate` holes in §3.4 and
 the remaining slice matchers (`exists`, `extension('url')`, reslicing, in-scope
-`resolve()`) are closed in-repo (`4e2b8ebc6`, `331f2ddbc`). **Pending work is
-§5.1** — do not treat the 3 Sep §5 numbering as the live queue.
+`resolve()`) are closed in-repo (`4e2b8ebc6`, `331f2ddbc`). Binding expand at
+mark time, mixed-kind AND (`type: "all"`), batch conditional PATCH, and the
+Postgres/auth doc cosmetics are also closed. **Pending work is §5.1** — do not
+treat the 3 Sep §5 numbering as the live queue. Store-backed `resolve()` is
+closed (item 28): REST prefetches relative `Type/id` into the validator pool.
 
 Companion to *HELIOS vs Atrius.docx*, which records what each sync decided. This
 document asks a different question: **are those decisions still correct, and do
@@ -125,9 +128,11 @@ being wrong.
 `HFS_VALIDATION_MODE=enforce` and `HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0`;
 the resolver no longer requires sushi `dependsOn` packages in the cache. See
 §6. The 3 Sep snapshot below is kept as the defect that motivated that work.
-Still open: `deploy/clinical/.env.abdm.example` still sets the dead
-`HFS_PROFILE_*` variables; no startup warn on recognised-but-removed `HFS_*`;
-no staging proof that a non-conformant write returns 422.
+**Closed 6 Sep:** `.env.abdm.example` is a dedicated `ndhm.in` validator
+(`HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES=ndhm.in@6.5.0`); HFS fails startup
+on leftover `HFS_PROFILE_MANIFEST` / `HFS_PROFILE_VALIDATION_MODE` /
+`HFS_PROFILE_VALIDATION_ADDONS`; `scripts/prove-validation-enforce.sh` is the
+staging 422 proof.
 
 The most urgent item in this audit, and a direct consequence of the drift in
 §3.4. `HFS_PROFILE_MANIFEST` and `HFS_PROFILE_VALIDATION_MODE` are read **nowhere
@@ -145,8 +150,8 @@ sets their replacements:
 | `deploy/clinical/.env.abdm.example`           | `warn`                               | neither                                          |
 
 
-*Table is the 3 Sep snapshot. Clinical rows are superseded by §6.1;*
-`.env.abdm.example` *is not.*
+*Table is the 3 Sep snapshot. Clinical rows and `.env.abdm.example` are
+superseded by §6.1 (ABDM file is the dedicated NDHM validator, not clinical HFS).*
 
 Nothing under `deploy/` or `scripts/` **as of 3 Sep** set `HFS_VALIDATION_MODE`,
 `HFS_FHIR_PACKAGES`, or `HFS_FHIR_PACKAGE_CACHE` — the only occurrences were
@@ -283,8 +288,8 @@ fork-numbered path** — precisely the scenario that silently drops the outbox.
 Minor defects (3 Sep snapshot): `migrate_v36_to_v37`'s error strings read
 `"Migration v35->v36 failed"`, and several Postgres migration doc comments still
 cite upstream's original numbers (e.g. `migrate_v23_to_v24` documented as
-"v22→v23"). **Error strings are now `v36->v37` / `v37->v38`.** Leftover comments
-remain (§5.1 item 16).
+"v22→v23"). **Closed 6 Sep:** titles and `Migration vN->vM` strings match the
+fork function names (including `v36->v37` / `v37->v38` / `v38->v39`).
 
 **Fix:** record applied-migration provenance (a `schema_migrations` table of
 applied step names, or a `flavour` marker), or at minimum add a startup
@@ -593,41 +598,10 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
 
 This is the live queue. Closed 3–6 Sep items stay in §5.2 for the record.
 
-**Ops / config (§3.1, §6.1)**
+**Offer upstream (§2, §4 option A) — held**
 
-1. Migrate `deploy/clinical/.env.abdm.example` off dead `HFS_PROFILE_MANIFEST` /
-   `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS`. Clinical HFS
-   examples already use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`.
-2. Warn or fail at HFS startup on recognised-but-removed `HFS_PROFILE_*` (and
-   similar). Nothing in `helios-rest` currently complains; leftover env still
-   looks like validation is on.
-3. Staging proof: with `HFS_VALIDATION_MODE=enforce` and the Atrius package
-   overlay, a knowingly non-conformant write returns **422**.
-
-**Offer upstream (§2, §4 option A)**
-
-4. `ChannelDispatcherRegistry` and the directory-layout FHIR generator — the
-   two changes that would delete the fork's largest recurring conflict sources.
-
-**NDHM / ABDM (§6.2–§6.3) — HIS boundary, not a second HFS engine**
-
-5. NDHM `$validate` at the ABDM export/remap gate. Seed `ndhm.in` on that
-   validator only. Do **not** add it to clinical `HFS_FHIR_PACKAGES`. Export
-   preflight still hits clinical HFS and strips remapped NDHM `meta.profile`.
-6. Align HIS remap canonicals with published NDHM 6.5.0 (`StructureDefinition/Patient`,
-   not `ndhmPatient`, and the same for Encounter/Claim).
-7. Optional: machine-check the claim “Atrius-valid ⇒ NDHM-valid after remap”
-   (`targetProfile` + required-binding supersets). `scripts/ndhm-parity-diff.py`
-   does not do this today.
-
-**One-engine validator leftovers (not a second engine)**
-
-8. Binding discriminators do not expand a ValueSet at mark time.
-9. Mixed-kind discriminator sets still warn and stay dormant.
-10. Store-backed `resolve()` is **out of scope**. In-scope `contained` / Bundle
-    `entry.resource` is implemented; unresolved references do not match.
-11. Conditional PATCH inside a Bundle is refused (instance-url PATCH is
-    implemented).
+4. `ChannelDispatcherRegistry` and the directory-layout FHIR generator.
+   Do not spend a PR cycle until Helios asks or a sync actually hurts.
 
 **IG / QI-Core (AtriusIGDraft, not HFS runtime)**
 
@@ -641,18 +615,13 @@ This is the live queue. Closed 3–6 Sep items stay in §5.2 for the record.
     `individual-recordedSexOrGender` instances need structural overlay
     (not in the embedded R4 core pack).
 
-**Docs / cosmetics**
-
-16. Postgres schema comments that still cite upstream's original step numbers.
-17. Optional: `docs/auth-verification.md` still *names* removed
-    `HFS_AUTH_JTI_BACKEND` as part of the #205 history — not live config.
-
 ### 5.2 Closed since the 3 Sep audit
 
 Original §5 numbers in parentheses. These are **not** the live queue.
 
 1. Clinical HFS env/scripts migrated to `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`
-   (4 Sep / §6.1). Remaining operator work is §5.1 items 1–3.
+   (4 Sep / §6.1). `.env.abdm.example` NDHM validator + startup fail on leftover
+   `HFS_PROFILE_*` + 422 proof script closed 6 Sep (items 21–23 below).
 3. Postgres write + index + outbox in one `WriteTx` (§3.2, `9e69fa873`).
 4. Keep-list corrected in `docs/clinical-reasoning/upstream-merge.md` (§3.4).
 5. Bulk-submit ingest through `IngestValidator` / `check_write` (`4e2b8ebc6`).
@@ -660,12 +629,48 @@ Original §5 numbers in parentheses. These are **not** the live queue.
 7. `#[non_exhaustive]` + `Principal::stub()` (§3.6, `e782018de`).
 8. Directory-layout FHIR models regenerated + regen runbook (§3.5, `7a0323097`).
 9. Redis JTI `EXISTS` timeout, fail-closed 503, require `jti` (§3.7).
+10. Store-backed `resolve()` closed as item 28.
 11. Slice `type` / `profile` / `binding` / `exists` / `extension` matchers, plus
-    in-scope `resolve()` (`4e2b8ebc6`, `331f2ddbc`). Leftovers are §5.1 items 8–11.
+    in-scope `resolve()` (`4e2b8ebc6`, `331f2ddbc`). Store-backed `resolve()` is
+    item 28.
 12. Outbox dead-letter; zero-delivery log; SQLite claim CAS; HTS per-instance
-    system-id cache (§3.7).
-13. `migrate_v36_to_v37` error strings (comments still leftover — §5.1 item 16).
+    system-id cache (§3.7). Postgres `dead_at` is `SCHEMA_VERSION` 39.
+13. Postgres migration titles and `Migration vN->vM` error strings aligned to
+    the fork's step numbers (6 Sep).
+16. `docs/auth-verification.md` #205 text: `HFS_AUTH_JTI_BACKEND` is historical;
+    live Redis is `HFS_AUTH_JTI_REVOCATION` (6 Sep).
 19. Audit sink `search_index` slot-2 columns, `SCHEMA_VERSION` 38 (§6.6).
+20. Binding discriminators expand embedded ValueSets at mark time
+    (`ValidationOptions::slice_binding_version`); mixed-kind sets AND as
+    `type: "all"`; batch `[type]?[criteria]` PATCH is resolved (6 Sep).
+    Transactions still decline URL criteria (#859).
+21. `.env.abdm.example` is a dedicated NDHM export validator (`ndhm.in@6.5.0`,
+    `:8083`); `deploy/env/hfs-ndhm-validate.env.example` mirrors it (6 Sep).
+22. `ServerConfig::finish_parsed` fails on leftover `HFS_PROFILE_MANIFEST` /
+    `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS` (6 Sep).
+23. `scripts/prove-validation-enforce.sh` — POST a `bogusElement` Patient,
+    expect **422** (6 Sep).
+24. HIS `HIS_NDHM_VALIDATE_URL` second `$validate` against that dedicated HFS;
+    clinical preflight still strips remapped NDHM `meta.profile` (6 Sep).
+25. HIS remap canonicals aligned to published NDHM 6.5.0 (`Patient`, not
+    `ndhmPatient`; same for Encounter/Claim/claim extensions, 6 Sep).
+26. `scripts/ndhm-parity-diff.py --his-remap` asserts HIS `NDHM_*` URLs exist in
+    the local `ndhm.in` package (6 Sep).
+27. `scripts/ndhm-parity-diff.py --remap-implies` machine-checks
+    Atrius-valid ⇒ NDHM-valid after HIS remap: `targetProfile` subset (including
+    NDHM `baseDefinition` walk and R4 core type) plus required-binding supersets.
+    Default FSH compare prints the same gaps when HIS sources are present.
+    `--remap-implies` fails closed: exit 2 if HIS sources are missing, exit 1
+    if implication gaps remain. Nested `identifier.assigner` is skipped.
+    NDHM 6.5.0 required-binding is vacuous (0 differential `required`).
+    Baseline 6 Sep: 105 unconstrained, 28 wider, 0 required-binding — see
+    §6.2 / §6.3.
+28. Store-backed `resolve()`: `ValidationService` prefetches relative `Type/id`
+    via `StorageBackedResolver` into `ValidationOptions::resolution_resources`.
+    Slice `resolve-ref` and FHIRPath constraints search that pool. The
+    `helios-fhirpath` crate stays storage-free. Unresolved references still do
+    not match. One-level, tenant-scoped, fan-out capped. Wired on `AppState`
+    `$validate` / write `check_write` and bulk-submit ingest (6 Sep).
 
 Also closed in §6: converter content-reference + choice-branch children (§6.4);
 versioned canonical lookup `Patient|4.0.1` (§6.5).
@@ -685,7 +690,9 @@ closed (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 S
 require `jti`). **§3.7 outbox dead-letter and zero-delivery log** closed 5 Sep.
 **§3.7 SQLite claim CAS and HTS `SYSTEM_ID_CACHE`** closed 5 Sep. No remaining
 §3.7 items. **6 Sep:** write-path / `$validate` holes and discriminator
-completeness (§6.7). Live leftovers are **§5.1**.
+completeness (§6.7). **6 Sep:** Atrius-valid ⇒ NDHM-valid after remap is a
+machine-check (`--remap-implies`, §5.2 item 27). Store-backed `resolve()` is
+item 28. Live leftovers are **§5.1** (upstream offer held, IG/QI-Core).
 
 ### 6.1 Code and operator config
 
@@ -705,7 +712,8 @@ HFS_VALIDATION_MODE=enforce
 | `deploy/env/hfs-clinical.env` (gitignored live local) | Relative `./data` paths (IDE `.env` does not expand `${ATRIUS_HFS_PATH}`); package cache + `enforce`              |
 | `deploy/env/hfs-clinical.env.example`                 | Same variables; production-style absolute cache path in comments                                                  |
 | `deploy/clinical/.env.atrius.example`                 | Same                                                                                                              |
-| `deploy/clinical/.env.abdm.example`                   | **Not migrated** — still `HFS_PROFILE_MANIFEST` / `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS` |
+| `deploy/clinical/.env.abdm.example`                   | Dedicated NDHM export validator (`ndhm.in@6.5.0`, `:8083`, `HFS_VALIDATION_MODE=enforce`). Not clinical HFS. |
+| `deploy/env/hfs-ndhm-validate.env.example`            | Same contract, production-style paths |
 | `docs/his/fhir-native-his-plan.md`                    | Example block uses the new trio                                                                                   |
 | `.gitignore`                                          | `/data/fhir-packages/`                                                                                            |
 
@@ -719,6 +727,9 @@ placeholder `atrius.in.r4`.
 | Script                                     | Change                                                                                                                                                                                                                                                |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scripts/setup-atrius-profile-registry.sh` | Fetches/expands published `package.tgz`, seeds `data/fhir-packages/{name}/{version}/`, prints the three env vars. `SKIP_MANIFESTS=1` skips optional audit JSON. Verifies ≥100 top-level SDs and Patient/Encounter files                               |
+| `scripts/setup-ndhm-profile-registry.sh`   | Seeds `ndhm.in@6.5.0` from `~/.fhir/packages` into `HFS_FHIR_PACKAGE_CACHE` for the export validator only                                                                                                                                             |
+| `scripts/run-hfs-ndhm.sh`                  | Starts that validator (`deploy/env/hfs-ndhm-validate.env` or `.env.abdm.example`)                                                                                                                                                                     |
+| `scripts/prove-validation-enforce.sh`      | POST a `bogusElement` Patient; expect **422**                                                                                                                                                                                                         |
 | `scripts/build-atrius-profile-manifest.sh` | Optional audit inventory only. No HL7 datatype/extension stitch (`manifests/deps/hl7-*` not needed — embedded R4 core pack already has `SimpleQuantity`, `patient-nationality`, …). Core filter is all top-level package `StructureDefinition-*.json` |
 | `scripts/p0-import-terminology.sh`         | Echoes the new env trio                                                                                                                                                                                                                               |
 | `scripts/load-atrius-ig-package.sh`        | Small alignment with the setup path                                                                                                                                                                                                                   |
@@ -769,34 +780,45 @@ automatically NDHM-valid:
 
 - Stored `meta.profile` is Atrius; NDHM rules apply after clone+remap (HIS
 `ndhm_export.rs`).
-- `only Reference(AtriusIn…)` vs NDHM `targetProfile` is not compared by
-`scripts/ndhm-parity-diff.py`. Remapping every Bundle entry is what makes
-the graph pass, not FSH parenting.
-- Atrius ValueSet supersets at `required` strength can fail NDHM; extensible
-is more forgiving. Extra Atrius extensions usually pass if NDHM leaves
-`extension` open. Stricter Atrius cardinality helps NDHM.
-- Export preflight today hits **clinical HFS** and **strips** remapped NDHM
-URLs (`atrius-his` `abdm.rs`). Real `ndhm.in` `$validate` is still deferred
-(`ndhm_parity.plan.md` `ndhm-export-validate`).
+- `only Reference(AtriusIn…)` vs NDHM `targetProfile` is compared by
+`scripts/ndhm-parity-diff.py --remap-implies`: each Atrius target, rewritten
+through `ndhm_profile_for_atrius`, must sit in the NDHM allowed set (or derive
+from it via `baseDefinition`). Unconstrained Atrius paths fail when NDHM names
+an NDHM profile. Nested `identifier.assigner` is skipped. Remapping every
+Bundle entry is still what makes a live graph pass; the script is the static
+subset check.
+- Atrius ValueSet supersets at `required` strength can fail NDHM; the same
+script gates that (NDHM 6.5.0 has no differential `required`, so it is
+vacuous today). Extensible supersets pass. Extra Atrius extensions usually
+pass if NDHM leaves `extension` open. Stricter Atrius cardinality helps NDHM.
+- Export preflight hits **clinical HFS** and **strips** remapped NDHM URLs
+(`atrius-his` `abdm.rs`). When `HIS_NDHM_VALIDATE_URL` is set, a second pass
+hits a dedicated `ndhm.in` HFS without stripping. Do not list `ndhm.in` on
+clinical `HFS_FHIR_PACKAGES`.
 
 Inheriting `Parent: $ABDMPatient` would freeze a small document/claims IG as
 the operational parent and fight CDS/QI-Core. NDHM 6.5.0 itself parents R4.
 
 ### 6.3 Related findings (not fixed)
 
-- **HIS remap canonicals vs published** `ndhm.in` **6.5.0.** Several constants use
-`…/ndhmPatient`, `…/ndhmEncounter`, `…/ndhmClaim`, … Published URLs are
-`…/StructureDefinition/Patient`, `Encounter`, `Claim`. Document/payer envelope
-profiles already match (`OPConsultRecord`, `DocumentBundle`, `ClaimBundle`).
-A remapped instance claiming `ndhmPatient` would fail a strict NDHM validator
-even with perfect field parity.
+- **HIS remap canonicals vs published** `ndhm.in` **6.5.0** — **closed 6 Sep.**
+  Constants now use `StructureDefinition/Patient`, `Encounter`, `Claim`,
+  `Claim-Condition`, … Envelope profiles were already correct.
+- **HIS remap coverage vs Atrius `only Reference` graph** — `--remap-implies`
+  is red (28 wider). `ndhm_profile_for_atrius` has no arms for Specimen,
+  ImagingStudy, ImmunizationRecommendation, FamilyMemberHistory, Communication,
+  or CommunicationRequest. Atrius status subtypes (`*-requested`,
+  `*-not-requested`, `atrius-in-consult-follow-up-appointment`) are exact-URL
+  misses. PrescriptionRecord `only Reference(Binary)` is R4 Binary, not
+  `AtriusInBinary`. Unconstrained FSH refs (105, many `section.author`) are
+  IG holes, not parser bugs.
 - **Embedded R4 core pack** covers the HL7 datatypes/extensions that used to be
 stitched into manifests. Rare gap called out earlier: `individual-recordedSexOrGender`
 is used in Atrius Patient FSH and is **not** in that embedded pack; add
 `hl7.fhir.uv.extensions.r4@5.3.0` to `HFS_FHIR_PACKAGES` only if untyped
 instances of that extension need structural overlay.
-- **Startup still silent** on `HFS_PROFILE_`* if someone leaves them set
-(backlog item 2).
+- **Startup on leftover** `HFS_PROFILE_*` — **closed 6 Sep** (fail in
+  `finish_parsed`). `HFS_PROFILE_CORPUS` is still valid.
 - **§3.7** (Redis JTI, outbox dead-letter / zero-delivery, SQLite claim CAS,
   HTS per-instance system-id cache) — closed 5 Sep. **§3.2**, **§3.3**,
   **§3.4**, **§3.5**, **§3.6** closed separately.
@@ -924,8 +946,9 @@ DELETE existence, bundle PATCH + `check_write`, `$validate` modes, and
 type/profile/binding slice matchers.
 
 `331f2ddbc` completed discriminator coverage (`exists`, `extension('url')`,
-reslicing) and in-scope `resolve()` (`contained` + Bundle `entry.resource` only
-— no store). Binding ValueSet expand at mark time, mixed-kind discriminator
-sets, and store-backed `resolve()` stay out of this engine; see §5.1 items 8–11.
-Do not restore `fhir-validation*`. `position` is ordered-slice declaration
-order, not a FHIR discriminator.
+reslicing) and in-scope `resolve()` (`contained` + Bundle `entry.resource`).
+REST later prefetches tenant-store `Type/id` targets into
+`ValidationOptions::resolution_resources` (item 28); the engine still does no
+I/O. Binding ValueSet expand at mark time and mixed-kind discriminator sets
+are closed. Do not restore `fhir-validation*`. `position` is ordered-slice
+declaration order, not a FHIR discriminator.

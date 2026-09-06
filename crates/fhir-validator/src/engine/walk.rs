@@ -83,14 +83,18 @@ impl SchemaSet {
 pub(super) struct WalkCtx<'a> {
     pub(super) resolver: &'a dyn SchemaResolver,
     /// The resource (or Bundle) the walk started at — used for in-scope
-    /// `resolve()` slice discriminators (`contained` / Bundle entries only).
+    /// `resolve()` slice discriminators (`contained` / Bundle entries).
     pub(super) root: &'a Value,
+    /// Prefetched store resources for `resolve-ref` (relative `Type/id`).
+    pub(super) resolution_resources: &'a [Value],
     errors: Vec<ValidationError>,
     deferred: Vec<Deferred>,
     pub(super) path: PathTracker,
     /// Opt-in extension-context warnings (#615).
     check_extension_context: bool,
     enforce_refers: bool,
+    /// Embedded core ValueSets for binding discriminators at mark time.
+    pub(super) terminology: Option<std::sync::Arc<crate::terminology::CoreTerminology>>,
 }
 
 impl WalkCtx<'_> {
@@ -122,11 +126,15 @@ pub(super) fn validate(
     let mut ctx = WalkCtx {
         resolver,
         root: resource,
+        resolution_resources: &opts.resolution_resources,
         errors: Vec::new(),
         deferred: Vec::new(),
         path: PathTracker::new(resource_type),
         check_extension_context: opts.check_extension_context,
         enforce_refers: opts.enforce_refers,
+        terminology: opts
+            .slice_binding_version
+            .map(crate::terminology::core_terminology),
     };
 
     // Root schema-set: resourceType, then meta.profile claims, then

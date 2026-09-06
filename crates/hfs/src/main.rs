@@ -625,7 +625,8 @@ async fn start_mongodb(
         Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
             as Arc<dyn helios_persistence::core::DeferredReindexHook>
     });
-    let submit_bundle = build_bulk_submit(&config, backend.clone(), reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, backend.clone(), backend.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         backend.clone(),
         config.clone(),
@@ -1277,7 +1278,8 @@ async fn start_sqlite(
         Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
             as Arc<dyn helios_persistence::core::DeferredReindexHook>
     });
-    let submit_bundle = build_bulk_submit(&config, backend.clone(), reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, backend.clone(), backend.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         backend,
         config.clone(),
@@ -1642,6 +1644,7 @@ fn composite_submit_jobs(
 async fn build_bulk_submit(
     config: &ServerConfig,
     jobs: Arc<dyn BulkSubmitJobStore>,
+    storage: Arc<dyn ResourceStorage>,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
 ) -> anyhow::Result<Option<helios_rest::BulkSubmitBundle>> {
     let cfg = config.bulk_submit.clone();
@@ -1753,7 +1756,8 @@ async fn build_bulk_submit(
             config.terminology_server.as_deref(),
             config.default_fhir_version,
         )
-        .map_err(|e| anyhow::anyhow!("bulk-submit ingest validator: {e}"))?;
+        .map_err(|e| anyhow::anyhow!("bulk-submit ingest validator: {e}"))?
+        .with_storage_resolve(storage);
         Some(Arc::new(svc))
     };
 
@@ -2044,7 +2048,8 @@ async fn start_sqlite_elasticsearch(
         config.bulk_submit.defer_indexing,
         reindex_hook.is_some(),
     );
-    let submit_bundle = build_bulk_submit(&config, submit_jobs, reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, submit_jobs, composite.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         composite.clone(),
         config.clone(),
@@ -2114,7 +2119,8 @@ async fn start_postgres(
         Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
             as Arc<dyn helios_persistence::core::DeferredReindexHook>
     });
-    let submit_bundle = build_bulk_submit(&config, backend.clone(), reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, backend.clone(), backend.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         backend.clone(),
         config.clone(),
@@ -2309,7 +2315,8 @@ async fn start_postgres_elasticsearch(
         config.bulk_submit.defer_indexing,
         reindex_hook.is_some(),
     );
-    let submit_bundle = build_bulk_submit(&config, submit_jobs, reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, submit_jobs, composite.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         composite.clone(),
         config.clone(),
@@ -2513,7 +2520,8 @@ async fn start_mongodb_elasticsearch(
         Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
             as Arc<dyn helios_persistence::core::DeferredReindexHook>
     });
-    let submit_bundle = build_bulk_submit(&config, mongo.clone(), reindex_hook).await?;
+    let submit_bundle =
+        build_bulk_submit(&config, mongo.clone(), mongo.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         composite.clone(),
         config.clone(),
@@ -2653,6 +2661,7 @@ async fn start_s3(
     let submit_bundle = if backend.supports_bulk_submit_worker() {
         build_bulk_submit(
             &config,
+            backend.clone(),
             backend.clone(),
             ops.reindex.clone().map(|op| {
                 Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
@@ -2932,6 +2941,7 @@ async fn start_s3_elasticsearch(
     let bulk_submit = if s3.supports_bulk_submit_worker() {
         build_bulk_submit(
             &config,
+            s3.clone(),
             s3.clone(),
             ops.reindex.clone().map(|op| {
                 Arc::new(helios_persistence::search::ReindexOnFinish::new(op))

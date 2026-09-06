@@ -261,3 +261,88 @@ async fn enforce_mode_honors_meta_profile_claims() {
         .await;
     assert_eq!(response.status_code(), 201, "{}", response.text());
 }
+
+#[tokio::test]
+async fn validate_resolve_follows_stored_subject() {
+    let server = create_test_server("off").await;
+
+    let created = server
+        .put("/Patient/p1")
+        .json(&json!({
+            "resourceType": "Patient",
+            "id": "p1",
+            "name": [{ "family": "A" }]
+        }))
+        .await;
+    assert!(
+        created.status_code().is_success(),
+        "patient write failed: {}",
+        created.text()
+    );
+
+    let profile = json!({
+        "resourceType": "StructureDefinition",
+        "id": "obs-named-subject",
+        "url": "http://example.org/StructureDefinition/obs-named-subject",
+        "name": "ObsNamedSubject",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Observation",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+        "derivation": "constraint",
+        "differential": {
+            "element": [{
+                "id": "Observation",
+                "path": "Observation",
+                "constraint": [{
+                    "key": "obs-named-subject",
+                    "severity": "error",
+                    "human": "subject must resolve to a named Patient",
+                    "expression": "subject.exists().not() or subject.resolve().name.exists()"
+                }]
+            }]
+        }
+    });
+    let uploaded = server
+        .put("/StructureDefinition/obs-named-subject")
+        .json(&profile)
+        .await;
+    assert!(
+        uploaded.status_code().is_success(),
+        "profile upload failed: {}",
+        uploaded.text()
+    );
+
+    let observation = |subject: &str| {
+        json!({
+            "resourceType": "Observation",
+            "status": "final",
+            "code": { "text": "x" },
+            "subject": { "reference": subject }
+        })
+    };
+
+    let hit = server
+        .post("/Observation/$validate?profile=http://example.org/StructureDefinition/obs-named-subject")
+        .json(&observation("Patient/p1"))
+        .await;
+    hit.assert_status_ok();
+    let outcome: Value = hit.json();
+    assert_eq!(
+        outcome["issue"][0]["severity"], "information",
+        "stored Patient/p1 must satisfy subject.resolve().name.exists(): {outcome:#}"
+    );
+
+    let miss = server
+        .post("/Observation/$validate?profile=http://example.org/StructureDefinition/obs-named-subject")
+        .json(&observation("Patient/missing"))
+        .await;
+    miss.assert_status_ok();
+    let outcome: Value = miss.json();
+    let issues = outcome["issue"].as_array().expect("issues");
+    assert!(
+        issues.iter().any(|i| i["code"] == "invariant"),
+        "missing Patient must fail the resolve() constraint: {outcome:#}"
+    );
+}

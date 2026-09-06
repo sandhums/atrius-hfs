@@ -770,3 +770,15 @@ fn converts_binding_slice_discriminator() {
     });
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn converts_mixed_kind_slice_discriminators() {
+    let actual = convert_to_value("mixed-kind-discriminators.json");
+    let slicing = &actual["elements"]["entry"]["slicing"]["slices"]["patient"]["match"];
+    assert_eq!(slicing["type"], "all", "{slicing}");
+    let parts = slicing["value"].as_array().expect("all-value is an array");
+    assert_eq!(parts.len(), 2, "{slicing}");
+    let kinds: Vec<&str> = parts.iter().map(|p| p["type"].as_str().unwrap()).collect();
+    assert!(kinds.contains(&"type"), "{slicing}");
+    assert!(kinds.contains(&"pattern"), "{slicing}");
+}

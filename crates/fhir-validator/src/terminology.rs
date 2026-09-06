@@ -93,7 +93,7 @@ impl CoreTerminology {
     /// not embedded (needs a terminology server). `system == None` matches the
     /// code under any system in the set (a bare `code` whose system is implied
     /// by the binding).
-    fn contains(&self, value_set: &str, system: Option<&str>, code: &str) -> Option<bool> {
+    pub fn contains(&self, value_set: &str, system: Option<&str>, code: &str) -> Option<bool> {
         let set = self
             .sets
             .get(crate::resolver::strip_canonical_version(value_set))?;
@@ -109,7 +109,7 @@ impl CoreTerminology {
     /// `Some(true)` in-set, `Some(false)` definitely out, `None` can't judge
     /// offline (value set not embedded, or shape not coded). This is the sync
     /// core both `validate_code` and the editor's binding check share.
-    fn member(&self, value_set: &str, coded: &CodedValue) -> Option<bool> {
+    pub fn member(&self, value_set: &str, coded: &CodedValue) -> Option<bool> {
         match coded {
             CodedValue::Code(code) => self.contains(value_set, None, code),
             CodedValue::Coding(coding) => {

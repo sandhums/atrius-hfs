@@ -3,8 +3,9 @@
 //! Discriminator paths are the FHIR "restricted FHIRPath" subset: dotted
 //! element selections, `$this`, `extension('url')`, `ofType(Type)`, and
 //! `resolve()`. `resolve()` is compiled to `resolve-ref` and evaluated
-//! against the instance graph already in hand (`contained`, Bundle entries);
-//! it never goes to storage.
+//! against the instance graph already in hand (`contained`, Bundle entries)
+//! plus any `ValidationOptions::resolution_resources` the caller prefetched
+//! from a tenant store. The converter never performs I/O.
 //!
 //! A `value`/`pattern` discriminator at path `P` becomes a partial-match
 //! pattern built from the `fixed[x]`/`pattern[x]` constant found at `P`
@@ -17,7 +18,8 @@
 //! ⇒ must exist, `max = 0` ⇒ must be absent).
 //!
 //! `type`, `profile`, and `binding` discriminators become typed [`Match`]
-//! values evaluated at runtime by the engine.
+//! values evaluated at runtime by the engine. Mixed-kind sets (and more than
+//! one typed discriminator) AND together as `type: "all"`.
 
 use super::EdDiscriminator;
 use super::tree::{SliceNode, capitalize, finalize};
@@ -99,7 +101,8 @@ enum DSeg {
     Extension(String),
     /// `ofType(Type)` — pick one branch of a choice element.
     OfType(String),
-    /// `resolve()` — follow a Reference against the in-scope instance graph.
+    /// `resolve()` — follow a Reference against the instance graph (and any
+    /// prefetched store resources the engine was given).
     Resolve,
 }
 
@@ -296,49 +299,114 @@ fn build_match(
         return build_exists_match(node, &parsed);
     }
 
-    // Single non-pattern discriminator (homogeneous set of one kind).
-    if kinds.iter().all(|k| *k == "type") && parsed.len() == 1 {
-        let (target, rsegs) = resolve_path(node, &parsed[0].1)?;
-        let type_code = target.schema.type_.as_ref()?;
-        return Some(Match {
-            type_: Some("type".to_string()),
-            value: Some(match_value_from_rsegs(
-                &rsegs,
-                Value::String(type_code.clone()),
-            )),
-            resolve_ref: resolve_ref.then_some(true),
-        });
-    }
-    if kinds.iter().all(|k| *k == "profile") && parsed.len() == 1 {
-        let (target, rsegs) = resolve_path(node, &parsed[0].1)?;
-        let profile = extension_profile
-            .map(str::to_string)
-            .or_else(|| target.type_profiles.first().cloned())
-            .or_else(|| target.schema.url.clone())
-            .or_else(|| {
-                target
-                    .schema
-                    .refers
-                    .as_ref()
-                    .and_then(|r| r.first().cloned())
-            })?;
-        return Some(Match {
-            type_: Some("profile".to_string()),
-            value: Some(match_value_from_rsegs(&rsegs, Value::String(profile))),
-            resolve_ref: resolve_ref.then_some(true),
-        });
-    }
-    if kinds.iter().all(|k| *k == "binding") && parsed.len() == 1 {
-        let (target, rsegs) = resolve_path(node, &parsed[0].1)?;
-        let vs = target.schema.binding.as_ref()?.value_set.clone();
-        return Some(Match {
-            type_: Some("binding".to_string()),
-            value: Some(match_value_from_rsegs(&rsegs, Value::String(vs))),
-            resolve_ref: resolve_ref.then_some(true),
-        });
+    // Homogeneous typed set of one discriminator, or mixed kinds: AND of
+    // each translatable discriminator (FHIR: the item matches iff every
+    // discriminator matches).
+    let mut pattern_group: Vec<(&EdDiscriminator, Vec<DSeg>)> = Vec::new();
+    let mut exists_group: Vec<(&EdDiscriminator, Vec<DSeg>)> = Vec::new();
+    let mut typed: Vec<(&EdDiscriminator, Vec<DSeg>)> = Vec::new();
+    for (disc, segs) in parsed {
+        match disc.type_.as_str() {
+            "value" | "pattern" => pattern_group.push((disc, segs)),
+            "exists" => exists_group.push((disc, segs)),
+            _ => typed.push((disc, segs)),
+        }
     }
 
-    None
+    let mut parts: Vec<Match> = Vec::new();
+    if !pattern_group.is_empty() {
+        let mut m = build_pattern_match(node, &pattern_group)?;
+        if pattern_group
+            .iter()
+            .any(|(_, segs)| segs.iter().any(|s| matches!(s, DSeg::Resolve)))
+        {
+            m.resolve_ref = Some(true);
+        }
+        parts.push(m);
+    }
+    if !exists_group.is_empty() {
+        parts.push(build_exists_match(node, &exists_group)?);
+    }
+    for (disc, segs) in &typed {
+        let this_resolve = segs.iter().any(|s| matches!(s, DSeg::Resolve));
+        parts.push(build_typed_match(
+            node,
+            disc,
+            segs,
+            extension_profile,
+            this_resolve,
+        )?);
+    }
+    and_matches(parts)
+}
+
+fn and_matches(parts: Vec<Match>) -> Option<Match> {
+    match parts.len() {
+        0 => None,
+        1 => parts.into_iter().next(),
+        _ => Some(Match {
+            type_: Some("all".to_string()),
+            value: Some(Value::Array(
+                parts
+                    .into_iter()
+                    .map(|m| serde_json::to_value(m).expect("Match is JSON"))
+                    .collect(),
+            )),
+            resolve_ref: None,
+        }),
+    }
+}
+
+fn build_typed_match(
+    node: &super::tree::Node,
+    disc: &EdDiscriminator,
+    segs: &[DSeg],
+    extension_profile: Option<&str>,
+    resolve_ref: bool,
+) -> Option<Match> {
+    match disc.type_.as_str() {
+        "type" => {
+            let (target, rsegs) = resolve_path(node, segs)?;
+            let type_code = target.schema.type_.as_ref()?;
+            Some(Match {
+                type_: Some("type".to_string()),
+                value: Some(match_value_from_rsegs(
+                    &rsegs,
+                    Value::String(type_code.clone()),
+                )),
+                resolve_ref: resolve_ref.then_some(true),
+            })
+        }
+        "profile" => {
+            let (target, rsegs) = resolve_path(node, segs)?;
+            let profile = extension_profile
+                .map(str::to_string)
+                .or_else(|| target.type_profiles.first().cloned())
+                .or_else(|| target.schema.url.clone())
+                .or_else(|| {
+                    target
+                        .schema
+                        .refers
+                        .as_ref()
+                        .and_then(|r| r.first().cloned())
+                })?;
+            Some(Match {
+                type_: Some("profile".to_string()),
+                value: Some(match_value_from_rsegs(&rsegs, Value::String(profile))),
+                resolve_ref: resolve_ref.then_some(true),
+            })
+        }
+        "binding" => {
+            let (target, rsegs) = resolve_path(node, segs)?;
+            let vs = target.schema.binding.as_ref()?.value_set.clone();
+            Some(Match {
+                type_: Some("binding".to_string()),
+                value: Some(match_value_from_rsegs(&rsegs, Value::String(vs))),
+                resolve_ref: resolve_ref.then_some(true),
+            })
+        }
+        _ => None,
+    }
 }
 
 fn build_pattern_match(

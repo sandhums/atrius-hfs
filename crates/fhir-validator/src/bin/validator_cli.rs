@@ -134,6 +134,7 @@ fn main() -> ExitCode {
         profiles: args.profiles.clone(),
         use_meta_profiles: !args.no_meta_profiles,
         unknown_profile: UnknownProfilePolicy::Warn,
+        slice_binding_version: Some(args.fhir_version),
         ..Default::default()
     };
     let outcome = validator.validate_sync(&resource, &opts);

@@ -58,6 +58,7 @@ impl ConstraintEvaluator for FhirPathConstraintEvaluator {
         resource: &Value,
         version: FhirVersion,
         constraints: &[DeferredConstraint<'_>],
+        resolution_resources: &[Value],
     ) -> Vec<ConstraintOutcome> {
         let typed = match parse_typed(resource, version) {
             Ok(t) => t,
@@ -71,7 +72,17 @@ impl ConstraintEvaluator for FhirPathConstraintEvaluator {
                     .collect();
             }
         };
-        let context = EvaluationContext::new(vec![typed]);
+        // Index 0 is the resource under evaluation (`this`). Extra JSON is
+        // the store-prefetch pool `resolve()` searches — same eager pattern
+        // as SOF's `set_resolution_scope`, without changing `%resource`.
+        let mut pool = Vec::with_capacity(1 + resolution_resources.len());
+        pool.push(typed);
+        for extra in resolution_resources {
+            if let Ok(t) = parse_typed(extra, version) {
+                pool.push(t);
+            }
+        }
+        let context = EvaluationContext::new(pool);
 
         constraints
             .iter()
@@ -186,7 +197,10 @@ fn parse_typed(resource: &Value, version: FhirVersion) -> Result<FhirResource, S
 
 #[cfg(test)]
 mod tests {
-    use super::combine;
+    use super::*;
+    use crate::effects::{ConstraintEvaluator, ConstraintOutcome, DeferredConstraint};
+    use helios_fhir::FhirVersion;
+    use serde_json::json;
 
     #[test]
     fn combines_paths_into_focused_expressions() {
@@ -199,5 +213,36 @@ mod tests {
             combine("Patient.name.2.given", "length() < 10"),
             "name[2].given.all(length() < 10)"
         );
+    }
+
+    #[cfg(feature = "R4")]
+    #[test]
+    fn resolve_sees_prefetched_store_resources() {
+        let evaluator = FhirPathConstraintEvaluator::new();
+        let obs = json!({
+            "resourceType": "Observation",
+            "status": "final",
+            "code": { "text": "x" },
+            "subject": { "reference": "Patient/p1" }
+        });
+        let constraints = [DeferredConstraint {
+            path: "Observation",
+            id: "obs-resolve",
+            expression: "subject.resolve().name.exists()",
+        }];
+        let miss = evaluator.evaluate_all(&obs, FhirVersion::R4, &constraints, &[]);
+        assert_eq!(miss, vec![ConstraintOutcome::Failed]);
+        let patient = json!({
+            "resourceType": "Patient",
+            "id": "p1",
+            "name": [{ "family": "A" }]
+        });
+        let hit = evaluator.evaluate_all(
+            &obs,
+            FhirVersion::R4,
+            &constraints,
+            std::slice::from_ref(&patient),
+        );
+        assert_eq!(hit, vec![ConstraintOutcome::Passed]);
     }
 }

@@ -262,9 +262,11 @@ pub struct Slice {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Match {
-    /// `pattern` | `binding` | `profile` | `type` | `exists` | `extension`.
-    /// `exists` carries `[{path, exists}]`; `extension` a `{url, pattern |
-    /// extension}` chain. `resolve-ref` follows a Reference in-scope only.
+    /// `pattern` | `binding` | `profile` | `type` | `exists` | `extension` |
+    /// `all`. `exists` carries `[{path, exists}]`; `extension` a `{url, pattern |
+    /// extension}` chain. `all` ANDs an array of nested match objects.
+    /// `resolve-ref` follows a Reference against the instance graph plus any
+    /// `ValidationOptions::resolution_resources` the caller supplied.
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub type_: Option<String>,
     /// The pattern / binding / profile / type / exists / extension payload.

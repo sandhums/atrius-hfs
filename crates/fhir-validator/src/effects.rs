@@ -121,6 +121,7 @@ pub trait ConstraintEvaluator: Send + Sync {
         resource: &Value,
         version: FhirVersion,
         constraints: &[DeferredConstraint<'_>],
+        resolution_resources: &[Value],
     ) -> Vec<ConstraintOutcome>;
 }
 
@@ -154,9 +155,17 @@ pub async fn execute(
     version: FhirVersion,
     deferred: &[Deferred],
     handlers: &EffectHandlers<'_>,
+    resolution_resources: &[Value],
     errors: &mut Vec<ValidationError>,
 ) {
-    execute_constraints(resource, version, deferred, handlers, errors);
+    execute_constraints(
+        resource,
+        version,
+        deferred,
+        handlers,
+        resolution_resources,
+        errors,
+    );
     execute_bindings(deferred, handlers, errors).await;
 }
 
@@ -165,6 +174,7 @@ fn execute_constraints(
     version: FhirVersion,
     deferred: &[Deferred],
     handlers: &EffectHandlers<'_>,
+    resolution_resources: &[Value],
     errors: &mut Vec<ValidationError>,
 ) {
     let Some(evaluator) = handlers.constraints else {
@@ -210,7 +220,7 @@ fn execute_constraints(
             expression,
         })
         .collect();
-    let outcomes = evaluator.evaluate_all(resource, version, &refs);
+    let outcomes = evaluator.evaluate_all(resource, version, &refs, resolution_resources);
     debug_assert_eq!(outcomes.len(), refs.len(), "evaluator must align outcomes");
 
     for ((path, id, _, human, severity), outcome) in selected.iter().zip(outcomes) {

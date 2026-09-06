@@ -45,10 +45,13 @@
 //!
 //! - Slice matchers: `pattern`, `type`, `profile`, `binding`, `exists`, and
 //!   `extension('url')` paths are evaluated (`engine/slicing.rs`). `resolve()`
-//!   follows References already in the instance (`contained`, Bundle entries)
-//!   and does not hit storage; an unresolved reference does not match.
-//!   Binding discriminators that name a ValueSet canonical cannot expand it
-//!   at mark time. Mixed-kind discriminator sets still warn and stay dormant.
+//!   follows References in the instance (`contained`, Bundle entries) and in
+//!   `ValidationOptions::resolution_resources` (store prefetch from REST). An
+//!   unresolved reference does not match. The engine never hits storage itself.
+//!   Binding discriminators that name a ValueSet canonical expand against
+//!   embedded core terminology when `ValidationOptions::slice_binding_version`
+//!   is set (HFS write/`$validate` always sets it). Mixed-kind discriminator
+//!   sets AND as `type: "all"`. `resolve()` is in-scope plus optional store prefetch.
 //! - `refers` (reference target types) is enforced when
 //!   `ValidationOptions::enforce_refers` is set (off by default for suite parity).
 //! - `extensible`-strength bindings warn when

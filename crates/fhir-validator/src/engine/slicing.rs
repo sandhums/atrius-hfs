@@ -21,20 +21,21 @@
 //!
 //! Match types: `pattern` (partial deep equality), `type` (JSON/FHIR type
 //! codes), `profile` (meta.profile claim or resolvable schema type),
-//! `binding` (coded value equals the match payload when it is a Coding /
-//! code string — ValueSet membership is deferred to the effects pass when
-//! the payload is a canonical ValueSet URL and no inline code is present),
+//! `binding` (coded value equals the match payload when it is an inline
+//! code; a ValueSet canonical is expanded against embedded core terminology
+//! when `ValidationOptions::slice_binding_version` is set),
 //! `exists` (presence/absence of each `{path, exists}` entry, with
-//! `{extension: url}` path steps and choice-key prefixes), and `extension`
+//! `{extension: url}` path steps and choice-key prefixes), `extension`
 //! (a `{url, pattern | extension}` chain matched against extension arrays
-//! by containment). `resolve-ref` follows a Reference against the in-scope
-//! instance (`contained`, Bundle `entry.resource`) and does not hit storage.
+//! by containment), and `all` (AND of nested matchers). `resolve-ref` follows
+//! a Reference against the instance (`contained`, Bundle `entry.resource`)
+//! plus any prefetched `resolution_resources`. The engine does not hit storage.
 //! A slice with no `match` matches nothing unless the slice schema itself
 //! carries `pattern`/`fixed`.
 
 use super::errors::{self, ErrorKind};
 use super::walk::{SchemaSet, WalkCtx, add_schemas_to_set, is_partial_match, validate_node};
-use crate::schema::{Slice, Slicing};
+use crate::schema::{Match, Slice, Slicing};
 use indexmap::IndexMap;
 use serde_json::Value;
 use std::collections::HashSet;
@@ -274,6 +275,7 @@ fn slice_matches_opt(ctx: Option<&WalkCtx<'_>>, slice: &Slice, item: &Value) -> 
             "binding" => typed_match(ctx, item, value, resolve_ref, binding_leaf),
             "exists" => exists_matches(item, value),
             "extension" => extension_matches(item, value),
+            "all" => all_matches(ctx, value, item),
             _ => false,
         };
     }
@@ -296,12 +298,40 @@ fn profile_leaf(ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool
     profile_matches(ctx, item, expected)
 }
 
-fn binding_leaf(_ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool {
-    binding_matches(item, &Value::String(expected.to_string()))
+fn binding_leaf(ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool {
+    binding_matches(ctx, item, expected)
+}
+
+fn all_matches(ctx: Option<&WalkCtx<'_>>, spec: &Value, item: &Value) -> bool {
+    let Some(parts) = spec.as_array() else {
+        return false;
+    };
+    if parts.is_empty() {
+        return false;
+    }
+    parts.iter().all(|part| {
+        let Ok(nested) = serde_json::from_value::<Match>(part.clone()) else {
+            return false;
+        };
+        slice_matches_opt(
+            ctx,
+            &Slice {
+                match_: Some(nested),
+                min: None,
+                max: None,
+                order: None,
+                reslice: None,
+                slice_is_constraining: None,
+                schema: None,
+            },
+            item,
+        )
+    })
 }
 
 /// Walk a converter-nested expected value (`{resource: "Patient"}`) or a
-/// `$this` scalar. `resolve-ref` runs at the focused leaf, in-scope only.
+/// `$this` scalar. `resolve-ref` runs at the focused leaf against the instance
+/// graph plus any prefetched `resolution_resources`.
 fn typed_match(
     ctx: Option<&WalkCtx<'_>>,
     item: &Value,
@@ -315,8 +345,8 @@ fn typed_match(
                 let Some(ctx) = ctx else {
                     return false;
                 };
-                return local_resolve(ctx.root, item)
-                    .is_some_and(|resolved| leaf(Some(ctx), &resolved, want));
+                return local_resolve(ctx.root, ctx.resolution_resources, item)
+                    .is_some_and(|resolved| leaf(Some(ctx), resolved, want));
             }
             leaf(ctx, item, want)
         }
@@ -342,19 +372,19 @@ fn focus_child<'a>(item: &'a Value, key: &str) -> Option<&'a Value> {
     })
 }
 
-/// Resolve a Reference (or reference string) against `root` only: `contained`
-/// resources and Bundle `entry.resource` (plus their contained). No storage.
-fn local_resolve(root: &Value, node: &Value) -> Option<Value> {
+/// Resolve a Reference (or reference string) against `root` plus `extra`:
+/// `contained` resources, Bundle `entry.resource` (plus their contained),
+/// and any caller-prefetched store resources. No I/O.
+fn local_resolve<'a>(root: &'a Value, extra: &'a [Value], node: &Value) -> Option<&'a Value> {
     let reference = node
         .as_str()
         .or_else(|| node.get("reference").and_then(Value::as_str))?;
-    let candidates = in_scope_resources(root);
-    candidates
+    in_scope_resources(root, extra)
         .into_iter()
         .find(|c| reference_hits(reference, c))
 }
 
-fn in_scope_resources(root: &Value) -> Vec<Value> {
+fn in_scope_resources<'a>(root: &'a Value, extra: &'a [Value]) -> Vec<&'a Value> {
     let mut out = Vec::new();
     push_resource_tree(&mut out, root);
     if root.get("resourceType").and_then(Value::as_str) == Some("Bundle")
@@ -366,17 +396,20 @@ fn in_scope_resources(root: &Value) -> Vec<Value> {
             }
         }
     }
+    for resource in extra {
+        push_resource_tree(&mut out, resource);
+    }
     out
 }
 
-fn push_resource_tree(out: &mut Vec<Value>, resource: &Value) {
+fn push_resource_tree<'a>(out: &mut Vec<&'a Value>, resource: &'a Value) {
     if resource.get("resourceType").is_some() {
-        out.push(resource.clone());
+        out.push(resource);
     }
     if let Some(contained) = resource.get("contained").and_then(Value::as_array) {
         for child in contained {
             if child.get("resourceType").is_some() {
-                out.push(child.clone());
+                out.push(child);
             }
         }
     }
@@ -575,17 +608,18 @@ fn profile_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, profile: &str) -> bo
     false
 }
 
-/// Binding discriminator: if `expected` is a string, accept when the item is
-/// that code, a Coding with that code, or a CodeableConcept containing it.
-/// Full ValueSet expansion is intentionally not done here.
-fn binding_matches(item: &Value, expected: &Value) -> bool {
-    let Some(needle) = expected.as_str() else {
-        return is_partial_match(item, expected);
-    };
-    // Canonical ValueSet URL — only match when the instance literally carries
-    // that URL (rare); otherwise leave unmatched (slice stays inactive for
-    // ValueSet-based binding discriminators without inline codes).
+/// Binding discriminator: an inline code matches Coding / code / CodeableConcept
+/// as before. A ValueSet canonical expands against embedded core terminology
+/// when the walk has a version; otherwise only a literal URL on the instance
+/// matches (extended-fixture contract).
+fn binding_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, needle: &str) -> bool {
     if needle.contains('/') {
+        if let Some(tx) = ctx.and_then(|c| c.terminology.as_deref())
+            && let Some(coded) = crate::effects::coded_value(item, None)
+            && tx.member(needle, &coded) == Some(true)
+        {
+            return true;
+        }
         if item.as_str() == Some(needle)
             || item.get("system").and_then(Value::as_str) == Some(needle)
         {
@@ -677,9 +711,25 @@ mod slice_match_tests {
             "resourceType": "Observation",
             "contained": [{ "resourceType": "Patient", "id": "p1" }]
         });
-        let resolved = local_resolve(&root, &json!({ "reference": "#p1" }));
+        let resolved = local_resolve(&root, &[], &json!({ "reference": "#p1" }));
         assert_eq!(resolved.unwrap()["resourceType"], "Patient");
-        assert!(local_resolve(&root, &json!({ "reference": "Patient/missing" })).is_none());
+        assert!(local_resolve(&root, &[], &json!({ "reference": "Patient/missing" })).is_none());
+    }
+
+    #[test]
+    fn local_resolve_hits_prefetched_store_resources() {
+        let root = json!({
+            "resourceType": "Observation",
+            "subject": { "reference": "Patient/p1" }
+        });
+        let extra = json!({ "resourceType": "Patient", "id": "p1", "name": [{"family": "A"}] });
+        let resolved = local_resolve(
+            &root,
+            std::slice::from_ref(&extra),
+            &json!({ "reference": "Patient/p1" }),
+        );
+        assert_eq!(resolved.unwrap()["name"][0]["family"], "A");
+        assert!(local_resolve(&root, &[], &json!({ "reference": "Patient/p1" })).is_none());
     }
 
     #[test]
@@ -692,5 +742,162 @@ mod slice_match_tests {
             }
         }));
         assert!(!slice_matches(&s, &json!({ "reference": "#p1" })));
+    }
+
+    #[test]
+    fn all_matcher_ands_nested_discriminators() {
+        let s = slice(json!({
+            "match": {
+                "type": "all",
+                "value": [
+                    { "type": "type", "value": "Coding" },
+                    { "type": "pattern", "value": { "system": "http://x" } }
+                ]
+            }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "system": "http://x", "code": "a" })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "system": "http://y", "code": "a" })
+        ));
+        assert!(!slice_matches(&s, &json!({ "reference": "Patient/1" })));
+    }
+
+    #[test]
+    fn binding_canonical_expands_when_version_is_set() {
+        use crate::engine::{ErrorKind, ValidationOptions, Validator};
+        use crate::resolver::SchemaRegistry;
+        use crate::schema::FhirSchema;
+        use helios_fhir::FhirVersion;
+        use std::sync::Arc;
+
+        let primitive = json!({ "kind": "primitive-type" });
+        let schema: FhirSchema = serde_json::from_value(json!({
+            "elements": {
+                "resourceType": { "type": "string" },
+                "category": {
+                    "array": true,
+                    "elements": {
+                        "system": { "type": "uri" },
+                        "code": { "type": "code" }
+                    },
+                    "slicing": {
+                        "slices": {
+                            "fromVs": {
+                                "match": {
+                                    "type": "binding",
+                                    "value": "http://hl7.org/fhir/ValueSet/observation-category"
+                                },
+                                "min": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+        .unwrap();
+        let mut registry = SchemaRegistry::new();
+        registry.insert_named("Obs", schema);
+        registry.insert_named("string", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("uri", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("code", serde_json::from_value(primitive).unwrap());
+        let validator = Validator::new(Arc::new(registry));
+        let resource = json!({
+            "resourceType": "Obs",
+            "category": [{
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+            }]
+        });
+        let without = validator.validate_sync(&resource, &ValidationOptions::default());
+        assert!(
+            without
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::SliceCardinality),
+            "no expansion → slice inactive: {:?}",
+            without.errors
+        );
+        let with = validator.validate_sync(
+            &resource,
+            &ValidationOptions {
+                slice_binding_version: Some(FhirVersion::R4),
+                ..Default::default()
+            },
+        );
+        assert!(
+            with.errors.is_empty(),
+            "core terminology must match laboratory: {:?}",
+            with.errors
+        );
+    }
+
+    #[test]
+    fn resolve_ref_slice_matches_prefetched_store_target() {
+        use crate::engine::{ErrorKind, ValidationOptions, Validator};
+        use crate::resolver::SchemaRegistry;
+        use crate::schema::FhirSchema;
+        use std::sync::Arc;
+
+        let primitive = json!({ "kind": "primitive-type" });
+        let schema: FhirSchema = serde_json::from_value(json!({
+            "elements": {
+                "resourceType": { "type": "string" },
+                "focus": {
+                    "array": true,
+                    "elements": {
+                        "reference": { "type": "string" }
+                    },
+                    "slicing": {
+                        "slices": {
+                            "patient": {
+                                "match": {
+                                    "type": "type",
+                                    "value": "Patient",
+                                    "resolve-ref": true
+                                },
+                                "min": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+        .unwrap();
+        let mut registry = SchemaRegistry::new();
+        registry.insert_named("Obs", schema);
+        registry.insert_named("string", serde_json::from_value(primitive).unwrap());
+        let validator = Validator::new(Arc::new(registry));
+        let resource = json!({
+            "resourceType": "Obs",
+            "focus": [{ "reference": "Patient/p1" }]
+        });
+        let without = validator.validate_sync(&resource, &ValidationOptions::default());
+        assert!(
+            without
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::SliceCardinality),
+            "unresolved Patient/p1 must not match the slice: {:?}",
+            without.errors
+        );
+        let with = validator.validate_sync(
+            &resource,
+            &ValidationOptions {
+                resolution_resources: vec![json!({
+                    "resourceType": "Patient",
+                    "id": "p1"
+                })],
+                ..Default::default()
+            },
+        );
+        assert!(
+            with.errors.is_empty(),
+            "prefetched Patient/p1 must match resolve-ref: {:?}",
+            with.errors
+        );
     }
 }

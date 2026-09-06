@@ -9,7 +9,10 @@
 //! The `$validate` operation uses [`ValidationService::validate_resource`]
 //! unconditionally; the write path (create/update/batch/transaction/bulk-submit)
 //! goes through [`ValidationService::check_write`], which is gated by
-//! `HFS_VALIDATION_MODE` (`off` | `log` | `enforce`).
+//! `HFS_VALIDATION_MODE` (`off` | `log` | `enforce`). Relative `Type/id`
+//! references are prefetched from the tenant store before the synchronous
+//! validator runs ([`ValidationService::with_storage_resolve`]); the engine
+//! itself never performs I/O.
 
 use crate::config::ValidationConfig;
 use crate::error::RestError;
@@ -26,6 +29,11 @@ use helios_fhir_validator::{
     UnknownProfilePolicy, ValidationError, ValidationOptions, Validator, dotted_to_fhirpath,
     materialize_package_layers,
 };
+use helios_persistence::core::ResourceStorage;
+use helios_persistence::sof::reference_resolver::{
+    StorageBackedResolver, StorageReferenceResolver, collect_missing_references,
+};
+use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use serde_json::{Value, json};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
@@ -67,6 +75,10 @@ pub struct ValidationService {
     /// Server-wide IG/NPM package registry layers (`HFS_FHIR_PACKAGES`
     /// list order; earlier wins). Empty when the env var is unset.
     package_layers: Vec<Arc<SchemaRegistry>>,
+    /// Optional tenant-store prefetch for FHIRPath / slice `resolve()`.
+    /// When set, relative `Type/id` references are batch-read before the
+    /// synchronous validator runs. The engine itself never performs I/O.
+    reference_resolver: Option<Arc<dyn StorageReferenceResolver>>,
 }
 
 impl Default for ValidationService {
@@ -81,6 +93,7 @@ impl Default for ValidationService {
             unknown_profile: UnknownProfilePolicy::Warn,
             tenant_profiles: Some(DashMap::new()),
             package_layers: Vec::new(),
+            reference_resolver: None,
         }
     }
 }
@@ -143,7 +156,18 @@ impl ValidationService {
             unknown_profile,
             tenant_profiles: config.stored_profiles.then(DashMap::new),
             package_layers,
+            reference_resolver: None,
         })
+    }
+
+    /// Prefetch relative `Type/id` references from `storage` into the
+    /// validator's `resolve()` pool. No-op when the caller never attaches this.
+    pub fn with_storage_resolve(mut self, storage: Arc<dyn ResourceStorage>) -> Self {
+        self.reference_resolver = Some(Arc::new(StorageBackedResolver::new(
+            storage,
+            StorageBackedResolver::DEFAULT_MAX_FANOUT,
+        )));
+        self
     }
 
     /// Replace the terminology provider (bindings stay unchecked without one).
@@ -182,12 +206,15 @@ impl ValidationService {
         tenant: Option<&str>,
         use_meta_profiles: bool,
     ) -> Vec<ValidationError> {
+        let resolution_resources = self.prefetch_resolve(version, resource, tenant).await;
         let resolver = self.resolver_for(version, tenant);
         let validator = Validator::new(resolver);
         let opts = ValidationOptions {
             profiles,
             use_meta_profiles,
             unknown_profile: self.unknown_profile,
+            slice_binding_version: Some(version),
+            resolution_resources,
             ..Default::default()
         };
         let handlers = EffectHandlers {
@@ -198,10 +225,28 @@ impl ValidationService {
             terminology: self.terminology.as_deref(),
             suppress_constraints: &self.suppress_constraints,
             terminology_fail_closed: self.terminology_fail_closed,
+            check_extensible_bindings: false,
         };
         validator
             .validate(resource, version, &opts, &handlers)
             .await
+    }
+
+    async fn prefetch_resolve(
+        &self,
+        version: FhirVersion,
+        resource: &Value,
+        tenant: Option<&str>,
+    ) -> Vec<Value> {
+        let (Some(resolver), Some(tenant_id)) = (&self.reference_resolver, tenant) else {
+            return Vec::new();
+        };
+        let refs = collect_missing_references(std::slice::from_ref(resource));
+        if refs.is_empty() {
+            return Vec::new();
+        }
+        let ctx = TenantContext::new(TenantId::new(tenant_id), TenantPermissions::full_access());
+        resolver.resolve(&ctx, version, &refs).await
     }
 
     /// Write-path gate. `Ok(())` = proceed with the write; `Err` = reject
@@ -489,10 +534,14 @@ impl TerminologyProvider for RemoteTerminologyProvider {
 pub fn to_outcome_issue(error: &ValidationError) -> Issue {
     let code = match error.kind {
         ErrorKind::Required => IssueType::Required,
-        ErrorKind::FixedValue | ErrorKind::PatternValue | ErrorKind::PrimitiveValue => {
-            IssueType::Value
-        }
-        ErrorKind::FhirpathConstraint => IssueType::Invariant,
+        ErrorKind::FixedValue
+        | ErrorKind::PatternValue
+        | ErrorKind::PrimitiveValue
+        | ErrorKind::MaxLength
+        | ErrorKind::MinValue
+        | ErrorKind::MaxValue
+        | ErrorKind::ReferenceTarget => IssueType::Value,
+        ErrorKind::FhirpathConstraint | ErrorKind::Questionnaire => IssueType::Invariant,
         // A known extension outside its declared context (#615): invalid
         // content by placement, not a structural malformation.
         ErrorKind::ExtensionContext => IssueType::Invalid,
