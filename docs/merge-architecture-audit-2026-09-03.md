@@ -12,6 +12,11 @@ and **§3.5** (directory-layout regen + runbook, 5 Sep), **§3.6**
 dead-letter / zero-delivery, SQLite claim CAS, HTS per-instance system-id
 cache; 5 Sep) are closed.
 
+Follow-up: **6 Sep 2026.** The five write-path / `$validate` holes in §3.4 and
+the remaining slice matchers (`exists`, `extension('url')`, reslicing, in-scope
+`resolve()`) are closed in-repo (`4e2b8ebc6`, `331f2ddbc`). **Pending work is
+§5.1** — do not treat the 3 Sep §5 numbering as the live queue.
+
 Companion to *HELIOS vs Atrius.docx*, which records what each sync decided. This
 document asks a different question: **are those decisions still correct, and do
 they hold up for durability and extensibility?** Sections are written to be
@@ -23,9 +28,10 @@ the outbox types), so nothing here is a build failure.
 
 Two findings were live defects rather than design debt: **§3.1**, where IG
 validation was disabled in deployments whose configuration asserted `strict`
-(config/scripts/resolver work in §6; staging 422 verification still open), and
-**§3.2**, where the outbox loses events on Postgres. Start there. The rest is
-durability and extensibility debt, ordered by how much it compounds.
+(config/scripts/resolver work in §6; ABDM env example + staging 422 still open),
+and **§3.2**, where the outbox lost events on Postgres (closed: `WriteTx`).
+Start there. The rest is durability and extensibility debt, ordered by how much
+it compounds. The live remaining queue is **§5.1**.
 
 ---
 
@@ -234,6 +240,12 @@ outbox event without a second round trip.
 fold the outbox insert into the resource CTE. Add a test that injects a failure
 between the resource write and the enqueue and asserts neither is visible.
 
+**Closed 5 Sep 2026** (`9e69fa873`). Direct REST CRUD (`create` / `update` /
+`delete` / `restore`) uses `WriteTx`
+(`crates/persistence/src/backends/postgres/write_tx.rs`): `BEGIN` on the pooled
+client, resource + index + outbox enqueue, then `COMMIT`. Drop without commit
+rolls back. Bundle writes already used `PostgresTransaction`.
+
 ### 3.3 Schema renumbering is positional, with no provenance guard
 
 The renumbered ladders are **contiguous and duplicate-free today** — 18 SQLite
@@ -268,10 +280,11 @@ Test coverage is the weak point. All 10 schema tests live in the SQLite module;
 database, which is valuable, but **no test simulates the upstream-numbered →
 fork-numbered path** — precisely the scenario that silently drops the outbox.
 
-Minor defects: `migrate_v36_to_v37`'s error strings still read
-`"Migration v35->v36 failed"` (postgres/schema.rs:3351–3363), and several
-Postgres migration doc comments still cite upstream's original numbers (e.g.
-`migrate_v23_to_v24` documented as "v22→v23").
+Minor defects (3 Sep snapshot): `migrate_v36_to_v37`'s error strings read
+`"Migration v35->v36 failed"`, and several Postgres migration doc comments still
+cite upstream's original numbers (e.g. `migrate_v23_to_v24` documented as
+"v22→v23"). **Error strings are now `v36->v37` / `v37->v38`.** Leftover comments
+remain (§5.1 item 16).
 
 **Fix:** record applied-migration provenance (a `schema_migrations` table of
 applied step names, or a `flavour` marker), or at minimum add a startup
@@ -576,79 +589,103 @@ runbook [fhir-model-regen.md](fhir-model-regen.md); signature check
 
 ## 5. Recommended backlog, by value over effort
 
-1. **~~Migrate the clinical env files to `HFS_VALIDATION_MODE` +
-  `HFS_FHIR_PACKAGES`, and fix the three scripts~~** (§3.1 / §6.1). Done in the
-   4 Sep working tree for clinical HFS. Remaining: migrate
-   `deploy/clinical/.env.abdm.example` (still `HFS_PROFILE_*`); verify by posting
-   a knowingly non-conformant resource and confirming a 422.
-2. **Warn or fail on recognised-but-removed** `HFS_`* **variables** at startup
-  (§3.1). Small change; it is what would have caught this in August, and it
-   protects every future removal.
-3. **Wrap the Postgres direct-CRUD write + index + outbox enqueue in one
-  transaction** (§3.2). Restores the outbox's central guarantee on the backend
-   staging actually runs.
-4. **~~Correct the docx keep-list and backlog~~** (§3.4). Done in-repo:
-   `docs/clinical-reasoning/upstream-merge.md` (Word file is outside git).
-5. **~~Route bulk-submit ingest through~~** `check_write` ~~or record unvalidated-by-design~~
-  (§3.4). Done 5 Sep: `IngestValidator` on ingest writes; HFS workers share
-  `ValidationService::check_write`.
-6. **~~Add schema provenance or an unconditional outbox-table reconciliation, plus
-  the upstream-numbered heal test and Postgres schema tests~~** (§3.3). Named
-  `schema_migrations` ledger on SQLite and Postgres.
-7. **~~`#[non_exhaustive]` + `Principal::stub()` and migrate the ~17 test
-  literals~~** (§3.6). Done 5 Sep.
-8. **~~Regenerate the directory-layout FHIR models from current specs~~** and
-  write the regen runbook (§3.5, §4). Done 5 Sep: models match Helios
-  signatures; [docs/fhir-model-regen.md](fhir-model-regen.md) +
-  `scripts/diff-fhir-model-signatures.py`. Offering the generator upstream
-  remains item 10.
-9. **~~Timeout the Redis revocation call~~**; decide timeout-vs-error semantics
-  (§3.7). Done 5 Sep: 500ms `EXISTS` budget, fail-closed 503, require `jti`
-  when the Redis checker is on.
-10. **Offer upstream `ChannelDispatcherRegistry` and the directory-layout
-  generator** (§2, §4) — the two changes that would delete the fork's largest
-    recurring conflict sources.
-11. **~~Finish or revert the half-wired~~** `type`/`profile`/`binding` **~~slice matchers~~**
-  (§3.4). Done 5 Sep: `engine/slicing.rs::slice_matches` evaluates them;
-  `resolve()` is in-scope only. Binding does not expand a ValueSet.
-12. **~~Outbox dead-lettering; "processed with zero deliveries" signal; SQLite
-  claim CAS; HTS per-instance system-id cache~~** (§3.7). Done 5 Sep.
-13. Cosmetic: `migrate_v36_to_v37` error strings, Postgres migration doc comments,
-  stale `HFS_AUTH_JTI_BACKEND` reference (§3.3, §3.4).
-14. **NDHM** `$validate` **at the ABDM boundary** (§6.2–§6.3): seed `ndhm.in` on an
-  export validator (or list it in `HFS_FHIR_PACKAGES` on that instance only);
-    align HIS remap URLs with published canonicals (`Patient` not `ndhmPatient`);
-    stop stripping NDHM `meta.profile` for the gate. Do **not** add `ndhm.in` to
-    clinical `HFS_FHIR_PACKAGES`.
-15. **Parity-diff** `targetProfile` and required-binding supersets (§6.2) if the
-  claim “Atrius-valid ⇒ NDHM-valid after remap” needs to be machine-checked.
-16. **Decide QI-Core** `mustSupport` **parity** for `AtriusInDeviceRequest` (§6.4):
-  Atrius flags `status`/`intent`/`code[x]`/`codeReference`/`codeCodeableConcept`
-    MS where QI-Core does not. No validation impact (MS is informational in HFS)
-    — purely whether the QI-Core-compliance claim should be exact.
-17. **Assert zero materialization warnings** for the seeded IG in CI (§6.4). The
-  two converter defects were visible only as WARN lines on a live boot; a
-    packages-level test asserting `warnings.is_empty()` on the real package
-    would have caught both.
-18. FSH allows `codeOptions` (`0..1`) but does not encode QI-Core `drq-3` (coding XOR codeOptions).
-19. **Audit sink search-index insert** — fixed in §6.6 (`SCHEMA_VERSION` 38).
+### 5.1 Pending (6 Sep 2026)
+
+This is the live queue. Closed 3–6 Sep items stay in §5.2 for the record.
+
+**Ops / config (§3.1, §6.1)**
+
+1. Migrate `deploy/clinical/.env.abdm.example` off dead `HFS_PROFILE_MANIFEST` /
+   `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS`. Clinical HFS
+   examples already use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`.
+2. Warn or fail at HFS startup on recognised-but-removed `HFS_PROFILE_*` (and
+   similar). Nothing in `helios-rest` currently complains; leftover env still
+   looks like validation is on.
+3. Staging proof: with `HFS_VALIDATION_MODE=enforce` and the Atrius package
+   overlay, a knowingly non-conformant write returns **422**.
+
+**Offer upstream (§2, §4 option A)**
+
+4. `ChannelDispatcherRegistry` and the directory-layout FHIR generator — the
+   two changes that would delete the fork's largest recurring conflict sources.
+
+**NDHM / ABDM (§6.2–§6.3) — HIS boundary, not a second HFS engine**
+
+5. NDHM `$validate` at the ABDM export/remap gate. Seed `ndhm.in` on that
+   validator only. Do **not** add it to clinical `HFS_FHIR_PACKAGES`. Export
+   preflight still hits clinical HFS and strips remapped NDHM `meta.profile`.
+6. Align HIS remap canonicals with published NDHM 6.5.0 (`StructureDefinition/Patient`,
+   not `ndhmPatient`, and the same for Encounter/Claim).
+7. Optional: machine-check the claim “Atrius-valid ⇒ NDHM-valid after remap”
+   (`targetProfile` + required-binding supersets). `scripts/ndhm-parity-diff.py`
+   does not do this today.
+
+**One-engine validator leftovers (not a second engine)**
+
+8. Binding discriminators do not expand a ValueSet at mark time.
+9. Mixed-kind discriminator sets still warn and stay dormant.
+10. Store-backed `resolve()` is **out of scope**. In-scope `contained` / Bundle
+    `entry.resource` is implemented; unresolved references do not match.
+11. Conditional PATCH inside a Bundle is refused (instance-url PATCH is
+    implemented).
+
+**IG / QI-Core (AtriusIGDraft, not HFS runtime)**
+
+12. Decide QI-Core `mustSupport` parity for `AtriusInDeviceRequest`
+    (`status` / `intent` / `code[x]` / `codeReference` / `codeCodeableConcept`).
+    MS is informational in HFS — no validation change.
+13. FSH allows `codeOptions` (`0..1`) but does not encode QI-Core `drq-3`
+    (coding XOR codeOptions).
+14. CI assert: seeded IG materialization `warnings.is_empty()`.
+15. Overlay `hl7.fhir.uv.extensions.r4` only if untyped
+    `individual-recordedSexOrGender` instances need structural overlay
+    (not in the embedded R4 core pack).
+
+**Docs / cosmetics**
+
+16. Postgres schema comments that still cite upstream's original step numbers.
+17. Optional: `docs/auth-verification.md` still *names* removed
+    `HFS_AUTH_JTI_BACKEND` as part of the #205 history — not live config.
+
+### 5.2 Closed since the 3 Sep audit
+
+Original §5 numbers in parentheses. These are **not** the live queue.
+
+1. Clinical HFS env/scripts migrated to `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`
+   (4 Sep / §6.1). Remaining operator work is §5.1 items 1–3.
+3. Postgres write + index + outbox in one `WriteTx` (§3.2, `9e69fa873`).
+4. Keep-list corrected in `docs/clinical-reasoning/upstream-merge.md` (§3.4).
+5. Bulk-submit ingest through `IngestValidator` / `check_write` (`4e2b8ebc6`).
+6. Named `schema_migrations` ledger + heal path (§3.3).
+7. `#[non_exhaustive]` + `Principal::stub()` (§3.6, `e782018de`).
+8. Directory-layout FHIR models regenerated + regen runbook (§3.5, `7a0323097`).
+9. Redis JTI `EXISTS` timeout, fail-closed 503, require `jti` (§3.7).
+11. Slice `type` / `profile` / `binding` / `exists` / `extension` matchers, plus
+    in-scope `resolve()` (`4e2b8ebc6`, `331f2ddbc`). Leftovers are §5.1 items 8–11.
+12. Outbox dead-letter; zero-delivery log; SQLite claim CAS; HTS per-instance
+    system-id cache (§3.7).
+13. `migrate_v36_to_v37` error strings (comments still leftover — §5.1 item 16).
+19. Audit sink `search_index` slot-2 columns, `SCHEMA_VERSION` 38 (§6.6).
+
+Also closed in §6: converter content-reference + choice-branch children (§6.4);
+versioned canonical lookup `Patient|4.0.1` (§6.5).
 
 ---
 
 
 
-## 6. Follow-up work (4 Sep 2026)
+## 6. Follow-up work (4–6 Sep 2026)
 
 Work on `feat-clinical-reasoning` after this audit, addressing §3.1, the
 package-overlay model, and the converter defects the first clean overlay boot
-exposed (§6.4). At time of writing it is in the working tree (not a single
-commit). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are closed
-(named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
+exposed (§6.4). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are
+closed (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
 (Postgres write TX; directory-layout regen + runbook). **§3.6** closed 5 Sep
 (`Principal::stub`). **§3.7 Redis JTI** closed 5 Sep (timeout, ConnectionManager,
 require `jti`). **§3.7 outbox dead-letter and zero-delivery log** closed 5 Sep.
 **§3.7 SQLite claim CAS and HTS `SYSTEM_ID_CACHE`** closed 5 Sep. No remaining
-§3.7 items.
+§3.7 items. **6 Sep:** write-path / `$validate` holes and discriminator
+completeness (§6.7). Live leftovers are **§5.1**.
 
 ### 6.1 Code and operator config
 
@@ -878,3 +915,17 @@ v38 `ADD COLUMN IF NOT EXISTS`s the three nullable slot-2 columns on every
 layout. `classify_postgres_error` now walks `source()` so the next catalog
 mismatch names the column. Restart HFS against the audit URL to migrate
 in place; do not dump `HFS_AUDIT_DATABASE_URL` in logs or tickets.
+
+### 6.7 Write-path `$validate` holes and discriminator completeness (6 Sep 2026)
+
+`4e2b8ebc6` closed the five remaining single-engine write / `$validate` gaps
+listed under §3.4: bulk-submit `IngestValidator` / `check_write`, transaction
+DELETE existence, bundle PATCH + `check_write`, `$validate` modes, and
+type/profile/binding slice matchers.
+
+`331f2ddbc` completed discriminator coverage (`exists`, `extension('url')`,
+reslicing) and in-scope `resolve()` (`contained` + Bundle `entry.resource` only
+— no store). Binding ValueSet expand at mark time, mixed-kind discriminator
+sets, and store-backed `resolve()` stay out of this engine; see §5.1 items 8–11.
+Do not restore `fhir-validation*`. `position` is ordered-slice declaration
+order, not a FHIR discriminator.
