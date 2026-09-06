@@ -12,8 +12,7 @@
 use async_trait::async_trait;
 use helios_persistence::tenant::TenantContext;
 use rusqlite::OptionalExtension;
-use std::collections::HashMap;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 
 use crate::error::HtsError;
 use crate::traits::{
@@ -29,26 +28,6 @@ use super::{
     BoolMap, LookupResponseMap, PropCodesMap, ResolvedMetaMap, SqliteTerminologyBackend,
     StringOptionMap, ValidateCodeResponseMap,
 };
-
-// ─── Process-wide CodeSystem URL → language cache ──────────────────────────
-//
-// `$lookup` reports the CS's primary language as the `preferredForLanguage`
-// designation tag (see `operations/lookup.rs`). Pre-iter9 the value was
-// extracted via a full `search(url=Some(system))` call which selected the
-// entire `resource_json` blob (multi-MB for SNOMED/LOINC) and parsed it just
-// to read `.language`. Under 50-VU lookup load this allocation/parse cost
-// dominated $lookup and dragged steady-state RPS from ~12-14k to ~2-3k.
-//
-// The cache memoises `Option<language>` per CS URL across requests. Cache
-// invalidation is coarse: any write to `code_systems` calls
-// `invalidate_cs_language_cache()` (alongside `invalidate_cs_id_cache()` in
-// the import path).  Imports happen at startup and the cache is then stable
-// for the life of the process.
-static CS_LANGUAGE_CACHE: OnceLock<RwLock<HashMap<String, Option<String>>>> = OnceLock::new();
-
-fn cs_language_cache() -> &'static RwLock<HashMap<String, Option<String>>> {
-    CS_LANGUAGE_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-}
 
 // ─── Per-instance CodeSystem property-code caches ──────────────────────────
 //
@@ -106,22 +85,6 @@ pub(super) fn cached_inactive_property_codes(
         system_url,
         "inactive",
     )
-}
-
-/// Clear the process-wide URL→language cache. Called by code paths that
-/// write to the `code_systems` table (CRUD + bulk import) — paired with
-/// `invalidate_cs_id_cache()`.
-///
-/// Only the two pre-iter3 caches (`CS_LANGUAGE_CACHE` here and
-/// `SYSTEM_ID_CACHE` in `value_set.rs`) remain global statics; the iter3
-/// caches were converted to per-instance fields on `SqliteTerminologyBackend`
-/// to fix test-isolation regressions when cargo runs tests in parallel.
-pub(crate) fn invalidate_cs_language_cache() {
-    if let Some(cache) = CS_LANGUAGE_CACHE.get()
-        && let Ok(mut w) = cache.write()
-    {
-        w.clear();
-    }
 }
 
 // ─── Per-instance $lookup response cache ────────────────────────────────────
@@ -190,6 +153,14 @@ impl SqliteTerminologyBackend {
 
     pub(super) fn cs_exists_cache(&self) -> &Arc<RwLock<BoolMap>> {
         &self.cs_exists_cache
+    }
+
+    pub(super) fn cs_system_id_cache(&self) -> &Arc<RwLock<super::SystemIdCacheMap>> {
+        &self.cs_system_id_cache
+    }
+
+    pub(super) fn cs_language_cache(&self) -> &Arc<RwLock<StringOptionMap>> {
+        &self.cs_language_cache
     }
 }
 
@@ -758,11 +729,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         _ctx: &TenantContext,
         url: &str,
     ) -> Result<Option<String>, HtsError> {
-        // Fast path: serve from the process-wide cache without touching the
+        // Fast path: serve from the per-instance cache without touching the
         // pool or spawn_blocking. CS language is effectively immutable per row;
-        // the cache is invalidated whenever code_systems is written (see
-        // `invalidate_cs_language_cache`).
-        if let Ok(read) = cs_language_cache().read()
+        // [`TerminologyCaches::invalidate_caches`] clears this on every write.
+        if let Ok(read) = self.cs_language_cache().read()
             && let Some(cached) = read.get(url)
         {
             return Ok(cached.clone());
@@ -798,7 +768,7 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         .await
         .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))??;
 
-        if let Ok(mut w) = cs_language_cache().write() {
+        if let Ok(mut w) = self.cs_language_cache().write() {
             w.insert(url.to_string(), lang.clone());
         }
         Ok(lang)

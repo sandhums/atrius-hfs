@@ -474,14 +474,6 @@ fn write_code_system(
         rusqlite::params![cs.url],
     );
 
-    // The process-wide URL→system_id cache may have memoised a now-stale row
-    // (e.g. an empty stub that this import is about to replace, or a
-    // re-imported system whose preferred row changed). Drop everything; the
-    // cache will repopulate lazily on the next request. The parallel
-    // URL→language cache is invalidated alongside.
-    crate::backends::sqlite::invalidate_cs_id_cache();
-    crate::backends::sqlite::invalidate_cs_language_cache();
-
     stats.code_systems += 1;
     Ok(())
 }
@@ -810,8 +802,6 @@ pub(crate) fn delete_code_system(conn: &Connection, id: &str) -> Result<(), HtsE
         );
     }
 
-    crate::backends::sqlite::invalidate_cs_id_cache();
-    crate::backends::sqlite::invalidate_cs_language_cache();
     Ok(())
 }
 

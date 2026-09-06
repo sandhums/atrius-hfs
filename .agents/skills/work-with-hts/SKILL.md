@@ -127,6 +127,10 @@ SNOMED CT descriptions in all languages — including per-language Description f
 
 Zip files that cannot be auto-detected require `--format`.
 
+## SQLite caches
+
+Hot-path memos (implicit/inline indexes, `$lookup` / `$validate-code` responses, CodeSystem URL→storage id, CodeSystem language, …) live on the `SqliteTerminologyBackend` instance. Parallel tests with separate in-memory databases must not share those maps. `TerminologyCaches::invalidate_caches` clears them after bundle import and after CRUD writes. Do not restore process-wide `OnceLock` caches for system id or language.
+
 ## Exit Codes
 
 | Code | Meaning |

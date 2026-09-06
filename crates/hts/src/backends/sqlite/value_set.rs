@@ -42,7 +42,7 @@ use helios_persistence::tenant::TenantContext;
 use regex::Regex;
 use rusqlite::{Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::Arc;
 
 use crate::ecl;
 use crate::error::HtsError;
@@ -53,28 +53,6 @@ use crate::types::{
 };
 
 use super::SqliteTerminologyBackend;
-
-// ─── Process-wide CodeSystem URL → (system_id, version) cache ───────────────
-//
-// Many `code_systems` rows can share the same canonical URL — e.g. an empty
-// stub from `hl7.terminology` plus a full RF2 import of SNOMED. Iter5 fixed
-// the correctness bug by adding an `EXISTS(SELECT 1 FROM concepts ...)`
-// priority subquery to the resolver SQL so the row with concepts is preferred,
-// but that subquery runs on EVERY hot-path lookup (validate-code, expand
-// per-include, etc.) and dominates wRPS at high concurrency.
-//
-// This cache memoises the resolved `(system_id, version)` per URL across
-// requests. Cache invalidation is coarse: any code_systems write (import,
-// CRUD) calls `invalidate_cs_id_cache()`, which clears the whole map. In
-// typical operation imports happen at startup and the cache is then stable
-// for the life of the process, so the cost amortises over millions of
-// subsequent requests.
-type SystemIdCacheMap = HashMap<String, (String, Option<String>)>;
-static SYSTEM_ID_CACHE: OnceLock<RwLock<SystemIdCacheMap>> = OnceLock::new();
-
-fn cs_id_cache() -> &'static RwLock<SystemIdCacheMap> {
-    SYSTEM_ID_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-}
 
 /// Truncate a URL to at most 80 characters for `hts::probe` log labels,
 /// appending an ellipsis when it was shortened. Operates on `char` boundaries,
@@ -90,22 +68,16 @@ fn truncate_url_for_probe(u: &str) -> String {
     }
 }
 
-/// Clear the process-wide URL→system_id cache. Called by code paths that
-/// write to the `code_systems` table (CRUD + bulk import).
-pub(crate) fn invalidate_cs_id_cache() {
-    if let Some(cache) = SYSTEM_ID_CACHE.get()
-        && let Ok(mut w) = cache.write()
-    {
-        w.clear();
-    }
-}
-
 /// Resolve `system_id` for a CodeSystem canonical URL, preferring rows that
 /// actually have concepts (skipping empty stubs imported by terminology
-/// packages). Uses a process-wide cache to avoid the EXISTS subquery on every
+/// packages). Uses a per-backend cache to avoid the EXISTS subquery on every
 /// request.
-fn resolve_system_id_cached(conn: &Connection, url: &str) -> Result<Option<String>, HtsError> {
-    if let Some(rec) = resolve_system_id_with_version_cached(conn, url)? {
+fn resolve_system_id_cached(
+    backend: &SqliteTerminologyBackend,
+    conn: &Connection,
+    url: &str,
+) -> Result<Option<String>, HtsError> {
+    if let Some(rec) = resolve_system_id_with_version_cached(backend, conn, url)? {
         Ok(Some(rec.0))
     } else {
         Ok(None)
@@ -116,10 +88,11 @@ fn resolve_system_id_cached(conn: &Connection, url: &str) -> Result<Option<Strin
 /// version. Used by the compose-include path which wants to populate
 /// `ExpansionContains.version`.
 fn resolve_system_id_with_version_cached(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     url: &str,
 ) -> Result<Option<(String, Option<String>)>, HtsError> {
-    if let Ok(read) = cs_id_cache().read()
+    if let Ok(read) = backend.cs_system_id_cache().read()
         && let Some(rec) = read.get(url)
     {
         return Ok(Some(rec.clone()));
@@ -145,7 +118,7 @@ fn resolve_system_id_with_version_cached(
     // The full rule lives in `backends::cs_precedence_order_by` and is shared
     // verbatim with the Postgres resolver.
     // The cache memoises the resolved `(id, version)` so the SQL runs once
-    // per URL per process.
+    // per URL per backend instance.
     let sql = format!(
         "SELECT id, version FROM code_systems WHERE url = ?1 \
          ORDER BY {} LIMIT 1",
@@ -159,7 +132,7 @@ fn resolve_system_id_with_version_cached(
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
     if let Some(ref rec) = row
-        && let Ok(mut w) = cs_id_cache().write()
+        && let Ok(mut w) = backend.cs_system_id_cache().write()
     {
         w.insert(url.to_owned(), rec.clone());
     }
@@ -557,6 +530,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                     let prop_key = format!("prop-result:{:016x}", fnv64(compose_str.as_bytes()));
                     let plain_key = format!("plain-fts:{:016x}", fnv64(compose_str.as_bytes()));
                     expand_inline_filtered(
+                        &backend,
                         &conn,
                         compose,
                         filter,
@@ -654,7 +628,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
 
                             // Single-include is-a / descendent-of: BFS with LIMIT.
                             if let Some((sys_url, sys_id, root_code, include_root)) =
-                                extract_simple_hierarchy_compose(&conn, compose, &mut warnings)?
+                                extract_simple_hierarchy_compose(&backend, &conn, compose, &mut warnings)?
                             {
                                 let page = bfs_isa_page(
                                     &conn,
@@ -680,6 +654,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             // be O(N_descendants) per branch and blocks the connection
                             // pool at high concurrency.
                             if let Some(page) = try_multiinclude_hierarchy_page(
+                                &backend,
                                 &conn,
                                 compose,
                                 count as usize,
@@ -857,6 +832,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             if let Some(count) = req.count.filter(|&c| c > 0) {
                                 let page_offset = req.offset.unwrap_or(0) as usize;
                                 if let Some((page, total)) = compose_page_fast(
+                                    &backend,
                                     &conn,
                                     compose_json.as_deref(),
                                     page_offset,
@@ -890,6 +866,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                             fnv64(compose_str.as_bytes())
                                         );
                                         expand_inline_filtered(
+                                            &backend,
                                             &conn,
                                             &compose,
                                             filter,
@@ -995,7 +972,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                 };
 
                                 if let Some((cs_url, pattern)) = cs_pat {
-                                    let system_id = resolve_system_id_cached(&conn, &cs_url)?;
+                                    let system_id = resolve_system_id_cached(&backend, &conn, &cs_url)?;
 
                                     if let Some(system_id) = system_id {
                                         let filter_lower =
@@ -1051,10 +1028,11 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                         if should_spawn {
                                             let bg_pool = pool.clone();
                                             let bg_pending = bg_index_pending.clone();
+                                            let bg_backend = backend.clone();
                                             std::thread::spawn(move || {
                                                 if let Ok(bg_conn) = bg_pool.get() {
                                                     let _ = ensure_implicit_cache(
-                                                        &bg_conn, &url_owned, None,
+                                                        &bg_backend, &bg_conn, &url_owned, None,
                                                     );
                                                 }
                                                 if let Ok(mut p) = bg_pending.lock() {
@@ -1074,7 +1052,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             }
 
                         // ── Blocking path: cache is warm, or count is None ────────────
-                        ensure_implicit_cache(&conn, url, req.date.as_deref())?;
+                        ensure_implicit_cache(&backend, &conn, url, req.date.as_deref())?;
                         // Load DB cache into the in-memory index so subsequent
                         // requests bypass SQLite entirely (EX03 optimisation).
                         ensure_implicit_index(&conn, url, &implicit_index)?;
@@ -1437,6 +1415,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         // code systems like SNOMED CT with ~350k concepts).
                         if let Some((cs_url, pattern)) = parse_fhir_vs_url(&url) {
                             let found = validate_fhir_vs(
+                                &backend,
                                 &conn,
                                 &cs_url,
                                 &pattern,
@@ -1502,7 +1481,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
 
                         // Other implicit ValueSets (e.g. CodeSystem.valueSet link): use the
                         // expansion cache, then do an O(1) indexed SQL lookup.
-                        ensure_implicit_cache(&conn, &url, req.date.as_deref())?;
+                        ensure_implicit_cache(&backend, &conn, &url, req.date.as_deref())?;
 
                         let found = lookup_in_implicit_cache(
                             &conn,
@@ -2392,6 +2371,7 @@ fn fetch_cache_legacy(conn: &Connection, vs_id: &str) -> Result<Vec<ExpansionCon
 /// Returns `None` if any include is not a plain full-system include so the
 /// caller can fall through to the general path.
 fn expand_inline_plain_fts(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     includes: &[serde_json::Value],
     filter_lower: &str,
@@ -2405,7 +2385,7 @@ fn expand_inline_plain_fts(
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
         let inc_version = inc["version"].as_str();
-        match resolve_compose_system_id(conn, system_url, inc_version)? {
+        match resolve_compose_system_id(backend, conn, system_url, inc_version)? {
             Some((id, _)) => pairs.push((system_url.to_owned(), id)),
             None => {
                 let msg = format!(
@@ -2504,6 +2484,7 @@ fn expand_inline_plain_fts(
 /// Rust over the (already bounded) result set.  Explicit `concept[]` lists are
 /// also filtered in Rust since they are already small.
 fn expand_inline_filtered(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     compose: &serde_json::Value,
     text_filter: &str,
@@ -2533,14 +2514,14 @@ fn expand_inline_filtered(
         if all_plain {
             if let Some((plain_key, cache)) = plain_fts_cache
                 && let Some(concept_idx) =
-                    load_plain_corpus_and_cache(conn, includes, plain_key, cache, warnings)
+                    load_plain_corpus_and_cache(backend, conn, includes, plain_key, cache, warnings)
             {
                 // Apply text filter via trigram index in Rust.
                 // Return all matches (no pagination) — the caller in expand()
                 // handles pagination via the filtered.skip().take() path.
                 return Ok(page_in_memory(&concept_idx, Some(&filter_lower), 0, -1));
             }
-            return expand_inline_plain_fts(conn, includes, &filter_lower, limit_hint, warnings);
+            return expand_inline_plain_fts(backend, conn, includes, &filter_lower, limit_hint, warnings);
         }
     }
 
@@ -2584,7 +2565,7 @@ fn expand_inline_filtered(
         };
         let inc_version = inc["version"].as_str();
 
-        let system_id = match resolve_compose_system_id(conn, system_url, inc_version)? {
+        let system_id = match resolve_compose_system_id(backend, conn, system_url, inc_version)? {
             Some((id, _)) => id,
             None => {
                 let msg = format!(
@@ -3227,7 +3208,7 @@ fn compute_expansion_depth_inner(
         .iter()
         .any(|inc| inc["valueSet"].as_array().is_some_and(|a| !a.is_empty()));
     let mut included: Vec<ExpansionContains> = if !any_vs_ref {
-        if let Some(result) = try_multi_include_property_only(conn, includes, warnings)? {
+        if let Some(result) = try_multi_include_property_only(backend, conn, includes, warnings)? {
             result
         } else {
             expand_includes_per_clause(backend, conn, includes, warnings, depth, ctx)?
@@ -3495,7 +3476,7 @@ fn expand_single_include_local(
     };
     let (system_id, cs_version) = match system_id_cache.get(&cache_key) {
         Some(cached) => cached.clone(),
-        None => match resolve_compose_system_id(conn, system_url, inc_version)? {
+        None => match resolve_compose_system_id(backend, conn, system_url, inc_version)? {
             Some((id, ver)) => {
                 system_id_cache.insert(cache_key, (id.clone(), ver.clone()));
                 (id, ver)
@@ -4383,6 +4364,7 @@ fn is_property_only_include(inc: &serde_json::Value) -> bool {
 /// systems, non-property filters, explicit concept lists, etc.) so the caller
 /// can fall back to the generic per-include loop.
 fn try_multi_include_property_only(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     includes: &[serde_json::Value],
     warnings: &mut Vec<String>,
@@ -4403,7 +4385,7 @@ fn try_multi_include_property_only(
         return Ok(None);
     }
 
-    let system_id = match resolve_system_id_cached(conn, first_system)? {
+    let system_id = match resolve_system_id_cached(backend, conn, first_system)? {
         Some(id) => id,
         None => {
             let msg = format!(
@@ -5350,6 +5332,7 @@ fn batch_property_eq_in_set(
 /// Returns `None` when the compose is not a qualifying multi-include (caller
 /// should fall through to `compute_expansion`).
 fn try_multiinclude_hierarchy_page(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     compose: &serde_json::Value,
     count: usize,
@@ -5405,7 +5388,7 @@ fn try_multiinclude_hierarchy_page(
             _ => return Ok(None),
         };
 
-        match resolve_system_id_cached(conn, system_url)? {
+        match resolve_system_id_cached(backend, conn, system_url)? {
             Some(id) => entries.push(Entry {
                 sys_url: system_url.to_owned(),
                 sys_id: id,
@@ -5521,6 +5504,7 @@ fn parse_fhir_vs_url(url: &str) -> Option<(String, FhirVsPattern)> {
 /// one or more systems) serve the first page in milliseconds instead of
 /// requiring a full DB scan that can exceed the 30 s request timeout.
 fn compose_page_fast(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     compose_json: Option<&str>,
     offset: usize,
@@ -5626,7 +5610,7 @@ fn compose_page_fast(
         } else {
             let system_id: Option<String> = system_cache
                 .entry(system_url.clone())
-                .or_insert_with(|| resolve_system_id_cached(conn, system_url).ok().flatten())
+                .or_insert_with(|| resolve_system_id_cached(backend, conn, system_url).ok().flatten())
                 .clone();
 
             if let Some(sid) = system_id {
@@ -5671,6 +5655,7 @@ fn compose_page_fast(
 /// Returns `Some((system_url, system_id, root_code, include_root))` on a match,
 /// `None` when the compose does not fit the pattern.
 fn extract_simple_hierarchy_compose(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     compose: &serde_json::Value,
     warnings: &mut Vec<String>,
@@ -5706,7 +5691,7 @@ fn extract_simple_hierarchy_compose(
         _ => return Ok(None),
     };
 
-    let system_id = match resolve_system_id_cached(conn, system_url)? {
+    let system_id = match resolve_system_id_cached(backend, conn, system_url)? {
         Some(id) => id,
         None => {
             warnings.push(format!(
@@ -6002,6 +5987,7 @@ fn bfs_isa_page(
 /// Returns `Ok(None)` when no row matches so callers can skip the include
 /// rather than abort the whole expansion.
 fn resolve_compose_system_id(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     url: &str,
     version: Option<&str>,
@@ -6009,7 +5995,7 @@ fn resolve_compose_system_id(
     // Hot-path fast lane: when the include doesn't pin a version, the cached
     // (id, version) tuple is exactly what we want, no SQL needed.
     if version.is_none() {
-        return resolve_system_id_with_version_cached(conn, url);
+        return resolve_system_id_with_version_cached(backend, conn, url);
     }
 
     // Version-pinned: must enumerate all candidate rows to find the matching
@@ -6396,7 +6382,7 @@ fn lookup_value_set_version(
     url: &str,
 ) -> Option<String> {
     // Per-instance cache: stable until the next re-import. Same invalidation
-    // hook as cs_id_cache (clear all on bundle write).
+    // hook as `cs_system_id_cache` (clear all on bundle write).
     let cache = backend.vs_version_for_msg_cache();
     if let Ok(read) = cache.read()
         && let Some(v) = read.get(url)
@@ -7592,6 +7578,7 @@ fn finish_validate_code_response(
 /// Returns the matching [`ExpansionContains`] on success, or `None` when the
 /// code is not a member of the implicit ValueSet.
 fn validate_fhir_vs(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     cs_url: &str,
     pattern: &FhirVsPattern,
@@ -7608,7 +7595,7 @@ fn validate_fhir_vs(
     // Multiple `code_systems` rows can share the same canonical URL — e.g. a
     // stub from `hl7.terminology` plus the real RF2 import. The cached
     // resolver picks the row that actually has concepts.
-    let system_id = match resolve_system_id_cached(conn, cs_url)? {
+    let system_id = match resolve_system_id_cached(backend, conn, cs_url)? {
         Some(id) => id,
         None => {
             return Err(HtsError::NotFound(format!(
@@ -7698,7 +7685,12 @@ fn validate_fhir_vs(
 /// atomically using `INSERT … SELECT` — avoids materialising hundreds-of-thousands
 /// of rows in Rust and is typically 10–50× faster than the previous row-loop
 /// approach for large systems such as SNOMED CT (~350 K concepts).
-fn ensure_implicit_cache(conn: &Connection, url: &str, date: Option<&str>) -> Result<(), HtsError> {
+fn ensure_implicit_cache(
+    backend: &SqliteTerminologyBackend,
+    conn: &Connection,
+    url: &str,
+    date: Option<&str>,
+) -> Result<(), HtsError> {
     let populated: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM implicit_expansion_cache WHERE url = ?1 LIMIT 1)",
@@ -7723,7 +7715,7 @@ fn ensure_implicit_cache(conn: &Connection, url: &str, date: Option<&str>) -> Re
         )));
     };
 
-    let system_id = resolve_system_id_cached(conn, &cs_url)?
+    let system_id = resolve_system_id_cached(backend, conn, &cs_url)?
         .ok_or_else(|| HtsError::NotFound(format!("CodeSystem not found: {cs_url}")))?;
 
     // BEGIN IMMEDIATE acquires the write lock upfront so concurrent callers
@@ -8967,6 +8959,7 @@ const PLAIN_FTS_CACHE_MAX_CONCEPTS: usize = 500_000;
 /// A concurrent request that already populated the same key returns the
 /// existing Arc without rebuilding the index.
 fn load_plain_corpus_and_cache(
+    backend: &SqliteTerminologyBackend,
     conn: &Connection,
     includes: &[serde_json::Value],
     cache_key: &str,
@@ -8991,7 +8984,7 @@ fn load_plain_corpus_and_cache(
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
         let inc_version = inc["version"].as_str();
-        match resolve_compose_system_id(conn, system_url, inc_version) {
+        match resolve_compose_system_id(backend, conn, system_url, inc_version) {
             Ok(Some((id, _))) => pairs.push((system_url.to_owned(), id)),
             Ok(None) => {
                 let msg = format!(
@@ -9144,6 +9137,66 @@ mod tests {
             truncate_url_for_probe(&multibyte),
             format!("{}…", "€".repeat(80))
         );
+    }
+
+    /// Two in-memory backends with the same CodeSystem URL must not share
+    /// the URL→system_id memo. A process-wide cache would make B expand
+    /// against A's `system_id` and miss `B_ONLY`.
+    #[tokio::test]
+    async fn system_id_cache_does_not_leak_across_in_memory_backends() {
+        let a = backend();
+        let b = backend();
+        a.pool()
+            .get()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO code_systems (id, url, version, name, status, content, created_at, updated_at)
+                 VALUES ('cs-a', 'http://example.org/shared-cs', '1.0', 'A', 'active', 'complete',
+                         '2024-01-01', '2024-01-01');
+                 INSERT INTO concepts (id, system_id, code, display)
+                 VALUES (1, 'cs-a', 'A_ONLY', 'Only A');",
+            )
+            .unwrap();
+        b.pool()
+            .get()
+            .unwrap()
+            .execute_batch(
+                "INSERT INTO code_systems (id, url, version, name, status, content, created_at, updated_at)
+                 VALUES ('cs-b', 'http://example.org/shared-cs', '1.0', 'B', 'active', 'complete',
+                         '2024-01-01', '2024-01-01');
+                 INSERT INTO concepts (id, system_id, code, display)
+                 VALUES (1, 'cs-b', 'B_ONLY', 'Only B');",
+            )
+            .unwrap();
+
+        let url = "http://example.org/shared-cs?fhir_vs";
+        let codes_of = |resp: &ExpandResponse| -> Vec<String> {
+            resp.contains.iter().map(|c| c.code.clone()).collect()
+        };
+
+        let resp_a = a
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some(url.into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(codes_of(&resp_a), ["A_ONLY"]);
+
+        let resp_b = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some(url.into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(codes_of(&resp_b), ["B_ONLY"]);
     }
 
     fn ctx() -> TenantContext {

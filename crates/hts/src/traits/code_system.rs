@@ -102,8 +102,7 @@ pub trait CodeSystemOperations: Send + Sync {
     /// full `search()` call that read and parsed the entire `resource_json`
     /// blob (multi-MB for SNOMED/LOINC). This method runs a single
     /// `json_extract(resource_json, '$.language')` query and the result is
-    /// memoised in a process-wide cache that is invalidated whenever the
-    /// `code_systems` table is written. Returns `Ok(None)` when the system
+    /// memoised per backend instance. Returns `Ok(None)` when the system
     /// is unknown or carries no `language` field.
     async fn code_system_language(
         &self,

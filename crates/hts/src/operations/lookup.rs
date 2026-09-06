@@ -235,7 +235,7 @@ async fn process_lookup_inner<B: TerminologyBackend>(
     // and parsed the entire `resource_json` blob just to read `.language` —
     // the dominant cost on the LK01-04 hot path under 50-VU load. The
     // dedicated trait method runs ONE `json_extract` query and is memoised
-    // in a process-wide cache.
+    // per backend instance.
     let cs_language: Option<String> = state
         .backend()
         .code_system_language(&ctx, &system)
