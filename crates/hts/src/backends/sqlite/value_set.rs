@@ -2521,7 +2521,14 @@ fn expand_inline_filtered(
                 // handles pagination via the filtered.skip().take() path.
                 return Ok(page_in_memory(&concept_idx, Some(&filter_lower), 0, -1));
             }
-            return expand_inline_plain_fts(backend, conn, includes, &filter_lower, limit_hint, warnings);
+            return expand_inline_plain_fts(
+                backend,
+                conn,
+                includes,
+                &filter_lower,
+                limit_hint,
+                warnings,
+            );
         }
     }
 
@@ -5610,7 +5617,11 @@ fn compose_page_fast(
         } else {
             let system_id: Option<String> = system_cache
                 .entry(system_url.clone())
-                .or_insert_with(|| resolve_system_id_cached(backend, conn, system_url).ok().flatten())
+                .or_insert_with(|| {
+                    resolve_system_id_cached(backend, conn, system_url)
+                        .ok()
+                        .flatten()
+                })
                 .clone();
 
             if let Some(sid) = system_id {
