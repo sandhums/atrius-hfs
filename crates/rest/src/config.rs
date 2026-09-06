@@ -43,6 +43,7 @@
 //! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
 //! | `HFS_FHIR_PACKAGE_CACHE` | (none) | Curated FHIR NPM package cache root (offline materialization) |
 //! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` packages to overlay (listed packages only) |
+//! | `HFS_PROFILE_MANIFEST` / `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS` | removed | Startup fails if set; use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`. `HFS_PROFILE_CORPUS` is unrelated (search profiling) and still valid. |
 //!
 //! # Example
 //!
@@ -1240,6 +1241,31 @@ fn parse_public_base_url_arg(value: &str) -> Result<String, String> {
     crate::public_url::PublicUrl::parse(value).map(|url| url.as_str().to_string())
 }
 
+/// Dual-engine profile validation was removed. Fail if leftover env still looks
+/// like write-path validation is on. `HFS_PROFILE_CORPUS` is not in this list.
+fn reject_removed_profile_env<F>(getenv: F) -> Result<(), String>
+where
+    F: Fn(&str) -> Result<String, std::env::VarError>,
+{
+    const REMOVED: &[&str] = &[
+        "HFS_PROFILE_MANIFEST",
+        "HFS_PROFILE_VALIDATION_MODE",
+        "HFS_PROFILE_VALIDATION_ADDONS",
+    ];
+    let set: Vec<&str> = REMOVED
+        .iter()
+        .copied()
+        .filter(|name| getenv(name).is_ok())
+        .collect();
+    if set.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "removed env var(s) still set: {}. Use HFS_VALIDATION_MODE + HFS_FHIR_PACKAGES instead (see docs/validation-cutover.md). HFS_PROFILE_CORPUS is unrelated and still valid.",
+        set.join(", ")
+    ))
+}
+
 impl ServerConfig {
     /// Loads configuration for the HFS binary and reports command-line,
     /// environment, and validation errors to the caller.
@@ -1248,6 +1274,9 @@ impl ServerConfig {
     }
 
     fn finish_parsed(mut config: Self) -> Result<Self, clap::Error> {
+        reject_removed_profile_env(|name| std::env::var(name)).map_err(|message| {
+            clap::Error::raw(clap::error::ErrorKind::ValueValidation, message)
+        })?;
         config.multitenancy = MultitenancyConfig::from_env();
         config.bulk_export = BulkExportConfig::from_env();
         config.bulk_submit = BulkSubmitConfig::from_env();
@@ -1571,6 +1600,38 @@ mod tests {
         assert_eq!(config.port, 8080);
         assert_eq!(config.host, "127.0.0.1");
         assert!(config.enable_cors);
+    }
+
+    #[test]
+    fn rejects_removed_hfs_profile_env() {
+        let err = reject_removed_profile_env(|name| {
+            if name == "HFS_PROFILE_MANIFEST" {
+                Ok("/tmp/legacy-manifest.json".into())
+            } else {
+                Err(std::env::VarError::NotPresent)
+            }
+        })
+        .expect_err("legacy HFS_PROFILE_MANIFEST must fail startup");
+        assert!(
+            err.contains("HFS_PROFILE_MANIFEST"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            err.contains("HFS_VALIDATION_MODE"),
+            "error should point at the replacement vars: {err}"
+        );
+    }
+
+    #[test]
+    fn allows_hfs_profile_corpus_and_unset_removed_vars() {
+        reject_removed_profile_env(|name| {
+            if name == "HFS_PROFILE_CORPUS" {
+                Ok("/tmp/synthea".into())
+            } else {
+                Err(std::env::VarError::NotPresent)
+            }
+        })
+        .expect("HFS_PROFILE_CORPUS is still a live search-profiling knob");
     }
 
     #[test]

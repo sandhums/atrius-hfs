@@ -14,6 +14,7 @@ Do not duplicate patient/encounter/subscription demo seeding here.
 
 ./scripts/run-hts.sh
 ./scripts/run-hfs.sh              # clinical :8082
+./scripts/run-hfs-ndhm.sh         # NDHM export validator :8083 (optional)
 ./scripts/run-kr-hfs.sh           # KR :8079
 ./scripts/run-cql-sidecar.sh      # :8088 (JVMsidecar or SIDECAR_JAR)
 ./scripts/run-cds-server.sh       # :8095
@@ -23,6 +24,7 @@ Do not duplicate patient/encounter/subscription demo seeding here.
 |--------|--------|-------------|
 | `run-hts.sh` | `target/release/hts` | `deploy/env/hts.env` |
 | `run-hfs.sh` | `target/release/hfs` | `deploy/env/hfs-clinical.env` |
+| `run-hfs-ndhm.sh` | `target/release/hfs` | `deploy/env/hfs-ndhm-validate.env` or `.env.abdm.example` |
 | `run-kr-hfs.sh` | `target/release/hfs` | `deploy/env/hfs-kr.env` |
 | `run-cds-server.sh` | `target/release/cds-server` | `deploy/env/cds-server.env` |
 | `run-cql-sidecar.sh` | jar or Maven `MainKt` | `deploy/env/cql-sidecar.env` |
@@ -61,6 +63,8 @@ orchestrator; use the writer alone only when KR already has PlanDefinitions.
 | Script | Role |
 |--------|------|
 | `setup-atrius-profile-registry.sh` | **Recommended**: fetch published `package.tgz` → seed `data/fhir-packages/{name}/{version}/` (optional audit manifests) |
+| `setup-ndhm-profile-registry.sh` | Seed `ndhm.in@6.5.0` from `~/.fhir/packages` for the ABDM export validator only — **not** clinical HFS |
+| `prove-validation-enforce.sh` | POST a non-conformant Patient; expect **422** (`HFS_VALIDATION_MODE=enforce`) |
 | `build-atrius-profile-manifest.sh` | Optional audit JSON under `manifests/` (HFS does not read these) |
 | `load-atrius-ig-package.sh` | Expand package into `manifests/atrius-ig-package/` |
 

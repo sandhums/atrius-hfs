@@ -35,6 +35,36 @@ not from HFS. HFS does **not** overlay that file’s `dependencies` unless those
 packages are also listed in `HFS_FHIR_PACKAGES`. The
 `atrius-r4-profile-manifest*.json` files are **not** read by HFS.
 
+## Staging 422 proof
+
+With `HFS_VALIDATION_MODE=enforce` and the Atrius overlay loaded, a write that
+is not schema-valid must return **422**:
+
+```bash
+HFS_BASE_URL=http://127.0.0.1:8082 ./scripts/prove-validation-enforce.sh
+```
+
+CI covers the same contract in `crates/rest/tests/validation_enforcement_tests.rs`.
+
+## NDHM / ABDM export validator (not clinical HFS)
+
+Do **not** add `ndhm.in` to clinical `HFS_FHIR_PACKAGES`. Seed a second HFS
+process with that package and point HIS at it:
+
+```bash
+./scripts/setup-ndhm-profile-registry.sh
+./scripts/run-hfs-ndhm.sh   # :8083, HFS_FHIR_PACKAGES=ndhm.in@6.5.0
+# HIS_NDHM_VALIDATE_URL=http://127.0.0.1:8083
+```
+
+Env templates: `deploy/clinical/.env.abdm.example`,
+`deploy/env/hfs-ndhm-validate.env.example`.
+
+HFS fails startup if leftover `HFS_PROFILE_MANIFEST`,
+`HFS_PROFILE_VALIDATION_MODE`, or `HFS_PROFILE_VALIDATION_ADDONS` are set.
+Use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES` instead. `HFS_PROFILE_CORPUS`
+is a search-profiling knob and is still valid.
+
 ## Remaining gaps (not a second engine)
 
 `ValidationService::check_write` **does** run on create/update/patch, batch
@@ -44,11 +74,12 @@ bulk-submit ingest (when the worker is given a `ValidationService`).
 `$validate` `mode` is enforced: `create` / `update` / `delete` / `profile`.
 
 Slice `type` / `profile` / `binding` / `exists` / `extension` discriminators
-are evaluated. Remaining holes (not a second engine):
+are evaluated (binding expand at mark time; mixed-kind AND as `type: "all"`).
+Batch `[type]?[criteria]` PATCH is resolved. `resolve()` follows in-scope
+targets and tenant-store `Type/id` that REST prefetched into the validator
+pool (the engine itself does no I/O). Remaining hole (not a second engine):
 
-- `resolve()` only follows References already in the instance (`contained`,
-  Bundle entries). It does not hit storage.
-- Binding discriminators do not expand a ValueSet at mark time.
-- Conditional PATCH inside a Bundle is refused.
+- Conditional URL criteria in a `transaction` (`[type]?[criteria]`) are still
+  declined whole (#859). Batch resolves them.
 
 Sync keep-list: [clinical-reasoning/upstream-merge.md](./clinical-reasoning/upstream-merge.md).

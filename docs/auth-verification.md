@@ -48,8 +48,10 @@ neither blocks the Keycloak setup once configured as in §2.
   the same still-valid access token was `401`ed. Single-use `jti` semantics
   belong to the `private_key_jwt` **client-assertion** JWT (checked by the IdP),
   not to resource-server access tokens, so the replay cache has been removed
-  outright — along with `HFS_AUTH_JTI_BACKEND`, `HFS_AUTH_REDIS_URL`, and the
-  `redis` feature. Pinned by `crates/auth/tests/bearer_token_reuse.rs`.
+  outright. The old `HFS_AUTH_JTI_BACKEND` env var is gone with it. Redis later
+  returned only as a **JTI revocation deny-list** (`HFS_AUTH_JTI_REVOCATION` +
+  `HFS_AUTH_REDIS_URL`), not as a replay cache — see `crates/auth/README.md`.
+  Pinned by `crates/auth/tests/bearer_token_reuse.rs`.
 - **#206 — `HFS_AUTH_AUDIENCE` not enforced when the token omits `aud`.**
   `jsonwebtoken` only validates `aud` when present; a token with no `aud` claim
   bypasses the restriction. `aud` should be added to `required_spec_claims` when
