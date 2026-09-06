@@ -5,12 +5,13 @@ use std::collections::HashSet;
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::core::schema_ledger::{
-    BASE_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering, implied_applied_indices,
+    BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering,
+    implied_applied_indices,
 };
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 21;
+pub const SCHEMA_VERSION: i32 = 22;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -36,6 +37,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_manifests_byte_progress", migrate_v18_to_v19),
     ("resources_reindex_keyset", migrate_v19_to_v20),
     ("search_index_partial_family_indexes", migrate_v20_to_v21),
+    (OUTBOX_DEAD_LETTER_STEP, migrate_v21_to_v22),
 ];
 
 const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
@@ -145,16 +147,37 @@ fn ensure_subscription_outbox(conn: &Connection) -> StorageResult<()> {
             attempts INTEGER NOT NULL DEFAULT 0,
             last_error TEXT,
             locked_by TEXT,
-            locked_until TEXT
+            locked_until TEXT,
+            dead_at TEXT
         );
-        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
-            ON subscription_outbox (available_at, id)
-            WHERE processed_at IS NULL;
         CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
             ON subscription_outbox (tenant_id, id)
             WHERE processed_at IS NOT NULL;",
     )
     .map_err(|e| migration_err(format!("ensure subscription_outbox: {e}")))?;
+    ensure_outbox_dead_letter(conn)
+}
+
+/// Adds `dead_at` and rebuilds the claim index so exhausted rows stay unclaimed.
+fn ensure_outbox_dead_letter(conn: &Connection) -> StorageResult<()> {
+    if table_exists(conn, "subscription_outbox")?
+        && !table_has_column(conn, "subscription_outbox", "dead_at")?
+    {
+        conn.execute(
+            "ALTER TABLE subscription_outbox ADD COLUMN dead_at TEXT",
+            [],
+        )
+        .map_err(|e| migration_err(format!("add subscription_outbox.dead_at: {e}")))?;
+    }
+    conn.execute("DROP INDEX IF EXISTS idx_subscription_outbox_claim", [])
+        .map_err(|e| migration_err(format!("drop outbox claim index: {e}")))?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+         ON subscription_outbox (available_at, id)
+         WHERE processed_at IS NULL AND dead_at IS NULL",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create outbox claim index: {e}")))?;
     Ok(())
 }
 
@@ -237,6 +260,16 @@ fn table_exists(conn: &Connection, name: &str) -> StorageResult<bool> {
         )
         .map_err(|e| migration_err(format!("probe table {name}: {e}")))?;
     Ok(n > 0)
+}
+
+fn table_has_column(conn: &Connection, table: &str, column: &str) -> StorageResult<bool> {
+    let mut stmt = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|e| migration_err(format!("pragma {table}: {e}")))?;
+    let cols = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| migration_err(format!("pragma {table} rows: {e}")))?;
+    Ok(cols.filter_map(|r| r.ok()).any(|c| c == column))
 }
 
 fn backfill_legacy_integer(
@@ -1678,6 +1711,11 @@ fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// v21 → v22: tombstone exhausted subscription outbox claims (`dead_at`).
+fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
+    ensure_outbox_dead_letter(conn)
+}
+
 /// Drop all tables (for testing).
 #[cfg(test)]
 #[allow(dead_code)]
@@ -1910,6 +1948,11 @@ mod tests {
         assert!(applied.contains("bulk_manifests_byte_progress"));
         assert!(applied.contains("resources_reindex_keyset"));
         assert!(applied.contains("search_index_partial_family_indexes"));
+        assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
+        assert!(
+            table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
+            "v22 must add subscription_outbox.dead_at"
+        );
         let has_reindex: i32 = conn
             .query_row(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_resources_reindex'",
@@ -2043,6 +2086,51 @@ mod tests {
             .unwrap();
         assert_eq!(exists, 1, "heal must create subscription_outbox at tip");
         assert!(applied_steps(&conn).contains(OUTBOX_STEP));
+    }
+
+    /// A database that already has the outbox table (schema 21) must grow
+    /// `dead_at` when the named dead-letter step runs.
+    #[test]
+    fn test_dead_letter_step_adds_dead_at_on_existing_outbox() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute_batch(
+            "DROP TABLE subscription_outbox;
+             CREATE TABLE subscription_outbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                tenant_id TEXT NOT NULL,
+                fhir_version TEXT NOT NULL,
+                resource_type TEXT NOT NULL,
+                resource_id TEXT NOT NULL,
+                version_id TEXT NOT NULL DEFAULT '',
+                event_type TEXT NOT NULL,
+                resource TEXT,
+                previous_resource TEXT,
+                envelope TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                available_at TEXT NOT NULL,
+                processed_at TEXT,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT,
+                locked_by TEXT,
+                locked_until TEXT
+             );",
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_DEAD_LETTER_STEP],
+        )
+        .unwrap();
+        set_schema_version(&conn, 21).unwrap();
+        assert!(!table_has_column(&conn, "subscription_outbox", "dead_at").unwrap());
+
+        initialize_schema(&conn).unwrap();
+
+        assert!(table_has_column(&conn, "subscription_outbox", "dead_at").unwrap());
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        assert!(applied_steps(&conn).contains(OUTBOX_DEAD_LETTER_STEP));
     }
 
     #[test]

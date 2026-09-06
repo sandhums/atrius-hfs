@@ -190,6 +190,7 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
                 "WITH candidates AS (
                     SELECT id FROM subscription_outbox
                     WHERE processed_at IS NULL
+                      AND dead_at IS NULL
                       AND available_at <= NOW()
                       AND (locked_until IS NULL OR locked_until < NOW())
                     ORDER BY id
@@ -262,6 +263,28 @@ impl SubscriptionOutboxStore for PostgresSubscriptionOutbox {
             )
             .await
             .map_err(|e| internal_error(format!("outbox mark_retry: {e}")))?;
+        Ok(())
+    }
+
+    async fn mark_dead(&self, id: i64, error: &str) -> StorageResult<()> {
+        let client = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| internal_error(format!("outbox pool get: {e}")))?;
+
+        client
+            .execute(
+                "UPDATE subscription_outbox
+                 SET dead_at = NOW(),
+                     locked_by = NULL,
+                     locked_until = NULL,
+                     last_error = $2
+                 WHERE id = $1",
+                &[&id, &error],
+            )
+            .await
+            .map_err(|e| internal_error(format!("outbox mark_dead: {e}")))?;
         Ok(())
     }
 

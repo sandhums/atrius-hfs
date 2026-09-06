@@ -15,8 +15,9 @@ Use this when working in `helios-subscriptions`, the FHIR topic-based Subscripti
 - Endpoint safety: rest-hook delivery to private/loopback endpoints is blocked unless `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS=true`.
 - Notification bundles follow the topic-based subscription spec; delivery failures retry with backoff (`engine/retry.rs`).
 - WebSocket subscriptions use binding tokens (`ws_token`) managed per connection (`ws_manager`).
-- **Durable outbox**: SQL backends (Postgres/SQLite) expose `SubscriptionOutboxStore`. Write handlers enqueue events; a background worker claims and dispatches. Non-SQL backends fall back to in-process `tokio::spawn`.
-- **Broker readiness (deferred):** outbox rows carry a CloudEvents-style `envelope` for a future Kafka/MSK/Redpanda relay — see `docs/eventing-broker-readiness.md`. Do not dual-write from the request path.
+- **Durable outbox**: SQL backends (Postgres/SQLite) expose `SubscriptionOutboxStore`. Write handlers enqueue events; a background worker claims and dispatches. Non-SQL backends fall back to in-process `tokio::spawn`. After max process-timeout retries a row is tombstoned (`dead_at` / `mark_dead`) rather than retried hourly. Completing evaluation with zero successful channel deliveries still `mark_processed` (to avoid duplicate `event_number`) and logs `Subscription event processed with zero successful deliveries`.
+- **SQLite claim is single-node.** Postgres uses `FOR UPDATE SKIP LOCKED`. SQLite uses a process-local mutex, `BEGIN IMMEDIATE`, and a compare-and-swap `UPDATE` so workers that share **one database file** cannot double-claim. That is not a cluster outbox: do not point several HFS nodes at separate SQLite copies of the same logical stream — use Postgres.
+- **Broker readiness (deferred):** outbox rows carry a CloudEvents-style `envelope` for a future Kafka/MSK/Redpanda relay — see `docs/eventing-broker-readiness.md`. Do not dual-write from the request path. Relays should ignore `dead_at IS NOT NULL` rows.
 
 ## Channels (`crates/subscriptions/src/channels/`)
 

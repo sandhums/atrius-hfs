@@ -87,4 +87,5 @@ mod user_settings;
 mod write_tx;
 
 pub use backend::{PostgresBackend, PostgresConfig};
+pub use schema::SCHEMA_VERSION;
 pub use subscription_outbox::PostgresSubscriptionOutbox;

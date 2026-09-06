@@ -160,7 +160,7 @@ pub use preconditions::{
     bundle_if_none_exist_gate, if_match_field_satisfied, multiple_matches_entry,
     not_supported_entry, precondition_failed_entry,
 };
-pub use schema_ledger::{BASE_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
+pub use schema_ledger::{BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{
     ChainedSearchProvider, FullSearchProvider, IncludeProvider, MultiTypeSearchProvider,
     RevincludeProvider, SearchProvider, SearchResult, TerminologySearchProvider,

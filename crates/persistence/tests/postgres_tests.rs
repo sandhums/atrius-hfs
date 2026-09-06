@@ -804,12 +804,12 @@ mod postgres_integration {
     use helios_fhir::FhirVersion;
     use serde_json::json;
 
-    use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig};
+    use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig, SCHEMA_VERSION};
     use helios_persistence::core::SettingsStore;
     use helios_persistence::core::history::{HistoryParams, InstanceHistoryProvider};
     use helios_persistence::core::{
-        BASE_STEP, Backend, BackendCapability, BackendKind, OUTBOX_STEP, ResourceStorage,
-        SCHEMA_FLAVOUR,
+        BASE_STEP, Backend, BackendCapability, BackendKind, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP,
+        ResourceStorage, SCHEMA_FLAVOUR,
     };
     use helios_persistence::error::{BackendError, ConcurrencyError, ResourceError, StorageError};
     use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
@@ -1249,6 +1249,21 @@ mod postgres_integration {
             .is_some()
     }
 
+    async fn subscription_outbox_has_dead_at(backend: &PostgresBackend) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'subscription_outbox'
+                   AND column_name = 'dead_at'",
+                &[],
+            )
+            .await
+            .expect("information_schema")
+            .is_some()
+    }
+
     async fn recorded_schema_version(backend: &PostgresBackend) -> i32 {
         let client = backend.get_client().await.expect("client");
         client
@@ -1410,6 +1425,46 @@ mod postgres_integration {
         assert!(!created.id().is_empty());
     }
 
+    /// A database whose outbox table predates `dead_at` must grow the column
+    /// when the named dead-letter step runs.
+    #[tokio::test]
+    async fn schema_v39_adds_outbox_dead_at() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP INDEX IF EXISTS idx_subscription_outbox_claim;
+                 ALTER TABLE subscription_outbox DROP COLUMN IF EXISTS dead_at;
+                 DELETE FROM schema_migrations WHERE name = 'subscription_outbox_dead_letter';
+                 UPDATE schema_version SET version = 38;",
+            )
+            .await
+            .expect("stamp v38 without dead_at");
+        drop(client);
+
+        assert!(
+            !subscription_outbox_has_dead_at(&backend).await,
+            "precondition: dead_at dropped"
+        );
+
+        backend
+            .init_schema()
+            .await
+            .expect("v38 → v39 must add dead_at");
+
+        assert!(
+            subscription_outbox_has_dead_at(&backend).await,
+            "v39 must add subscription_outbox.dead_at"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_DEAD_LETTER_STEP)
+        );
+    }
+
     /// Direct REST CRUD enqueues the outbox row in the same commit as the
     /// resource (the durability contract SQLite already had).
     #[tokio::test]
@@ -1546,7 +1601,7 @@ mod postgres_integration {
             subscription_outbox_exists(&backend).await,
             "fresh schema must include subscription_outbox"
         );
-        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
         assert_eq!(
             recorded_schema_flavour(&backend).await.as_deref(),
             Some(SCHEMA_FLAVOUR)
@@ -1555,6 +1610,11 @@ mod postgres_integration {
         assert!(applied.iter().any(|n| n == BASE_STEP));
         assert!(applied.iter().any(|n| n == OUTBOX_STEP));
         assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+        assert!(applied.iter().any(|n| n == OUTBOX_DEAD_LETTER_STEP));
+        assert!(
+            subscription_outbox_has_dead_at(&backend).await,
+            "fresh schema must include subscription_outbox.dead_at"
+        );
     }
 
     /// Upstream numbering at v36 never ran this fork's v16→v17 outbox step.
@@ -1590,7 +1650,7 @@ mod postgres_integration {
             subscription_outbox_exists(&backend).await,
             "heal must create subscription_outbox"
         );
-        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
         assert_eq!(
             recorded_schema_flavour(&backend).await.as_deref(),
             Some(SCHEMA_FLAVOUR)
@@ -1598,6 +1658,8 @@ mod postgres_integration {
         let applied = applied_schema_steps(&backend).await;
         assert!(applied.iter().any(|n| n == OUTBOX_STEP));
         assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+        assert!(applied.iter().any(|n| n == OUTBOX_DEAD_LETTER_STEP));
+        assert!(subscription_outbox_has_dead_at(&backend).await);
     }
 
     /// Integer already at the tip, but the named outbox step is missing from
@@ -1616,7 +1678,7 @@ mod postgres_integration {
             .expect("un-record outbox at tip");
         drop(client);
 
-        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
 
         backend
             .init_schema()
@@ -1656,7 +1718,7 @@ mod postgres_integration {
             subscription_outbox_exists(&backend).await,
             "heal must create subscription_outbox at tip"
         );
-        assert_eq!(recorded_schema_version(&backend).await, 38);
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
         assert!(
             applied_schema_steps(&backend)
                 .await

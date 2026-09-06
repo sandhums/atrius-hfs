@@ -25,7 +25,7 @@ flowchart LR
 | `subscription_outbox` (Postgres/SQLite) | Same-TX durable log of resource changes; CloudEvents-style `envelope` JSON column |
 | Outbox worker (`helios-subscriptions`) | Claims rows, matches SubscriptionTopics, dispatches via registered channels |
 | FHIR Subscriptions | Primary fan-out to HIS, CDS, UIs — standards-based, not broker-specific |
-| `$events` | Spec recovery for gap fill (subscribers) |
+| `$events` | Spec recovery for gap fill (subscribers); dead-lettered rows (`dead_at`) are not listed |
 
 There is **no** Kafka, MSK, Redpanda, SQS, or RabbitMQ in the Atrius stack today. Staging remains a single-node Compose deployment.
 
@@ -135,7 +135,7 @@ Suggested broker message conventions (when the relay exists):
 
 Intended pattern (not implemented):
 
-1. A small **outbox relay** process (or HFS sidecar task) tails `subscription_outbox` for rows that are `processed` (or a dedicated `published_at` column added later).
+1. A small **outbox relay** process (or HFS sidecar task) tails `subscription_outbox` for rows that are `processed` (or a dedicated `published_at` column added later). Skip `dead_at IS NOT NULL` — those claims exhausted retries and were tombstoned.
 2. For each row, publish `envelope` to the broker **exactly once** from the relay’s perspective (store broker offset / outbox id in a `outbox_publish` table, or use transactional outbox → Kafka connect patterns).
 3. FHIR Subscription dispatch **continues to run as today** for clinical subscribers; the broker is an *additional* fan-out for analytics/gateway teams — not a replacement for Subscriptions unless you deliberately migrate a consumer.
 

@@ -22,6 +22,10 @@ pub const BASE_STEP: &str = "base";
 /// v16→v17 is this fork's `bulk_provider_submissions`.
 pub const OUTBOX_STEP: &str = "subscription_outbox";
 
+/// Fork-only tip step: `subscription_outbox.dead_at` so exhausted claims are
+/// tombstoned instead of retried hourly forever.
+pub const OUTBOX_DEAD_LETTER_STEP: &str = "subscription_outbox_dead_letter";
+
 /// Index of [`OUTBOX_STEP`] in both SQL backends' ordered step lists.
 pub const OUTBOX_STEP_INDEX: usize = 15;
 
@@ -155,21 +159,30 @@ mod tests {
     #[test]
     fn classify_flavour_and_tip_are_fork() {
         assert_eq!(
-            classify_numbering(Some(SCHEMA_FLAVOUR), 36, 38, false),
+            classify_numbering(Some(SCHEMA_FLAVOUR), 36, 39, false),
             Numbering::Fork
         );
-        assert_eq!(classify_numbering(None, 38, 38, false), Numbering::Fork);
-        assert_eq!(classify_numbering(None, 20, 38, true), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 39, 39, false), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 20, 39, true), Numbering::Fork);
     }
 
     #[test]
     fn classify_no_outbox_below_tip_is_upstream() {
-        assert_eq!(classify_numbering(None, 36, 38, false), Numbering::Upstream);
+        assert_eq!(classify_numbering(None, 36, 39, false), Numbering::Upstream);
         assert_eq!(classify_numbering(None, 18, 19, false), Numbering::Upstream);
     }
 
     #[test]
     fn classify_below_insertion_is_fork() {
-        assert_eq!(classify_numbering(None, 16, 38, false), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 16, 39, false), Numbering::Fork);
+    }
+
+    #[test]
+    fn upstream_postgres_v36_skips_later_fork_tip_steps() {
+        let idx = implied_applied_indices(36, Numbering::Upstream, 38);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(!idx.contains(&36), "slot-2");
+        assert!(!idx.contains(&37), "outbox dead-letter");
+        assert_eq!(idx.len(), 35);
     }
 }

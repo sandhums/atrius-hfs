@@ -178,8 +178,14 @@ pub trait SubscriptionOutboxStore: Send + Sync {
 
     /// Claim up to `limit` available rows for this worker.
     ///
-    /// Claimed rows are locked until `mark_processed` / `mark_retry` or the lock
-    /// lease expires.
+    /// Claimed rows are locked until `mark_processed` / `mark_retry` /
+    /// `mark_dead` or the lock lease expires.
+    ///
+    /// Postgres uses `FOR UPDATE SKIP LOCKED`. SQLite takes a process-local
+    /// mutex, `BEGIN IMMEDIATE`, and a compare-and-swap `UPDATE` so workers
+    /// that share **one database file** cannot double-claim. That is not a
+    /// cluster outbox: do not point several HFS nodes at separate SQLite
+    /// copies of the same logical stream — use Postgres.
     async fn claim(
         &self,
         worker_id: &str,
@@ -197,6 +203,12 @@ pub trait SubscriptionOutboxStore: Send + Sync {
         delay: std::time::Duration,
         error: &str,
     ) -> StorageResult<()>;
+
+    /// Tombstone a claimed row after retries are exhausted.
+    ///
+    /// Dead rows keep `processed_at` unset so `$events` does not treat them as
+    /// successful deliveries, and they are excluded from later `claim` calls.
+    async fn mark_dead(&self, id: i64, error: &str) -> StorageResult<()>;
 
     /// Fetch processed events for a tenant, oldest first.
     ///
@@ -224,6 +236,7 @@ struct InMemoryState {
     rows: Vec<SubscriptionOutboxEntry>,
     processed: HashSet<i64>,
     locked: HashSet<i64>,
+    dead: HashSet<i64>,
 }
 
 impl InMemorySubscriptionOutbox {
@@ -261,7 +274,10 @@ impl SubscriptionOutboxStore for InMemorySubscriptionOutbox {
             let Some(id) = row.id else {
                 continue;
             };
-            if state.processed.contains(&id) || state.locked.contains(&id) {
+            if state.processed.contains(&id)
+                || state.locked.contains(&id)
+                || state.dead.contains(&id)
+            {
                 continue;
             }
             if row.available_at > now {
@@ -297,6 +313,17 @@ impl SubscriptionOutboxStore for InMemorySubscriptionOutbox {
         state.locked.remove(&id);
         if let Some(row) = state.rows.iter_mut().find(|r| r.id == Some(id)) {
             row.available_at = Utc::now() + chrono::Duration::from_std(delay).unwrap_or_default();
+            row.last_error = Some(error.to_string());
+        }
+        Ok(())
+    }
+
+    async fn mark_dead(&self, id: i64, error: &str) -> StorageResult<()> {
+        let mut state = self.inner.lock();
+        state.locked.remove(&id);
+        state.processed.remove(&id);
+        state.dead.insert(id);
+        if let Some(row) = state.rows.iter_mut().find(|r| r.id == Some(id)) {
             row.last_error = Some(error.to_string());
         }
         Ok(())
@@ -358,6 +385,44 @@ mod tests {
             .await
             .unwrap();
         assert!(claimed_again.is_empty());
+    }
+
+    #[tokio::test]
+    async fn in_memory_dead_letter_is_not_reclaimed_or_listed_as_processed() {
+        let store = InMemorySubscriptionOutbox::new();
+        let entry = SubscriptionOutboxEntry::new(
+            TenantId::new("t1"),
+            FhirVersion::R4,
+            "Patient",
+            "p1",
+            "1",
+            OutboxEventType::Create,
+            Some(json!({"resourceType":"Patient","id":"p1"})),
+            None,
+        );
+        let id = store.enqueue(&entry).await.unwrap();
+        let claimed = store
+            .claim("worker-1", 10, std::time::Duration::from_secs(30))
+            .await
+            .unwrap();
+        assert_eq!(claimed.len(), 1);
+
+        store
+            .mark_dead(id, "processing timed out; max retries exceeded")
+            .await
+            .unwrap();
+
+        let claimed_again = store
+            .claim("worker-1", 10, std::time::Duration::from_secs(30))
+            .await
+            .unwrap();
+        assert!(claimed_again.is_empty());
+
+        let processed = store
+            .list_processed(&TenantId::new("t1"), None, 10)
+            .await
+            .unwrap();
+        assert!(processed.is_empty());
     }
 
     #[test]

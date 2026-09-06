@@ -115,9 +115,12 @@ async fn process_batch(
             continue;
         };
         let event = entry_to_resource_event(&entry);
-        // Evaluation/dispatch errors are logged inside the engine; treat panic-free
-        // completion as success. Transient channel failures use in-engine retry.
-        // If we want outbox-level retry for hard failures later, wrap this.
+        // Evaluation/dispatch errors are logged inside the engine. Completing
+        // without panic still marks the row processed so we do not re-increment
+        // `event_number` and duplicate notifications. Permanent channel failures
+        // are visible via DeliveryStats and a "zero successful deliveries" warn.
+        // Outbox-level retry is only for process timeout (crash/hang). After
+        // max retries those rows are tombstoned (`dead_at`), not retried hourly.
         match tokio::time::timeout(
             config.outbox_process_timeout,
             engine.on_resource_event(event),
@@ -134,28 +137,103 @@ async fn process_batch(
                 }
             }
             Err(_) => {
-                let attempt = entry.attempts.saturating_sub(1);
-                if should_retry(config, attempt) {
-                    let delay = calculate_delay(config, attempt);
-                    warn!(
-                        outbox_id = id,
-                        attempt,
-                        delay_ms = delay.as_millis() as u64,
-                        "Outbox processing timed out; scheduling retry"
-                    );
-                    let _ = store.mark_retry(id, delay, "processing timed out").await;
-                } else {
-                    error!(outbox_id = id, "Outbox processing timed out; giving up");
-                    let _ = store
-                        .mark_retry(
-                            id,
-                            Duration::from_secs(3600),
-                            "processing timed out; max retries exceeded",
-                        )
-                        .await;
-                }
+                on_process_timeout(store, config, id, entry.attempts.saturating_sub(1)).await;
             }
         }
     }
     Ok(processed)
+}
+
+async fn on_process_timeout(
+    store: &DynSubscriptionOutboxStore,
+    config: &SubscriptionConfig,
+    id: i64,
+    attempt: u32,
+) {
+    if should_retry(config, attempt) {
+        let delay = calculate_delay(config, attempt);
+        warn!(
+            outbox_id = id,
+            attempt,
+            delay_ms = delay.as_millis() as u64,
+            "Outbox processing timed out; scheduling retry"
+        );
+        let _ = store.mark_retry(id, delay, "processing timed out").await;
+    } else {
+        error!(
+            outbox_id = id,
+            "Outbox processing timed out; dead-lettering"
+        );
+        let _ = store
+            .mark_dead(id, "processing timed out; max retries exceeded")
+            .await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use helios_fhir::FhirVersion;
+    use helios_persistence::core::{InMemorySubscriptionOutbox, SubscriptionOutboxEntry};
+    use helios_persistence::tenant::TenantId;
+    use serde_json::json;
+    use std::sync::Arc;
+
+    fn sample_entry() -> SubscriptionOutboxEntry {
+        SubscriptionOutboxEntry::new(
+            TenantId::new("t1"),
+            FhirVersion::R4,
+            "Patient",
+            "p1",
+            "1",
+            OutboxEventType::Create,
+            Some(json!({"resourceType":"Patient","id":"p1"})),
+            None,
+        )
+    }
+
+    #[tokio::test]
+    async fn exhausted_timeout_dead_letters_instead_of_hourly_retry() {
+        let store: DynSubscriptionOutboxStore = Arc::new(InMemorySubscriptionOutbox::new());
+        let id = store.enqueue(&sample_entry()).await.unwrap();
+        let claimed = store.claim("w", 1, Duration::from_secs(30)).await.unwrap();
+        assert_eq!(claimed.len(), 1);
+
+        let config = SubscriptionConfig {
+            max_retries: 0,
+            ..Default::default()
+        };
+        on_process_timeout(&store, &config, id, claimed[0].attempts.saturating_sub(1)).await;
+
+        let again = store.claim("w", 1, Duration::from_secs(30)).await.unwrap();
+        assert!(again.is_empty(), "dead-lettered row must not be reclaimed");
+        let processed = store
+            .list_processed(&TenantId::new("t1"), None, 10)
+            .await
+            .unwrap();
+        assert!(
+            processed.is_empty(),
+            "dead rows must not appear in $events processed"
+        );
+    }
+
+    #[tokio::test]
+    async fn timeout_within_retry_budget_reschedules() {
+        let store: DynSubscriptionOutboxStore = Arc::new(InMemorySubscriptionOutbox::new());
+        let id = store.enqueue(&sample_entry()).await.unwrap();
+        let claimed = store.claim("w", 1, Duration::from_secs(30)).await.unwrap();
+
+        let config = SubscriptionConfig {
+            max_retries: 3,
+            retry_initial_delay: Duration::from_millis(1),
+            retry_max_delay: Duration::from_millis(1),
+            ..Default::default()
+        };
+        on_process_timeout(&store, &config, id, claimed[0].attempts.saturating_sub(1)).await;
+
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        let again = store.claim("w", 1, Duration::from_secs(30)).await.unwrap();
+        assert_eq!(again.len(), 1);
+        assert_eq!(again[0].id, Some(id));
+    }
 }

@@ -241,7 +241,8 @@ impl SubscriptionEngine {
         subscription: &ActiveSubscription,
         bundle: &serde_json::Value,
     ) {
-        self.dispatch_with_retry(subscription, bundle, "heartbeat", None)
+        let _ = self
+            .dispatch_with_retry(subscription, bundle, "heartbeat", None)
             .await;
     }
 
@@ -342,6 +343,10 @@ impl SubscriptionEngine {
             "Event matched subscriptions"
         );
 
+        let matched = matches.len();
+        let mut delivered = 0u32;
+        let mut failed = 0u32;
+
         // Build and dispatch notifications for each match.
         for eval_match in matches {
             let mut subscription = eval_match.subscription;
@@ -376,6 +381,7 @@ impl SubscriptionEngine {
                         error = %e,
                         "Failed to build notification"
                     );
+                    failed += 1;
                     continue;
                 }
             };
@@ -391,14 +397,30 @@ impl SubscriptionEngine {
                 "Dispatching subscription event notification"
             );
 
-            // Dispatch with retry.
-            self.dispatch_with_retry(
-                &subscription,
-                &bundle,
-                "event-notification",
-                Some(event_number),
-            )
-            .await;
+            if self
+                .dispatch_with_retry(
+                    &subscription,
+                    &bundle,
+                    "event-notification",
+                    Some(event_number),
+                )
+                .await
+            {
+                delivered += 1;
+            } else {
+                failed += 1;
+            }
+        }
+
+        if delivered == 0 {
+            warn!(
+                tenant_id = %event.tenant_id,
+                resource_type = %event.resource_type,
+                resource_id = %event.resource_id,
+                matched,
+                failed,
+                "Subscription event processed with zero successful deliveries"
+            );
         }
     }
 
@@ -936,13 +958,15 @@ impl SubscriptionEngine {
     }
 
     /// Dispatch a notification with retry logic.
+    ///
+    /// Returns `true` when the endpoint accepted the notification.
     async fn dispatch_with_retry(
         &self,
         subscription: &ActiveSubscription,
         bundle: &serde_json::Value,
         notification_type: &'static str,
         event_number: Option<u64>,
-    ) {
+    ) -> bool {
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
 
@@ -955,7 +979,7 @@ impl SubscriptionEngine {
                 endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
                 "No dispatcher registered for channel type"
             );
-            return;
+            return false;
         };
 
         let mut attempt: u32 = 0;
@@ -975,7 +999,7 @@ impl SubscriptionEngine {
                         endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
                         "Subscription notification dispatched"
                     );
-                    return;
+                    return true;
                 }
                 Ok(DispatchResult::PermanentError(msg)) => {
                     warn!(
@@ -990,7 +1014,7 @@ impl SubscriptionEngine {
                     );
                     self.delivery_stats.record_failure(tenant_id, sub_id, now);
                     self.handle_delivery_failure(tenant_id, sub_id).await;
-                    return;
+                    return false;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
                     attempt += 1;
@@ -1008,7 +1032,7 @@ impl SubscriptionEngine {
                         );
                         self.delivery_stats.record_failure(tenant_id, sub_id, now);
                         self.handle_delivery_failure(tenant_id, sub_id).await;
-                        return;
+                        return false;
                     }
 
                     let delay = retry::calculate_delay(&self.config, attempt);
@@ -1036,7 +1060,7 @@ impl SubscriptionEngine {
                     );
                     self.delivery_stats.record_failure(tenant_id, sub_id, now);
                     self.handle_delivery_failure(tenant_id, sub_id).await;
-                    return;
+                    return false;
                 }
             }
         }
@@ -1564,6 +1588,17 @@ mod tests {
         // Check subscription status changed to error.
         let sub = engine.manager().get_subscription("t1", "sub-1").unwrap();
         assert_eq!(sub.status, SubscriptionStatusCode::Error);
+
+        let now = chrono::Utc::now().timestamp();
+        let window = engine.delivery_stats().window("t1", "sub-1", now);
+        assert_eq!(
+            window.delivered, 0,
+            "permanent failure must not count as a successful delivery"
+        );
+        assert!(
+            window.failed >= 1,
+            "zero-delivery events must still record DeliveryStats failures"
+        );
     }
 
     #[tokio::test]

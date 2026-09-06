@@ -1,4 +1,11 @@
 //! SQLite implementation of [`SubscriptionOutboxStore`].
+//!
+//! Claim uses a process-local mutex, `BEGIN IMMEDIATE`, and a compare-and-swap
+//! `UPDATE` so workers that share one database file cannot double-claim.
+//! SQLite has no `SELECT … FOR UPDATE SKIP LOCKED`. Clustered subscription
+//! dispatch needs Postgres. The mutex is required because shared-cache
+//! in-memory pools fail `BEGIN IMMEDIATE` with `SQLITE_LOCKED`, which
+//! `busy_timeout` does not cover.
 
 use std::time::Duration;
 
@@ -6,6 +13,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::core::subscription_outbox::{
@@ -30,6 +38,11 @@ fn parse_dt(s: &str) -> StorageResult<DateTime<Utc>> {
         .map(|dt| dt.with_timezone(&Utc))
         .map_err(|e| internal_error(format!("invalid outbox timestamp '{s}': {e}")))
 }
+
+/// Serializes in-process claims. Shared-cache SQLite returns `SQLITE_LOCKED`
+/// on concurrent `BEGIN IMMEDIATE`; `busy_timeout` does not apply. File WAL
+/// still serializes writers via IMMEDIATE for other processes.
+static OUTBOX_CLAIM_LOCK: Mutex<()> = Mutex::const_new(());
 
 /// SQLite-backed durable subscription outbox.
 #[derive(Clone)]
@@ -238,6 +251,7 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
         limit: u32,
         lease: Duration,
     ) -> StorageResult<Vec<SubscriptionOutboxEntry>> {
+        let _guard = OUTBOX_CLAIM_LOCK.lock().await;
         let pool = self.pool.clone();
         let worker_id = worker_id.to_string();
         let limit = limit.max(1) as usize;
@@ -248,7 +262,7 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
                 .get()
                 .map_err(|e| internal_error(format!("outbox pool get: {e}")))?;
             let tx = conn
-                .transaction()
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
                 .map_err(|e| internal_error(format!("outbox claim begin: {e}")))?;
 
             let now = Utc::now();
@@ -260,6 +274,7 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
                     .prepare(
                         "SELECT id FROM subscription_outbox
                          WHERE processed_at IS NULL
+                           AND dead_at IS NULL
                            AND available_at <= ?1
                            AND (locked_until IS NULL OR locked_until < ?1)
                          ORDER BY id
@@ -277,15 +292,22 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
 
             let mut claimed = Vec::with_capacity(ids.len());
             for id in ids {
-                tx.execute(
-                    "UPDATE subscription_outbox
-                     SET locked_by = ?2,
-                         locked_until = ?3,
-                         attempts = attempts + 1
-                     WHERE id = ?1",
-                    rusqlite::params![id, worker_id, locked_until],
-                )
-                .map_err(|e| internal_error(format!("outbox claim update: {e}")))?;
+                let n = tx
+                    .execute(
+                        "UPDATE subscription_outbox
+                         SET locked_by = ?2,
+                             locked_until = ?3,
+                             attempts = attempts + 1
+                         WHERE id = ?1
+                           AND processed_at IS NULL
+                           AND dead_at IS NULL
+                           AND (locked_until IS NULL OR locked_until < ?4)",
+                        rusqlite::params![id, worker_id, locked_until, now_str],
+                    )
+                    .map_err(|e| internal_error(format!("outbox claim update: {e}")))?;
+                if n == 0 {
+                    continue;
+                }
 
                 let entry = tx
                     .query_row(
@@ -357,6 +379,31 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
         .map_err(|e| internal_error(format!("outbox mark_retry join: {e}")))?
     }
 
+    async fn mark_dead(&self, id: i64, error: &str) -> StorageResult<()> {
+        let pool = self.pool.clone();
+        let error = error.to_string();
+        let now = Utc::now().to_rfc3339();
+
+        tokio::task::spawn_blocking(move || {
+            let conn = pool
+                .get()
+                .map_err(|e| internal_error(format!("outbox pool get: {e}")))?;
+            conn.execute(
+                "UPDATE subscription_outbox
+                 SET dead_at = ?2,
+                     locked_by = NULL,
+                     locked_until = NULL,
+                     last_error = ?3
+                 WHERE id = ?1",
+                rusqlite::params![id, now, error],
+            )
+            .map_err(|e| internal_error(format!("outbox mark_dead: {e}")))?;
+            Ok(())
+        })
+        .await
+        .map_err(|e| internal_error(format!("outbox mark_dead join: {e}")))?
+    }
+
     async fn list_processed(
         &self,
         tenant_id: &TenantId,
@@ -395,5 +442,58 @@ impl SubscriptionOutboxStore for SqliteSubscriptionOutbox {
         })
         .await
         .map_err(|e| internal_error(format!("outbox list_processed join: {e}")))?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backends::sqlite::SqliteBackend;
+    use serde_json::json;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    fn sample_entry() -> SubscriptionOutboxEntry {
+        SubscriptionOutboxEntry::new(
+            TenantId::new("t1"),
+            FhirVersion::R4,
+            "Patient",
+            "p1",
+            "1",
+            OutboxEventType::Create,
+            Some(json!({"resourceType":"Patient","id":"p1"})),
+            None,
+        )
+    }
+
+    #[tokio::test]
+    async fn sqlite_claim_does_not_double_claim_under_contention() {
+        let backend = SqliteBackend::in_memory().expect("in-memory sqlite");
+        backend.init_schema().expect("schema");
+        let store = Arc::new(SqliteSubscriptionOutbox::new(backend.pool(), "test"));
+        let id = store.enqueue(&sample_entry()).await.expect("enqueue");
+
+        let mut handles = Vec::new();
+        for i in 0..8 {
+            let store = Arc::clone(&store);
+            handles.push(tokio::spawn(async move {
+                store
+                    .claim(&format!("w{i}"), 10, Duration::from_secs(30))
+                    .await
+                    .expect("claim")
+            }));
+        }
+
+        let mut winners = Vec::new();
+        for h in handles {
+            winners.extend(h.await.expect("join"));
+        }
+        assert_eq!(
+            winners.len(),
+            1,
+            "exactly one worker must win the row, got {}",
+            winners.len()
+        );
+        assert_eq!(winners[0].id, Some(id));
     }
 }
