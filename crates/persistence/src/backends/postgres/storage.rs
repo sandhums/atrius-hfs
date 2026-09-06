@@ -2884,6 +2884,16 @@ impl ConditionalStorage for PostgresBackend {
             n => Ok(ConditionalPatchResult::MultipleMatches(n)),
         }
     }
+
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<crate::types::StoredResource>> {
+        self.find_matching_resources(tenant, resource_type, search_params)
+            .await
+    }
 }
 
 impl PostgresBackend {

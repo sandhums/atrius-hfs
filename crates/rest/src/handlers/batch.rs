@@ -18,8 +18,8 @@ use helios_auth::{FhirOperation, Principal, SmartScopePolicy};
 use helios_fhir::FhirVersion;
 use helios_persistence::core::{
     BundleEntry, BundleEntryResult, BundleMethod, BundleProvider, ConditionalCreateResult,
-    ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult, IncludeProvider,
-    ResourceStorage, RevincludeProvider, SearchProvider, bundle_if_match_gate,
+    ConditionalDeleteResult, ConditionalPatchResult, ConditionalStorage, ConditionalUpdateResult,
+    IncludeProvider, ResourceStorage, RevincludeProvider, SearchProvider, bundle_if_match_gate,
 };
 use helios_persistence::error::{ResourceError, StorageError, TransactionError};
 #[cfg(feature = "subscriptions")]
@@ -1355,21 +1355,6 @@ where
             }
         }
         BundleMethod::Patch => {
-            if id.is_empty() {
-                return create_error_result(
-                    400,
-                    "PATCH entry request.url must address an instance ('[type]/[id]')",
-                );
-            }
-            if criteria.is_some() {
-                return create_error_result(
-                    400,
-                    &format!(
-                        "Entry {index}: conditional PATCH in a Bundle is not supported; \
-                         address the instance directly ('[type]/[id]')"
-                    ),
-                );
-            }
             let patch_doc = match entry.get("resource") {
                 Some(r) => r,
                 None => {
@@ -1381,26 +1366,105 @@ where
             {
                 return entry_failure(error);
             }
-            if let Some(failure) =
-                check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
-            {
-                return failure;
-            }
-            let existing = match state
-                .storage()
-                .read(tenant.context(), &resource_type, &id)
-                .await
-            {
-                Ok(Some(stored)) => stored,
-                Ok(None) => {
+
+            let existing = if let Some(criteria) = criteria.as_deref() {
+                match state
+                    .storage()
+                    .conditional_matches(tenant.context(), &resource_type, criteria)
+                    .await
+                {
+                    Ok(matches) => match matches.len() {
+                        0 => {
+                            return create_error_result(
+                                404,
+                                &format!("{resource_type} matching {criteria} was not found"),
+                            );
+                        }
+                        1 => matches.into_iter().next().unwrap(),
+                        n => {
+                            return entry_failure(RestError::MultipleMatches {
+                                operation: "patch".to_string(),
+                                count: n,
+                            });
+                        }
+                    },
+                    Err(e) if is_unsupported_capability(&e) => {
+                        let format =
+                            match helios_persistence::core::patch_format_from_bundle_resource(
+                                patch_doc,
+                            ) {
+                                Ok(f) => f,
+                                Err(e) => {
+                                    let (status, message) = entry_error(e);
+                                    return create_error_result(status, &message);
+                                }
+                            };
+                        return match state
+                            .storage()
+                            .conditional_patch(tenant.context(), &resource_type, criteria, &format)
+                            .await
+                        {
+                            Ok(ConditionalPatchResult::Patched(stored)) => {
+                                record_stored_profile(state, tenant, fhir_version, &stored);
+                                #[cfg(feature = "subscriptions")]
+                                emit_bundle_event(
+                                    state,
+                                    tenant,
+                                    fhir_version,
+                                    &stored,
+                                    helios_subscriptions::ResourceEventType::Update,
+                                );
+                                BundleEntryResult::ok(stored)
+                            }
+                            Ok(ConditionalPatchResult::NoMatch) => create_error_result(
+                                404,
+                                &format!("{resource_type} matching {criteria} was not found"),
+                            ),
+                            Ok(ConditionalPatchResult::MultipleMatches(count)) => {
+                                entry_failure(RestError::MultipleMatches {
+                                    operation: "patch".to_string(),
+                                    count,
+                                })
+                            }
+                            Err(e) => {
+                                let (status, message) = entry_error(e);
+                                create_error_result(status, &message)
+                            }
+                        };
+                    }
+                    Err(e) => {
+                        let (status, message) = entry_error(e);
+                        return create_error_result(status, &message);
+                    }
+                }
+            } else {
+                if id.is_empty() {
                     return create_error_result(
-                        404,
-                        &format!("{resource_type}/{id} was not found"),
+                        400,
+                        "PATCH entry request.url must address an instance ('[type]/[id]')",
                     );
                 }
-                Err(e) => {
-                    let (status, message) = entry_error(e);
-                    return create_error_result(status, &message);
+                if let Some(failure) =
+                    check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
+                {
+                    return failure;
+                }
+                match state
+                    .storage()
+                    .read(tenant.context(), &resource_type, &id)
+                    .await
+                {
+                    Ok(Some(stored)) => stored,
+                    Ok(None) => {
+                        return create_error_result(
+                            404,
+                            &format!("{resource_type}/{id} was not found"),
+                        );
+                    }
+                    Err(e) => {
+                        let (status, message) = entry_error(e);
+                        return create_error_result(status, &message);
+                    }
                 }
             };
             let patched = match helios_persistence::core::patched_from_bundle_entry(
@@ -2522,6 +2586,15 @@ fn entry_error(err: StorageError) -> (u16, String) {
     (status.as_u16(), message)
 }
 
+fn is_unsupported_capability(err: &StorageError) -> bool {
+    matches!(
+        err,
+        StorageError::Backend(
+            helios_persistence::error::BackendError::UnsupportedCapability { .. }
+        )
+    )
+}
+
 /// Computes the sanitized `(status, issue code, message)` for a failed
 /// transaction.
 ///
@@ -3062,6 +3135,7 @@ mod tests {
         Exists,
         NoMatch,
         Deleted,
+        Patched,
         MultipleMatches(usize),
         Unsupported,
     }
@@ -3370,6 +3444,27 @@ mod tests {
                 }
                 ConditionalReply::Unsupported => Err(Self::unsupported("conditional_delete")),
                 _ => panic!("conditional_delete is not scripted for this test"),
+            }
+        }
+
+        async fn conditional_patch(
+            &self,
+            tenant: &TenantContext,
+            resource_type: &str,
+            search_params: &str,
+            _patch: &helios_persistence::core::PatchFormat,
+        ) -> StorageResult<ConditionalPatchResult> {
+            self.record_conditional("patch", resource_type, search_params);
+            match self.conditional_reply {
+                ConditionalReply::Patched | ConditionalReply::Updated => Ok(
+                    ConditionalPatchResult::Patched(Self::existing(tenant, resource_type)),
+                ),
+                ConditionalReply::NoMatch => Ok(ConditionalPatchResult::NoMatch),
+                ConditionalReply::MultipleMatches(n) => {
+                    Ok(ConditionalPatchResult::MultipleMatches(n))
+                }
+                ConditionalReply::Unsupported => Err(Self::unsupported("conditional_patch")),
+                _ => panic!("conditional_patch is not scripted for this test"),
             }
         }
     }
@@ -3968,6 +4063,49 @@ mod tests {
 
         let state = state_with(DelayStorage::conditional(
             ConditionalReply::MultipleMatches(3),
+        ));
+        let response = run_batch(&state, &bundle, None).await;
+        assert_eq!(
+            response["entry"][0]["response"]["status"], "412 Precondition Failed",
+            "{}",
+            response["entry"][0]
+        );
+    }
+
+    /// A conditional PATCH in a batch is resolved like PUT: one match 200, none
+    /// 404, several 412. DelayStorage does not implement `conditional_matches`,
+    /// so the arm falls through to `conditional_patch`.
+    #[tokio::test]
+    async fn conditional_patch_maps_results() {
+        let bundle = serde_json::json!({
+            "resourceType": "Bundle",
+            "type": "batch",
+            "entry": [{
+                "request": { "method": "PATCH", "url": "Patient?identifier=x" },
+                "resource": { "active": true }
+            }]
+        });
+
+        let state = state_with(DelayStorage::conditional(ConditionalReply::Patched));
+        let response = run_batch(&state, &bundle, None).await;
+        assert_eq!(
+            state.storage().conditional_calls(),
+            vec![("patch", "Patient".to_string(), "identifier=x".to_string())]
+        );
+        let entry = &response["entry"][0];
+        assert_eq!(entry["response"]["status"], "200 OK", "{entry}");
+        assert_eq!(entry["resource"]["id"], "existing");
+
+        let state = state_with(DelayStorage::conditional(ConditionalReply::NoMatch));
+        let response = run_batch(&state, &bundle, None).await;
+        assert_eq!(
+            response["entry"][0]["response"]["status"], "404 Not Found",
+            "{}",
+            response["entry"][0]
+        );
+
+        let state = state_with(DelayStorage::conditional(
+            ConditionalReply::MultipleMatches(2),
         ));
         let response = run_batch(&state, &bundle, None).await;
         assert_eq!(

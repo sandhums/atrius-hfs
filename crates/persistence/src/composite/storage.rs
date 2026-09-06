@@ -1479,6 +1479,16 @@ impl ConditionalStorage for CompositeStorage {
 
         Ok(result)
     }
+
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<StoredResource>> {
+        self.find_conditional_matches(tenant, resource_type, search_params)
+            .await
+    }
 }
 
 #[async_trait]

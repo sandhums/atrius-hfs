@@ -535,8 +535,8 @@ curl -X POST http://localhost:8080/ \
 It is a `code` with a required binding to `http://hl7.org/fhir/ValueSet/http-verb`,
 whose concepts are `caseSensitive: true` and uppercase in every supported FHIR
 version — so a lowercase `"post"` is invalid instance data and is refused with
-`400`, not silently accepted. `GET`, `POST`, `PUT` and `DELETE` dispatch; `PATCH`
-and `HEAD` are refused as described under Current Limitations.
+`400`, not silently accepted. `GET`, `POST`, `PUT`, `PATCH` and `DELETE` dispatch;
+`HEAD` is refused as described under Current Limitations.
 
 ### Conditional Operations in Bundles
 
@@ -559,11 +559,12 @@ and `HEAD` are refused as described under Current Limitations.
   bundle fails at that entry rather than creating a duplicate.
 
 Conditional interactions expressed in the entry URL (`PUT [type]?[criteria]`,
-`DELETE [type]?[criteria]`):
+`PATCH [type]?[criteria]`, `DELETE [type]?[criteria]`):
 
 - In a `batch`, they are **resolved** with the status mapping the resource
   endpoints use. `PUT`: one match updates (`200`, `location` = `[type]/[id]`), no
-  match creates (`201`), several matches `412`. `DELETE`: deleted or no match
+  match creates (`201`), several matches `412`. `PATCH`: one match applies
+  (`200`), no match `404`, several matches `412`. `DELETE`: deleted or no match
   `204`, several matches `412` (`/metadata` elects `conditionalDelete: "single"`).
   The criteria are percent-decoded like a request URL's query, with repeated
   parameters kept. A bundle carrying a conditional entry runs its entries
@@ -586,7 +587,6 @@ backend is #514.
 The following FHIR transaction features are not yet implemented:
 - **Conditional URL criteria in transactions** - `[type]?[criteria]` entries are declined whole in a `transaction` (resolved in a `batch`; #859)
 - **Conditional reference resolution** - References like `Patient?identifier=12345` are not resolved
-- **Conditional PATCH in a Bundle** - instance-url PATCH is applied (format inferred from the entry resource); `[type]?[criteria]` PATCH is refused
 - **HEAD entries** - refused with 405. `HEAD` is a legal `http-verb` code and is served on the instance-read route, but not inside a Bundle
 - **Prefer header** - `return=minimal` and `return=OperationOutcome` not honored
 - **Duplicate detection** - Same resource appearing twice in a transaction is not detected
