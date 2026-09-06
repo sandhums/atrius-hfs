@@ -7,9 +7,8 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for whole number values
-/// 
+///
 /// integer Type: A whole number
-/// 
+///
 /// See: [integer](http://hl7.org/fhir/StructureDefinition/integer)
 pub type Integer = Element<std::primitive::i32, Extension>;
-

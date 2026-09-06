@@ -7,61 +7,63 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR RelatedArtifact type
-/// 
+///
 /// RelatedArtifact Type: Related artifacts such as dependencies, components,
 /// additional documentation, justification, or bibliographic references.
-/// 
+///
 /// ## Purpose
 /// Knowledge resources must be able to provide enough information for consumers of the content (and/or interventions or results produced by the content) to be able to determine and understand the justification for and evidence in support of the content.
-/// 
+///
 /// ## Type: Complex-type type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DataType
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [RelatedArtifact](http://hl7.org/fhir/StructureDefinition/RelatedArtifact)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(summary_fields = "r#type,label,display,citation,url,document,resource,resource_reference")]
+#[fhir_resource(
+    summary_fields = "r#type,label,display,citation,url,document,resource,resource_reference"
+)]
 pub struct RelatedArtifact {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// documentation | justification | citation | predecessor | successor | derived-from | depends-on | composed-of | part-of
-    /// 
+    ///
     /// The type of relationship to the related artifact.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The presence of both sides of a relationship type (e.g. successor and
     /// predecessor) is required to support use cases where one side of a
@@ -71,16 +73,16 @@ pub struct RelatedArtifact {
     /// when using related artifact elements to describe and reference FHIR
     /// resources, the type element SHALL be drawn from the
     /// fhir-related-artifact-type ValueSet.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of relationship to the related artifact.
@@ -88,107 +90,107 @@ pub struct RelatedArtifact {
     #[fhir_serde(rename = "type")]
     pub r#type: Code,
     /// Short label
-    /// 
+    ///
     /// A short label that can be used to reference the citation from elsewhere in
     /// the containing artifact, such as a footnote index.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub label: Option<String>,
     /// Brief description of the related artifact
-    /// 
+    ///
     /// A brief description of the document or knowledge resource being referenced,
     /// suitable for display to a consumer.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub display: Option<String>,
     /// Bibliographic citation for the artifact
-    /// 
+    ///
     /// A bibliographic citation for the related artifact. This text SHOULD be
     /// formatted according to an accepted citation format.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Additional structured information about citations should be captured as
     /// extensions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub citation: Option<Markdown>,
     /// A url for the artifact that can be followed to access the actual content
-    /// 
+    ///
     /// A url for the artifact that can be followed to access the actual content.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Option<Url>,
     /// What document is being referenced
-    /// 
+    ///
     /// The document being referenced, represented as an attachment. This is
     /// exclusive with the resource element.
-    /// 
+    ///
     /// ## Implementation Notes
     /// RelatedArtifact.document.url is a version specific reference to the citation
     /// content (e.g. stable), which is different to RelatedArtifact.url, which is a
     /// reference to content that can change over time.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub document: Option<Attachment>,
     /// What artifact is being referenced
-    /// 
+    ///
     /// The related artifact, such as a library, value set, profile, or other
     /// knowledge resource.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If the type is predecessor, this is a reference to the succeeding knowledge
     /// resource. If the type is successor, this is a reference to the prior
     /// knowledge resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub resource: Option<Canonical>,
     /// What artifact, if not a conformance resource
-    /// 
+    ///
     /// The related artifact, if the artifact is not a canonical resource, or a
     /// resource reference to a canonical resource.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If both resource and resourceReference are present, they SHOULD be consistent
     /// and reference the same resource. Although relatedArtifact is intended to
@@ -197,16 +199,15 @@ pub struct RelatedArtifact {
     /// kind is mode). Related artifacts SHOULD be used to reference definitional
     /// resources, and profiles SHOULD be used to make that explicit for particular
     /// use cases.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "resourceReference")]
     pub resource_reference: Option<Reference>,
 }
-

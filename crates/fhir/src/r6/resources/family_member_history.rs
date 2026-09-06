@@ -58,52 +58,55 @@ pub enum FamilyMemberHistoryDeceased {
 }
 
 /// FHIR FamilyMemberHistory type
-/// 
+///
 /// Significant health conditions for a person related to the patient relevant in
 /// the context of care for the patient.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [FamilyMemberHistory](http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "born,age,deceased", summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,data_absent_reason,patient,date,recorder,asserter,name,relationship,sex,age,deceased,reason,condition")]
+#[fhir_resource(
+    choice_elements = "born,age,deceased",
+    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,data_absent_reason,patient,date,recorder,asserter,name,relationship,sex,age,deceased,reason,condition"
+)]
 pub struct FamilyMemberHistory {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -111,7 +114,7 @@ pub struct FamilyMemberHistory {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -121,22 +124,22 @@ pub struct FamilyMemberHistory {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -147,27 +150,27 @@ pub struct FamilyMemberHistory {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -175,27 +178,27 @@ pub struct FamilyMemberHistory {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -203,41 +206,41 @@ pub struct FamilyMemberHistory {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -247,11 +250,11 @@ pub struct FamilyMemberHistory {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -259,38 +262,38 @@ pub struct FamilyMemberHistory {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// External Id(s) for this record
-    /// 
+    ///
     /// Business identifiers assigned to this family member history by the performer
     /// or other systems which remain constant as the resource is updated and
     /// propagates from server to server.
-    /// 
+    ///
     /// ## Requirements
     /// Allows identification of the family member history as it is known by various
     /// participating systems and in a way that remains consistent across servers.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is a business identifier, not a resource identifier (see
     /// [discussion](resource.html#identifiers)). It is best practice for the
@@ -299,57 +302,57 @@ pub struct FamilyMemberHistory {
     /// same identifier can exist - possibly even with different resource types. For
     /// example, multiple Patient and a Person resource instance might share the same
     /// social insurance number.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// partial | completed | entered-in-error | health-unknown
-    /// 
+    ///
     /// A code specifying the status of the record of the family history of a
     /// specific family member.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element is labeled as a modifier because the status contains codes that
     /// mark the resource as not currently valid.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A code that identifies the status of the family history record.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/history-status|6.0.0-ballot4
     pub status: Code,
     /// subject-unknown | withheld | unable-to-obtain | deferred
-    /// 
+    ///
     /// Describes why the family member's history is not available.
-    /// 
+    ///
     /// ## Requirements
     /// This is a separate element to allow it to have a distinct binding from
     /// reasonCode.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the reason why a family member's history is not available.
@@ -357,117 +360,117 @@ pub struct FamilyMemberHistory {
     #[fhir_serde(rename = "dataAbsentReason")]
     pub data_absent_reason: Option<CodeableConcept>,
     /// Patient history is about
-    /// 
+    ///
     /// The person who this history concerns.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is not the family member.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Proband
     pub patient: Reference,
     /// When history was recorded or last updated
-    /// 
+    ///
     /// The date (and possibly time) when the family member history was recorded or
     /// last updated.
-    /// 
+    ///
     /// ## Requirements
     /// Allows determination of how current the summary is.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should be captured even if the same as the date on the List aggregating
     /// the full family history.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub date: Option<DateTime>,
     /// Who recorded the family member history
-    /// 
+    ///
     /// Individual who recorded the record and takes responsibility for its content.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub recorder: Option<Reference>,
     /// Person or device that asserts this family member history
-    /// 
+    ///
     /// Individual or device that is making the family member history statement.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub asserter: Option<Reference>,
     /// The family member described
-    /// 
+    ///
     /// This will either be a name or a description; e.g. "Aunt Susan", "my cousin
     /// with the red hair".
-    /// 
+    ///
     /// ## Requirements
     /// Allows greater ease in ensuring the same person is being talked about.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Relationship to the subject
-    /// 
+    ///
     /// The type of relationship this person has to the patient (father, mother,
     /// brother etc.).
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The nature of the relationship between the patient and the related person being described in the family member history.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/v3-FamilyMember
     pub relationship: CodeableConcept,
     /// female-typical | male-typical | specified | unknown
-    /// 
+    ///
     /// A context-specific sex value for the family member which can inform clinical
     /// decision making in relation to treatment of the patient. This element SHALL
     /// NOT be used to reflect the family member's gender identity.
-    /// 
+    ///
     /// ## Requirements
     /// Not all relationship codes imply sex and the relative's sex can be relevant
     /// for risk assessments.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element should ideally reflect the family member's sex characteristics.
     /// However, as reported information based on the knowledge of the patient or
@@ -476,137 +479,137 @@ pub struct FamilyMemberHistory {
     /// Questions soliciting this information should be phrased to encourage capture
     /// of genetic sex where known. However, systems performing analysis should also
     /// allow for the possibility of imprecision with this element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Codes describing the sex values appropriate in this context
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/sex-parameter-for-clinical-use
     pub sex: Option<CodeableConcept>,
     /// (approximate) date of birth
-    /// 
+    ///
     /// The actual or approximate date of birth of the relative.
-    /// 
+    ///
     /// ## Requirements
     /// Allows calculation of the relative's age.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: fhs-1
     #[fhir_serde(flatten)]
     pub born: Option<FamilyMemberHistoryBorn>,
     /// (approximate) age
-    /// 
+    ///
     /// The age of the relative at the time the family member history is recorded.
-    /// 
+    ///
     /// ## Requirements
     /// While age can be calculated from date of birth, sometimes recording age
     /// directly is more natural for clinicians.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: fhs-1, fhs-3
     #[fhir_serde(flatten)]
     pub age: Option<FamilyMemberHistoryAge>,
     /// Dead? How old/when?
-    /// 
+    ///
     /// Deceased flag or the actual or approximate age of the relative at the time of
     /// death for the family member history record.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: fhs-3
     #[fhir_serde(flatten)]
     pub deceased: Option<FamilyMemberHistoryDeceased>,
     /// Why was family member history performed?
-    /// 
+    ///
     /// Describes why the family member history occurred in coded or textual form, or
     /// Indicates a Condition, Observation, AllergyIntolerance, or
     /// QuestionnaireResponse that justifies this family member history event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Textual reasons can be captured using reasonCode.text.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes indicating why the family member history was done.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/clinical-findings
     pub reason: Option<Vec<CodeableReference>>,
     /// General note about related person
-    /// 
+    ///
     /// This property allows a non condition-specific note to the made about the
     /// related person. Ideally, the note would be in the condition property, but
     /// this is not always possible.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Condition that the related person had
-    /// 
+    ///
     /// The significant Conditions (or condition) that the family member had. This is
     /// a repeating section to allow a system to represent more than one condition
     /// per resource, though there is nothing stopping multiple resources - one per
     /// condition.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub condition: Option<Vec<FamilyMemberHistoryCondition>>,
     /// Procedures that the related person had
-    /// 
+    ///
     /// The significant Procedures (or procedure) that the family member had. This is
     /// a repeating section to allow a system to represent more than one procedure
     /// per resource, though there is nothing stopping multiple resources - one per
     /// procedure.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -632,17 +635,17 @@ pub enum FamilyMemberHistoryConditionOnset {
 }
 
 /// Condition that the related person had
-/// 
+///
 /// The significant Conditions (or condition) that the family member had. This is
 /// a repeating section to allow a system to represent more than one condition
 /// per resource, though there is nothing stopping multiple resources - one per
 /// condition.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -650,41 +653,41 @@ pub enum FamilyMemberHistoryConditionOnset {
 #[fhir_resource(choice_elements = "onset")]
 pub struct FamilyMemberHistoryCondition {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -694,11 +697,11 @@ pub struct FamilyMemberHistoryCondition {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -706,100 +709,100 @@ pub struct FamilyMemberHistoryCondition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Condition, allergy, or intolerance suffered by relation
-    /// 
+    ///
     /// The actual condition, allergy, or intolerance specified. Could be a coded
     /// condition (like MI or Diabetes) or a less specific string like 'cancer'
     /// depending on how much is known about the condition and the capabilities of
     /// the creating system.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Identification of the Condition or diagnosis.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/condition-code
     pub code: CodeableConcept,
     /// deceased | permanent disability | etc
-    /// 
+    ///
     /// Indicates what happened following the condition. If the condition resulted in
     /// death, deceased date is captured on the relation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The result of the condition for the patient; e.g. death, permanent disability, temporary disability, etc.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/condition-outcome
     pub outcome: Option<CodeableConcept>,
     /// Whether the condition contributed to the cause of death
-    /// 
+    ///
     /// This condition contributed to the cause of death of the related person. If
     /// contributedToDeath is not populated, then it is unknown.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "contributedToDeath")]
     pub contributed_to_death: Option<Boolean>,
     /// When condition first manifested
-    /// 
+    ///
     /// Either the age of onset, range of approximate age or descriptive string can
     /// be recorded. For conditions with multiple occurrences, this describes the
     /// first known occurrence.
-    /// 
+    ///
     /// ## Requirements
     /// Age of onset of a condition in relatives is predictive of risk for the
     /// patient.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub onset: Option<FamilyMemberHistoryConditionOnset>,
     /// Extra information about condition
-    /// 
+    ///
     /// An area where general notes can be placed about this specific condition.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -828,14 +831,14 @@ pub enum FamilyMemberHistoryProcedurePerformed {
 }
 
 /// Procedures that the related person had
-/// 
+///
 /// The significant Procedures (or procedure) that the family member had. This is
 /// a repeating section to allow a system to represent more than one procedure
 /// per resource, though there is nothing stopping multiple resources - one per
 /// procedure.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -843,41 +846,41 @@ pub enum FamilyMemberHistoryProcedurePerformed {
 #[fhir_resource(choice_elements = "performed")]
 pub struct FamilyMemberHistoryProcedure {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -887,11 +890,11 @@ pub struct FamilyMemberHistoryProcedure {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -899,95 +902,94 @@ pub struct FamilyMemberHistoryProcedure {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Procedures performed on the related person
-    /// 
+    ///
     /// The actual procedure specified. Could be a coded procedure or a less specific
     /// string depending on how much is known about the procedure and the
     /// capabilities of the creating system.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: A code to identify a specific procedure.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/procedure-code
     pub code: CodeableConcept,
     /// What happened following the procedure
-    /// 
+    ///
     /// Indicates what happened following the procedure. If the procedure resulted in
     /// death, deceased date is captured on the relation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: The result of the procedure; e.g. death, permanent disability, temporary disability, etc.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/clinical-findings
     pub outcome: Option<CodeableConcept>,
     /// Whether the procedure contributed to the cause of death
-    /// 
+    ///
     /// This procedure contributed to the cause of death of the related person. If
     /// contributedToDeath is not populated, then it is unknown.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "contributedToDeath")]
     pub contributed_to_death: Option<Boolean>,
     /// When the procedure was performed
-    /// 
+    ///
     /// Estimated or actual date, date-time, period, or age when the procedure was
     /// performed. Allows a period to support complex procedures that span more than
     /// one date, and also allows for the length of the procedure to be captured.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub performed: Option<FamilyMemberHistoryProcedurePerformed>,
     /// Extra information about the procedure
-    /// 
+    ///
     /// An area where general notes can be placed about this specific procedure.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
 }
-

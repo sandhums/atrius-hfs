@@ -7,56 +7,58 @@ use crate::r4::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR TestScript type
-/// 
+///
 /// A structured set of tests against a FHIR server or client implementation to
 /// determine compliance against the FHIR specification.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: draft
 /// FHIR Version: 4.0.1
-/// 
+///
 /// See: [TestScript](http://hl7.org/fhir/StructureDefinition/TestScript)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(summary_fields = "id,meta,implicit_rules,url,identifier,version,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction")]
+#[fhir_resource(
+    summary_fields = "id,meta,implicit_rules,url,identifier,version,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction"
+)]
 pub struct TestScript {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The only time that a resource does not have an id is when it is being
     /// submitted to the server using a create operation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
     /// along with other profiles etc.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -66,22 +68,22 @@ pub struct TestScript {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of it's narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies it's meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -92,27 +94,27 @@ pub struct TestScript {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: A human language.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/languages
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -120,62 +122,62 @@ pub struct TestScript {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, and nor can
     /// they have their own independent transaction scope.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
     /// dependent) to restore it again. Contained resources may have profiles and
     /// tags In their meta elements, but SHALL NOT have security labels.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and
     /// manageable, there is a strict set of governance applied to the definition and
     /// use of extensions. Though any implementer can define an extension, there is a
     /// set of requirements that SHALL be met as part of the definition of the
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -185,11 +187,11 @@ pub struct TestScript {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -197,236 +199,236 @@ pub struct TestScript {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this test script, represented as a URI (globally unique)
-    /// 
+    ///
     /// An absolute URI that is used to identify this test script when it is
     /// referenced in a specification, model, design or an instance; also called its
     /// canonical identifier. This SHOULD be globally unique and SHOULD be a literal
     /// address at which at which an authoritative instance of this test script is
     /// (or will be) published. This URL can be the target of a canonical reference.
     /// It SHALL remain the same when the test script is stored on different servers.
-    /// 
+    ///
     /// ## Requirements
     /// Allows the test script to be referenced by a single globally unique
     /// identifier.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    /// 
+    ///
     /// The determination of when to create a new version of a resource (same url,
     /// new version) vs. defining a new artifact is up to the author. Considerations
     /// for making this decision are found in [Technical and Business
     /// Versions](resource.html#versions).
-    /// 
+    ///
     /// In some cases, the resource can no longer be found at the stated url, but the
     /// url itself cannot change. Implementations can use the
     /// [meta.source](resource.html#meta) element to indicate where the current
     /// master source of the resource can be found.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// url, authoritative-url, destination, identity
     pub url: Uri,
     /// Additional identifier for the test script
-    /// 
+    ///
     /// A formal identifier that is used to identify this test script when it is
     /// represented in other formats, or referenced in a specification, model, design
     /// or an instance.
-    /// 
+    ///
     /// ## Requirements
     /// Allows externally provided and/or usable business identifiers to be easily
     /// associated with the module.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, this is used for identifiers that can go in an HL7 V3 II (instance
     /// identifier) data type, and can then identify this test script outside of
     /// FHIR, where it is not possible to use the logical URI.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Identifier>,
     /// Business version of the test script
-    /// 
+    ///
     /// The identifier that is used to identify this version of the test script when
     /// it is referenced in a specification, model, design or instance. This is an
     /// arbitrary value managed by the test script author and is not expected to be
     /// globally unique. For example, it might be a timestamp (e.g. yyyymmdd) if a
     /// managed version is not available. There is also no expectation that versions
     /// can be placed in a lexicographical sequence.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There may be different test script instances that have the same identifier
     /// but different versions. The version can be appended to the url in a reference
     /// to allow a reference to a particular business version of the test script with
     /// the format [url]|[version].
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Name for this test script (computer friendly)
-    /// 
+    ///
     /// A natural language name identifying the test script. This name should be
     /// usable as an identifier for the module by machine processing applications
     /// such as code generation.
-    /// 
+    ///
     /// ## Requirements
     /// Support human navigation and code generation.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. The name should be a simple
     /// alphanumeric type name to ensure that it is machine-processing friendly.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: inv-0
     pub name: String,
     /// Name for this test script (human friendly)
-    /// 
+    ///
     /// A short, descriptive, user-friendly title for the test script.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This name does not need to be machine-processing friendly and may contain
     /// punctuation, white-space, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// draft | active | retired | unknown
-    /// 
+    ///
     /// The status of this test script. Enables tracking the life-cycle of the
     /// content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Allows filtering of test scripts that are appropriate for use versus not.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This is labeled as "Is Modifier" because applications should not use a retired {{title}} without due consideration
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status|4.0.1
     pub status: Code,
     /// For testing purposes, not real usage
-    /// 
+    ///
     /// A Boolean value to indicate that this test script is authored for testing
     /// purposes (or education/evaluation/marketing) and is not intended to be used
     /// for genuine usage.
-    /// 
+    ///
     /// ## Requirements
     /// Enables experimental content to be developed following the same lifecycle
     /// that would be used for a production-level test script.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Allows filtering of test scripts that are appropriate for use versus not.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub experimental: Option<Boolean>,
     /// Date last changed
-    /// 
+    ///
     /// The date (and optionally time) when the test script was published. The date
     /// must change when the business version changes and it must change if the
     /// status code changes. In addition, it should change when the substantive
     /// content of the test script changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Note that this is not the same as the resource last-modified-date, since the
     /// resource may be a secondary representation of the test script. Additional
     /// specific dates may be added as extensions or be found by consulting
     /// Provenances associated with past versions of the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Revision Date
     pub date: Option<DateTime>,
     /// Name of the publisher (organization or individual)
-    /// 
+    ///
     /// The name of the organization or individual that published the test script.
-    /// 
+    ///
     /// ## Requirements
     /// Helps establish the "authority/credibility" of the test script. May also
     /// allow for contact.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Usually an organization but may be an individual. The publisher (or steward)
     /// of the test script is the organization or individual primarily responsible
@@ -435,38 +437,38 @@ pub struct TestScript {
     /// content. The publisher is the primary point of contact for questions or
     /// issues with the test script. This item SHOULD be populated unless the
     /// information is available from context.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    /// 
+    ///
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    /// 
+    ///
     /// ## Implementation Notes
     /// May be a web site, an email address, a telephone number, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub contact: Option<Vec<ContactDetail>>,
     /// Natural language description of the test script
-    /// 
+    ///
     /// A free text natural language description of the test script from a consumer's
     /// perspective.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This description can be used to capture details such as why the test script
     /// was built, comments about misuse, instructions for clinical use and
@@ -475,137 +477,137 @@ pub struct TestScript {
     /// resource itself. This item SHOULD be populated unless the information is
     /// available from context (e.g. the language of the test script is presumed to
     /// be the predominant language in the place the test script was created).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// The context that the content is intended to support
-    /// 
+    ///
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate test script
     /// instances.
-    /// 
+    ///
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// any of the contexts apply.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Intended jurisdiction for test script (if applicable)
-    /// 
+    ///
     /// A legal or geographic region in which the test script is intended to be used.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It may be possible for the test script to be used in jurisdictions other than
     /// those for which it was originally designed or intended.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Countries and regions within which this artifact is targeted for use.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// Why this test script is defined
-    /// 
+    ///
     /// Explanation of why this test script is needed and why it has been designed as
     /// it has.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element does not describe the usage of the test script. Instead, it
     /// provides traceability of ''why'' the resource is either needed or ''why'' it
     /// is defined as it is. This may be used to point to source materials or
     /// specifications that drove the structure of this test script.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub purpose: Option<Markdown>,
     /// Use and/or publishing restrictions
-    /// 
+    ///
     /// A copyright statement relating to the test script and/or its contents.
     /// Copyright statements are generally legal restrictions on the use and
     /// publishing of the test script.
-    /// 
+    ///
     /// ## Requirements
     /// Consumers must be able to determine any legal restrictions on the use of the
     /// test script and/or its content.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// License, Restrictions
     pub copyright: Option<Markdown>,
     /// An abstract server representing a client or sender in a message exchange
-    /// 
+    ///
     /// An abstract server used in operations within this test script in the origin
     /// element.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The purpose of this element is to define the profile of an origin element
     /// used elsewhere in the script. Test engines could then use the origin-profile
     /// mapping to offer a filtered list of test systems that can serve as the sender
     /// for the interaction.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub origin: Option<Vec<TestScriptOrigin>>,
     /// An abstract server representing a destination or receiver in a message exchange
-    /// 
+    ///
     /// An abstract server used in operations within this test script in the
     /// destination element.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The purpose of this element is to define the profile of a destination element
     /// used elsewhere in the script. Test engines could then use the
     /// destination-profile mapping to offer a filtered list of test systems that can
     /// serve as the receiver for the interaction.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub destination: Option<Vec<TestScriptDestination>>,
     /// Required capability that is assumed to function correctly on the FHIR server being tested
-    /// 
+    ///
     /// The required capability must exist and are assumed to function correctly on
     /// the FHIR server being tested.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -613,35 +615,35 @@ pub struct TestScript {
     ///   Expression: `capability.required.exists() or capability.validated.exists()`
     pub metadata: Option<TestScriptMetadata>,
     /// Fixture in the test script - by reference (uri)
-    /// 
+    ///
     /// Fixture in the test script - by reference (uri). All fixtures are required
     /// for the test script to execute.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub fixture: Option<Vec<TestScriptFixture>>,
     /// Reference of the validation profile
-    /// 
+    ///
     /// Reference to the profile to be used for validation.
-    /// 
+    ///
     /// ## Implementation Notes
     /// See http://build.fhir.org/resourcelist.html for complete list of resource
     /// types.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub profile: Option<Vec<Reference>>,
     /// Placeholder for evaluated elements
-    /// 
+    ///
     /// Variable is set based either on element value in response body or on header
     /// field value in the response headers.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Variables would be set based either on XPath/JSONPath expressions against
     /// fixtures (static and response), or headerField evaluations against response
@@ -656,9 +658,9 @@ pub struct TestScript {
     /// "operation.params", "operation.requestHeader.value", and "operation.url"
     /// element values during operation calls and in "assert.value" during assertion
     /// evaluations. See example testscript-search.xml.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -666,32 +668,32 @@ pub struct TestScript {
     ///   Expression: `expression.empty() or headerField.empty() or path.empty()`
     pub variable: Option<Vec<TestScriptVariable>>,
     /// A series of required setup operations before tests are executed
-    /// 
+    ///
     /// A series of required setup operations before tests are executed.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub setup: Option<TestScriptSetup>,
     /// A test in this script
-    /// 
+    ///
     /// A test in this script.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub test: Option<Vec<TestScriptTest>>,
     /// A series of required clean up steps
-    /// 
+    ///
     /// A series of operations required to clean up after all the tests are executed
     /// (successfully or otherwise).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -699,58 +701,58 @@ pub struct TestScript {
 }
 
 /// An abstract server representing a destination or receiver in a message exchange
-/// 
+///
 /// An abstract server used in operations within this test script in the
 /// destination element.
-/// 
+///
 /// ## Implementation Notes
 /// The purpose of this element is to define the profile of a destination element
 /// used elsewhere in the script. Test engines could then use the
 /// destination-profile mapping to offer a filtered list of test systems that can
 /// serve as the receiver for the interaction.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptDestination {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -760,11 +762,11 @@ pub struct TestScriptDestination {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -772,70 +774,70 @@ pub struct TestScriptDestination {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The index of the abstract destination server starting at 1
-    /// 
+    ///
     /// Abstract name given to a destination server in this test script. The name is
     /// provided as a number starting at 1.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A given destination index (e.g. 1) can appear only once in the list (e.g.
     /// Destination 1 cannot be specified twice ... once as Form-Manager and again as
     /// Form-Processor within the same script as that could get confusing during test
     /// configuration).
-    /// 
+    ///
     /// Different destination indices could play the same actor in the same test
     /// script (e.g. You could have two different test systems acting as
     /// Form-Manager).
-    /// 
+    ///
     /// The destination indices provided elsewhere in the test script must be one of
     /// these destination indices.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub index: Integer,
     /// FHIR-Server | FHIR-SDC-FormManager | FHIR-SDC-FormReceiver | FHIR-SDC-FormProcessor
-    /// 
+    ///
     /// The type of destination profile the test system supports.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Must be a "receiver"/"server" profile.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - When missing: FHIR-Server
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type of destination profile the test system supports.
@@ -844,52 +846,52 @@ pub struct TestScriptDestination {
 }
 
 /// Fixture in the test script - by reference (uri)
-/// 
+///
 /// Fixture in the test script - by reference (uri). All fixtures are required
 /// for the test script to execute.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptFixture {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -899,11 +901,11 @@ pub struct TestScriptFixture {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -911,67 +913,67 @@ pub struct TestScriptFixture {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Whether or not to implicitly create the fixture during setup
-    /// 
+    ///
     /// Whether or not to implicitly create the fixture during setup. If true, the
     /// fixture is automatically created on each server being tested during setup,
     /// therefore no create operation is required for this fixture in the
     /// TestScript.setup section.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub autocreate: Boolean,
     /// Whether or not to implicitly delete the fixture during teardown
-    /// 
+    ///
     /// Whether or not to implicitly delete the fixture during teardown. If true, the
     /// fixture is automatically deleted on each server being tested during teardown,
     /// therefore no delete operation is required for this fixture in the
     /// TestScript.teardown section.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub autodelete: Boolean,
     /// Reference of the resource
-    /// 
+    ///
     /// Reference to the resource (containing the contents of the resource needed for
     /// operations).
-    /// 
+    ///
     /// ## Implementation Notes
     /// See http://build.fhir.org/resourcelist.html for complete list of resource
     /// types.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -979,12 +981,12 @@ pub struct TestScriptFixture {
 }
 
 /// Required capability that is assumed to function correctly on the FHIR server being tested
-/// 
+///
 /// The required capability must exist and are assumed to function correctly on
 /// the FHIR server being tested.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -993,40 +995,40 @@ pub struct TestScriptFixture {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptMetadata {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1036,11 +1038,11 @@ pub struct TestScriptMetadata {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1048,45 +1050,45 @@ pub struct TestScriptMetadata {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Links to the FHIR specification
-    /// 
+    ///
     /// A link to the FHIR specification that this test is covering.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub link: Option<Vec<TestScriptMetadataLink>>,
     /// Capabilities  that are assumed to function correctly on the FHIR server being tested
-    /// 
+    ///
     /// Capabilities that must exist and are assumed to function correctly on the
     /// FHIR server being tested.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When the metadata capabilities section is defined at TestScript.metadata or
     /// at TestScript.setup.metadata, and the server's conformance statement does not
@@ -1100,9 +1102,9 @@ pub struct TestScriptMetadata {
     /// test script or not. They do not impact the skipping logic. Capabilities whose
     /// "metadata.capabilities.validated" flag is true are the primary focus of the
     /// test script.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1110,10 +1112,10 @@ pub struct TestScriptMetadata {
 }
 
 /// Capabilities  that are assumed to function correctly on the FHIR server being tested
-/// 
+///
 /// Capabilities that must exist and are assumed to function correctly on the
 /// FHIR server being tested.
-/// 
+///
 /// ## Implementation Notes
 /// When the metadata capabilities section is defined at TestScript.metadata or
 /// at TestScript.setup.metadata, and the server's conformance statement does not
@@ -1127,49 +1129,49 @@ pub struct TestScriptMetadata {
 /// test script or not. They do not impact the skipping logic. Capabilities whose
 /// "metadata.capabilities.validated" flag is true are the primary focus of the
 /// test script.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptMetadataCapability {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1179,11 +1181,11 @@ pub struct TestScriptMetadataCapability {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1191,106 +1193,106 @@ pub struct TestScriptMetadataCapability {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Are the capabilities required?
-    /// 
+    ///
     /// Whether or not the test execution will require the given capabilities of the
     /// server in order for this test script to execute.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub required: Boolean,
     /// Are the capabilities validated?
-    /// 
+    ///
     /// Whether or not the test execution will validate the given capabilities of the
     /// server in order for this test script to execute.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub validated: Boolean,
     /// The expected capabilities of the server
-    /// 
+    ///
     /// Description of the capabilities that this test script is requiring the server
     /// to support.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Which origin server these requirements apply to
-    /// 
+    ///
     /// Which origin server these requirements apply to.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub origin: Option<Vec<Integer>>,
     /// Which server these requirements apply to
-    /// 
+    ///
     /// Which server these requirements apply to.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub destination: Option<Integer>,
     /// Links to the FHIR specification
-    /// 
+    ///
     /// Links to the FHIR specification that describes this interaction and the
     /// resources involved in more detail.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub link: Option<Vec<Uri>>,
     /// Required Capability Statement
-    /// 
+    ///
     /// Minimum capabilities required of server for test script to execute
     /// successfully. If server does not meet at a minimum the referenced capability
     /// statement, then all tests in this script are skipped.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The conformance statement of the server has to contain at a minimum the
     /// contents of the reference pointed to by this element.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1298,51 +1300,51 @@ pub struct TestScriptMetadataCapability {
 }
 
 /// Links to the FHIR specification
-/// 
+///
 /// A link to the FHIR specification that this test is covering.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptMetadataLink {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1352,11 +1354,11 @@ pub struct TestScriptMetadataLink {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1364,46 +1366,46 @@ pub struct TestScriptMetadataLink {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// URL to the specification
-    /// 
+    ///
     /// URL to a particular requirement or feature within the FHIR specification.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Uri,
     /// Short description
-    /// 
+    ///
     /// Short description of the link.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1411,58 +1413,58 @@ pub struct TestScriptMetadataLink {
 }
 
 /// An abstract server representing a client or sender in a message exchange
-/// 
+///
 /// An abstract server used in operations within this test script in the origin
 /// element.
-/// 
+///
 /// ## Implementation Notes
 /// The purpose of this element is to define the profile of an origin element
 /// used elsewhere in the script. Test engines could then use the origin-profile
 /// mapping to offer a filtered list of test systems that can serve as the sender
 /// for the interaction.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptOrigin {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1472,11 +1474,11 @@ pub struct TestScriptOrigin {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1484,69 +1486,69 @@ pub struct TestScriptOrigin {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The index of the abstract origin server starting at 1
-    /// 
+    ///
     /// Abstract name given to an origin server in this test script. The name is
     /// provided as a number starting at 1.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A given origin index (e.g. 1) can appear only once in the list (e.g. Origin 1
     /// cannot be specified twice ... once as FormFiller and again as FormProcessor
     /// within the same script as that could get confusing during test
     /// configuration).
-    /// 
+    ///
     /// Different origin indices could play the same actor in the same test script
     /// (e.g. You could have two different test systems acting as Form-Filler).
-    /// 
+    ///
     /// The origin indices provided elsewhere in the test script must be one of these
     /// origin indices.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub index: Integer,
     /// FHIR-Client | FHIR-SDC-FormFiller
-    /// 
+    ///
     /// The type of origin profile the test system supports.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Must be a "sender"/"client" profile.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - When missing: FHIR-Client
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type of origin profile the test system supports.
@@ -1555,51 +1557,51 @@ pub struct TestScriptOrigin {
 }
 
 /// A series of required setup operations before tests are executed
-/// 
+///
 /// A series of required setup operations before tests are executed.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptSetup {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1609,11 +1611,11 @@ pub struct TestScriptSetup {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1621,40 +1623,40 @@ pub struct TestScriptSetup {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// A setup operation or assert to perform
-    /// 
+    ///
     /// Action would contain either an operation or an assertion.
-    /// 
+    ///
     /// ## Implementation Notes
     /// An action should contain either an operation or an assertion but not both. It
     /// can contain any number of variables.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1664,15 +1666,15 @@ pub struct TestScriptSetup {
 }
 
 /// A setup operation or assert to perform
-/// 
+///
 /// Action would contain either an operation or an assertion.
-/// 
+///
 /// ## Implementation Notes
 /// An action should contain either an operation or an assertion but not both. It
 /// can contain any number of variables.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1681,40 +1683,40 @@ pub struct TestScriptSetup {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptSetupAction {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1724,11 +1726,11 @@ pub struct TestScriptSetupAction {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1736,36 +1738,36 @@ pub struct TestScriptSetupAction {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The setup operation to perform
-    /// 
+    ///
     /// The operation to perform.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1773,17 +1775,17 @@ pub struct TestScriptSetupAction {
     ///   Expression: `sourceId.exists() or (targetId.count() + url.count() + params.count() = 1) or (type.code in ('capabilities' |'search' | 'transaction' | 'history'))`
     pub operation: Option<TestScriptSetupActionOperation>,
     /// The assertion to perform
-    /// 
+    ///
     /// Evaluates the results of previous operations to determine if the server under
     /// test behaves appropriately.
-    /// 
+    ///
     /// ## Implementation Notes
     /// In order to evaluate an assertion, the request, response, and results of the
     /// most recently executed operation must always be maintained by the test
     /// engine.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1797,17 +1799,17 @@ pub struct TestScriptSetupAction {
 }
 
 /// The assertion to perform
-/// 
+///
 /// Evaluates the results of previous operations to determine if the server under
 /// test behaves appropriately.
-/// 
+///
 /// ## Implementation Notes
 /// In order to evaluate an assertion, the request, response, and results of the
 /// most recently executed operation must always be maintained by the test
 /// engine.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1820,40 +1822,40 @@ pub struct TestScriptSetupAction {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptSetupActionAssert {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1863,11 +1865,11 @@ pub struct TestScriptSetupActionAssert {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1875,147 +1877,147 @@ pub struct TestScriptSetupActionAssert {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Tracking/logging assertion label
-    /// 
+    ///
     /// The label would be used for tracking/logging purposes by test engines.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This has no impact on the verification itself.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub label: Option<String>,
     /// Tracking/reporting assertion description
-    /// 
+    ///
     /// The description would be used by test engines for tracking and reporting
     /// purposes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This has no impact on the verification itself.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// response | request
-    /// 
+    ///
     /// The direction to use for the assertion.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If the direction is specified as "response" (the default), then the
     /// processing of this assert is against the received response message. If the
     /// direction is specified as "request", then the processing of this assert is
     /// against the sent request message.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of direction to use for assertion.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/assert-direction-codes|4.0.1
     pub direction: Option<Code>,
     /// Id of the source fixture to be evaluated
-    /// 
+    ///
     /// Id of the source fixture used as the contents to be evaluated by either the
     /// "source/expression" or "sourceId/path" definition.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "compareToSourceId")]
     pub compare_to_source_id: Option<String>,
     /// The FHIRPath expression to evaluate against the source fixture
-    /// 
+    ///
     /// The FHIRPath expression to evaluate against the source fixture. When
     /// compareToSourceId is defined, either compareToSourceExpression or
     /// compareToSourcePath must be defined, but not both.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Thefhirpath expression to be evaluated against the expected fixture to
     /// compare to. Ignored if "assert.value" is used. The evaluation will be done
     /// before the assertion is evaluated.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "compareToSourceExpression")]
     pub compare_to_source_expression: Option<String>,
     /// XPath or JSONPath expression to evaluate against the source fixture
-    /// 
+    ///
     /// XPath or JSONPath expression to evaluate against the source fixture. When
     /// compareToSourceId is defined, either compareToSourceExpression or
     /// compareToSourcePath must be defined, but not both.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The XPath or JSONPath expression to be evaluated against the expected fixture
     /// to compare to. Ignored if "assert.value" is used. The evaluation will be done
     /// before the assertion is evaluated.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "compareToSourcePath")]
     pub compare_to_source_path: Option<String>,
     /// Mime type to compare against the 'Content-Type' header
-    /// 
+    ///
     /// The mime-type contents to compare against the request or response message
     /// 'Content-Type' header.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If this is specified, then test engine shall confirm that the content-type of
     /// the last operation's headers is set to this value. If "assert.sourceId"
     /// element is specified, then the evaluation will be done against the headers
     /// mapped to that sourceId (and not the last operation's headers). If you'd like
     /// to have more control over the string, then use 'assert.headerField' instead.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Examples
     /// - General: None
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The mime type of an attachment. Any valid mime type is allowed.
@@ -2023,10 +2025,10 @@ pub struct TestScriptSetupActionAssert {
     #[fhir_serde(rename = "contentType")]
     pub content_type: Option<Code>,
     /// The FHIRPath expression to be evaluated
-    /// 
+    ///
     /// The FHIRPath expression to be evaluated against the request or response
     /// message contents - HTTP headers and payload.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If both "expression" and a "fixtureId" are specified, then the expression
     /// will be evaluated against the request or response body mapped to the
@@ -2034,67 +2036,67 @@ pub struct TestScriptSetupActionAssert {
     /// expression will be evaluated against the response body of the last operation.
     /// Test engines are to store the request and response body and headers of the
     /// last operation at all times for subsequent assertions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub expression: Option<String>,
     /// HTTP header field name
-    /// 
+    ///
     /// The HTTP header field name e.g. 'Location'.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "headerField" is specified then "value" must be specified. If "sourceId"
     /// is not specified, then "headerField" will be evaluated against the last
     /// operation's response headers. Test engines are to keep track of the last
     /// operation's response body and response headers.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "headerField")]
     pub header_field: Option<String>,
     /// Fixture Id of minimum content resource
-    /// 
+    ///
     /// The ID of a fixture. Asserts that the response contains at a minimum the
     /// fixture specified by minimumId.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserts that the response contains all the element/content in another fixture
     /// pointed to by minimumId. This can be a statically defined fixture or one that
     /// is dynamically set via responseId.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "minimumId")]
     pub minimum_id: Option<String>,
     /// Perform validation on navigation links?
-    /// 
+    ///
     /// Whether or not the test execution performs validation on the bundle
     /// navigation links.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserts that the Bundle contains first, last, and next links.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "navigationLinks")]
     pub navigation_links: Option<Boolean>,
     /// equals | notEquals | in | notIn | greaterThan | lessThan | empty | notEmpty | contains | notContains | eval
-    /// 
+    ///
     /// The operator type defines the conditional behavior of the assert. If not
     /// defined, the default is equals.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Operators are useful especially for negative testing. If operator is not
     /// specified, then the "equals" operator is assumed; e.g. ```<code> <assert>
@@ -2103,23 +2105,23 @@ pub struct TestScriptSetupActionAssert {
     /// <assert> <operator value="greaterThan" /> <responseHeader> <field
     /// value="Content-Length" /> <value value="0" /> </responseHeader/> </assert>
     /// </code> ```.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of operator to use for assertion.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/assert-operator-codes|4.0.1
     pub operator: Option<Code>,
     /// XPath or JSONPath expression
-    /// 
+    ///
     /// The XPath or JSONPath expression to be evaluated against the fixture
     /// representing the response received from server.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If both "path" and a "fixtureId" are specified, then the path will be
     /// evaluated against the request or response body mapped to the fixtureId. If
@@ -2127,29 +2129,29 @@ pub struct TestScriptSetupActionAssert {
     /// against the response body of the last operation. Test engines are to store
     /// the request and response body and headers of the last operation at all times
     /// for subsequent assertions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub path: Option<String>,
     /// delete | get | options | patch | post | put | head
-    /// 
+    ///
     /// The request method or HTTP operation code to compare against that used by the
     /// client system under test.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "requestMethod" is specified then it will be used in place of "value". The
     /// "requestMethod" will evaluate against the last operation's request HTTP
     /// operation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The allowable request method or HTTP operation codes.
@@ -2157,67 +2159,67 @@ pub struct TestScriptSetupActionAssert {
     #[fhir_serde(rename = "requestMethod")]
     pub request_method: Option<Code>,
     /// Request URL comparison value
-    /// 
+    ///
     /// The value to use in a comparison against the request URL path string.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "requestURL" is specified then it will be used in place of "value". The
     /// "requestURL" will evaluate against the last operation's full request URL path
     /// string.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "requestURL")]
     pub request_u_r_l: Option<String>,
     /// Resource type
-    /// 
+    ///
     /// The type of the resource.  See http://build.fhir.org/resourcelist.html.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This will be expected resource type in response body e.g. in read, vread,
     /// search, etc. See http://build.fhir.org/resourcelist.html for complete list of
     /// resource types; e.g. <assert > <resourceType value="Patient" </assert>.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A list of all the concrete types defined in this version of the FHIR specification - Data Types and Resource Types.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/defined-types|4.0.1
     pub resource: Option<Code>,
     /// okay | created | noContent | notModified | bad | forbidden | notFound | methodNotAllowed | conflict | gone | preconditionFailed | unprocessable
-    /// 
+    ///
     /// okay | created | noContent | notModified | bad | forbidden | notFound |
     /// methodNotAllowed | conflict | gone | preconditionFailed | unprocessable.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is a shorter way of achieving similar verifications via
     /// "assert.responseCode". If you need more control, then use
     /// "assert.responseCode" e.g. <assert> <contentType value="json" /> <response
     /// value="okay"/> </assert>.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of response code to use for assertion.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/assert-response-code-types|4.0.1
     pub response: Option<Code>,
     /// HTTP response code to test
-    /// 
+    ///
     /// The value of the HTTP response code to be tested.
-    /// 
+    ///
     /// ## Implementation Notes
     /// To be used with "operator" attribute value. Asserts that the response code
     /// equals this value if "operator" is not specified. If the operator is "in" or
@@ -2225,75 +2227,75 @@ pub struct TestScriptSetupActionAssert {
     /// "200,201". Otherwise, it's expected to be a numeric value. If "fixture" is
     /// not specified, then the "responseBodyId" value of the last operation is
     /// assumed.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "responseCode")]
     pub response_code: Option<String>,
     /// Fixture Id of source expression or headerField
-    /// 
+    ///
     /// Fixture to evaluate the XPath/JSONPath expression or the headerField against.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This can be a statically defined fixture (at the top of the testscript) or a
     /// dynamically set fixture created by responseId of the action.operation
     /// element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "sourceId")]
     pub source_id: Option<Id>,
     /// Profile Id of validation profile reference
-    /// 
+    ///
     /// The ID of the Profile to validate against.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The ID of a Profile fixture. Asserts that the response is valid according to
     /// the Profile specified by validateProfileId.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "validateProfileId")]
     pub validate_profile_id: Option<Id>,
     /// The value to compare to
-    /// 
+    ///
     /// The value to compare to.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The string-representation of a number, string, or boolean that is expected.
     /// Test engines do have to look for placeholders (${}) and replace the variable
     /// placeholders with the variable values at runtime before comparing this value
     /// to the actual value.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub value: Option<String>,
     /// Will this assert produce a warning only on error?
-    /// 
+    ///
     /// Whether or not the test execution will produce a warning only on error for
     /// this assert.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If this element is specified and it is true, then assertion failures can be
     /// logged by test engine but should not stop the test script execution from
     /// proceeding. There are likely cases where the spec is not clear on what should
     /// happen. If the spec says something is optional (maybe a response header for
     /// example), but a server doesn’t do it, we could choose to issue a warning.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2302,11 +2304,11 @@ pub struct TestScriptSetupActionAssert {
 }
 
 /// The setup operation to perform
-/// 
+///
 /// The operation to perform.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2315,40 +2317,40 @@ pub struct TestScriptSetupActionAssert {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptSetupActionOperation {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2358,11 +2360,11 @@ pub struct TestScriptSetupActionOperation {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2370,43 +2372,43 @@ pub struct TestScriptSetupActionOperation {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The operation code type that will be executed
-    /// 
+    ///
     /// Server interaction or operation type.
-    /// 
+    ///
     /// ## Implementation Notes
     /// See http://build.fhir.org/http.html for list of server interactions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The allowable operation code types.
@@ -2414,9 +2416,9 @@ pub struct TestScriptSetupActionOperation {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<Coding>,
     /// Resource type
-    /// 
+    ///
     /// The type of the resource.  See http://build.fhir.org/resourcelist.html.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "url" element is specified, then "targetId", "params", and "resource"
     /// elements will be ignored as "url" element will have everything needed for
@@ -2428,86 +2430,86 @@ pub struct TestScriptSetupActionOperation {
     /// if present. For "read" operation, the resource and id values will be
     /// extracted from "targetId" fixture and used to construct the url. For "vread"
     /// and "history" operations, the versionId value will also be used.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: A list of all the concrete types defined in this version of the FHIR specification - Data Types and Resource Types.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/defined-types|4.0.1
     pub resource: Option<Code>,
     /// Tracking/logging operation label
-    /// 
+    ///
     /// The label would be used for tracking/logging purposes by test engines.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This has no impact on the verification itself.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub label: Option<String>,
     /// Tracking/reporting operation description
-    /// 
+    ///
     /// The description would be used by test engines for tracking and reporting
     /// purposes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This has no impact on the verification itself.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Mime type to accept in the payload of the response, with charset etc.
-    /// 
+    ///
     /// The mime-type to use for RESTful operation in the 'Accept' header.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If this is specified, then test engine shall set the 'Accept' header to the
     /// corresponding value. If you'd like to explicitly set the 'Accept' to some
     /// other value then use the 'requestHeader' element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Examples
     /// - General: None
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The mime type of an attachment. Any valid mime type is allowed.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/mimetypes|4.0.1
     pub accept: Option<Code>,
     /// Mime type of the request payload contents, with charset etc.
-    /// 
+    ///
     /// The mime-type to use for RESTful operation in the 'Content-Type' header.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If this is specified, then test engine shall set the 'Content-Type' header to
     /// the corresponding value. If you'd like to explicitly set the 'Content-Type'
     /// to some other value then use the 'requestHeader' element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Examples
     /// - General: None
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The mime type of an attachment. Any valid mime type is allowed.
@@ -2515,76 +2517,76 @@ pub struct TestScriptSetupActionOperation {
     #[fhir_serde(rename = "contentType")]
     pub content_type: Option<Code>,
     /// Server responding to the request
-    /// 
+    ///
     /// The server where the request message is destined for. Must be one of the
     /// server numbers listed in TestScript.destination section.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If multiple TestScript.destination elements are defined and
     /// operation.destination is undefined, test engine will report an error as it
     /// cannot determine what destination to use for the exchange.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub destination: Option<Integer>,
     /// Whether or not to send the request url in encoded format
-    /// 
+    ///
     /// Whether or not to implicitly send the request url in encoded format. The
     /// default is true to match the standard RESTful client behavior. Set to false
     /// when communicating with a server that does not support encoded url paths.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "encodeRequestUrl")]
     pub encode_request_url: Boolean,
     /// delete | get | options | patch | post | put | head
-    /// 
+    ///
     /// The HTTP method the test engine MUST use for this operation regardless of any
     /// other operation details.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The primary purpose of the explicit HTTP method is support of HTTP POST
     /// method invocation of the FHIR search. Other uses will include support of
     /// negative testing.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The allowable request method or HTTP operation codes.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/http-operations|4.0.1
     pub method: Option<Code>,
     /// Server initiating the request
-    /// 
+    ///
     /// The server where the request message originates from. Must be one of the
     /// server numbers listed in TestScript.origin section.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If absent, test engine will send the message. When present, test engine will
     /// not send the request message but will wait for the request message to be sent
     /// from this origin server.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub origin: Option<Integer>,
     /// Explicitly defined path parameters
-    /// 
+    ///
     /// Path plus parameters after [type]. Used to set parts of the request URL
     /// explicitly.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "url" element is specified, then "targetId", "params", and "resource"
     /// elements will be ignored as "url" element will have everything needed for
@@ -2605,17 +2607,17 @@ pub struct TestScriptSetupActionOperation {
     /// [base]/[type]/[id]/_history/[vid] {?_format=[mime-type]} Test engines do have
     /// to look for placeholders (${}) and replace the variable placeholders with the
     /// variable values at runtime before sending the request.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub params: Option<String>,
     /// Each operation can have one or more header elements
-    /// 
+    ///
     /// Header elements would be used to set HTTP headers.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This gives control to test-script writers to set headers explicitly based on
     /// test requirements. It will allow for testing using: - "If-Modified-Since" and
@@ -2623,18 +2625,18 @@ pub struct TestScriptSetupActionOperation {
     /// "If-Match" header. See http://build.fhir.org/http.html#2.1.0.11 - Conditional
     /// Create using "If-None-Exist". See http://build.fhir.org/http.html#2.1.0.13.1
     /// - Invalid "Content-Type" header for negative testing. - etc.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "requestHeader")]
     pub request_header: Option<Vec<TestScriptSetupActionOperationRequestHeader>>,
     /// Fixture Id of mapped request
-    /// 
+    ///
     /// The fixture id (maybe new) to map to the request.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If a requestId is supplied, then the resulting request (both headers and
     /// body) is mapped to the fixture ID (which may be entirely new and previously
@@ -2642,18 +2644,18 @@ pub struct TestScriptSetupActionOperation {
     /// the test engine's responsibility to store the request and use it as the
     /// requestId in subsequent assertions when assertion path and/or headerField is
     /// specified, direction is equal to request, and the requestId in not specified.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "requestId")]
     pub request_id: Option<Id>,
     /// Fixture Id of mapped response
-    /// 
+    ///
     /// The fixture id (maybe new) to map to the response.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If a responseId is supplied, and the server responds, then the resulting
     /// response (both headers and body) is mapped to the fixture ID (which may be
@@ -2662,30 +2664,30 @@ pub struct TestScriptSetupActionOperation {
     /// the response and use it as the responseId in subsequent assertions when
     /// assertion path and/or headerField is specified and the responseId is not
     /// specified.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "responseId")]
     pub response_id: Option<Id>,
     /// Fixture Id of body for PUT and POST requests
-    /// 
+    ///
     /// The id of the fixture used as the body of a PUT or POST request.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "sourceId")]
     pub source_id: Option<Id>,
     /// Id of fixture used for extracting the [id],  [type], and [vid] for GET requests
-    /// 
+    ///
     /// Id of fixture used for extracting the [id], [type], and [vid] for GET
     /// requests.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If "url" element is specified, then "targetId", "params", and "resource"
     /// elements will be ignored as "url" element will have everything needed for
@@ -2697,18 +2699,18 @@ pub struct TestScriptSetupActionOperation {
     /// if present. For "read" operation, the resource and id values will be
     /// extracted from "targetId" fixture and used to construct the url. For "vread"
     /// and "history" operations, the versionId value will also be used.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "targetId")]
     pub target_id: Option<Id>,
     /// Request URL
-    /// 
+    ///
     /// Complete request URL.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Used to set the request URL explicitly. If "url" element is defined, then
     /// "targetId", "resource", and "params" elements will be ignored. Test engines
@@ -2716,9 +2718,9 @@ pub struct TestScriptSetupActionOperation {
     /// (beyond encoding the URL for HTTP). Test engines do have to look for
     /// placeholders (${}) and replace the variable placeholders with the variable
     /// values at runtime before sending the request.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2726,9 +2728,9 @@ pub struct TestScriptSetupActionOperation {
 }
 
 /// Each operation can have one or more header elements
-/// 
+///
 /// Header elements would be used to set HTTP headers.
-/// 
+///
 /// ## Implementation Notes
 /// This gives control to test-script writers to set headers explicitly based on
 /// test requirements. It will allow for testing using: - "If-Modified-Since" and
@@ -2736,49 +2738,49 @@ pub struct TestScriptSetupActionOperation {
 /// "If-Match" header. See http://build.fhir.org/http.html#2.1.0.11 - Conditional
 /// Create using "If-None-Exist". See http://build.fhir.org/http.html#2.1.0.13.1
 /// - Invalid "Content-Type" header for negative testing. - etc.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptSetupActionOperationRequestHeader {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2788,11 +2790,11 @@ pub struct TestScriptSetupActionOperationRequestHeader {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2800,56 +2802,56 @@ pub struct TestScriptSetupActionOperationRequestHeader {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// HTTP header field name
-    /// 
+    ///
     /// The HTTP header field e.g. "Accept".
-    /// 
+    ///
     /// ## Implementation Notes
     /// If header element is specified, then field is required.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub field: String,
     /// HTTP headerfield value
-    /// 
+    ///
     /// The value of the header e.g. "application/fhir+xml".
-    /// 
+    ///
     /// ## Implementation Notes
     /// If header element is specified, then value is required. No conversions will
     /// be done by the test engine e.g. "xml" to "application/fhir+xml". The values
     /// will be set in HTTP headers "as-is". Test engines do have to look for
     /// placeholders (${}) and replace the variable placeholders with the variable
     /// values at runtime before sending the request.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2857,52 +2859,52 @@ pub struct TestScriptSetupActionOperationRequestHeader {
 }
 
 /// A series of required clean up steps
-/// 
+///
 /// A series of operations required to clean up after all the tests are executed
 /// (successfully or otherwise).
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptTeardown {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -2912,11 +2914,11 @@ pub struct TestScriptTeardown {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -2924,40 +2926,40 @@ pub struct TestScriptTeardown {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// One or more teardown operations to perform
-    /// 
+    ///
     /// The teardown action will only contain an operation.
-    /// 
+    ///
     /// ## Implementation Notes
     /// An action should contain either an operation or an assertion but not both. It
     /// can contain any number of variables.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -2965,55 +2967,55 @@ pub struct TestScriptTeardown {
 }
 
 /// One or more teardown operations to perform
-/// 
+///
 /// The teardown action will only contain an operation.
-/// 
+///
 /// ## Implementation Notes
 /// An action should contain either an operation or an assertion but not both. It
 /// can contain any number of variables.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptTeardownAction {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3023,11 +3025,11 @@ pub struct TestScriptTeardownAction {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3035,36 +3037,36 @@ pub struct TestScriptTeardownAction {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The teardown operation to perform
-    /// 
+    ///
     /// An operation would involve a REST request to a server.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3074,51 +3076,51 @@ pub struct TestScriptTeardownAction {
 }
 
 /// A test in this script
-/// 
+///
 /// A test in this script.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptTest {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3128,11 +3130,11 @@ pub struct TestScriptTest {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3140,61 +3142,61 @@ pub struct TestScriptTest {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Tracking/logging name of this test
-    /// 
+    ///
     /// The name of this test used for tracking/logging purposes by test engines.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Tracking/reporting short description of the test
-    /// 
+    ///
     /// A short description of the test used by test engines for tracking and
     /// reporting purposes.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// A test operation or assert to perform
-    /// 
+    ///
     /// Action would contain either an operation or an assertion.
-    /// 
+    ///
     /// ## Implementation Notes
     /// An action should contain either an operation or an assertion but not both. It
     /// can contain any number of variables.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3204,15 +3206,15 @@ pub struct TestScriptTest {
 }
 
 /// A test operation or assert to perform
-/// 
+///
 /// Action would contain either an operation or an assertion.
-/// 
+///
 /// ## Implementation Notes
 /// An action should contain either an operation or an assertion but not both. It
 /// can contain any number of variables.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3221,40 +3223,40 @@ pub struct TestScriptTest {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptTestAction {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3264,11 +3266,11 @@ pub struct TestScriptTestAction {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3276,36 +3278,36 @@ pub struct TestScriptTestAction {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The setup operation to perform
-    /// 
+    ///
     /// An operation would involve a REST request to a server.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3313,17 +3315,17 @@ pub struct TestScriptTestAction {
     ///   Expression: `sourceId.exists() or (targetId.count() + url.count() + params.count() = 1) or (type.code in ('capabilities' | 'search' | 'transaction' | 'history'))`
     pub operation: Option<TestScriptSetupActionOperation>,
     /// The setup assertion to perform
-    /// 
+    ///
     /// Evaluates the results of previous operations to determine if the server under
     /// test behaves appropriately.
-    /// 
+    ///
     /// ## Implementation Notes
     /// In order to evaluate an assertion, the request, response, and results of the
     /// most recently executed operation must always be maintained by the test
     /// engine.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3337,10 +3339,10 @@ pub struct TestScriptTestAction {
 }
 
 /// Placeholder for evaluated elements
-/// 
+///
 /// Variable is set based either on element value in response body or on header
 /// field value in the response headers.
-/// 
+///
 /// ## Implementation Notes
 /// Variables would be set based either on XPath/JSONPath expressions against
 /// fixtures (static and response), or headerField evaluations against response
@@ -3355,9 +3357,9 @@ pub struct TestScriptTestAction {
 /// "operation.params", "operation.requestHeader.value", and "operation.url"
 /// element values during operation calls and in "assert.value" during assertion
 /// evaluations. See example testscript-search.xml.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -3366,40 +3368,40 @@ pub struct TestScriptTestAction {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TestScriptVariable {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -3409,11 +3411,11 @@ pub struct TestScriptVariable {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -3421,155 +3423,154 @@ pub struct TestScriptVariable {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Descriptive name for this variable
-    /// 
+    ///
     /// Descriptive name for this variable.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Placeholders would contain the variable name wrapped in ${} in
     /// "operation.params", "operation.requestHeader.value", and "operation.url"
     /// elements. These placeholders would need to be replaced by the variable value
     /// before the operation is executed.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: String,
     /// Default, hard-coded, or user-defined value for this variable
-    /// 
+    ///
     /// A default, hard-coded, or user-defined value for this variable.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The purpose of this element is to allow for a pre-defined value that can be
     /// used as a default or as an override value. Test engines can optionally use
     /// this as a placeholder for user-defined execution time values.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "defaultValue")]
     pub default_value: Option<String>,
     /// Natural language description of the variable
-    /// 
+    ///
     /// A free text natural language description of the variable and its purpose.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// The FHIRPath expression against the fixture body
-    /// 
+    ///
     /// The FHIRPath expression to evaluate against the fixture body. When variables
     /// are defined, only one of either expression, headerField or path must be
     /// specified.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If headerField is defined, then the variable will be evaluated against the
     /// headers that sourceId is pointing to. If expression or path is defined, then
     /// the variable will be evaluated against the fixture body that sourceId is
     /// pointing to. It is an error to define any combination of expression,
     /// headerField and path.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub expression: Option<String>,
     /// HTTP header field name for source
-    /// 
+    ///
     /// Will be used to grab the HTTP header field value from the headers that
     /// sourceId is pointing to.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If headerField is defined, then the variable will be evaluated against the
     /// headers that sourceId is pointing to. If path is defined, then the variable
     /// will be evaluated against the fixture body that sourceId is pointing to. It
     /// is an error to define both headerField and path.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "headerField")]
     pub header_field: Option<String>,
     /// Hint help text for default value to enter
-    /// 
+    ///
     /// Displayable text string with hint help information to the user when entering
     /// a default value.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub hint: Option<String>,
     /// XPath or JSONPath against the fixture body
-    /// 
+    ///
     /// XPath or JSONPath to evaluate against the fixture body. When variables are
     /// defined, only one of either expression, headerField or path must be
     /// specified.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If headerField is defined, then the variable will be evaluated against the
     /// headers that sourceId is pointing to. If expression or path is defined, then
     /// the variable will be evaluated against the fixture body that sourceId is
     /// pointing to. It is an error to define any combination of expression,
     /// headerField and path.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub path: Option<String>,
     /// Fixture Id of source expression or headerField within this variable
-    /// 
+    ///
     /// Fixture to evaluate the XPath/JSONPath expression or the headerField against
     /// within this variable.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This can be a statically defined fixture (at the top of the TestScript) or a
     /// dynamically set fixture created by responseId of the `action.operation`
     /// element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "sourceId")]
     pub source_id: Option<Id>,
 }
-

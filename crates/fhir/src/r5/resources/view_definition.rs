@@ -19,58 +19,61 @@ pub enum ViewDefinitionVersionAlgorithm {
 }
 
 /// FHIR ViewDefinition type
-/// 
+///
 /// A ViewDefinition represents a tabular projection of a FHIR resource, where
 /// the columns and inclusion
 /// criteria are defined by FHIRPath expressions.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: draft
 /// FHIR Version: 5.0.0
-/// 
+///
 /// See: [ViewDefinition](http://hl7.org/fhir/StructureDefinition/ViewDefinition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "versionAlgorithm", summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction,effective_period")]
+#[fhir_resource(
+    choice_elements = "versionAlgorithm",
+    summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction,effective_period"
+)]
 pub struct ViewDefinition {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resouce id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
     /// along with other profiles etc.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -80,22 +83,22 @@ pub struct ViewDefinition {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -106,27 +109,27 @@ pub struct ViewDefinition {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|5.0.0
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -134,69 +137,69 @@ pub struct ViewDefinition {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
     /// dependent) to restore it again. Contained resources may have profiles and
     /// tags in their meta elements, but SHALL NOT have security labels.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -206,11 +209,11 @@ pub struct ViewDefinition {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -218,32 +221,32 @@ pub struct ViewDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](http://hl7.org/fhir/R5/extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this view definition, represented as an absolute URI (globally unique)
-    /// 
+    ///
     /// An absolute URI that is used to identify this view definition when it is
     /// referenced in a specification, model, design or an instance; also called its
     /// canonical identifier. This SHOULD be globally unique and SHOULD be a literal
@@ -251,56 +254,56 @@ pub struct ViewDefinition {
     /// will be) published. This URL can be the target of a canonical reference. It
     /// SHALL remain the same when the view definition is stored on different
     /// servers.
-    /// 
+    ///
     /// ## Requirements
     /// Allows the view definition to be referenced by a single globally unique
     /// identifier.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    /// 
+    ///
     /// The determination of when to create a new version of a resource (same url,
     /// new version) vs. defining a new artifact is up to the author. Considerations
     /// for making this decision are found in [Technical and Business
     /// Versions](resource.html#versions).
-    /// 
+    ///
     /// In some cases, the resource can no longer be found at the stated url, but the
     /// url itself cannot change. Implementations can use the
     /// [meta.source](resource.html#meta) element to indicate where the current
     /// master source of the resource can be found.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **cnl-1**: URL should not contain | or # - these characters make processing canonical references problematic (warning)
     ///   Expression: `exists() implies matches('^[^|# ]+$')`
     pub url: Option<Uri>,
     /// Additional identifier for the view definition
-    /// 
+    ///
     /// A formal identifier that is used to identify this view definition when it is
     /// represented in other formats, or referenced in a specification, model, design
     /// or an instance.
-    /// 
+    ///
     /// ## Requirements
     /// Allows externally provided and/or usable business identifiers to be easily
     /// associated with the view definition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, this is used for identifiers that can go in an HL7 V3 II (instance
     /// identifier) data type, and can then identify this view definition outside of
     /// FHIR, where it is not possible to use the logical URI.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub identifier: Option<Vec<Identifier>>,
     /// Business version of the view definition
-    /// 
+    ///
     /// The identifier that is used to identify this version of the view definition
     /// when it is referenced in a specification, model, design or instance. This is
     /// an arbitrary value managed by the view definition author and is not expected
@@ -308,59 +311,59 @@ pub struct ViewDefinition {
     /// if a managed version is not available. There is also no expectation that
     /// versions can be placed in a lexicographical sequence without additional
     /// knowledge. (See the versionAlgorithm element.)
-    /// 
+    ///
     /// ## Implementation Notes
     /// There may be different view definitions that have the same url but different
     /// versions. The version can be appended to the url in a reference to allow a
     /// reference to a particular business version of the view definition with the
     /// format [url]|[version]. The version SHOULD NOT contain a '#' - see [Business
     /// Version](resource.html#bv-format).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub version: Option<String>,
     /// How to compare versions
-    /// 
+    ///
     /// Indicates the mechanism used to compare versions to determine which is more
     /// current.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If set as a string, this is a FHIRPath expression that has two additional
     /// context variables passed in - %version1 and %version2 and will return a
     /// negative number if version1 is newer, a positive number if version2 and a 0
     /// if the version ordering can't be successfully be determined.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/version-algorithm
     #[fhir_serde(flatten)]
     pub version_algorithm: Option<ViewDefinitionVersionAlgorithm>,
     /// Name for this view definition (computer friendly)
-    /// 
+    ///
     /// A natural language name identifying the view definition. This name should be
     /// usable as an identifier for the resource by machine processing applications
     /// such as code generation.
-    /// 
+    ///
     /// ## Requirements
     /// Supports code generation.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. The name should be a simple
     /// alphanumeric type no-whitespace name to ensure that it is machine-processing
     /// friendly.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **sql-name**: Name is limited to letters, numbers, or underscores and cannot start with an (error)
     ///   underscore -- i.e. with a regular expression of: ^[A-Za-z][A-Za-z0-9_]*$
@@ -368,74 +371,74 @@ pub struct ViewDefinition {
     ///   Expression: `empty() or matches('^[A-Za-z][A-Za-z0-9_]*$')`
     pub name: Option<String>,
     /// Name for this view definition (human friendly)
-    /// 
+    ///
     /// A short, descriptive, user-friendly title for the view definition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This name does not need to be machine-processing friendly and may contain
     /// punctuation, white-space, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub title: Option<String>,
     /// draft | active | retired | unknown
-    /// 
+    ///
     /// The current state of this view definition.
-    /// 
+    ///
     /// ## Requirements
     /// Enables tracking the life-cycle of the content and filtering of view
     /// definitions that are appropriate for use versus not.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A nominal state-transition diagram can be found in the [Definition
     /// pattern](definition.html#statemachine) documentation.
-    /// 
+    ///
     /// Unknown does not represent 'other' - one of the defined statuses must apply.
     /// Unknown is used when the authoring system is not sure what the current status
     /// is.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This is labeled as "Is Modifier" because applications should not use a retired view definition without due consideration
     /// - Included in summary
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status
     pub status: Code,
     /// For testing purposes, not real usage
-    /// 
+    ///
     /// A Boolean value to indicate that this view definition is authored for testing
     /// purposes (or education/evaluation/marketing) and is not intended for genuine
     /// usage.
-    /// 
+    ///
     /// ## Requirements
     /// Enables experimental content to be developed following the same lifecycle
     /// that would be used for a production-level view definition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Allows filtering of view definitions that are appropriate for use versus not.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     /// - When missing: If absent, this resource is treated as though it is not experimental.
     pub experimental: Option<Boolean>,
     /// Date last changed
-    /// 
+    ///
     /// The date (and optionally time) when the view definition was last
     /// significantly changed. The date must change when the business version changes
     /// and it must change if the status code changes. In addition, it should change
     /// when the substantive content of the view definition changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The date is often not tracked until the resource is published, but may be
     /// present on draft content. Note that this is not the same as the resource
@@ -443,27 +446,27 @@ pub struct ViewDefinition {
     /// the view definition. Additional specific dates may be added as extensions or
     /// be found by consulting Provenances associated with past versions of the
     /// resource.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Aliases
     /// Revision Date
     pub date: Option<DateTime>,
     /// Name of the publisher/steward (organization or individual)
-    /// 
+    ///
     /// The name of the organization or individual responsible for the release and
     /// ongoing maintenance of the view definition.
-    /// 
+    ///
     /// ## Requirements
     /// Helps establish the "authority/credibility" of the view definition. May also
     /// allow for contact.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Usually an organization but may be an individual. The publisher (or steward)
     /// of the view definition is the organization or individual primarily
@@ -472,336 +475,336 @@ pub struct ViewDefinition {
     /// initially authored the content. The publisher is the primary point of contact
     /// for questions or issues with the view definition. This item SHOULD be
     /// populated unless the information is available from context.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    /// 
+    ///
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    /// 
+    ///
     /// ## Implementation Notes
     /// May be a web site, an email address, a telephone number, etc.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub contact: Option<Vec<ContactDetail>>,
     /// Natural language description of the view definition
-    /// 
+    ///
     /// A free text natural language description of the view definition from a
     /// consumer's perspective.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This description can be used to capture details such as comments about
     /// misuse, instructions for clinical use and interpretation, literature
     /// references, examples from the paper world, etc. It is not a rendering of the
     /// view definition as conveyed in the 'text' field of the resource itself. This
     /// item SHOULD be populated unless the information is available from context.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub description: Option<Markdown>,
     /// The context that the content is intended to support
-    /// 
+    ///
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate view
     /// definitions.
-    /// 
+    ///
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// even any of the contexts apply.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Intended jurisdiction for view definition (if applicable)
-    /// 
+    ///
     /// A legal or geographic region in which the view definition is intended to be
     /// used.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It may be possible for the view definition to be used in jurisdictions other
     /// than those for which it was originally designed or intended.
-    /// 
+    ///
     /// DEPRECATION NOTE: For consistency, implementations are encouraged to migrate
     /// to using the new 'jurisdiction' code in the useContext element. (I.e.
     /// useContext.code indicating
     /// http://terminology.hl7.org/CodeSystem/usage-context-type#jurisdiction and
     /// useContext.valueCodeableConcept indicating the jurisdiction.)
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Countries and regions within which this artifact is targeted for use.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/jurisdiction
     pub jurisdiction: Option<Vec<CodeableConcept>>,
     /// Why this view definition is defined
-    /// 
+    ///
     /// Explanation of why this view definition is needed and why it has been
     /// designed as it has.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element does not describe the usage of the view definition. Instead, it
     /// provides traceability of "why" the resource is either needed or "why" it is
     /// defined as it is. This may be used to point to source materials or
     /// specifications that drove the structure of this view definition.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub purpose: Option<Markdown>,
     /// Use and/or publishing restrictions
-    /// 
+    ///
     /// A copyright statement relating to the view definition and/or its contents.
     /// Copyright statements are generally legal restrictions on the use and
     /// publishing of the view definition.
-    /// 
+    ///
     /// ## Requirements
     /// Consumers must be able to determine any legal restrictions on the use of the
     /// view definition and/or its content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The short copyright declaration (e.g. (c) '2015+ xyz organization' should be
     /// sent in the copyrightLabel element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Aliases
     /// License, Restrictions
     pub copyright: Option<Markdown>,
     /// Copyright holder and year(s)
-    /// 
+    ///
     /// A short string (<50 characters), suitable for inclusion in a page footer that
     /// identifies the copyright holder, effective period, and optionally whether
     /// rights are restricted. (e.g. 'All rights reserved', 'Some rights reserved').
-    /// 
+    ///
     /// ## Requirements
     /// Defines the content expected to be rendered in all representations of the
     /// artifact.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The (c) symbol should NOT be included in this string. It will be added by
     /// software when rendering the notation. Full details about licensing,
     /// restrictions, warrantees, etc. goes in the more general 'copyright' element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "copyrightLabel")]
     pub copyright_label: Option<String>,
     /// When the view definition was approved by publisher
-    /// 
+    ///
     /// The date on which the resource content was approved by the publisher.
     /// Approval happens once when the content is officially approved for usage.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The 'date' element may be more recent than the approval date because of minor
     /// changes or editorial corrections.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "approvalDate")]
     pub approval_date: Option<Date>,
     /// When the view definition was last reviewed by the publisher
-    /// 
+    ///
     /// The date on which the resource content was last reviewed. Review happens
     /// periodically after approval but does not change the original approval date.
-    /// 
+    ///
     /// ## Requirements
     /// Gives a sense of how "current" the content is. Resources that have not been
     /// reviewed in a long time may have a risk of being less appropriate/relevant.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Implementation Notes
     /// If specified, this date follows the original approval date.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "lastReviewDate")]
     pub last_review_date: Option<Date>,
     /// When the view definition is expected to be used
-    /// 
+    ///
     /// The period during which the view definition content was or is planned to be
     /// in active use.
-    /// 
+    ///
     /// ## Requirements
     /// Allows establishing a transition before a resource comes into effect and also
     /// allows for a sun-setting process when new versions of the view definition are
     /// or are expected to be used instead.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The effective period for a view definition determines when the content is
     /// applicable for usage and is independent of publication and review dates. For
     /// example, a measure intended to be used for the year 2016 might be published
     /// in 2015.
-    /// 
+    ///
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     #[fhir_serde(rename = "effectivePeriod")]
     pub effective_period: Option<Period>,
     /// E.g. Education, Treatment, Assessment, etc
-    /// 
+    ///
     /// Descriptive topics related to the content of the view definition. Topics
     /// provide a high-level categorization as well as keywords for the view
     /// definition that can be useful for filtering and searching.
-    /// 
+    ///
     /// ## Requirements
     /// Repositories must be able to determine how to categorize the view definition
     /// so that it can be found by topical and keyword searches.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element provides topical categorization and keywords for the view
     /// definition, as opposed to the more structured context-of-use information
     /// provided in the useContext element.
-    /// 
+    ///
     /// DEPRECATION NOTE: For consistency, implementations are encouraged to migrate
     /// to using the new 'topic' code in the useContext element. (I.e.
     /// useContext.code indicating
     /// http://terminology.hl7.org/CodeSystem/usage-context-type#topic and
     /// useContext.valueCodeableConcept indicating the topic)
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/definition-topic
     pub topic: Option<Vec<CodeableConcept>>,
     /// Who authored the view definition
-    /// 
+    ///
     /// An individual or organization primarily involved in the creation and
     /// maintenance of the view definition.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub author: Option<Vec<ContactDetail>>,
     /// Who edited the view definition
-    /// 
+    ///
     /// An individual or organization primarily responsible for internal coherence of
     /// the view definition.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub editor: Option<Vec<ContactDetail>>,
     /// Who reviewed the view definition
-    /// 
+    ///
     /// An individual or organization asserted by the publisher to be primarily
     /// responsible for review of some aspect of the view definition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub reviewer: Option<Vec<ContactDetail>>,
     /// Who endorsed the view definition
-    /// 
+    ///
     /// An individual or organization asserted by the publisher to be responsible for
     /// officially endorsing the view definition for use in some setting.
-    /// 
+    ///
     /// ## Implementation Notes
     /// See guidance around (not) making local changes to elements
     /// [here](canonicalresource.html#localization).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub endorser: Option<Vec<ContactDetail>>,
     /// Additional documentation, citations, etc
-    /// 
+    ///
     /// Related artifacts such as additional documentation, justification,
     /// dependencies, bibliographic references, and predecessor and successor
     /// artifacts.
-    /// 
+    ///
     /// ## Requirements
     /// A view definition must be able to provide enough information for consumers of
     /// the content (and/or interventions or results produced by the content) to be
     /// able to determine and understand the justification for and evidence in
     /// support of the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Each related artifact is either an attachment, or a reference to another
     /// resource, but not both.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     #[fhir_serde(rename = "relatedArtifact")]
     pub related_artifact: Option<Vec<RelatedArtifact>>,
     /// FHIR resource for the ViewDefinition
-    /// 
+    ///
     /// The FHIR resource that the view is based upon, e.g. 'Patient' or
     /// 'Observation'.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/resource-types
     pub resource: Code,
     /// FHIR profiles that this view definition was intended to be executed against
-    /// 
+    ///
     /// Indicates that this definition was intended to create a view over a set of
     /// resources conforming to the specified FHIR profiles. Each of these profiles
     /// SHALL be based upon the resource type specified in `resource`.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub profile: Option<Vec<Canonical>>,
     /// FHIR version(s) of the resource for the ViewDefinition
-    /// 
+    ///
     /// The FHIR version(s) for the FHIR resource. The value of this element is the
     /// formal version of the specification, without the revision number, e.g.
     /// [publication].[major].[minor].
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/FHIR-version
     #[fhir_serde(rename = "fhirVersion")]
     pub fhir_version: Option<Vec<Code>>,
     /// Constant that can be used in FHIRPath expressions
-    /// 
+    ///
     /// A constant is a value that is injected into a FHIRPath expression through the
     /// use of a FHIRPath
     /// external constant with the same name.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub constant: Option<Vec<ViewDefinitionConstant>>,
     /// A collection of columns and nested selects to include in the view.
-    /// 
+    ///
     /// The select structure defines the columns to be used in the resulting view.
     /// These are expressed
     /// in the `column` structure below, or in nested `select`s for nested resources.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **sql-expressions**: Can only have at most one of `forEach`, `forEachOrNull`, or `repeat`. (error)
     ///   Expression: `(forEach.exists().toInteger() + forEachOrNull.exists().toInteger() + repeat.exists().toInteger()) \<= 1`
     pub select: Option<Vec<ViewDefinitionSelect>>,
     /// A series of zero or more FHIRPath constraints to filter resources for the view.
-    /// 
+    ///
     /// A series of zero or more FHIRPath constraints to filter resources for the
     /// view. Every constraint
     /// must evaluate to true for the resource to be included in the view.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     #[fhir_serde(rename = "where")]
     pub r#where: Option<Vec<ViewDefinitionWhere>>,
@@ -871,21 +874,21 @@ pub enum ViewDefinitionConstantValue {
 }
 
 /// Constant that can be used in FHIRPath expressions
-/// 
+///
 /// A constant is a value that is injected into a FHIRPath expression through the
 /// use of a FHIRPath
 /// external constant with the same name.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "value")]
 pub struct ViewDefinitionConstant {
     /// Name of constant (referred to in FHIRPath as %[name])
-    /// 
+    ///
     /// Name of constant (referred to in FHIRPath as %[name])
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **sql-name**: Name is limited to letters, numbers, or underscores and cannot start with an (error)
     ///   underscore -- i.e. with a regular expression of: ^[A-Za-z][A-Za-z0-9_]*$
@@ -893,122 +896,122 @@ pub struct ViewDefinitionConstant {
     ///   Expression: `empty() or matches('^[A-Za-z][A-Za-z0-9_]*$')`
     pub name: String,
     /// Value of constant
-    /// 
+    ///
     /// The value that will be substituted in place of the constant reference. This
     /// is done by including `%your_constant_name` in a FHIRPath expression, which
     /// effectively converts
     /// the FHIR literal defined here to a FHIRPath literal used in the path
     /// expression.
-    /// 
+    ///
     /// Support for additional types may be added in the future.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
     #[fhir_serde(flatten)]
     pub value: Option<ViewDefinitionConstantValue>,
 }
 
 /// A collection of columns and nested selects to include in the view.
-/// 
+///
 /// The select structure defines the columns to be used in the resulting view.
 /// These are expressed
 /// in the `column` structure below, or in nested `select`s for nested resources.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **sql-expressions**: Can only have at most one of `forEach`, `forEachOrNull`, or `repeat`. (error)
 ///   Expression: `(forEach.exists().toInteger() + forEachOrNull.exists().toInteger() + repeat.exists().toInteger()) \<= 1`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ViewDefinitionSelect {
     /// A column to be produced in the resulting table.
-    /// 
+    ///
     /// A column to be produced in the resulting table. The column is relative to the
     /// select structure
     /// that contains it.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub column: Option<Vec<ViewDefinitionSelectColumn>>,
     /// Nested select relative to a parent expression.
-    /// 
+    ///
     /// Nested select relative to a parent expression. If the parent `select` has a
     /// `forEach` or `forEachOrNull`, this child select will apply for each item in
     /// that expression.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub select: Option<Vec<ViewDefinitionSelect>>,
     /// A FHIRPath expression to retrieve the parent element(s) used in the containing select. The default is effectively `$this`.
-    /// 
+    ///
     /// A FHIRPath expression to retrieve the parent element(s) used in the
     /// containing select, relative to the root resource or parent `select`,
     /// if applicable. `forEach` will produce a row for each element selected in the
     /// expression. For example, using forEach on `address` in Patient will
     /// generate a new row for each address, with columns defined in the
     /// corresponding `column` structure.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "forEach")]
     pub for_each: Option<String>,
     /// Same as forEach, but will produce a row with null values if the collection is empty.
-    /// 
+    ///
     /// Same as forEach, but produces a single row with null values in the nested
     /// expression if the collection is empty. For example,
     /// with a Patient resource, a `forEachOrNull` on address will produce a row for
     /// each patient even if there are no addresses; it will
     /// simply set the address columns to `null`.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "forEachOrNull")]
     pub for_each_or_null: Option<String>,
     /// FHIRPath expressions to recursively select from.
-    /// 
+    ///
     /// A list of FHIRPath expressions that define paths to recursively traverse. The
     /// view runner will recursively
     /// follow each path to any depth, collecting results from all levels. All
     /// results are combined using a union
     /// operation.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub repeat: Option<Vec<String>>,
     /// Creates a union of all rows in the given selection structures.
-    /// 
+    ///
     /// A `unionAll` combines the results of multiple selection structures. Each
     /// structure under the `unionAll` must produce the same column names
     /// and types. The results from each nested selection will then have their own
     /// row.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     #[fhir_serde(rename = "unionAll")]
     pub union_all: Option<Vec<ViewDefinitionSelect>>,
 }
 
 /// A column to be produced in the resulting table.
-/// 
+///
 /// A column to be produced in the resulting table. The column is relative to the
 /// select structure
 /// that contains it.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ViewDefinitionSelectColumn {
     /// FHIRPath expression that creates a column and defines its content
-    /// 
+    ///
     /// A FHIRPath expression that evaluates to the value that will be output in the
     /// column for each
     /// resource. The input context is the collection of resources of the type
     /// specified in the resource
     /// element. Constants defined in Reference({constant}) can be referenced as
     /// %[name].
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
     pub path: String,
     /// Column name produced in the output
-    /// 
+    ///
     /// Name of the column produced in the output, must be in a database-friendly
     /// format. The column
     /// names in the output must not have any duplicates.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **sql-name**: Name is limited to letters, numbers, or underscores and cannot start with an (error)
     ///   underscore -- i.e. with a regular expression of: ^[A-Za-z][A-Za-z0-9_]*$
@@ -1016,24 +1019,24 @@ pub struct ViewDefinitionSelectColumn {
     ///   Expression: `empty() or matches('^[A-Za-z][A-Za-z0-9_]*$')`
     pub name: String,
     /// Description of the column
-    /// 
+    ///
     /// A human-readable description of the column.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub description: Option<Markdown>,
     /// Indicates whether the column may have multiple values.
-    /// 
+    ///
     /// Indicates whether the column may have multiple values. Defaults to `false` if
     /// unset.
-    /// 
+    ///
     /// ViewDefinitions must have this set to `true` if multiple values may be
     /// returned. Implementations SHALL
     /// report an error if multiple values are produced when that is not the case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub collection: Option<Boolean>,
     /// A FHIR StructureDefinition URI for the column's type.
-    /// 
+    ///
     /// A FHIR StructureDefinition URI for the column's type. Relative URIs are
     /// implicitly given
     /// the 'http://hl7.org/fhir/StructureDefinition/' prefix. The URI may also use
@@ -1041,77 +1044,76 @@ pub struct ViewDefinitionSelectColumn {
     /// a backbone element within a structure. For instance,
     /// `Observation.referenceRange` may be specified to indicate
     /// the returned type is that backbone element.
-    /// 
+    ///
     /// This field *must* be provided if a ViewDefinition returns a non-primitive
     /// type. Implementations should report an error
     /// if the returned type does not match the type set here, or if a non-primitive
     /// type is returned but this field is unset.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     #[fhir_serde(rename = "type")]
     pub r#type: Option<Uri>,
     /// Additional metadata describing the column
-    /// 
+    ///
     /// Tags can be used to attach additional metadata to columns, such as
     /// implementation-specific
     /// directives or database-specific type hints.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
     pub tag: Option<Vec<ViewDefinitionSelectColumnTag>>,
 }
 
 /// Additional metadata describing the column
-/// 
+///
 /// Tags can be used to attach additional metadata to columns, such as
 /// implementation-specific
 /// directives or database-specific type hints.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ViewDefinitionSelectColumnTag {
     /// Name of tag
-    /// 
+    ///
     /// A name that identifies the meaning of the tag. A namespace should be used to
     /// scope the tag to
     /// a particular context. For example, 'ansi/type' could be used to indicate the
     /// type that should
     /// be used to represent the value within an ANSI SQL database.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
     pub name: String,
     /// Value of tag
-    /// 
+    ///
     /// Value of tag
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
     pub value: String,
 }
 
 /// A series of zero or more FHIRPath constraints to filter resources for the view.
-/// 
+///
 /// A series of zero or more FHIRPath constraints to filter resources for the
 /// view. Every constraint
 /// must evaluate to true for the resource to be included in the view.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct ViewDefinitionWhere {
     /// A FHIRPath expression defining a filter condition
-    /// 
+    ///
     /// A FHIRPath expression that defines a filter that must evaluate to true for a
     /// resource to be
     /// included in the output. The input context is the collection of resources of
     /// the type specified in
     /// the resource element. Constants defined in Reference({constant}) can be
     /// referenced as %[name].
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
     pub path: String,
     /// A human-readable description of the above where constraint.
-    /// 
+    ///
     /// A human-readable description of the above where constraint.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub description: Option<String>,
 }
-

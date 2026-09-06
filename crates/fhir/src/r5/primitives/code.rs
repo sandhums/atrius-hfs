@@ -7,9 +7,8 @@ use crate::r5::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for coded values drawn from a defined set
-/// 
+///
 /// code type: A string which has at least one character and no leading or trailing whitespace and where there is no whitespace other than single spaces in the contents
-/// 
+///
 /// See: [code](http://hl7.org/fhir/StructureDefinition/code)
 pub type Code = Element<std::string::String, Extension>;
-

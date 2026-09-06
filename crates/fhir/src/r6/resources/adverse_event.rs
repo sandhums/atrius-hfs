@@ -19,7 +19,7 @@ pub enum AdverseEventEffect {
 }
 
 /// FHIR AdverseEvent type
-/// 
+///
 /// An event (i.e. any change to current patient status) that may be related to
 /// unintended effects on a patient or research participant. The unintended
 /// effects may require additional monitoring, treatment, hospitalization, or may
@@ -33,49 +33,52 @@ pub enum AdverseEventEffect {
 /// consulting the domain specific implementation guides when implementing the
 /// AdverseEvent Resource. The implementation guides include specific extensions,
 /// value sets and constraints.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [AdverseEvent](http://hl7.org/fhir/StructureDefinition/AdverseEvent)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "effect", summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,actuality,category,code,subject,encounter,effect,detected,recorded_date,resulting_effect,location,seriousness,outcome,recorder,participant,study,suspect_entity,contributing_factor,preventive_action,mitigating_action,supporting_info")]
+#[fhir_resource(
+    choice_elements = "effect",
+    summary_fields = "id,meta,implicit_rules,modifier_extension,identifier,status,actuality,category,code,subject,encounter,effect,detected,recorded_date,resulting_effect,location,seriousness,outcome,recorder,participant,study,suspect_entity,contributing_factor,preventive_action,mitigating_action,supporting_info"
+)]
 pub struct AdverseEvent {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -83,7 +86,7 @@ pub struct AdverseEvent {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -93,22 +96,22 @@ pub struct AdverseEvent {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -119,27 +122,27 @@ pub struct AdverseEvent {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -147,27 +150,27 @@ pub struct AdverseEvent {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -175,41 +178,41 @@ pub struct AdverseEvent {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -219,11 +222,11 @@ pub struct AdverseEvent {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -231,38 +234,38 @@ pub struct AdverseEvent {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Business identifier for the event
-    /// 
+    ///
     /// Business identifiers assigned to this adverse event by the performer or other
     /// systems which remain constant as the resource is updated and propagates from
     /// server to server.
-    /// 
+    ///
     /// ## Requirements
     /// Allows identification of the adverse event as it is known by various
     /// participating systems and in a way that remains consistent across servers.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is a business identifier, not a resource identifier (see
     /// [discussion](resource.html#identifiers)). It is best practice for the
@@ -271,46 +274,46 @@ pub struct AdverseEvent {
     /// same identifier can exist - possibly even with different resource types. For
     /// example, multiple Patient and a Person resource instance might share the same
     /// social insurance number.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// in-progress | completed | entered-in-error | unknown
-    /// 
+    ///
     /// The current state of the adverse event or potential adverse event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is not the reporting of the event to any regulatory or quality
     /// organization. This is not the outcome of the patient's condition. The adverse
     /// event status may be determined by the timing of the clinical trial
     /// assessments and is not necessarily the same as the condition status.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Codes identifying the lifecycle stage of an event.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-status|6.0.0-ballot4
     pub status: Code,
     /// actual | potential | unknown
-    /// 
+    ///
     /// Whether the event actually happened or was a near miss. Note that this is
     /// independent of whether anyone was affected or harmed or how severely.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It would be unusual for a recorder of an adverse event to not know this
     /// value; unknown code is included to support legacy data and is strongly
@@ -320,87 +323,87 @@ pub struct AdverseEvent {
     /// should be recorded as an AllergyIntolerance. If an AllergyIntolerance does
     /// exist and the substance was given, then an adverse reaction should be
     /// recorded as an AdverseEvent due to the aberrant workflow.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because it has a potential code that indicates the adverse event did not actually happen.
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Overall nature of the adverse event, e.g. real or potential.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-actuality|6.0.0-ballot4
     pub actuality: Code,
     /// wrong-patient | procedure-mishap | medication-mishap | device | unsafe-physical-environment | hospital-acquired-infection | wrong-body-site
-    /// 
+    ///
     /// The overall type of event, intended for search and filtering purposes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Overall categorization of the event, e.g. product-related or situational.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-category
     pub category: Option<Vec<CodeableConcept>>,
     /// Event or incident that occurred or was averted
-    /// 
+    ///
     /// Specific event that occurred or that was averted, such as patient fall, wrong
     /// organ removed, or wrong blood transfused.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Detailed type of event.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-type
     pub code: Option<CodeableConcept>,
     /// Subject impacted by event
-    /// 
+    ///
     /// This subject or group impacted by the event.
-    /// 
+    ///
     /// ## Requirements
     /// Allows for exposure of biohazard (such as legionella) to a group of
     /// individuals in a hospital.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If AdverseEvent.resultingEffect differs among members of the group, then use
     /// Patient as the subject.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// patient
     pub subject: Reference,
     /// The Encounter associated with the start of the AdverseEvent
-    /// 
+    ///
     /// The Encounter associated with the start of the AdverseEvent.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This will typically be the encounter the event occurred within, but some
     /// activities may be initiated prior to or after the official completion of an
@@ -410,78 +413,78 @@ pub struct AdverseEvent {
     /// given is the associated encounter. If the patient reports the AdverseEvent
     /// during a second encounter, that second encounter is not the associated
     /// encounter.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// When the effect of the AdverseEvent occurred
-    /// 
+    ///
     /// The date (and perhaps time) when the effect of the AdverseEvent occurred.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub effect: Option<AdverseEventEffect>,
     /// When the event was detected
-    /// 
+    ///
     /// Estimated or actual date the AdverseEvent began, in the opinion of the
     /// reporter.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub detected: Option<DateTime>,
     /// When the event was recorded
-    /// 
+    ///
     /// The date on which the existence of the AdverseEvent was first recorded.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The recordedDate represents the date when this particular AdverseEvent record
     /// was created in the system, not the date of the most recent update. The date
     /// of the last record modification can be retrieved from the resource metadata.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "recordedDate")]
     pub recorded_date: Option<DateTime>,
     /// Effect on the subject due to this event
-    /// 
+    ///
     /// Information about the condition that occurred as a result of the adverse
     /// event, such as hives due to the exposure to a substance (for example, a drug
     /// or a chemical) or a broken leg as a result of the fall.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Indicates the effect on subject due to this adverse event.
@@ -489,22 +492,22 @@ pub struct AdverseEvent {
     #[fhir_serde(rename = "resultingEffect")]
     pub resulting_effect: Option<Vec<CodeableReference>>,
     /// Location where adverse event occurred
-    /// 
+    ///
     /// The information about where the adverse event occurred.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub location: Option<Reference>,
     /// Seriousness or gravity of the event
-    /// 
+    ///
     /// Assessment whether this event, or averted event, was of clinical importance.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Using an example, a rash can have an AdverseEvent.resultingEffect.severity =
     /// severe, yet an AdverseEvent.seriousness = non-serious. Alternatively, a
@@ -515,126 +518,126 @@ pub struct AdverseEvent {
     /// with asthma was included and had an asthmatic episode where
     /// AdverseEvent.resultingEffect.severity = mild, yet an adverseEvent.seriousness
     /// = serious.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Overall seriousness of this event for the patient.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-seriousness
     pub seriousness: Option<CodeableConcept>,
     /// Type of outcome from the adverse event
-    /// 
+    ///
     /// Describes the type of outcome from the adverse event, such as resolved,
     /// recovering, ongoing, resolved-with-sequelae, or fatal.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the type of outcome from the adverse event.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-outcome
     pub outcome: Option<Vec<CodeableConcept>>,
     /// Who recorded the adverse event
-    /// 
+    ///
     /// Information on who recorded the adverse event. May be the patient or a
     /// practitioner.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub recorder: Option<Reference>,
     /// Who was involved in the adverse event or the potential adverse event and what they did
-    /// 
+    ///
     /// Indicates who or what participated in the adverse event and how they were
     /// involved.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The participant should not be used when there is another element to capture
     /// the participation, such as subject or recorder.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub participant: Option<Vec<AdverseEventParticipant>>,
     /// Research study that the subject is enrolled in
-    /// 
+    ///
     /// The research study that the subject is enrolled in.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub study: Option<Vec<Reference>>,
     /// Considered likely or probable or anticipated in the research study
-    /// 
+    ///
     /// Considered likely or probable or anticipated in the research study. Whether
     /// the reported event matches any of the outcomes for the patient that are
     /// considered by the study as known or likely.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "expectedInResearchStudy")]
     pub expected_in_research_study: Option<Boolean>,
     /// The suspected agent causing the adverse event
-    /// 
+    ///
     /// Describes the entity that is suspected to have caused the adverse event.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "suspectEntity")]
     pub suspect_entity: Option<Vec<AdverseEventSuspectEntity>>,
     /// Contributing factors suspected to have increased the probability or severity of the adverse event
-    /// 
+    ///
     /// The contributing factors suspected to have increased the probability or
     /// severity of the adverse event.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the contributing factors suspected to have increased the probability or severity of the adverse event.
@@ -642,18 +645,18 @@ pub struct AdverseEvent {
     #[fhir_serde(rename = "contributingFactor")]
     pub contributing_factor: Option<Vec<CodeableReference>>,
     /// Preventive actions that contributed to avoiding the adverse event
-    /// 
+    ///
     /// Preventive actions that contributed to avoiding the adverse event.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the preventive actions that contributed to avoiding the adverse event.
@@ -661,19 +664,19 @@ pub struct AdverseEvent {
     #[fhir_serde(rename = "preventiveAction")]
     pub preventive_action: Option<Vec<CodeableReference>>,
     /// Ameliorating actions taken after the adverse event occurred in order to reduce the extent of harm
-    /// 
+    ///
     /// The ameliorating action taken after the adverse event occurred in order to
     /// reduce the extent of harm.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the ameliorating actions taken after the adverse event occured in order to reduce the extent of harm.
@@ -681,7 +684,7 @@ pub struct AdverseEvent {
     #[fhir_serde(rename = "mitigatingAction")]
     pub mitigating_action: Option<Vec<CodeableReference>>,
     /// Subject medical history or document relevant to this adverse event
-    /// 
+    ///
     /// Relevant past history for the subject. In a clinical care context, an example
     /// being a patient had an adverse event following a penicillin administration
     /// and the patient had a previously documented penicillin allergy. In a clinical
@@ -691,16 +694,16 @@ pub struct AdverseEvent {
     /// medical history. For example, a clinical note, staff list, or material safety
     /// data sheet (MSDS). Supporting information is not a contributing factor,
     /// preventive action, or mitigating action.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the supporting information relevant to the event.
@@ -708,12 +711,12 @@ pub struct AdverseEvent {
     #[fhir_serde(rename = "supportingInfo")]
     pub supporting_info: Option<Vec<CodeableReference>>,
     /// Comment on adverse event
-    /// 
+    ///
     /// Comments made about the adverse event by the performer, subject or other
     /// participants.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -721,60 +724,60 @@ pub struct AdverseEvent {
 }
 
 /// Who was involved in the adverse event or the potential adverse event and what they did
-/// 
+///
 /// Indicates who or what participated in the adverse event and how they were
 /// involved.
-/// 
+///
 /// ## Implementation Notes
 /// The participant should not be used when there is another element to capture
 /// the participation, such as subject or recorder.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct AdverseEventParticipant {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -784,11 +787,11 @@ pub struct AdverseEventParticipant {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -796,51 +799,51 @@ pub struct AdverseEventParticipant {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Type of involvement
-    /// 
+    ///
     /// Distinguishes the type of involvement of the actor in the adverse event, such
     /// as contributor or informant.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes describing the type of involvement of the actor in the adverse event.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/adverse-event-participant-function
     pub function: Option<CodeableConcept>,
     /// Who was involved in the adverse event or the potential adverse event
-    /// 
+    ///
     /// Indicates who or what participated in the event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For example, the physician prescribing a drug, a nurse administering the
     /// drug, a device that administered the drug, a witness to the event, or an
@@ -849,12 +852,12 @@ pub struct AdverseEventParticipant {
     /// being the subject, such as when the subject is a contributor or informant.
     /// Using Group is only allowed when the group represents a family or a household
     /// and does not represent groups of Practitioners.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -874,14 +877,14 @@ pub enum AdverseEventSuspectEntityOccurrence {
 }
 
 /// The suspected agent causing the adverse event
-/// 
+///
 /// Describes the entity that is suspected to have caused the adverse event.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -889,41 +892,41 @@ pub enum AdverseEventSuspectEntityOccurrence {
 #[fhir_resource(choice_elements = "occurrence")]
 pub struct AdverseEventSuspectEntity {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -933,11 +936,11 @@ pub struct AdverseEventSuspectEntity {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -945,65 +948,65 @@ pub struct AdverseEventSuspectEntity {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Refers to the specific entity that caused the adverse event
-    /// 
+    ///
     /// Identifies the actual instance of what caused the adverse event. May be a
     /// substance, medication, medication administration, medication statement or a
     /// device.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub instance: CodeableReference,
     /// Information on the possible cause of the event
-    /// 
+    ///
     /// Information on the possible cause of the event.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub causality: Option<AdverseEventSuspectEntityCausality>,
     /// When the suspect entity occurred
-    /// 
+    ///
     /// The date (and perhaps time) when the suspect entity occurred.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1012,55 +1015,55 @@ pub struct AdverseEventSuspectEntity {
 }
 
 /// Information on the possible cause of the event
-/// 
+///
 /// Information on the possible cause of the event.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct AdverseEventSuspectEntityCausality {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1070,11 +1073,11 @@ pub struct AdverseEventSuspectEntityCausality {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1082,42 +1085,42 @@ pub struct AdverseEventSuspectEntityCausality {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Method of evaluating the relatedness of the suspected entity to the event
-    /// 
+    ///
     /// The method of evaluating the relatedness of the suspected entity to the
     /// event.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: TODO.
@@ -1125,19 +1128,19 @@ pub struct AdverseEventSuspectEntityCausality {
     #[fhir_serde(rename = "assessmentMethod")]
     pub assessment_method: Option<CodeableConcept>,
     /// Result of the assessment regarding the relatedness of the suspected entity to the event
-    /// 
+    ///
     /// The result of the assessment regarding the relatedness of the suspected
     /// entity to the event.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes for the assessment of whether the entity caused the event.
@@ -1145,17 +1148,16 @@ pub struct AdverseEventSuspectEntityCausality {
     #[fhir_serde(rename = "entityRelatedness")]
     pub entity_relatedness: Option<CodeableConcept>,
     /// Author of the information on the possible cause of the event
-    /// 
+    ///
     /// The author of the information on the possible cause of the event.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Reference>,
 }
-

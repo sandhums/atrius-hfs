@@ -19,55 +19,58 @@ pub enum DosageAsNeeded {
 }
 
 /// FHIR Dosage type
-/// 
+///
 /// Base StructureDefinition for Dosage Type: Indicates how the medication is/was
 /// taken or should be taken by the patient.
-/// 
+///
 /// ## Type: Complex-type type
 /// Base type: http://hl7.org/fhir/StructureDefinition/BackboneElement
-/// 
+///
 /// ## Status: draft
 /// FHIR Version: 4.3.0
-/// 
+///
 /// See: [Dosage](http://hl7.org/fhir/StructureDefinition/Dosage)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "asNeeded", summary_fields = "modifier_extension,sequence,text,additional_instruction,patient_instruction,timing,as_needed,site,route,method,dose_and_rate,max_dose_per_period,max_dose_per_administration,max_dose_per_lifetime")]
+#[fhir_resource(
+    choice_elements = "asNeeded",
+    summary_fields = "modifier_extension,sequence,text,additional_instruction,patient_instruction,timing,as_needed,site,route,method,dose_and_rate,max_dose_per_period,max_dose_per_administration,max_dose_per_lifetime"
+)]
 pub struct Dosage {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -77,11 +80,11 @@ pub struct Dosage {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -89,53 +92,53 @@ pub struct Dosage {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The order of the dosage instructions
-    /// 
+    ///
     /// Indicates the order in which the dosage instructions should be applied or
     /// interpreted.
-    /// 
+    ///
     /// ## Requirements
     /// If the sequence number of multiple Dosages is the same, then it is implied
     /// that the instructions are to be treated as concurrent. If the sequence number
     /// is different, then the Dosages are intended to be sequential.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub sequence: Option<Integer>,
     /// Free text dosage instructions e.g. SIG
-    /// 
+    ///
     /// Free text dosage instructions e.g. SIG.
-    /// 
+    ///
     /// ## Requirements
     /// Free text dosage instructions can be used for cases where the instructions
     /// are too complex to code. The content of this attribute does not include the
@@ -146,65 +149,65 @@ pub struct Dosage {
     /// then the dosage.text should reflect the same information as the timing.
     /// Additional information about administration or preparation of the medication
     /// should be included as text.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub text: Option<String>,
     /// Supplemental instruction or warnings to the patient - e.g. "with meals", "may cause drowsiness"
-    /// 
+    ///
     /// Supplemental instructions to the patient on how to take the medication (e.g.
     /// "with meals" or"take half to one hour before food") or warnings for the
     /// patient about the medication (e.g. "may cause drowsiness" or "avoid exposure
     /// of skin to direct sunlight or sunlamps").
-    /// 
+    ///
     /// ## Requirements
     /// Additional instruction is intended to be coded, but where no code exists, the
     /// element could include text. For example, "Swallow with plenty of water" which
     /// might or might not be coded.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Information about administration or preparation of the medication (e.g.
     /// "infuse as rapidly as possibly via intraperitoneal port" or "immediately
     /// following drug x") should be populated in dosage.text.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/additional-instruction-codes
     #[fhir_serde(rename = "additionalInstruction")]
     pub additional_instruction: Option<Vec<CodeableConcept>>,
     /// Patient or consumer oriented instructions
-    /// 
+    ///
     /// Instructions in terms that are understood by the patient or consumer.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "patientInstruction")]
     pub patient_instruction: Option<String>,
     /// When medication should be administered
-    /// 
+    ///
     /// When medication should be administered.
-    /// 
+    ///
     /// ## Requirements
     /// The timing schedule for giving the medication to the patient. This data type
     /// allows many different expressions. For example: "Every 8 hours"; "Three times
@@ -214,196 +217,196 @@ pub struct Dosage {
     /// of 2 hours). However, when rate doesn't imply duration (e.g. 250mL/hour),
     /// then the timing.repeat.duration is needed to convey the infuse over time
     /// period.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This attribute might not always be populated while the Dosage.text is
     /// expected to be populated. If both are populated, then the Dosage.text should
     /// reflect the content of the Dosage.timing.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub timing: Option<Timing>,
     /// Take "as needed" (for x)
-    /// 
+    ///
     /// Indicates whether the Medication is only taken when needed within a specific
     /// dosing schedule (Boolean option), or it indicates the precondition for taking
     /// the Medication (CodeableConcept).
-    /// 
+    ///
     /// ## Implementation Notes
     /// Can express "as needed" without a reason by setting the Boolean = True. In
     /// this case the CodeableConcept is not populated. Or you can express "as
     /// needed" with a reason by including the CodeableConcept. In this case the
     /// Boolean is assumed to be True. If you set the Boolean to False, then the dose
     /// is given according to the schedule and is not "prn" or "as needed".
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/medication-as-needed-reason
     #[fhir_serde(flatten)]
     pub as_needed: Option<DosageAsNeeded>,
     /// Body site to administer to
-    /// 
+    ///
     /// Body site to administer to.
-    /// 
+    ///
     /// ## Requirements
     /// A coded specification of the anatomic site where the medication first enters
     /// the body.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If the use case requires attributes from the BodySite resource (e.g. to
     /// identify and track separately) then use the standard extension
     /// [bodySite](extension-bodysite.html). May be a summary code, or a reference to
     /// a very precise definition of the location, or both.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/approach-site-codes
     pub site: Option<CodeableConcept>,
     /// How drug should enter body
-    /// 
+    ///
     /// How drug should enter body.
-    /// 
+    ///
     /// ## Requirements
     /// A code specifying the route or physiological path of administration of a
     /// therapeutic agent into or onto a patient's body.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/route-codes
     pub route: Option<CodeableConcept>,
     /// Technique for administering medication
-    /// 
+    ///
     /// Technique for administering medication.
-    /// 
+    ///
     /// ## Requirements
     /// A coded value indicating the method by which the medication is introduced
     /// into or onto the body. Most commonly used for injections. For examples, Slow
     /// Push; Deep IV.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Terminologies used often pre-coordinate this term with the route and or form
     /// of administration.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/administration-method-codes
     pub method: Option<CodeableConcept>,
     /// Amount of medication administered
-    /// 
+    ///
     /// The amount of medication administered.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     #[fhir_serde(rename = "doseAndRate")]
     pub dose_and_rate: Option<Vec<DosageDoseAndRate>>,
     /// Upper limit on medication per unit of time
-    /// 
+    ///
     /// Upper limit on medication per unit of time.
-    /// 
+    ///
     /// ## Requirements
     /// The maximum total quantity of a therapeutic substance that may be
     /// administered to a subject over the period of time. For example, 1000mg in 24
     /// hours.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is intended for use as an adjunct to the dosage when there is an upper
     /// cap. For example "2 tablets every 4 hours to a maximum of 8/day".
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "maxDosePerPeriod")]
     pub max_dose_per_period: Option<Ratio>,
     /// Upper limit on medication per administration
-    /// 
+    ///
     /// Upper limit on medication per administration.
-    /// 
+    ///
     /// ## Requirements
     /// The maximum total quantity of a therapeutic substance that may be
     /// administered to a subject per administration.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is intended for use as an adjunct to the dosage when there is an upper
     /// cap. For example, a body surface area related dose with a maximum amount,
     /// such as 1.5 mg/m2 (maximum 2 mg) IV over 5 – 10 minutes would have
     /// doseQuantity of 1.5 mg/m2 and maxDosePerAdministration of 2 mg.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "maxDosePerAdministration")]
     pub max_dose_per_administration: Option<Quantity>,
     /// Upper limit on medication per lifetime of the patient
-    /// 
+    ///
     /// Upper limit on medication per lifetime of the patient.
-    /// 
+    ///
     /// ## Requirements
     /// The maximum total quantity of a therapeutic substance that may be
     /// administered per lifetime of the subject.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -439,14 +442,14 @@ pub enum DosageDoseAndRateRate {
 }
 
 /// Amount of medication administered
-/// 
+///
 /// The amount of medication administered.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
@@ -454,67 +457,67 @@ pub enum DosageDoseAndRateRate {
 #[fhir_resource(choice_elements = "dose,rate")]
 pub struct DosageDoseAndRate {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// The kind of dose or rate specified
-    /// 
+    ///
     /// The kind of dose or rate specified, for example, ordered or calculated.
-    /// 
+    ///
     /// ## Requirements
     /// If the type is not populated, assume to be "ordered".
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/dose-rate-type
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Amount of medication per dose
-    /// 
+    ///
     /// Amount of medication per dose.
-    /// 
+    ///
     /// ## Requirements
     /// The amount of therapeutic or other substance given at one administration
     /// event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Note that this specifies the quantity of the specified medication, not the
     /// quantity for each active ingredient(s). Each ingredient amount can be
@@ -530,21 +533,21 @@ pub struct DosageDoseAndRate {
     /// can be specified to convey the total amount to be administered over the
     /// period of time as indicated by the schedule e.g. 500 ml in dose, with timing
     /// used to convey that this should be done over 4 hours.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub dose: Option<DosageDoseAndRateDose>,
     /// Amount of medication per unit of time
-    /// 
+    ///
     /// Amount of medication per unit of time.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies the speed with which the medication was or will be introduced into
     /// the patient. Typically the rate for an infusion e.g. 100 ml per 1 hour or 100
@@ -554,14 +557,14 @@ pub struct DosageDoseAndRate {
     /// duration (e.g. 500mL/2 hours implies a duration of 2 hours). However, when
     /// rate doesn't imply duration (e.g. 250mL/hour), then the
     /// timing.repeat.duration is needed to convey the infuse over time period.
-    /// 
+    ///
     /// ## Implementation Notes
     /// It is possible to supply both a rate and a doseQuantity to provide full
     /// details about how the medication is to be administered and supplied. If the
     /// rate is intended to change over time, depending on local rules/regulations,
     /// each change should be captured as a new version of the MedicationRequest with
     /// an updated rate, or captured with a new MedicationRequest with the new rate.
-    /// 
+    ///
     /// It is possible to specify a rate over time (for example, 100 ml/hour) using
     /// either the rateRatio and rateQuantity. The rateQuantity approach requires
     /// systems to have the capability to parse UCUM grammer where ml/hour is
@@ -569,16 +572,15 @@ pub struct DosageDoseAndRate {
     /// denominator. Where a rate such as 500ml over 2 hours is specified, the use of
     /// rateRatio may be more semantically correct than specifying using a
     /// rateQuantity of 250 mg/hour.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub rate: Option<DosageDoseAndRateRate>,
 }
-

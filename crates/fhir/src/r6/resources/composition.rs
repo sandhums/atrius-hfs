@@ -7,57 +7,59 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR Composition type
-/// 
+///
 /// Composition provides the structural backbone for assembling a set of
 /// healthcare-related information into a single logical package that provides a
 /// single coherent statement of meaning, establishes its own context and has
 /// traceability to the author who is making the statement.
-/// 
+///
 /// ## Purpose
 /// To support documents, and also to capture the EN13606 notion of an attested commit to the patient EHR, and to allow a set of disparate resources at the information/engineering level to be gathered into a clinical statement.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: active
 /// FHIR Version: 6.0.0-ballot4
-/// 
+///
 /// See: [Composition](http://hl7.org/fhir/StructureDefinition/Composition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,status,r#type,category,subject,encounter,date,use_context,author,name,title,classification,custodian,event")]
+#[fhir_resource(
+    summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,status,r#type,category,subject,encounter,date,use_context,author,name,title,classification,custodian,event"
+)]
 pub struct Composition {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resource id depends on the given use case.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
@@ -65,7 +67,7 @@ pub struct Composition {
     /// implicitRules policy applies, additional policies may be conveyed using the
     /// [additionalImplicitRules](https://build.fhir.org/ig/HL7/fhir-extensions/StructureDefinition-additionalImplicitRules.html)
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -75,22 +77,22 @@ pub struct Composition {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -101,27 +103,27 @@ pub struct Composition {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -129,27 +131,27 @@ pub struct Composition {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
@@ -157,41 +159,41 @@ pub struct Composition {
     /// tags in their meta elements, but SHALL NOT have security labels. Contained
     /// resources may be a resource type defined in the FHIR specification, or an
     /// [additional resource](resource.html#additional).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    /// 
+    ///
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -201,11 +203,11 @@ pub struct Composition {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -213,77 +215,77 @@ pub struct Composition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this Composition, represented as a URI (globally unique)
-    /// 
+    ///
     /// An absolute URI that is used to identify this Composition when it is
     /// referenced in a specification, model, design or an instance; also called its
     /// canonical identifier. This SHOULD be globally unique and SHOULD be a literal
     /// address at which an authoritative instance of this Composition is (or will
     /// be) published. This URL can be the target of a canonical reference. It SHALL
     /// remain the same when the Composition is stored on different servers.
-    /// 
+    ///
     /// ## Requirements
     /// Allows the Composition to be referenced by a single globally unique
     /// identifier.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Option<Uri>,
     /// Version-independent identifier for the Composition
-    /// 
+    ///
     /// A version-independent identifier for the Composition. This identifier stays
     /// constant as the composition is changed over time.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Similar to ClinicalDocument/setId in CDA. See discussion in resource
     /// definition for how these relate.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// An explicitly assigned identifier of a variation of the content in the Composition
-    /// 
+    ///
     /// An explicitly assigned identifier of a variation of the content in the
     /// Composition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This element is the author-assigned business version of the Composition
     /// (analogous to CDA ClinicalDocument.versionNumber). It is distinct from
@@ -292,57 +294,57 @@ pub struct Composition {
     /// on a server. Composition.version reflects the version of a logical document's
     /// content and remains constant even if the Composition or its referenced
     /// resources are moved between servers and receive new meta.versionId values.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Represents informed consents and medico-legal transactions
-    /// 
+    ///
     /// References the consents associated with this document. Examples include a
     /// consent to perform the clinical service being documented (.event) or a
     /// consent for the information contained in the document to be released to a
     /// third party.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub consent: Option<Vec<Reference>>,
     /// Fulfills plan, proposal or order
-    /// 
+    ///
     /// A plan, proposal or order that is fulfilled in whole or in part by this
     /// composition.
-    /// 
+    ///
     /// ## Requirements
     /// Allows tracing of authorization for the event and tracking whether
     /// proposals/recommendations were acted upon.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// fulfills
     #[fhir_serde(rename = "basedOn")]
     pub based_on: Option<Vec<Reference>>,
     /// registered | partial | preliminary | final | amended | corrected | appended | cancelled | entered-in-error | deprecated | unknown
-    /// 
+    ///
     /// The workflow/clinical status of this composition. The status is a marker for
     /// the clinical standing of the document.
-    /// 
+    ///
     /// ## Requirements
     /// Need to be able to mark interim, amended, or withdrawn compositions or
     /// documents.
-    /// 
+    ///
     /// ## Implementation Notes
     /// See section 2.8.3.2, The workflow/clinical status of the composition, for
     /// guidance. Because the entered-in-error flag changes how this resource and its
@@ -352,45 +354,45 @@ pub struct Composition {
     /// The Composition resource has no explicit status for noting whether this
     /// business rule is in effect; this would be handled by an extension if
     /// required.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The workflow status of the composition.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/composition-status|6.0.0-ballot4
     pub status: Code,
     /// Kind of composition (LOINC if possible)
-    /// 
+    ///
     /// Specifies the particular kind of composition (e.g. History and Physical,
     /// Discharge Summary, Progress Note). This usually equates to the purpose of
     /// making the composition.
-    /// 
+    ///
     /// ## Requirements
     /// Key metadata element describing the composition, used in searching/filtering.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For Composition type, LOINC is ubiquitous and strongly endorsed by HL7. Most
     /// implementation guides will require a specific LOINC code, or use LOINC as an
     /// extensible binding.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: Type of a composition.
@@ -398,165 +400,165 @@ pub struct Composition {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Categorization of Composition
-    /// 
+    ///
     /// A categorization for the type of the composition - helps with indexing and
     /// searching. This may be implied by or derived from the code specified in the
     /// Composition Type.
-    /// 
+    ///
     /// ## Requirements
     /// Helps humans to assess whether the composition is of interest when viewing an
     /// index of compositions or documents.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: High-level kind of a clinical document at a macro level.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/referenced-item-category
     pub category: Option<Vec<CodeableConcept>>,
     /// Who and/or what the composition is about
-    /// 
+    ///
     /// Who or what the composition is about. The composition can be about a person,
     /// (patient or healthcare practitioner), a device (e.g. a machine) or even a
     /// group of subjects (such as a document about a herd of livestock, or a set of
     /// patients that share a common exposure).
-    /// 
+    ///
     /// ## Requirements
     /// Essential metadata for searching for the composition. Identifies who and/or
     /// what the composition/document is about.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For clinical documents, this is usually the patient.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub subject: Option<Vec<Reference>>,
     /// Context of the Composition
-    /// 
+    ///
     /// Describes the clinical encounter or type of care this documentation is
     /// associated with.
-    /// 
+    ///
     /// ## Requirements
     /// Provides context for the composition and supports searching.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// Composition editing time
-    /// 
+    ///
     /// The composition editing time, when the composition was last logically changed
     /// by the author.
-    /// 
+    ///
     /// ## Requirements
     /// dateTime is used for tracking, organizing versions and searching. Note that
     /// this is the time of authoring this version of the Composition. When packaged
     /// in a document, [Bundle.timestamp](bundle-definitions.html#Bundle.timestamp)
     /// is the date of packaging.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The Last Modified Date on the composition may be after the date the document
     /// was attested without being changed. This means that the date on an amended
     /// document is the date of the amendment, not the date of original authorship.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub date: DateTime,
     /// The context that the content is intended to support
-    /// 
+    ///
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate Composition
     /// instances.
-    /// 
+    ///
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// any of the contexts apply.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// Who and/or what authored the composition
-    /// 
+    ///
     /// Identifies who is responsible for the information in the composition, not
     /// necessarily who typed it in.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies who is responsible for the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When the Composition is software-generated, a Device can be referenced. When
     /// a software-generated Composition is verified by a human (but not authored by
     /// that human), use the attester element to identify the human(s) who performed
     /// the verification.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Vec<Reference>>,
     /// Identifies supporting entities, including parents, relatives, caregivers, insurance policyholders, guarantors, and others related in some way to the patient
-    /// 
+    ///
     /// Identifies supporting entities, including parents, relatives, caregivers,
     /// insurance policyholders, guarantors, and others related in some way to the
     /// patient. A supporting person or organization is an individual or an
     /// organization with a relationship to the patient. A supporting person who is
     /// playing multiple roles would be recorded in multiple participants (e.g.,
     /// emergency contact and next-of-kin).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub participant: Option<Vec<CompositionParticipant>>,
     /// Computer friendly name
-    /// 
+    ///
     /// A machine-friendly identifier suitable for code generation. For example,
     /// 'ClinicalDocument' or 'Composition_v2'. See the Constraint description.
-    /// 
+    ///
     /// ## Requirements
     /// Support human navigation and code generation.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The name is not expected to be globally unique. This field is used primarily
     /// by computers while the title field includes information for human-display.
@@ -564,114 +566,114 @@ pub struct Composition {
     /// when available while Composition.name is an uncoded string.
     /// Composition.identifier is used to identify the specific instance of a
     /// document.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **cmp-4**: Name should start with an uppercase letter (A–Z), be 2 to 255 characters long, and contain only letters, digits, and underscores. Whitespace, hyphens, and other punctuation are not permitted (warning)
     ///   Expression: `%resource.name.exists() implies %resource.name.matches('^[A-Z]([A-Za-z0-9_]){1,254}$')`
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-4
     pub name: Option<String>,
     /// Human Readable name/title
-    /// 
+    ///
     /// Official human-readable label for the composition.
-    /// 
+    ///
     /// ## Implementation Notes
     /// For many compositions, the title is the same as the text or a display name of
     /// Composition.type (e.g. a "consultation" or "progress note").
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// For any additional notes
-    /// 
+    ///
     /// For any additional notes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A comment, general note or annotation not coded elsewhere.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// The assignment to an organizing scheme
-    /// 
+    ///
     /// The assignment to an organizing scheme, including the type of classification
     /// and one or more classifier values.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub classification: Option<Vec<CompositionClassification>>,
     /// Attests to accuracy of composition
-    /// 
+    ///
     /// A participant who has attested to the accuracy of the composition/document.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies responsibility for the accuracy of the composition content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Only list each attester once.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-3
     pub attester: Option<Vec<CompositionAttester>>,
     /// Organization which maintains the composition
-    /// 
+    ///
     /// Identifies the organization or group who is responsible for ongoing
     /// maintenance of and access to the composition/document information.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies where to go to find the current version, where to report issues,
     /// etc.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This is useful when documents are derived from a composition - provides
     /// guidance for how to get the latest version of the document. This is optional
     /// because this is sometimes not known by the authoring system, and can be
     /// inferred by context. However, it is important that this information be known
     /// when working with a derived document, so providing a custodian is encouraged.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub custodian: Option<Reference>,
     /// Relationships to other compositions/documents
-    /// 
+    ///
     /// Relationships that this composition has with other compositions or documents
     /// (FHIR or non-FHIR resources) that already exist.
-    /// 
+    ///
     /// ## Implementation Notes
     /// To reference (using relatesTo) a Bundle of type "document" or another
     /// Composition where you only have the identifier, use a targetReference with an
@@ -685,49 +687,49 @@ pub struct Composition {
     /// "relatesTo": [{
     ///   "type": "replaces",
     ///   "targetReference": {
-    ///     "identifier": { 
-    ///       "system": "...", 
+    ///     "identifier": {
+    ///       "system": "...",
     ///       "value": "..."
     ///     }
-    ///   } 
+    ///   }
     /// }]
     /// ```
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "relatesTo")]
     pub relates_to: Option<Vec<CompositionRelatesTo>>,
     /// The clinical service(s) being documented
-    /// 
+    ///
     /// The clinical service, such as a colonoscopy or an appendectomy, being
     /// documented.
-    /// 
+    ///
     /// ## Requirements
     /// Provides context for the composition and creates a linkage between a resource
     /// describing an event and the composition created describing the event.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The event needs to be consistent with the type element, though it can provide
     /// further information if desired.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub event: Option<Vec<CompositionEvent>>,
     /// Composition is broken into sections
-    /// 
+    ///
     /// The root of the sections that make up the composition.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **cmp-1**: A section must contain at least one of text, entries, or sub-sections (error)
     ///   Expression: `text.exists() or entry.exists() or section.exists()`
@@ -737,68 +739,68 @@ pub struct Composition {
     ///   Expression: `%resource.attester.exists() implies(text.exists() or section.exists())`
     /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-3
     pub section: Option<Vec<CompositionSection>>,
 }
 
 /// Attests to accuracy of composition
-/// 
+///
 /// A participant who has attested to the accuracy of the composition/document.
-/// 
+///
 /// ## Requirements
 /// Identifies responsibility for the accuracy of the composition content.
-/// 
+///
 /// ## Implementation Notes
 /// Only list each attester once.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-/// 
+///
 /// ## Conditions
 /// Used when: cmp-3
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CompositionAttester {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -808,11 +810,11 @@ pub struct CompositionAttester {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -820,70 +822,70 @@ pub struct CompositionAttester {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// personal | professional | legal | official
-    /// 
+    ///
     /// The type of attestation the authenticator offers.
-    /// 
+    ///
     /// ## Requirements
     /// Indicates the level of authority of the attestation.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The way in which a person authenticated a composition.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/composition-attestation-mode
     pub mode: CodeableConcept,
     /// When the composition was attested
-    /// 
+    ///
     /// When the composition was attested by the party.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies when the information in the composition was deemed accurate.
     /// (Things may have changed since then.)
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub time: Option<DateTime>,
     /// Who attested the composition
-    /// 
+    ///
     /// Who attested the composition in the specified way.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies who has taken on the responsibility for accuracy of the
     /// composition content.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -891,56 +893,56 @@ pub struct CompositionAttester {
 }
 
 /// The assignment to an organizing scheme
-/// 
+///
 /// The assignment to an organizing scheme, including the type of classification
 /// and one or more classifier values.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CompositionClassification {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -950,11 +952,11 @@ pub struct CompositionClassification {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -962,53 +964,53 @@ pub struct CompositionClassification {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The kind of classifier (e.g. population, intervention)
-    /// 
+    ///
     /// The kind of classifier (e.g. population, intervention, comparator, outcome).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/evidence-classifier-type-example
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// The specific classification value
-    /// 
+    ///
     /// The specific classification value.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/condition-code
@@ -1016,64 +1018,64 @@ pub struct CompositionClassification {
 }
 
 /// The clinical service(s) being documented
-/// 
+///
 /// The clinical service, such as a colonoscopy or an appendectomy, being
 /// documented.
-/// 
+///
 /// ## Requirements
 /// Provides context for the composition and creates a linkage between a resource
 /// describing an event and the composition created describing the event.
-/// 
+///
 /// ## Implementation Notes
 /// The event needs to be consistent with the type element, though it can provide
 /// further information if desired.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Special Semantics
 /// - Included in summary
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CompositionEvent {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1083,11 +1085,11 @@ pub struct CompositionEvent {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1095,51 +1097,51 @@ pub struct CompositionEvent {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// The period covered by the documentation
-    /// 
+    ///
     /// The period of time covered by the documentation. There is no assertion that
     /// the documentation is a complete representation for this period, only that it
     /// documents events during this time.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub period: Option<Period>,
     /// The event(s) being documented, as code(s), reference(s), or both
-    /// 
+    ///
     /// Represents the main clinical acts, such as a colonoscopy or an appendectomy,
     /// being documented. In some cases, the event is inherent in the typeCode, such
     /// as a "History and Physical Report" in which case the procedure being
     /// documented is necessarily a "History and Physical" act. The events may be
     /// included as a code or as a reference to another resource.
-    /// 
+    ///
     /// ## Implementation Notes
     /// An event can further specialize the act inherent in Composition.type, such as
     /// where it is simply "Procedure Report" and the procedure was a "colonoscopy".
@@ -1147,16 +1149,16 @@ pub struct CompositionEvent {
     /// inherent in Composition.type as such a conflict would create an ambiguous
     /// situation. This short list of codes is provided to be used as key words for
     /// certain types of queries.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: This list of codes represents the main clinical acts being documented.
@@ -1165,57 +1167,57 @@ pub struct CompositionEvent {
 }
 
 /// Identifies supporting entities, including parents, relatives, caregivers, insurance policyholders, guarantors, and others related in some way to the patient
-/// 
+///
 /// Identifies supporting entities, including parents, relatives, caregivers,
 /// insurance policyholders, guarantors, and others related in some way to the
 /// patient. A supporting person or organization is an individual or an
 /// organization with a relationship to the patient. A supporting person who is
 /// playing multiple roles would be recorded in multiple participants (e.g.,
 /// emergency contact and next-of-kin).
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CompositionParticipant {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1225,11 +1227,11 @@ pub struct CompositionParticipant {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1237,77 +1239,77 @@ pub struct CompositionParticipant {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Meaning and purpose of participation, in creation of the clinical document
-    /// 
+    ///
     /// Meaning and purpose of participation, in creation of the clinical document.
     /// The list includes: data entry person, informant, primary information
     /// recipient, and tracker. Other types are allowed.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: FHIR Clinical Document Participant Types. Author, Authenticator, Custodian, Legal Authenticator, Record Target and Subject are found in distinct, named fields in FHIR. Thus, these types are excluded.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/fhir-clinical-doc-participant
     #[fhir_serde(rename = "type")]
     pub r#type: Option<Vec<CodeableConcept>>,
-    /// 
+    ///
     /// Exact function of the participant in the creation of the clinical document.
     /// This is more granular than type.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: To specify the exact function an actor had in a service in all necessary detail.
     /// - **ValueSet**: http://terminology.hl7.org/ValueSet/v3-ParticipationFunction
     pub function: Option<Vec<CodeableConcept>>,
     /// Time period of participation
-    /// 
+    ///
     /// Time period of participation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub time: Option<Period>,
     /// Who the participant is
-    /// 
+    ///
     /// Who the participant is.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1336,10 +1338,10 @@ pub enum CompositionRelatesToTarget {
 }
 
 /// Relationships to other compositions/documents
-/// 
+///
 /// Relationships that this composition has with other compositions or documents
 /// (FHIR or non-FHIR resources) that already exist.
-/// 
+///
 /// ## Implementation Notes
 /// To reference (using relatesTo) a Bundle of type "document" or another
 /// Composition where you only have the identifier, use a targetReference with an
@@ -1353,16 +1355,16 @@ pub enum CompositionRelatesToTarget {
 /// "relatesTo": [{
 ///   "type": "replaces",
 ///   "targetReference": {
-///     "identifier": { 
-///       "system": "...", 
+///     "identifier": {
+///       "system": "...",
 ///       "value": "..."
 ///     }
-///   } 
+///   }
 /// }]
 /// ```
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1370,41 +1372,41 @@ pub enum CompositionRelatesToTarget {
 #[fhir_resource(choice_elements = "target")]
 pub struct CompositionRelatesTo {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1414,11 +1416,11 @@ pub struct CompositionRelatesTo {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1426,38 +1428,38 @@ pub struct CompositionRelatesTo {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// documentation | justification | citation | predecessor | successor | derived-from | depends-on | composed-of | part-of | amends | amended-with | appends | appended-with | cites | cited-by | comments-on | comment-in | contains | contained-in | corrects | correction-in | replaces | replaced-with | retracts | retracted-by | signs | similar-to | supports | supported-with | transforms | transformed-into | transformed-with | documents | specification-of | created-with | cite-as | reprint | reprint-of | summarizes
-    /// 
+    ///
     /// The type of relationship to the related artifact.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type of relationship to the related artifact.
@@ -1465,11 +1467,11 @@ pub struct CompositionRelatesTo {
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// The artifact that is related to this Composition
-    /// 
+    ///
     /// The artifact that is related to this Composition Resource.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1478,11 +1480,11 @@ pub struct CompositionRelatesTo {
 }
 
 /// Composition is broken into sections
-/// 
+///
 /// The root of the sections that make up the composition.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **cmp-1**: A section must contain at least one of text, entries, or sub-sections (error)
 ///   Expression: `text.exists() or entry.exists() or section.exists()`
@@ -1492,47 +1494,47 @@ pub struct CompositionRelatesTo {
 ///   Expression: `%resource.attester.exists() implies(text.exists() or section.exists())`
 /// - **ele-1**: All FHIR elements must have a @value or children or both (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-/// 
+///
 /// ## Conditions
 /// Used when: cmp-3
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct CompositionSection {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1542,11 +1544,11 @@ pub struct CompositionSection {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1554,37 +1556,37 @@ pub struct CompositionSection {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Label for section (e.g. for ToC)
-    /// 
+    ///
     /// The label for this particular section. This will be part of the rendered
     /// content for the document, and is often used to build a table of contents.
-    /// 
+    ///
     /// ## Requirements
     /// Section headings are often standardized for different types of documents.
     /// They give guidance to humans on how the document is organized.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The title identifies the section for a human reader. The title must be
     /// consistent with the narrative of the resource that is the target of the
@@ -1593,64 +1595,64 @@ pub struct CompositionSection {
     /// a section has subsections that have their own adequately distinguishing
     /// title, or documents that only have a single section. Most Implementation
     /// Guides will make section title a required element.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// header, label, caption
     pub title: Option<String>,
     /// Classification of section (recommended)
-    /// 
+    ///
     /// A code identifying the kind of content contained within the section. This
     /// must be consistent with the section title.
-    /// 
+    ///
     /// ## Requirements
     /// Provides computable standardized labels to topics within the document.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The code identifies the section for an automated processor of the document.
     /// This is particularly relevant when using profiles to control the structure of
     /// the document.
-    /// 
+    ///
     /// If the section has content (instead of sub-sections), the section.code does
     /// not change the meaning or interpretation of the resource that is the content
     /// of the section.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Classification of a section of a composition/document.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/doc-section-codes
     pub code: Option<CodeableConcept>,
     /// Who and/or what authored the section, when the section is authored by someone other than the composition.author
-    /// 
+    ///
     /// Identifies who is responsible for the information in this section, not
     /// necessarily who typed it in.
-    /// 
+    ///
     /// The actual author of the section when it is not the author of the
     /// composition. If author is not specified, the author is assumed to be the
     /// author of the parent section or the author of the composition.
-    /// 
+    ///
     /// ## Requirements
     /// Identifies who is responsible for the content.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Vec<Reference>>,
     /// Who/what the section is about, when it is not about the subject of the composition
-    /// 
+    ///
     /// The actual focus of the section when it is not the subject of the
     /// composition, but instead represents something or someone associated with the
     /// subject such as (for a patient subject) a spouse, parent, fetus, or donor. If
@@ -1659,7 +1661,7 @@ pub struct CompositionSection {
     /// composition. Sections with a focus SHALL only include resources where the
     /// logical subject (patient, subject, focus, etc.) matches the section focus, or
     /// the resources have no logical subject (few resources).
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, sections in a document are about the subject of the document,
     /// whether that is a patient, or group of patients, location, or device, or
@@ -1667,66 +1669,66 @@ pub struct CompositionSection {
     /// about related entities. Typical examples are a section in a newborn discharge
     /// summary concerning the mother, or family history documents, with a section
     /// about each family member, though there are many other examples.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub focus: Option<Reference>,
     /// Text summary of the section, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains the attested content of the section,
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Document profiles may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-1, cmp-3
     pub text: Option<Narrative>,
     /// Information about the section contents that is not represented by any of the section entries
-    /// 
+    ///
     /// Information about the section contents that is not represented by any of the
     /// section entries.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A comment, general note or annotation not coded elsewhere in the section.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Order of section entries
-    /// 
+    ///
     /// Specifies the order applied to the items in the section entries.
-    /// 
+    ///
     /// ## Requirements
     /// Important for presentation and rendering. Lists may be sorted to place more
     /// important information first or to group related entries.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Applications SHOULD render ordered lists in the order provided, but MAY allow
     /// users to re-order based on their own preferences as well. If there is no
     /// order specified, the order is unknown, though there may still be some order.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: What order applies to the items in the entry.
@@ -1734,66 +1736,65 @@ pub struct CompositionSection {
     #[fhir_serde(rename = "orderedBy")]
     pub ordered_by: Option<CodeableConcept>,
     /// A reference to data that supports this section
-    /// 
+    ///
     /// A reference to the actual resource from which the narrative in the section is
     /// derived.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If there are no entries in the list, an emptyReason SHOULD be provided.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-1, cmp-2
     pub entry: Option<Vec<Reference>>,
     /// Why the section is empty
-    /// 
+    ///
     /// If the section is empty, why the list is empty. An empty section typically
     /// has some text explaining the empty reason.
-    /// 
+    ///
     /// ## Requirements
     /// Allows capturing things like "none exist" or "not asked" which can be
     /// important for most lists.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The various reasons for an empty section make a significant difference to its
     /// interpretation. Note that this code is for use when the entire section
     /// content has been suppressed, and not for when individual items are omitted -
     /// implementers may consider using a text note or a flag on an entry in these
     /// cases.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: If a section is empty, why it is empty.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/list-empty-reason
-    /// 
+    ///
     /// ## Conditions
     /// Used when: cmp-2
     #[fhir_serde(rename = "emptyReason")]
     pub empty_reason: Option<CodeableConcept>,
     /// Nested Section
-    /// 
+    ///
     /// A nested sub-section within this section.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Nested sections are primarily used to help human readers navigate to
     /// particular portions of the document.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub section: Option<Vec<CompositionSection>>,
 }
-
