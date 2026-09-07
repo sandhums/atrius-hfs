@@ -101,6 +101,11 @@ print(f"OK: seeded {pkg_ref} ({len(sds)} top-level StructureDefinitions) → {de
 print("    (this is what HFS_FHIR_PACKAGES loads; audit manifests under manifests/ are optional)")
 PY
 
+echo "==> Asserting package materialization warnings.is_empty()"
+# Fail closed: seeded IG must convert with zero warnings (audit §5.1 item 14).
+ATRIUS_IG_PACKAGE="${DEST}" cargo test -p helios-fhir-validator \
+  materialize_seeded_atrius_ig_has_no_warnings -- --exact --nocapture
+
 echo
 echo "Done. Start clinical HFS with:"
 echo "  HFS_FHIR_PACKAGE_CACHE=${CACHE_ROOT}"

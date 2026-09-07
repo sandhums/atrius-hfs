@@ -605,19 +605,30 @@ This is the live queue. Closed 3–6 Sep items stay in §5.2 for the record.
 
 **IG / QI-Core (AtriusIGDraft, not HFS runtime)**
 
-12. Decide QI-Core `mustSupport` parity for `AtriusInDeviceRequest`
-    (`status` / `intent` / `code[x]` / `codeReference` / `codeCodeableConcept`).
-    MS is informational in HFS — no validation change.
 13. FSH allows `codeOptions` (`0..1`) but does not encode QI-Core `drq-3`
-    (coding XOR codeOptions).
-14. CI assert: seeded IG materialization `warnings.is_empty()`.
-15. Overlay `hl7.fhir.uv.extensions.r4` only if untyped
-    `individual-recordedSexOrGender` instances need structural overlay
-    (not in the embedded R4 core pack).
+    (coding XOR codeOptions). **Wont-fix on NDHM-overlapping types** —
+    `NDHMCompleteCoding` requires `coding`; XOR would reject NDHM-valid
+    instances. Leave open only if a QI-only profile needs it later.
 
 ### 5.2 Closed since the 3 Sep audit
 
 Original §5 numbers in parentheses. These are **not** the live queue.
+
+**IG / QI-Core (closed 6 Sep)**
+
+12. QI-Core parity policy: map QI-Core 6 `qicore-keyelement` → Atrius `MS`;
+    no US-realm ValueSets at storage; DeviceRequest trimmed to QI keyelement
+    MS (dropped `codeReference` / `codeCodeableConcept` / `codeOptions` MS).
+    ValueSet decisions in `evaluation-strategy.md`; machine check
+    `AtriusIGDraft/scripts/qicore-parity-diff.py` → `docs/qicore-parity-report.md`.
+14. CI assert: seeded IG materialization `warnings.is_empty()` —
+    `packages_tests::materialize_seeded_atrius_ig_has_no_warnings` +
+    `setup-atrius-profile-registry.sh` post-seed gate.
+15. Do **not** overlay `hl7.fhir.uv.extensions.r4` on clinical HFS. Dropped
+    unused `individual-recordedSexOrGender` from Patient FSH (not in NDHM or
+    QI-Core Patient). Extensions pack remains SUSHI authoring-only for
+    `codeOptions` / `event-recorded`. Deleted
+    `manifests/deps/hl7-r4-extensions/`.
 
 1. Clinical HFS env/scripts migrated to `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`
    (4 Sep / §6.1). `.env.abdm.example` NDHM validator + startup fail on leftover
@@ -812,11 +823,11 @@ the operational parent and fight CDS/QI-Core. NDHM 6.5.0 itself parents R4.
   misses. PrescriptionRecord `only Reference(Binary)` is R4 Binary, not
   `AtriusInBinary`. Unconstrained FSH refs (105, many `section.author`) are
   IG holes, not parser bugs.
-- **Embedded R4 core pack** covers the HL7 datatypes/extensions that used to be
-stitched into manifests. Rare gap called out earlier: `individual-recordedSexOrGender`
-is used in Atrius Patient FSH and is **not** in that embedded pack; add
-`hl7.fhir.uv.extensions.r4@5.3.0` to `HFS_FHIR_PACKAGES` only if untyped
-instances of that extension need structural overlay.
+- **Embedded R4 core pack** covers the HL7 datatypes/extensions used by Atrius
+  profiles. `individual-recordedSexOrGender` was removed from Patient FSH (not
+  NDHM, not QI-Core); do **not** add `hl7.fhir.uv.extensions.r4` to clinical
+  `HFS_FHIR_PACKAGES`. SUSHI still depends on the pack for authoring
+  `codeOptions` / `event-recorded`. Closed as audit item 15 (6 Sep).
 - **Startup on leftover** `HFS_PROFILE_*` — **closed 6 Sep** (fail in
   `finish_parsed`). `HFS_PROFILE_CORPUS` is still valid.
 - **§3.7** (Redis JTI, outbox dead-letter / zero-delivery, SQLite claim CAS,
@@ -898,11 +909,10 @@ are generic FHIR-conformance bugs affecting any IG with recursive backbones or
 constrained choice branches, so they remain good upstream candidates if that
 call is revisited.
 
-**Not done: QI-Core** `mustSupport` **parity.** `AtriusInDeviceRequest` marks
-`status`, `intent`, `code[x]`, `codeReference`, `codeCodeableConcept` as MS
-where QI-Core does not. Since MS is informational in HFS, this changes no
-validation behaviour and was deliberately kept separate from the fix above —
-tracked as a parity decision, not a defect.
+**Not done: QI-Core** `drq-3` **XOR (item 13).** Encoding coding XOR
+`codeOptions` on NDHM-overlapping resources would reject NDHM-valid
+CompleteCoding instances. DeviceRequest MS extras beyond QI keyelement were
+trimmed (item 12). Seeded IG materialization warnings gate is item 14.
 
 ### 6.5 Versioned canonical lookup (`Patient|4.0.1`)
 

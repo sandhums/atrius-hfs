@@ -301,3 +301,56 @@ fn package_layers_overlay_core_for_meta_profile() {
         outcome.errors
     );
 }
+
+/// Materialize the seeded Atrius IG package and assert zero converter warnings.
+///
+/// Looks at `ATRIUS_IG_PACKAGE`, then `manifests/atrius-ig-package` relative to
+/// the workspace root (or crate parent). Skips when `package.json` is absent so
+/// `cargo test` stays offline-green without a seeded package.
+#[test]
+fn materialize_seeded_atrius_ig_has_no_warnings() {
+    let pkg = seeded_atrius_ig_package();
+    let Some(pkg) = pkg else {
+        eprintln!(
+            "skip materialize_seeded_atrius_ig_has_no_warnings: no ATRIUS_IG_PACKAGE \
+             / manifests/atrius-ig-package (seed via scripts/setup-atrius-profile-registry.sh)"
+        );
+        return;
+    };
+    let (_registry, report) = materialize_package(&pkg).expect("materialize Atrius IG package");
+    assert!(
+        report.convert_errors.is_empty(),
+        "Atrius IG convert_errors: {:?}",
+        report.convert_errors
+    );
+    assert!(
+        report.warnings.is_empty(),
+        "Atrius IG materialization warnings (expected empty after converter fixes): {:?}",
+        report.warnings
+    );
+    assert!(
+        report.inserted >= 100,
+        "expected ≥100 StructureDefinitions inserted, got {}",
+        report.inserted
+    );
+}
+
+fn seeded_atrius_ig_package() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("ATRIUS_IG_PACKAGE") {
+        let path = PathBuf::from(p);
+        if path.join("package.json").is_file() {
+            return Some(path);
+        }
+    }
+    // crates/fhir-validator → workspace root
+    let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())?;
+    let candidate = workspace.join("manifests/atrius-ig-package");
+    if candidate.join("package.json").is_file() {
+        Some(candidate)
+    } else {
+        None
+    }
+}

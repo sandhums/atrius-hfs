@@ -33,8 +33,10 @@ missing from the cache or materialization fails (no silent empty overlay).
 resolved or overlaid. That list is authoring metadata — NDHM terminology,
 THO, the Extensions Pack, CRMI, and so on. Add a package to
 `HFS_FHIR_PACKAGES` only when its StructureDefinitions should be on the
-runtime validation surface. CodeSystem / ValueSet resources still go through
-HTS, not the schema registry.
+runtime validation surface. **Do not** add `hl7.fhir.uv.extensions.r4` for
+clinical HFS — typed extension instances get structure from the Atrius IG
+snapshot; the Extensions Pack is SUSHI authoring-only. CodeSystem / ValueSet
+resources still go through HTS, not the schema registry.
 
 ## Resolver order
 
