@@ -165,7 +165,7 @@ cargo run -p cds-server -- \
   --library-base-url http://127.0.0.1:8079 \
   --kr-services-binary-id cds-services-catalog \
   --hfs-base-url http://localhost:8082 \
-  --hts-base-url http://localhost:8090
+  --hts-base-url http://localhost:9091
 ```
 
 Local JSON file:
@@ -176,7 +176,7 @@ cargo run -p cds-server -- \
   --clinical-reasoning-url http://127.0.0.1:8088 \
   --services-manifest-path ./cds-services.manifest.json \
   --hfs-base-url http://localhost:8082 \
-  --hts-base-url http://localhost:8090 \
+  --hts-base-url http://localhost:9091 \
   --library-base-url http://127.0.0.1:8079
 ```
 

@@ -24,8 +24,8 @@ use dashmap::DashMap;
 use helios_fhir::FhirVersion;
 use helios_fhir_validator::fhirpath_effects::FhirPathConstraintEvaluator;
 use helios_fhir_validator::{
-    CodedValue, CompositeResolver, EffectHandlers, ErrorKind, PackageCache, PackageRef,
-    SchemaRegistry, SchemaResolver, Severity, TerminologyError, TerminologyProvider,
+    CodedValue, CompositeResolver, CoreTerminology, EffectHandlers, ErrorKind, PackageCache,
+    PackageRef, SchemaRegistry, SchemaResolver, Severity, TerminologyError, TerminologyProvider,
     UnknownProfilePolicy, ValidationError, ValidationOptions, Validator, dotted_to_fhirpath,
     materialize_package_layers,
 };
@@ -36,7 +36,7 @@ use helios_persistence::sof::reference_resolver::{
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use serde_json::{Value, json};
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Per-tenant, per-version profile registries fed from stored
@@ -108,7 +108,7 @@ impl ValidationService {
 
     /// Build a service from `HFS_VALIDATION_*` / `HFS_FHIR_*` configuration.
     /// `terminology_server` is `HFS_TERMINOLOGY_SERVER` (required for
-    /// `terminology = remote`; the config validator enforces the pairing).
+    /// `terminology = remote` or `tiered`; the config validator enforces the pairing).
     ///
     /// Fails when `HFS_FHIR_PACKAGES` is set and a listed package is missing
     /// from the cache or materialization fails — never boots with a silently
@@ -134,6 +134,28 @@ impl ValidationService {
                     base.to_string(),
                     Duration::from_millis(config.terminology_timeout_ms),
                 ))),
+                ("remote", None) => {
+                    return Err(
+                        "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER"
+                            .to_string(),
+                    );
+                }
+                ("tiered", Some(base)) => {
+                    let remote = RemoteTerminologyProvider::new(
+                        base.to_string(),
+                        Duration::from_millis(config.terminology_timeout_ms),
+                    );
+                    Some(Arc::new(TieredTerminologyProvider::new(
+                        helios_fhir_validator::core_terminology(version),
+                        Arc::new(remote),
+                    )))
+                }
+                ("tiered", None) => {
+                    return Err(
+                        "HFS_VALIDATION_TERMINOLOGY=tiered requires HFS_TERMINOLOGY_SERVER"
+                            .to_string(),
+                    );
+                }
                 // Offline required-binding checks against the FHIR core value
                 // sets embedded in helios-fhir-validator (no server needed).
                 ("embedded", _) => {
@@ -426,32 +448,60 @@ impl SchemaResolver for LockedRegistryResolver {
 }
 
 // ---------------------------------------------------------------------
+// Tiered terminology provider
+// ---------------------------------------------------------------------
+
+/// Embedded FHIR-core pack first; HTS `$validate-code` only when the ValueSet
+/// is not in the pack (`CoreTerminology::member` returns `None`).
+///
+/// A definite pack hit (`Some(true)`) or miss (`Some(false)`) never calls HTS.
+/// That is the original Atrius local-then-remote posture: core enums stay
+/// offline; SNOMED/LOINC/NDHM/Atrius bindings go to the terminology server.
+pub struct TieredTerminologyProvider {
+    core: Arc<CoreTerminology>,
+    remote: Arc<dyn TerminologyProvider>,
+}
+
+impl TieredTerminologyProvider {
+    /// `remote` is typically [`RemoteTerminologyProvider`].
+    pub fn new(core: Arc<CoreTerminology>, remote: Arc<dyn TerminologyProvider>) -> Self {
+        Self { core, remote }
+    }
+}
+
+#[async_trait]
+impl TerminologyProvider for TieredTerminologyProvider {
+    async fn validate_code(
+        &self,
+        value_set: &str,
+        coded: &CodedValue,
+    ) -> Result<bool, TerminologyError> {
+        match self.core.member(value_set, coded) {
+            Some(verdict) => Ok(verdict),
+            None => self.remote.validate_code(value_set, coded).await,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
 // Remote terminology provider
 // ---------------------------------------------------------------------
 
 /// `TerminologyProvider` backed by a FHIR terminology server's
-/// `ValueSet/$validate-code`, with a small in-memory TTL cache (neither the
-/// fhirpath nor the search terminology clients cache).
+/// `ValueSet/$validate-code`. Verdicts are cached process-wide (300s TTL) so
+/// search, FHIRPath, and validation share hits.
 pub struct RemoteTerminologyProvider {
-    base_url: String,
-    client: reqwest::Client,
-    /// `(valueSet, coded-token)` → validity, cached for [`CACHE_TTL`].
-    cache: DashMap<String, (bool, Instant)>,
+    client: helios_terminology_client::TerminologyClient,
 }
 
-/// How long `$validate-code` verdicts are cached.
-const CACHE_TTL: Duration = Duration::from_secs(300);
-
 impl RemoteTerminologyProvider {
-    /// `base_url` is the terminology server root (e.g. `http://hts:8090`).
+    /// `base_url` is the terminology server root (e.g. `http://hts:9091`).
     pub fn new(base_url: String, timeout: Duration) -> Self {
         Self {
-            base_url: base_url.trim_end_matches('/').to_string(),
-            client: reqwest::Client::builder()
-                .timeout(timeout)
-                .build()
-                .expect("reqwest client builds"),
-            cache: DashMap::new(),
+            client: helios_terminology_client::TerminologyClient::new(
+                base_url,
+                helios_terminology_client::ClientOptions::validation(timeout),
+            ),
         }
     }
 
@@ -482,47 +532,11 @@ impl TerminologyProvider for RemoteTerminologyProvider {
         coded: &CodedValue,
     ) -> Result<bool, TerminologyError> {
         let key = format!("{value_set}|{coded:?}");
-        if let Some(entry) = self.cache.get(&key) {
-            let (verdict, at) = *entry;
-            if at.elapsed() < CACHE_TTL {
-                return Ok(verdict);
-            }
-        }
-
-        let url = format!("{}/ValueSet/$validate-code", self.base_url);
-        let response = self
-            .client
-            .post(&url)
-            .json(&Self::payload(value_set, coded))
-            .send()
+        let body = Self::payload(value_set, coded);
+        self.client
+            .validate_code_bool(&key, &body)
             .await
-            .map_err(|e| TerminologyError(format!("request to {url} failed: {e}")))?;
-        if !response.status().is_success() {
-            return Err(TerminologyError(format!(
-                "{url} returned {}",
-                response.status()
-            )));
-        }
-        let body: Value = response
-            .json()
-            .await
-            .map_err(|e| TerminologyError(format!("invalid $validate-code response: {e}")))?;
-        let verdict = body
-            .get("parameter")
-            .and_then(Value::as_array)
-            .and_then(|params| {
-                params
-                    .iter()
-                    .find(|p| p.get("name").and_then(Value::as_str) == Some("result"))
-            })
-            .and_then(|p| p.get("valueBoolean"))
-            .and_then(Value::as_bool)
-            .ok_or_else(|| {
-                TerminologyError("no boolean 'result' parameter in response".to_string())
-            })?;
-
-        self.cache.insert(key, (verdict, Instant::now()));
-        Ok(verdict)
+            .map_err(|e| TerminologyError(e.to_string()))
     }
 }
 
@@ -622,6 +636,121 @@ impl helios_persistence::core::IngestValidator for ValidationService {
                     "diagnostics": e.to_string()
                 }]
             })),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    struct RecordingRemote {
+        calls: Mutex<Vec<(String, String)>>,
+        verdict: bool,
+        fail: bool,
+    }
+
+    #[async_trait]
+    impl TerminologyProvider for RecordingRemote {
+        async fn validate_code(
+            &self,
+            value_set: &str,
+            coded: &CodedValue,
+        ) -> Result<bool, TerminologyError> {
+            let token = match coded {
+                CodedValue::Code(c) => c.clone(),
+                other => format!("{other:?}"),
+            };
+            self.calls
+                .lock()
+                .expect("lock")
+                .push((value_set.to_string(), token));
+            if self.fail {
+                return Err(TerminologyError("hts down".into()));
+            }
+            Ok(self.verdict)
+        }
+    }
+
+    fn tiered(remote: RecordingRemote) -> (TieredTerminologyProvider, Arc<RecordingRemote>) {
+        let remote = Arc::new(remote);
+        (
+            TieredTerminologyProvider::new(
+                helios_fhir_validator::core_terminology(FhirVersion::R4),
+                Arc::clone(&remote) as Arc<dyn TerminologyProvider>,
+            ),
+            remote,
+        )
+    }
+
+    #[tokio::test]
+    async fn tiered_answers_core_enums_without_hts() {
+        let (tx, remote) = tiered(RecordingRemote {
+            calls: Mutex::new(Vec::new()),
+            verdict: false,
+            fail: false,
+        });
+        let vs = "http://hl7.org/fhir/ValueSet/administrative-gender";
+        assert!(
+            tx.validate_code(vs, &CodedValue::Code("male".into()))
+                .await
+                .unwrap()
+        );
+        assert!(
+            !tx.validate_code(vs, &CodedValue::Code("masculino".into()))
+                .await
+                .unwrap()
+        );
+        assert!(
+            remote.calls.lock().unwrap().is_empty(),
+            "core pack hit/miss must not call HTS"
+        );
+    }
+
+    #[tokio::test]
+    async fn tiered_falls_through_to_hts_for_unembedded_valueset() {
+        let (tx, remote) = tiered(RecordingRemote {
+            calls: Mutex::new(Vec::new()),
+            verdict: true,
+            fail: false,
+        });
+        let vs = "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-composition-section-codes";
+        assert!(
+            tx.validate_code(vs, &CodedValue::Code("422843007".into()))
+                .await
+                .unwrap()
+        );
+        let calls = remote.calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].0, vs);
+        assert_eq!(calls[0].1, "422843007");
+    }
+
+    #[tokio::test]
+    async fn tiered_propagates_hts_errors() {
+        let (tx, _) = tiered(RecordingRemote {
+            calls: Mutex::new(Vec::new()),
+            verdict: true,
+            fail: true,
+        });
+        let err = tx
+            .validate_code(
+                "http://hl7.org/fhir/ValueSet/marital-status",
+                &CodedValue::Code("M".into()),
+            )
+            .await
+            .unwrap_err();
+        assert!(err.0.contains("hts down"), "{err}");
+    }
+
+    #[test]
+    fn from_config_tiered_requires_server() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "tiered".to_string();
+        match ValidationService::from_config(&cfg, None, FhirVersion::R4) {
+            Ok(_) => panic!("expected error when HFS_TERMINOLOGY_SERVER is unset"),
+            Err(err) => assert!(err.contains("HFS_TERMINOLOGY_SERVER"), "{err}"),
         }
     }
 }

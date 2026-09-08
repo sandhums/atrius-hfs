@@ -225,7 +225,7 @@ Backend (connection management, capabilities)
 
 ## Features
 
-- **Multiple Backends**: SQLite, PostgreSQL, Cassandra, MongoDB, Neo4j, Elasticsearch, S3
+- **Multiple Backends**: SQLite, PostgreSQL, MongoDB, Elasticsearch, S3
 - **Multitenancy**: Shared-schema isolation via a `tenant_id` discriminator on every backend, with a mandatory `TenantContext` on every tenant-scoped operation (the S3 backend additionally offers a bucket-per-tenant mode)
 - **Full FHIR Search**: All parameter types, modifiers, chaining, \_include/\_revinclude
 - **Versioning**: Complete resource history with optimistic locking
@@ -489,9 +489,7 @@ Backends can serve as primary (CRUD, versioning, and — where the backend suppo
 | ------------------ | --------------------------- | -------------- |
 | `sqlite` (default) | SQLite (in-memory and file) | rusqlite       |
 | `postgres`         | PostgreSQL with JSONB       | tokio-postgres |
-| `cassandra`        | Apache Cassandra            | cdrs-tokio     |
 | `mongodb`          | MongoDB document store      | mongodb        |
-| `neo4j`            | Neo4j graph database        | neo4rs         |
 | `elasticsearch`    | Elasticsearch search        | elasticsearch  |
 | `s3`               | AWS S3 object storage       | aws-sdk-s3     |
 
@@ -1221,14 +1219,14 @@ The SQLite backend includes a complete FHIR search implementation using pre-comp
 
 ### Phase 5+: Additional Backends (Planned)
 
-- [ ] Cassandra backend (wide-column, partition keys)
+- [ ] ClickHouse backend
 - [x] MongoDB Phase 1 scaffold (module wiring, config, Backend trait baseline)
 - [x] MongoDB Phase 2 core storage parity (CRUD/count/read_batch/create_or_update, tenant isolation, soft-delete, schema bootstrap)
 - [x] MongoDB Phase 3 versioning/history plus best-effort session-backed consistency
 - [x] MongoDB Phase 4 native search, pagination/sorting, and conditional create/update/delete
 - [x] MongoDB Phase 5 composite MongoDB + Elasticsearch integration and runtime wiring
 - [x] MongoDB Phase 6 runtime wiring verification, documentation sync, and release-readiness validation
-- [ ] Neo4j backend (graph queries, Cypher)
+- [ ] Graph-role routing docs (no dedicated graph engine)
 
 ### Phase 6: Composite Storage ✓
 
@@ -1507,12 +1505,16 @@ let config = CompositeConfigBuilder::new()
     .build()?;
 ```
 
-#### Graph-Heavy Workloads
+#### Graph-role routing (no dedicated graph engine)
+
+Chained search is routed to `BackendRole::Graph` when one is configured.
+There is no Neo4j/Cassandra backend in this crate; an existing engine can
+fill the role if you want that routing:
 
 ```rust
 let config = CompositeConfigBuilder::new()
     .primary("pg", BackendKind::Postgres)
-    .graph_backend("neo4j", BackendKind::Neo4j)
+    .graph_backend("graph", BackendKind::Postgres)
     .sync_mode(SyncMode::Hybrid { sync_for_search: false })
     .build()?;
 ```

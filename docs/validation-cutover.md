@@ -11,8 +11,54 @@ enforcement. The Atrius `fhir-validation` crate and `HFS_PROFILE_MANIFEST` /
 | `HFS_FHIR_PACKAGE_CACHE` | Curated FHIR NPM package cache root |
 | `HFS_FHIR_PACKAGES` | Comma-separated `name@version` packages to overlay (listed packages only; `package.json` deps are not walked) |
 | `HFS_VALIDATION_MODE` | `off` / `log` / `enforce` on create/update/patch/batch/**transaction**/bulk-submit ingest |
+| `HFS_VALIDATION_TERMINOLOGY` | `off` / `embedded` / `remote` / `tiered`. Atrius clinical + NDHM validate use `tiered`: FHIR-core enums from the validator gz pack, everything else (SNOMED, LOINC, NDHM, Atrius) via `HFS_TERMINOLOGY_SERVER`. |
 
 See [crates/fhir-validator/docs/packages.md](../crates/fhir-validator/docs/packages.md).
+
+## Terminology: `tiered`
+
+Atrius clinical HFS and the NDHM export validator set
+`HFS_VALIDATION_TERMINOLOGY=tiered` with `HFS_VALIDATION_TERMINOLOGY_FAIL=open`.
+
+- FHIR-core enumerated ValueSets (status, gender, category, …) are answered
+  from the validator gz pack (`CoreTerminology::member`) with no HTS round trip.
+- ValueSets **not** in that pack — SNOMED, LOINC, RxNorm, UCUM, THO
+  (`marital-status`), NDHM, Atrius — go to `HFS_TERMINOLOGY_SERVER`
+  (`ValueSet/$validate-code`).
+- `open` warns when HTS is unreachable; switch to `closed` in production if
+  HTS is a hard dependency.
+
+`embedded` alone is **not** HTS. The R4 pack is ~480 `http://hl7.org/fhir/ValueSet/*`
+URLs generated from the spec `valuesets.json` bundle. Unknown URLs used to
+return `Ok(true)` and silently accept SNOMED/NDHM bindings.
+
+**Do not merge Atrius or NDHM ValueSets into
+`crates/fhir-validator/packs/terminology_r4.json.gz`.** That file is regenerated
+from the HL7 spec; mixing custom URLs in would be wiped on the next regen and
+would lie about what “FHIR core” means. Keep Atrius/NDHM in HTS
+(`scripts/import-ndhm-atrius-terminology.py`, `hts import`, or
+`HTS_BOOTSTRAP_DIR`). `HFS_FHIR_PACKAGES` overlays StructureDefinitions only;
+CodeSystem/ValueSet files in the package are ignored for binding checks.
+
+A second Atrius validator pack is optional later, only if HTS latency or
+offline `$validate` becomes a problem.
+
+Env templates are checked by `python3 scripts/check-env-drift.py` (Atrius CI).
+
+## Retired crates (backup branch)
+
+`crates/fhir-terminology` (generated local ValueSet/CodeSystem tables) and
+`crates/fhir-valueset-gen` (`atrius-fhir-valueset-gen`) had **zero dependents**
+and duplicated the validator gz packs plus HTS. They are deleted from
+`feat-clinical-reasoning`. Full sources remain on
+
+`backup/fhir-terminology-and-valueset-gen` (commit `1d8c0e43e`).
+
+Restore with `git checkout backup/fhir-terminology-and-valueset-gen -- crates/fhir-terminology crates/fhir-valueset-gen` and add those paths back to `default-members`. Do not put them on the default build path.
+
+HTTP to HTS now goes through `helios-terminology-client` (`crates/terminology-client`): REST search `$expand`, validation `$validate-code`, FHIRPath `%terminologies`, and the UI picker share one process-wide 300s TTL cache.
+
+Cassandra and Neo4j cargo features (`cdrs-tokio` / `neo4rs`) were never implemented and have been removed from `helios-persistence`.
 
 ## Staging checklist
 

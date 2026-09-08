@@ -23,6 +23,7 @@ otel = ["helios-observability/otel"]
 [dependencies]
 helios-fhir = { path = "../fhir", version = "0.2.1", default-features = false }
 helios-fhirpath-support = { path = "../fhirpath-support", version = "0.2.1" }
+helios-terminology-client = { path = "../terminology-client", version = "0.2.1" }
 helios-observability = { path = "../observability", version = "0.2.1" }
 chumsky = "0.10"
 roxmltree = "0.20"

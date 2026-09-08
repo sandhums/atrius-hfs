@@ -4,13 +4,16 @@
 //! It implements the standard FHIR terminology operations including expand, lookup,
 //! validate-code, subsumes, and translate.
 
+use helios_fhir::FhirVersion;
+use helios_terminology_client::{
+    ClientOptions, TerminologyClient as HtsClient, TerminologyError as HtsError,
+};
 use reqwest::Client;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::error::{FhirPathError, FhirPathResult};
-use helios_fhir::FhirVersion;
 
 /// Default request timeout for terminology server calls.
 ///
@@ -43,11 +46,20 @@ fn parse_request_timeout(raw: Option<&str>) -> Option<Duration> {
     }
 }
 
+fn map_term(err: HtsError, op: &str) -> FhirPathError {
+    match err {
+        HtsError::Network(msg) => FhirPathError::NetworkError(msg),
+        HtsError::Parse(msg) => FhirPathError::ParseError(msg),
+        HtsError::ServerError { status, body } => {
+            FhirPathError::TerminologyError(format!("{op} failed with status {status}: {body}"))
+        }
+    }
+}
+
 /// Terminology client for making requests to a FHIR terminology server
 #[derive(Clone)]
 pub struct TerminologyClient {
-    client: Client,
-    base_url: String,
+    inner: HtsClient,
     #[allow(dead_code)]
     fhir_version: FhirVersion,
 }
@@ -63,17 +75,10 @@ impl TerminologyClient {
     /// The request timeout defaults to 30s and can be overridden with
     /// `FHIRPATH_TERMINOLOGY_TIMEOUT` (whole seconds; `0` disables it).
     pub fn new(base_url: String, fhir_version: FhirVersion) -> Self {
-        let mut builder = Client::builder();
-        if let Some(timeout) = request_timeout() {
-            builder = builder.timeout(timeout);
-        }
-        let client = builder
-            .build()
-            .expect("failed to build terminology HTTP client");
-
+        let mut options = ClientOptions::fhirpath();
+        options.timeout = request_timeout();
         Self {
-            client,
-            base_url: base_url.trim_end_matches('/').to_string(),
+            inner: HtsClient::new(base_url, options),
             fhir_version,
         }
     }
@@ -88,8 +93,7 @@ impl TerminologyClient {
     #[allow(dead_code)]
     pub fn with_client(client: Client, base_url: String, fhir_version: FhirVersion) -> Self {
         Self {
-            client,
-            base_url: base_url.trim_end_matches('/').to_string(),
+            inner: HtsClient::with_http(client, base_url, None),
             fhir_version,
         }
     }
@@ -105,44 +109,15 @@ impl TerminologyClient {
         value_set_url: &str,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/ValueSet/$expand", self.base_url);
-
-        // Build query parameters
-        let mut query_params = vec![("url".to_string(), value_set_url.to_string())];
-
-        if let Some(params) = params {
-            for (key, value) in params {
-                query_params.push((key.clone(), value));
-            }
-        }
-
-        let response = self
-            .client
-            .get(&url)
-            .query(
-                &query_params
-                    .iter()
-                    .map(|(k, v)| (k.as_str(), v.as_str()))
-                    .collect::<Vec<_>>(),
-            )
-            .header("Accept", "application/fhir+json")
-            .send()
+        let extra: Vec<(String, String)> = params.unwrap_or_default().into_iter().collect();
+        let extra_ref: Vec<(&str, &str)> = extra
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        self.inner
+            .expand_get(value_set_url, &extra_ref)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "ValueSet expansion failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "ValueSet expansion"))
     }
 
     /// Looks up details for a code
@@ -158,8 +133,6 @@ impl TerminologyClient {
         code: &str,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/CodeSystem/$lookup", self.base_url);
-
         let mut body = json!({
             "resourceType": "Parameters",
             "parameter": [
@@ -174,7 +147,6 @@ impl TerminologyClient {
             ]
         });
 
-        // Add additional parameters if provided
         if let Some(params) = params
             && let Some(parameters) = body.get_mut("parameter").and_then(|p| p.as_array_mut())
         {
@@ -186,29 +158,10 @@ impl TerminologyClient {
             }
         }
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json("/CodeSystem/$lookup", &body)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "Code lookup failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "Code lookup"))
     }
 
     /// Validates a code against a ValueSet
@@ -231,10 +184,10 @@ impl TerminologyClient {
         let local_valueset_id = Self::local_valueset_id_from_canonical(value_set_url);
         let (base_valueset_url, valueset_version) = Self::split_valueset_canonical(value_set_url);
 
-        let url = if let Some(valueset_id) = local_valueset_id {
-            format!("{}/ValueSet/{}/$validate-code", self.base_url, valueset_id)
+        let path = if let Some(valueset_id) = local_valueset_id {
+            format!("/ValueSet/{valueset_id}/$validate-code")
         } else {
-            format!("{}/ValueSet/$validate-code", self.base_url)
+            "/ValueSet/$validate-code".to_string()
         };
 
         let mut parameters = Vec::new();
@@ -300,31 +253,10 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json(&path, &body)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            let result: Value = response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))?;
-
-            Ok(result)
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "ValueSet validation failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "ValueSet validation"))
     }
 
     /// Validates a code against a ValueSet using a full FHIR `Parameters` resource body.
@@ -344,7 +276,7 @@ impl TerminologyClient {
         mut parameters: Value,
     ) -> FhirPathResult<Value> {
         let local_valueset_id = Self::local_valueset_id_from_canonical(valueset_canonical);
-        let url = if let Some(valueset_id) = local_valueset_id {
+        let path = if let Some(valueset_id) = local_valueset_id {
             if let Some(param_array) = parameters
                 .get_mut("parameter")
                 .and_then(|p| p.as_array_mut())
@@ -356,34 +288,15 @@ impl TerminologyClient {
                         .unwrap_or(true)
                 });
             }
-            format!("{}/ValueSet/{}/$validate-code", self.base_url, valueset_id)
+            format!("/ValueSet/{valueset_id}/$validate-code")
         } else {
-            format!("{}/ValueSet/$validate-code", self.base_url)
+            "/ValueSet/$validate-code".to_string()
         };
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&parameters)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json(&path, &parameters)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "ValueSet validation failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "ValueSet validation"))
     }
 
     /// Validates a code against a CodeSystem
@@ -401,8 +314,6 @@ impl TerminologyClient {
         display: Option<&str>,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/CodeSystem/$validate-code", self.base_url);
-
         let mut parameters = vec![
             json!({
                 "name": "url",
@@ -436,29 +347,10 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json("/CodeSystem/$validate-code", &body)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "CodeSystem validation failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "CodeSystem validation"))
     }
 
     /// Checks if one code subsumes another
@@ -476,8 +368,6 @@ impl TerminologyClient {
         code_b: &str,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/CodeSystem/$subsumes", self.base_url);
-
         let mut parameters = vec![
             json!({
                 "name": "system",
@@ -508,29 +398,10 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json("/CodeSystem/$subsumes", &body)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "Subsumes check failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "Subsumes check"))
     }
 
     /// Translates a code using a ConceptMap
@@ -550,35 +421,12 @@ impl TerminologyClient {
         target_system: Option<&str>,
         params: Option<HashMap<String, String>>,
     ) -> FhirPathResult<Value> {
-        let url = format!("{}/ConceptMap/$translate", self.base_url);
-
         let body = build_translate_body(concept_map_url, system, code, target_system, params);
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&body)
-            .header("Content-Type", "application/fhir+json")
-            .header("Accept", "application/fhir+json")
-            .send()
+        self.inner
+            .post_json("/ConceptMap/$translate", &body)
             .await
-            .map_err(|e| FhirPathError::NetworkError(e.to_string()))?;
-
-        if response.status().is_success() {
-            let result: Value = response
-                .json()
-                .await
-                .map_err(|e| FhirPathError::ParseError(e.to_string()))?;
-
-            Ok(result)
-        } else {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            Err(FhirPathError::TerminologyError(format!(
-                "Translation failed with status {}: {}",
-                status, body
-            )))
-        }
+            .map_err(|e| map_term(e, "Translation"))
     }
     fn split_valueset_canonical(valueset_url: &str) -> (&str, Option<&str>) {
         if let Some((base, version)) = valueset_url.split_once('|') {
@@ -803,16 +651,16 @@ mod tests {
     #[test]
     fn test_terminology_client_creation() {
         let client = TerminologyClient::new("https://tx.fhir.org/r4/".to_string(), FhirVersion::R4);
-        assert_eq!(client.base_url, "https://tx.fhir.org/r4");
+        assert_eq!(client.inner.base_url(), "https://tx.fhir.org/r4");
     }
 
     #[test]
     fn test_base_url_normalization() {
         let client = TerminologyClient::new("https://tx.fhir.org/r4/".to_string(), FhirVersion::R4);
-        assert_eq!(client.base_url, "https://tx.fhir.org/r4");
+        assert_eq!(client.inner.base_url(), "https://tx.fhir.org/r4");
 
         let client2 = TerminologyClient::new("https://tx.fhir.org/r4".to_string(), FhirVersion::R4);
-        assert_eq!(client2.base_url, "https://tx.fhir.org/r4");
+        assert_eq!(client2.inner.base_url(), "https://tx.fhir.org/r4");
     }
 
     /// Captures the `$translate` request body and returns the parameter names it carries.

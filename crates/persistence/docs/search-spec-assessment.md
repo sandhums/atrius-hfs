@@ -27,7 +27,7 @@ executes depends on the configured backend. Most gaps are therefore in the backe
 Supported backends for search: **SQLite** (reference implementation), **PostgreSQL**, **MongoDB**
 (partial native), **Elasticsearch** (search-optimized secondary). **S3** is storage-only and
 returns `UnsupportedCapability` for all search operations (`backends/s3/storage.rs`). Cassandra and
-Neo4j are not implemented.
+Neo4j are not implemented (cargo features for those drivers were removed).
 
 ## 1. Search parameter types
 

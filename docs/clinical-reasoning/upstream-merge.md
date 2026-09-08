@@ -227,7 +227,7 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 
 | File | Atrius change |
 |------|----------------|
-| `Cargo.toml` | Keep Atrius `default-members` (`fhir-valueset-gen`, `fhir-terminology`, `cds-server` is a workspace member via `crates/*` but not a default member). Helios version / serde pins from `main` |
+| `Cargo.toml` | Keep Atrius `default-members` (`cds-server`, `crates/terminology-client`; do **not** restore `fhir-valueset-gen` / `fhir-terminology` — they live on `backup/fhir-terminology-and-valueset-gen`). Helios version / serde pins from `main` |
 
 **Note:** `ValidationService` is wired in `helios-rest` `AppState` from `ServerConfig`. `crates/hfs/src/main.rs` also constructs one for bulk-submit workers (`IngestValidator`). Do not restore a second engine.
 

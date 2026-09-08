@@ -13,17 +13,17 @@ import CLI, and bootstrap-sync internals, see
 ## Running
 
 ```bash
-# Default: SQLite, port 8090, no seed data
+# Default: SQLite, port 9091 (Atrius), no seed data
 cargo run --bin hts
 
 # Custom database path and port
-HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9090 cargo run --bin hts
+HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9091 cargo run --bin hts
 ```
 
 ```powershell
 # Windows equivalent
 $env:HTS_DATABASE_URL = ".\my-terminology.db"
-$env:HTS_SERVER_PORT  = "9090"
+$env:HTS_SERVER_PORT  = "9091"
 cargo run --bin hts
 ```
 
@@ -60,7 +60,7 @@ $env:HTS_BOOTSTRAP_DIR = ".\crates\hts\terminology-data"
 cargo run --bin hts
 ```
 
-`http://localhost:8090/ui/hts` serves the dashboard; the bare root `/`
+`http://localhost:9091/ui/hts` serves the dashboard; the bare root `/`
 redirects there too.
 
 This gives you ICD-10-CM, ICD-9-CM, NCI Thesaurus, MeSH (via NCI Thesaurus
@@ -85,7 +85,7 @@ and `RELEASING.md` for the full refresh workflow.
 
 | Variable | Default | Description |
 |---|---|---|
-| `HTS_SERVER_PORT` | `8090` | Server port |
+| `HTS_SERVER_PORT` | `9091` | Server port (Atrius default; Helios upstream used 8090) |
 | `HTS_SERVER_HOST` | `127.0.0.1` | Host to bind |
 | `HTS_DATABASE_URL` | `./data/hts.db` | SQLite file path or PostgreSQL connection URL |
 | `HTS_BOOTSTRAP_DIR` | none | Directory of terminology files imported on startup — set to `./crates/hts/terminology-data` for the bundled seed set |
@@ -98,8 +98,8 @@ import CLI.
 ## Sanity check
 
 ```bash
-curl http://localhost:8090/health
-curl "http://localhost:8090/metadata?mode=terminology"
+curl http://localhost:9091/health
+curl "http://localhost:9091/metadata?mode=terminology"
 ```
 
 The second call should return a `TerminologyCapabilities` resource once

@@ -1,0 +1,22 @@
+[package]
+name = "helios-terminology-client"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage = "https://github.com/HeliosSoftware/hfs/tree/main/crates/terminology-client"
+rust-version.workspace = true
+description = "Shared FHIR terminology-server HTTP client (HTS $expand / $validate-code / $lookup / $subsumes / $translate) with a process-wide TTL cache"
+keywords = ["helios-software", "hl7", "fhir", "terminology"]
+categories = ["web-programming"]
+
+[dependencies]
+dashmap = "6"
+reqwest = { version = "0.12", features = ["json"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }

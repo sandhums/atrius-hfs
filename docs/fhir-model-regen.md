@@ -14,8 +14,9 @@ layout. The cost of keeping it is **silent model staleness**: a merge that
 `git rm`s Helios’s `r4.rs` discards every upstream body change. Regen after
 those syncs is the only way the directory tree picks them up.
 
-Terminology (`crates/fhir-terminology`) is a different generator
-(`helios-fhir-valueset-gen`) and does not follow this layout.
+The former `crates/fhir-terminology` / `atrius-fhir-valueset-gen` path is
+retired; sources live on branch `backup/fhir-terminology-and-valueset-gen`.
+HTS plus `helios-fhir-validator` packs are the live terminology path.
 
 ## When to regenerate
 

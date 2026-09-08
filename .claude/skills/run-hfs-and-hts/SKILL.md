@@ -20,11 +20,11 @@ Start `hts` first, seeded from the bundled terminology data, then start
 ```bash
 # Terminal 1 — HTS, seeded with the bundled terminology set, admin UI on
 HTS_BOOTSTRAP_DIR=./crates/hts/terminology-data cargo run --bin hts
-# binds 127.0.0.1:8090, admin UI at /ui/hts
+# binds 127.0.0.1:9091, admin UI at /ui/hts
 
 # Terminal 2 — HFS, wired to use HTS for terminology operations
-HFS_TERMINOLOGY_SERVER=http://127.0.0.1:8090 \
-FHIRPATH_TERMINOLOGY_SERVER=http://127.0.0.1:8090 \
+HFS_TERMINOLOGY_SERVER=http://127.0.0.1:9091 \
+FHIRPATH_TERMINOLOGY_SERVER=http://127.0.0.1:9091 \
 cargo run --bin hfs
 # binds 127.0.0.1:8080, UI at /ui
 ```
@@ -32,11 +32,11 @@ cargo run --bin hfs
 ```powershell
 # Terminal 1 — HTS
 $env:HTS_BOOTSTRAP_DIR = ".\crates\hts\terminology-data"
-cargo run --bin hts              # binds 127.0.0.1:8090, admin UI at /ui/hts
+cargo run --bin hts              # binds 127.0.0.1:9091, admin UI at /ui/hts
 
 # Terminal 2 — HFS
-$env:HFS_TERMINOLOGY_SERVER      = "http://127.0.0.1:8090"
-$env:FHIRPATH_TERMINOLOGY_SERVER = "http://127.0.0.1:8090"
+$env:HFS_TERMINOLOGY_SERVER      = "http://127.0.0.1:9091"
+$env:FHIRPATH_TERMINOLOGY_SERVER = "http://127.0.0.1:9091"
 cargo run --bin hfs               # binds 127.0.0.1:8080, UI at /ui
 ```
 
@@ -46,17 +46,17 @@ bootstrap import.
 
 Note there are two distinct `/ui` surfaces once both are running: HFS's own
 UI at `http://127.0.0.1:8080/ui`, and HTS's administrative UI at
-`http://127.0.0.1:8090/ui/hts` (both on by default; set `HTS_UI_ENABLED=false`
+`http://127.0.0.1:9091/ui/hts` (both on by default; set `HTS_UI_ENABLED=false`
 to opt out of the latter — see
 [run-hts-server](../run-hts-server/SKILL.md#admin-ui)).
 
 ## Sanity checks
 
 ```bash
-curl http://localhost:8090/health
-curl "http://localhost:8090/metadata?mode=terminology"   # TerminologyCapabilities once seeded
+curl http://localhost:9091/health
+curl "http://localhost:9091/metadata?mode=terminology"   # TerminologyCapabilities once seeded
 curl http://localhost:8080/health
-curl -o /dev/null -w "%{http_code}\n" http://localhost:8090/ui/hts   # 200 unless HTS_UI_ENABLED=false
+curl -o /dev/null -w "%{http_code}\n" http://localhost:9091/ui/hts   # 200 unless HTS_UI_ENABLED=false
 ```
 
 ## What this enables

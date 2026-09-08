@@ -21,7 +21,7 @@
 //! |----------|---------|---------|
 //! | `CR_SIDECAR_URL` | `http://127.0.0.1:8088` | JVM sidecar base (matches typical `SIDECAR_PORT`) |
 //! | `HFS_BASE_URL` | `http://127.0.0.1:8080` | `hfsBaseUrl` — clinical retrieves |
-//! | `HTS_BASE_URL` | `http://127.0.0.1:8090` | `htsBaseUrl` — terminology |
+//! | `HTS_BASE_URL` | `http://127.0.0.1:9091` | `htsBaseUrl` — terminology |
 //! | `LIBRARY_BASE_URL` | — | Optional `libraryBaseUrl` for `GET Library/{id}` |
 //! | `RESOLVE_FROM_FHIR` | `true` | If `true`, inline ELM optional; if `false`, require `ELM` or `ELM_PATH` |
 //! | `ELM_PATH` | — | Path to ELM document file (JSON or XML) |
@@ -173,7 +173,7 @@ async fn run() -> Result<(), String> {
         library_version,
         expression,
         hfs_base_url: env_trim("HFS_BASE_URL", "http://127.0.0.1:8080"),
-        hts_base_url: env_trim("HTS_BASE_URL", "http://127.0.0.1:8090"),
+        hts_base_url: env_trim("HTS_BASE_URL", "http://127.0.0.1:9091"),
         library_base_url,
         resolve_library_artifacts_from_fhir: resolve_from_fhir,
         included_libraries: Vec::new(),

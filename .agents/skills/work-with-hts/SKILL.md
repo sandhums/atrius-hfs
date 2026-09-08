@@ -10,18 +10,18 @@ Use this when working on the `hts` binary or terminology server behavior.
 ## Running
 
 ```bash
-# Default: SQLite, port 8090
+# Default: SQLite, port 9091
 cargo run --bin hts
 
 # Custom database path and port
-HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9090 cargo run --bin hts
+HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9091 cargo run --bin hts
 ```
 
 ## Environment
 
 | Variable | Default | Description |
 |---|---|---|
-| `HTS_SERVER_PORT` | `8090` | Server port |
+| `HTS_SERVER_PORT` | `9091` | Server port |
 | `HTS_SERVER_HOST` | `127.0.0.1` | Host to bind |
 | `HTS_LOG_LEVEL` | `info` | Log level: error, warn, info, debug, trace |
 | `HTS_DATABASE_URL` | `./data/hts.db` | SQLite file path or PostgreSQL connection URL |
@@ -60,24 +60,24 @@ When `HTS_BOOTSTRAP_DIR` points at a directory, HTS synchronizes recognized file
 
 ```bash
 # Import a FHIR Bundle containing CodeSystem, ValueSet, or ConceptMap resources
-curl -X POST http://localhost:8090/import \
+curl -X POST http://localhost:9091/import \
   -H "Content-Type: application/fhir+json" \
   -d @bundle.json
 
 # Lookup a concept
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"url","valueUri":"http://example.org/cs"},{"name":"code","valueCode":"ABC"}]}'
 
 # Expand a value set
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"url","valueUri":"http://example.org/vs"}]}'
 ```
 
 ## HFS Integration
 
-Set `HFS_TERMINOLOGY_SERVER=http://localhost:8090` on HFS to enable:
+Set `HFS_TERMINOLOGY_SERVER=http://localhost:9091` on HFS to enable:
 
 - FHIR search `:in` modifier, using ValueSet expansion to filter by code.
 - FHIRPath `memberOf()` and `subsumes()` delegation through `FHIRPATH_TERMINOLOGY_SERVER`.

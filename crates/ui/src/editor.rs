@@ -1060,24 +1060,17 @@ pub async fn expand(State(state): State<WebState>, Query(query): Query<ExpandQue
     let Some(base) = state.terminology.as_ref() else {
         return StatusCode::NO_CONTENT.into_response();
     };
-    let target = format!("{}/ValueSet/$expand", base.trim_end_matches('/'));
-    let mut params: Vec<(&str, &str)> = vec![("url", query.url.as_str()), ("count", "25")];
+    let client = helios_terminology_client::TerminologyClient::new(
+        base,
+        helios_terminology_client::ClientOptions::ui_expand(),
+    );
+    let mut extra: Vec<(&str, &str)> = vec![("count", "25")];
     if !query.filter.is_empty() {
-        params.push(("filter", query.filter.as_str()));
+        extra.push(("filter", query.filter.as_str()));
     }
-    let response = match reqwest::Client::new()
-        .get(&target)
-        .query(&params)
-        .header("Accept", "application/fhir+json")
-        .timeout(std::time::Duration::from_millis(2500))
-        .send()
-        .await
-    {
-        Ok(r) if r.status().is_success() => r,
-        _ => return StatusCode::NO_CONTENT.into_response(),
-    };
-    let Ok(body) = response.json::<Value>().await else {
-        return StatusCode::NO_CONTENT.into_response();
+    let body = match client.expand_get(&query.url, &extra).await {
+        Ok(body) => body,
+        Err(_) => return StatusCode::NO_CONTENT.into_response(),
     };
     let codes: Vec<Value> = body["expansion"]["contains"]
         .as_array()

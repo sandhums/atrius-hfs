@@ -20,18 +20,8 @@ pub enum BackendKind {
     Sqlite,
     /// PostgreSQL database.
     Postgres,
-    /// Apache Cassandra (wide-column store).
-    ///
-    /// Reserved: no backend is implemented for this kind. It is accepted by
-    /// composite configuration and the advisor but cannot be instantiated.
-    Cassandra,
     /// MongoDB (document store).
     MongoDB,
-    /// Neo4j (graph database).
-    ///
-    /// Reserved: no backend is implemented for this kind. It is accepted by
-    /// composite configuration and the advisor but cannot be instantiated.
-    Neo4j,
     /// Elasticsearch (search engine).
     Elasticsearch,
     /// AWS S3 (object storage).
@@ -45,9 +35,7 @@ impl std::fmt::Display for BackendKind {
         match self {
             BackendKind::Sqlite => write!(f, "sqlite"),
             BackendKind::Postgres => write!(f, "postgres"),
-            BackendKind::Cassandra => write!(f, "cassandra"),
             BackendKind::MongoDB => write!(f, "mongodb"),
-            BackendKind::Neo4j => write!(f, "neo4j"),
             BackendKind::Elasticsearch => write!(f, "elasticsearch"),
             BackendKind::S3 => write!(f, "s3"),
             BackendKind::Custom(name) => write!(f, "{}", name),

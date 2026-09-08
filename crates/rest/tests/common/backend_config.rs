@@ -101,9 +101,7 @@ impl BackendKindExt for BackendKind {
         match self {
             BackendKind::Sqlite => "sqlite",
             BackendKind::Postgres => "postgres",
-            BackendKind::Cassandra => "cassandra",
             BackendKind::MongoDB => "mongodb",
-            BackendKind::Neo4j => "neo4j",
             BackendKind::Elasticsearch => "elasticsearch",
             BackendKind::S3 => "s3",
             BackendKind::Custom(name) => name,

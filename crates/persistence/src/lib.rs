@@ -29,10 +29,6 @@
 //! - `elasticsearch` - Elasticsearch for full-text search
 //! - `s3` - AWS S3 object storage
 //!
-//! The `cassandra` and `neo4j` features are placeholders: they pull in driver
-//! dependencies but no backend is implemented behind them. See [`backends`] for
-//! details.
-//!
 //! FHIR version features:
 //! - `R4`, `R4B`, `R5`, `R6`
 //!

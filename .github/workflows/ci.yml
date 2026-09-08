@@ -1767,7 +1767,7 @@ jobs:
               # Flatten the artifact structure: move binaries from target/release/ to root
               staging=$(mktemp -d)
               # Copy known binaries by name (artifacts lose executable permission)
-              for bin in hfs fhirpath-server fhirpath-cli sof-server sof-cli config-advisor hts; do
+              for bin in hfs fhirpath-server fhirpath-cli sof-server sof-cli config-advisor hts cds-server; do
                 if [[ "$target" == *"windows"* ]]; then
                   found=$(find "$dir/target" -maxdepth 3 -type f -name "${bin}.exe" 2>/dev/null | head -1)
                 else
@@ -1840,6 +1840,7 @@ jobs:
           - fhirpath-server
           - sof-server
           - hts
+          - cds-server
         arch:
           - amd64
           - arm64
@@ -1858,9 +1859,13 @@ jobs:
             include_data: false
           - image: hts
             binary: hts
-            port: 8090
+            port: 9091
             include_data: false
             bootstrap_dir: /app/terminology-data
+          - image: cds-server
+            binary: cds-server
+            port: 8095
+            include_data: false
           - arch: amd64
             rust_target: x86_64-unknown-linux-gnu
             artifact_release_dir: target/release
@@ -1940,6 +1945,7 @@ jobs:
           - fhirpath-server
           - sof-server
           - hts
+          - cds-server
     steps:
       - name: Determine version
         id: version

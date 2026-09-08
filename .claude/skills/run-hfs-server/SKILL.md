@@ -228,7 +228,7 @@ StructureDefinitions (per tenant) become validatable profiles on write.
 | `HFS_VALIDATION_UNKNOWN_PROFILE` | `warn` | Unresolvable profiles: `warn`, `error`, or `ignore` |
 | `HFS_VALIDATION_CONSTRAINTS` | `true` | Evaluate FHIRPath invariants |
 | `HFS_VALIDATION_SUPPRESS_CONSTRAINTS` | `dom-6` | Comma-separated constraint ids to skip |
-| `HFS_VALIDATION_TERMINOLOGY` | `off` | Required-binding checks: `off` or `remote` (`ValueSet/$validate-code` against `HFS_TERMINOLOGY_SERVER`) |
+| `HFS_VALIDATION_TERMINOLOGY` | `embedded` | Required-binding checks: `off`, `embedded` (offline FHIR core value sets), `remote` (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or `tiered` (embedded hit/miss; HTS for ValueSets not in the pack) |
 | `HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS` | `3000` | Per-check terminology timeout |
 | `HFS_VALIDATION_TERMINOLOGY_FAIL` | `open` | Terminology outage posture: `open` (warn) or `closed` (error) |
 | `HFS_VALIDATION_STORED_PROFILES` | `true` | Maintain per-tenant profile registries from stored StructureDefinitions |

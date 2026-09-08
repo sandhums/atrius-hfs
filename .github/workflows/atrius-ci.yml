@@ -58,7 +58,7 @@ jobs:
       - name: rustfmt
         run: |
           cargo fmt -p helios-fhir-validator -p helios-rest \
-            -p helios-persistence -p helios-hts -- --check
+            -p helios-persistence -p helios-hts -p cds-server -- --check
 
       - name: helios-fhir-validator
         run: cargo test -p helios-fhir-validator --features R4,fhirpath
@@ -71,6 +71,12 @@ jobs:
 
       - name: helios-hts (lib, sqlite)
         run: cargo test -p helios-hts --features R4,sqlite --lib
+
+      - name: cds-server
+        run: cargo test -p cds-server
+
+      - name: env drift (deploy/env examples vs code)
+        run: python3 scripts/check-env-drift.py
 
       - name: helios-hfs check (R4 sqlite, no UI)
         run: cargo check -p helios-hfs --no-default-features --features R4,sqlite

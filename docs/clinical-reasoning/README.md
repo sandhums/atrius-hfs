@@ -39,7 +39,7 @@ Helios splits responsibilities across Rust services (orchestration, FHIR storage
   │   :8082     │                              │   :8079     │          │  :9091*     │
   └─────────────┘                              └─────────────┘          └─────────────┘
 
-* HTS default port is 8090; align `HFS_TERMINOLOGY_SERVER` and `CDS_HTS_BASE_URL` with your listen port.
+* Atrius HTS listen default is 9091 (`HTS_SERVER_PORT`). Align `HFS_TERMINOLOGY_SERVER` and `CDS_HTS_BASE_URL` with that port.
 ```
 
 ## Critical routing: `hfsBaseUrl` vs `libraryBaseUrl`

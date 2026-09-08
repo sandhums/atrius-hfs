@@ -29,7 +29,7 @@ fn trim_trailing_slash(s: String) -> String {
 /// # Atrius defaults (local dev)
 ///
 /// - `hfs_base_url` → `http://127.0.0.1:8082` (clinical HFS)
-/// - `hts_base_url` → `http://127.0.0.1:9091` (or 8090 — align with HTS listen port)
+/// - `hts_base_url` → `http://127.0.0.1:9091` (Atrius `HTS_SERVER_PORT` default)
 /// - `library_base_url` → `http://127.0.0.1:8079` (KR HFS)
 #[derive(Debug, Clone)]
 pub struct FhirServiceEndpoints {

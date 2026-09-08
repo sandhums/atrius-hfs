@@ -477,7 +477,7 @@ helios-rest = { version = "0.1", features = ["R4", "sqlite"] }
 
 The server supports FHIR [batch](https://hl7.org/fhir/http.html#batch) and [transaction](https://hl7.org/fhir/http.html#transaction) bundles via `POST /`.
 
-> **Backend Support:** Transaction bundles require a backend with ACID transaction support. SQLite fully supports transactions. Some backends (Cassandra, Elasticsearch, S3) only support batch bundles. See the persistence crate documentation for the full capability matrix.
+> **Backend Support:** Transaction bundles require a backend with ACID transaction support. SQLite fully supports transactions. Some backends (Elasticsearch, S3) only support batch bundles. See the persistence crate documentation for the full capability matrix.
 
 ### Transaction (Atomic)
 

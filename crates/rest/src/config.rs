@@ -37,7 +37,7 @@
 //! | `HFS_VALIDATION_UNKNOWN_PROFILE` | warn | Unresolvable profiles: warn, error, or ignore |
 //! | `HFS_VALIDATION_CONSTRAINTS` | true | Evaluate FHIRPath invariants |
 //! | `HFS_VALIDATION_SUPPRESS_CONSTRAINTS` | dom-6 | Comma-separated constraint ids to skip |
-//! | `HFS_VALIDATION_TERMINOLOGY` | embedded | Required-binding checks: embedded (offline FHIR core value sets), remote (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or off |
+//! | `HFS_VALIDATION_TERMINOLOGY` | embedded | Required-binding checks: `off`, `embedded` (offline FHIR core value sets), `remote` (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or `tiered` (embedded hit/miss, HTS on ValueSets not in the pack) |
 //! | `HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS` | 3000 | Per-check terminology timeout |
 //! | `HFS_VALIDATION_TERMINOLOGY_FAIL` | open | Terminology outage posture: open (warn) or closed (error) |
 //! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
@@ -592,9 +592,12 @@ impl ValidationConfig {
                 self.unknown_profile
             ));
         }
-        if !matches!(self.terminology.as_str(), "off" | "embedded" | "remote") {
+        if !matches!(
+            self.terminology.as_str(),
+            "off" | "embedded" | "remote" | "tiered"
+        ) {
             errors.push(format!(
-                "HFS_VALIDATION_TERMINOLOGY '{}' invalid (expected off|embedded|remote)",
+                "HFS_VALIDATION_TERMINOLOGY '{}' invalid (expected off|embedded|remote|tiered)",
                 self.terminology
             ));
         }
@@ -1231,7 +1234,7 @@ pub struct ServerConfig {
     /// - FHIRPath `subsumes()` → `POST /CodeSystem/$subsumes` (via env var passthrough)
     ///
     /// Leave unset (default: none) to disable terminology integration.
-    /// Example: `http://localhost:8090`
+    /// Example: `http://localhost:9091`
     #[arg(long, env = "HFS_TERMINOLOGY_SERVER")]
     pub terminology_server: Option<String>,
 
@@ -1518,11 +1521,14 @@ impl ServerConfig {
             errors.append(&mut validation_errors);
         }
 
-        // Remote terminology checking needs a terminology server to call.
-        if self.validation.terminology == "remote" && self.terminology_server.is_none() {
-            errors.push(
-                "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER".to_string(),
-            );
+        // Remote / tiered terminology checking needs a terminology server to call.
+        if matches!(self.validation.terminology.as_str(), "remote" | "tiered")
+            && self.terminology_server.is_none()
+        {
+            errors.push(format!(
+                "HFS_VALIDATION_TERMINOLOGY={} requires HFS_TERMINOLOGY_SERVER",
+                self.validation.terminology
+            ));
         }
 
         if errors.is_empty() {
@@ -2524,5 +2530,33 @@ mod tests {
             assert_eq!(variant.to_string(), expected);
             assert_eq!(expected.parse::<StorageBackendMode>().unwrap(), variant);
         }
+    }
+
+    #[test]
+    fn validation_terminology_tiered_requires_terminology_server() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "tiered".to_string();
+        cfg.validate().unwrap();
+
+        let mut server = ServerConfig::default();
+        server.validation.terminology = "tiered".to_string();
+        server.terminology_server = None;
+        let errs = server.validate().unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("HFS_VALIDATION_TERMINOLOGY=tiered")),
+            "{errs:?}"
+        );
+
+        server.terminology_server = Some("http://127.0.0.1:9091".into());
+        server.validate().unwrap();
+    }
+
+    #[test]
+    fn validation_terminology_rejects_unknown_mode() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "local-then-remote".to_string();
+        let errs = cfg.validate().unwrap_err();
+        assert!(errs.iter().any(|e| e.contains("tiered")), "{errs:?}");
     }
 }

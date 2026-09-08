@@ -210,7 +210,7 @@ See [data-import.md § KR HFS](./data-import.md#kr-hfs-knowledge-libraries) and 
 
 ## HTS port mismatch
 
-Defaults differ across files (`8090` vs `9091`). Align:
+Atrius default is `9091` (`HTS_SERVER_PORT`, `CDS_HTS_BASE_URL`). Align:
 
 - `HTS_SERVER_PORT`
 - `HFS_TERMINOLOGY_SERVER` (clinical HFS)

@@ -498,32 +498,6 @@ impl BackendInfo {
                 .collect(),
             },
             BackendInfo {
-                kind: "Neo4j".to_string(),
-                name: "Neo4j".to_string(),
-                description: "Graph database, ideal for relationship-heavy queries".to_string(),
-                default_capabilities: vec!["Read", "Search", "ChainedSearch"]
-                    .into_iter()
-                    .map(String::from)
-                    .collect(),
-                recommended_roles: vec!["Graph"].into_iter().map(String::from).collect(),
-                strengths: vec![
-                    "Fast graph traversal",
-                    "Natural relationship modeling",
-                    "Excellent for chained searches",
-                ]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-                weaknesses: vec![
-                    "Not suitable as primary store",
-                    "Learning curve for Cypher",
-                    "Can be expensive",
-                ]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            },
-            BackendInfo {
                 kind: "S3".to_string(),
                 name: "Amazon S3 / Object Storage".to_string(),
                 description: "Object storage, ideal for archival and large data volumes"
@@ -884,10 +858,8 @@ fn parse_backend_kind(s: &str) -> Result<BackendKind, String> {
         "sqlite" => Ok(BackendKind::Sqlite),
         "postgres" | "postgresql" => Ok(BackendKind::Postgres),
         "elasticsearch" | "es" => Ok(BackendKind::Elasticsearch),
-        "neo4j" => Ok(BackendKind::Neo4j),
         "s3" | "objectstore" => Ok(BackendKind::S3),
         "mongodb" | "mongo" => Ok(BackendKind::MongoDB),
-        "cassandra" => Ok(BackendKind::Cassandra),
         _ => Err(format!("Unknown backend kind: {}", s)),
     }
 }

@@ -15,6 +15,7 @@ The project is a Rust workspace with 20 crates (19 default-members; `pysof` excl
 | **`helios-fhir-macro`** | Procedural macros for FHIR functionality. |
 | **`helios-fhirpath`** | FHIRPath expression language — parser (chumsky), evaluator, CLI tool, and HTTP server. |
 | **`helios-fhirpath-support`** | Shared support utilities for FHIRPath. |
+| **`helios-terminology-client`** | Shared HTS HTTP client (`$expand` / `$validate-code` / `$lookup` / `$subsumes` / `$translate`) with a process-wide TTL cache. Used by REST search, validation, FHIRPath, and the UI picker. |
 | **`helios-fhir-validator`** | FHIR resource validation — FHIR Schema based structural/profile engine, SD→schema converter, embedded core packs (R4–R6), deferred FHIRPath-constraint and terminology-binding effects. Configured via `HFS_VALIDATION_*`. |
 | **`helios-serde`** | JSON and XML serialization for FHIR resources (`xml` feature flag). |
 | **`helios-serde-support`** | Shared serde helpers. |

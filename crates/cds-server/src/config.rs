@@ -72,11 +72,11 @@ pub struct Args {
     )]
     pub hfs_base_url: String,
 
-    /// Terminology FHIR REST base (`htsBaseUrl` → sidecar). Example: `http://localhost:8090` when HTS listens on 8090.
+    /// Terminology FHIR REST base (`htsBaseUrl` → sidecar). Atrius default listen port is 9091.
     #[arg(
         long,
         env = "CDS_HTS_BASE_URL",
-        default_value = "http://127.0.0.1:8090"
+        default_value = "http://127.0.0.1:9091"
     )]
     pub hts_base_url: String,
 

@@ -44,7 +44,7 @@ pub enum Command {
 #[derive(Parser, Debug, Clone)]
 pub struct HtsConfig {
     /// Server port
-    #[arg(long, env = "HTS_SERVER_PORT", default_value = "8090")]
+    #[arg(long, env = "HTS_SERVER_PORT", default_value = "9091")]
     pub port: u16,
 
     /// Server host to bind
@@ -134,7 +134,7 @@ impl HtsConfig {
 impl Default for HtsConfig {
     fn default() -> Self {
         Self {
-            port: 8090,
+            port: 9091,
             host: "127.0.0.1".into(),
             log_level: "info".into(),
             database_url: "./data/hts.db".into(),

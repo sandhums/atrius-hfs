@@ -52,6 +52,7 @@ helios-audit = { path = "../audit", version = "0.2.1", default-features = false 
 helios-subscriptions = { path = "../subscriptions", version = "0.2.1", optional = true, default-features = false }
 helios-fhir-validator = { path = "../fhir-validator", version = "0.2.1", default-features = false, features = ["fhirpath"] }
 helios-observability = { path = "../observability", version = "0.2.1" }
+helios-terminology-client = { path = "../terminology-client", version = "0.2.1" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

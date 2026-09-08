@@ -69,6 +69,7 @@ futures-lite = "2"
 # `OutboundAuthProvider`: the credentials the UI attaches to its server-to-server
 # self-calls (a service token when auth is enabled; a no-op when it is not).
 helios-auth = { path = "../auth", version = "0.2.1" }
+helios-terminology-client = { path = "../terminology-client", version = "0.2.1" }
 
 # Web framework (matches the version used by helios-hfs / helios-rest)
 axum = "0.8"

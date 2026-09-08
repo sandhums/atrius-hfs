@@ -92,12 +92,12 @@ Pre-built binaries are available on the [GitHub Releases](https://github.com/Hel
 # 1. Import every bundled terminology in one pass (a few minutes)
 ./hts import ./terminology-data
 
-# 2. Start the server (R4, SQLite, port 8090)
+# 2. Start the server (R4, SQLite, port 9091)
 ./hts run
 
 # 3. Verify
-curl http://localhost:8090/health
-curl http://localhost:8090/metadata
+curl http://localhost:9091/health
+curl http://localhost:9091/metadata
 ```
 
 ### Using Docker Images
@@ -107,20 +107,20 @@ Pre-built multi-arch Docker images (amd64/arm64) are available on GitHub Contain
 ```bash
 # First run: auto-imports bundled terminologies into the persistent volume
 # (takes a few minutes), then starts the server.
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   ghcr.io/heliossoftware/hts:latest
 
 # Subsequent runs: DB is populated, auto-bootstrap is a no-op; server starts
 # immediately.
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   ghcr.io/heliossoftware/hts:latest
 
 # Disable auto-bootstrap (e.g. to import from a mounted directory yourself):
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   -e HTS_BOOTSTRAP_DIR= \
@@ -327,7 +327,7 @@ Options:
 Start the FHIR Terminology HTTP server. This is the default command when no subcommand is given.
 
 ```bash
-# Run with default settings (R4, SQLite, port 8090)
+# Run with default settings (R4, SQLite, port 9091)
 hts run
 
 # Equivalent - run is the default
@@ -353,7 +353,7 @@ If `hts import` has not been run first, HTS creates the SQLite file (or `./data/
 Usage: hts run [OPTIONS]
 
 Options:
-      --port <PORT>                Server port [env: HTS_SERVER_PORT=] [default: 8090]
+      --port <PORT>                Server port [env: HTS_SERVER_PORT=] [default: 9091]
       --host <HOST>                Host to bind [env: HTS_SERVER_HOST=] [default: 127.0.0.1]
       --log-level <LOG_LEVEL>      Log level (error, warn, info, debug, trace)
                                    [env: HTS_LOG_LEVEL=] [default: info]
@@ -374,7 +374,7 @@ Options:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HTS_SERVER_PORT` | 8090 | Server port |
+| `HTS_SERVER_PORT` | 9091 | Server port |
 | `HTS_SERVER_HOST` | 127.0.0.1 | Host to bind |
 | `HTS_LOG_LEVEL` | info | Log level (error, warn, info, debug, trace) |
 | `HTS_DATABASE_URL` | ./data/hts.db | SQLite database file path |
@@ -495,10 +495,10 @@ Pagination is controlled by `_count` (page size, default 20) and `_offset` (zero
 
 ```bash
 # Search by canonical URL
-curl "http://localhost:8090/CodeSystem?url=http://loinc.org"
+curl "http://localhost:9091/CodeSystem?url=http://loinc.org"
 
 # Search by status with pagination
-curl "http://localhost:8090/ValueSet?status=active&_count=10&_offset=0"
+curl "http://localhost:9091/ValueSet?status=active&_count=10&_offset=0"
 ```
 
 ## Capabilities Endpoint
@@ -512,10 +512,10 @@ curl "http://localhost:8090/ValueSet?status=active&_count=10&_offset=0"
 
 ```bash
 # Full CapabilityStatement (default)
-curl http://localhost:8090/metadata
+curl http://localhost:9091/metadata
 
 # TerminologyCapabilities
-curl "http://localhost:8090/metadata?mode=terminology"
+curl "http://localhost:9091/metadata?mode=terminology"
 ```
 
 ## Batch Support
@@ -531,7 +531,7 @@ curl "http://localhost:8090/metadata?mode=terminology"
 Unsupported entry operations return a `400` entry-level `OperationOutcome` without failing the overall batch.
 
 ```bash
-curl -X POST http://localhost:8090/ \
+curl -X POST http://localhost:9091/ \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Bundle",
@@ -566,7 +566,7 @@ curl -X POST http://localhost:8090/ \
 ### Import a FHIR Bundle via HTTP
 
 ```bash
-curl -X POST http://localhost:8090/import \
+curl -X POST http://localhost:9091/import \
   -H "Content-Type: application/fhir+json" \
   -d @bundle.json
 ```
@@ -574,7 +574,7 @@ curl -X POST http://localhost:8090/import \
 ### Lookup a Concept
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -588,7 +588,7 @@ curl -X POST http://localhost:8090/CodeSystem/\$lookup \
 ### Validate a Code
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
+curl -X POST http://localhost:9091/CodeSystem/\$validate-code \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -619,7 +619,7 @@ boolean parameter downgrades that mismatch to a `warning` while keeping
 `result=true`:
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
+curl -X POST http://localhost:9091/CodeSystem/\$validate-code \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -644,7 +644,7 @@ curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
 ### Expand a ValueSet
 
 ```bash
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -657,7 +657,7 @@ curl -X POST http://localhost:8090/ValueSet/\$expand \
 Pagination is supported via `count` and `offset` parameters:
 
 ```bash
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -673,7 +673,7 @@ curl -X POST http://localhost:8090/ValueSet/\$expand \
 
 ```bash
 # Does 73211009 (Diabetes mellitus) subsume 44054006 (Type 2 diabetes)?
-curl -X POST http://localhost:8090/CodeSystem/\$subsumes \
+curl -X POST http://localhost:9091/CodeSystem/\$subsumes \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -690,7 +690,7 @@ Returns one of: `equivalent`, `subsumes`, `subsumed-by`, or `not-subsumed`.
 ### Translate a Code
 
 ```bash
-curl -X POST http://localhost:8090/ConceptMap/\$translate \
+curl -X POST http://localhost:9091/ConceptMap/\$translate \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -705,7 +705,7 @@ curl -X POST http://localhost:8090/ConceptMap/\$translate \
 ### Create a CodeSystem
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem \
+curl -X POST http://localhost:9091/CodeSystem \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "CodeSystem",
@@ -731,7 +731,7 @@ Set `HFS_TERMINOLOGY_SERVER` on the HFS process to delegate terminology operatio
 HTS_DATABASE_URL=./data/hts.db cargo run --bin hts
 
 # Start HFS with HTS delegation
-HFS_TERMINOLOGY_SERVER=http://localhost:8090 cargo run --bin hfs
+HFS_TERMINOLOGY_SERVER=http://localhost:9091 cargo run --bin hfs
 ```
 
 HFS propagates the URL to its embedded FHIRPath engine as `FHIRPATH_TERMINOLOGY_SERVER`, enabling:
@@ -851,7 +851,7 @@ per-language Description and Language-refset files are skipped without being
 parsed; English is always retained because display selection depends on it:
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -H "Accept-Language: de" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"system","valueUri":"http://snomed.info/sct"},{"name":"code","valueCode":"22298006"}]}'
