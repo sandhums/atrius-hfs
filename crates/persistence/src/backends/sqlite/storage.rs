@@ -79,14 +79,10 @@ fn begin_immediate_tx<'c>(
 pub(crate) fn fts_table_exists(conn: &rusqlite::Connection) -> StorageResult<bool> {
     use rusqlite::OptionalExtension;
 
-    conn.query_row(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'",
-        [],
-        |_| Ok(()),
-    )
-    .optional()
-    .map(|found| found.is_some())
-    .map_err(|e| internal_error(format!("Failed to probe for resource_fts: {e}")))
+    conn.prepare_cached("SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'")
+        .and_then(|mut stmt| stmt.query_row([], |_| Ok(())).optional())
+        .map(|found| found.is_some())
+        .map_err(|e| internal_error(format!("Failed to probe for resource_fts: {e}")))
 }
 
 /// Runs a `DELETE FROM resource_fts …` on a purge path, skipping it when FTS5
@@ -1029,6 +1025,13 @@ impl ResourceStorage for SqliteBackend {
             "DELETE FROM resource_fts WHERE tenant_id = ?1",
             params![id],
         )?;
+        // The rowid mapping (#967) is a plain table, so it neither cascades
+        // nor is reached by the FTS delete above.
+        tx.execute(
+            "DELETE FROM resource_fts_map WHERE tenant_id = ?1",
+            params![id],
+        )
+        .or_query_error("purge FTS mapping")?;
         // Per-user settings are keyed by user, not tenant, so they are not swept
         // by the deletes above — but a client stores PHI-derived query strings in
         // them, which belong to this tenant (issue #313). Same transaction: this
@@ -1230,7 +1233,10 @@ impl SqliteBackend {
         }
 
         // Index FTS content for _text and _content searches
-        self.index_fts_content(conn, tenant_id, resource_type, resource_id, resource)?;
+        {
+            let _span = crate::perf::span(crate::perf::Phase::Fts);
+            self.index_fts_content(conn, tenant_id, resource_type, resource_id, resource)?;
+        }
 
         Ok(())
     }
@@ -1261,18 +1267,36 @@ impl SqliteBackend {
         }
 
         // Insert into FTS table
-        conn.execute(
+        conn.prepare_cached(
             "INSERT INTO resource_fts (resource_id, resource_type, tenant_id, narrative_text, full_content)
              VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![
-                resource_id,
-                resource_type,
-                tenant_id,
-                content.narrative,
-                content.full_content
-            ],
         )
+        .map_err(|e| internal_error(format!("Failed to prepare FTS insert: {}", e)))?
+        .execute(params![
+            resource_id,
+            resource_type,
+            tenant_id,
+            content.narrative,
+            content.full_content
+        ])
         .map_err(|e| internal_error(format!("Failed to insert FTS content: {}", e)))?;
+
+        // Remember which rowid FTS5 assigned. `resource_fts`'s plain columns
+        // are UNINDEXED, so deleting by (tenant, type, id) can only scan the
+        // whole table; deleting by rowid is a b-tree lookup (#967).
+        conn.prepare_cached(
+            "INSERT OR REPLACE INTO resource_fts_map
+                (tenant_id, resource_type, resource_id, fts_rowid)
+             VALUES (?1, ?2, ?3, ?4)",
+        )
+        .map_err(|e| internal_error(format!("Failed to prepare FTS map insert: {}", e)))?
+        .execute(params![
+            tenant_id,
+            resource_type,
+            resource_id,
+            conn.last_insert_rowid()
+        ])
+        .map_err(|e| internal_error(format!("Failed to record FTS rowid: {}", e)))?;
 
         Ok(())
     }
@@ -1294,16 +1318,72 @@ impl SqliteBackend {
         // custom SearchParameter indexing). Postgres indexes through
         // `tenant_extractor` + in-memory `stored_by_tenant` and does not need
         // this path.
-        let values = self
-            .tenant_extractor_for_indexing(conn, tenant_id)
-            .extract(resource, resource_type)
-            .map_err(|e| internal_error(format!("Search parameter extraction failed: {}", e)))?;
+        let values = {
+            let _span = crate::perf::span(crate::perf::Phase::Extract);
+            self.tenant_extractor_for_indexing(conn, tenant_id)
+                .extract(resource, resource_type)
+                .map_err(|e| internal_error(format!("Search parameter extraction failed: {}", e)))?
+        };
 
+        // Rows are written eight at a time: a single-row INSERT stepped once
+        // per row spends a measurable share of its time entering and leaving
+        // the statement, and every resource writes ~10-30 rows. The B-tree
+        // work is unchanged; only the per-statement overhead is amortized
+        // (measured +9% bulk-ingest throughput on the real 31 GB manifest).
         let mut count = 0;
-        for value in values {
-            self.write_index_entry(conn, tenant_id, resource_type, resource_id, &value)?;
-            count += 1;
+        {
+            // The whole insert, plus its Rust-side half (normalising values and
+            // building the bound parameters) as a nested phase, so a profile can
+            // tell our marshalling apart from SQLite's b-tree work (#947).
+            let _span = crate::perf::span(crate::perf::Phase::IndexInsert);
+            use crate::search::converters::IndexValue;
+            let marshal_span = crate::perf::span(crate::perf::Phase::IndexMarshal);
+            let owned: Vec<_> = values
+                .into_iter()
+                .map(|v| match &v.value {
+                    IndexValue::Date {
+                        value: d,
+                        precision,
+                    } => {
+                        let mut n = v.clone();
+                        n.value = IndexValue::Date {
+                            value: Self::normalize_date_for_sqlite(d),
+                            precision: *precision,
+                        };
+                        n
+                    }
+                    _ => v,
+                })
+                .collect();
+            let rows: Vec<Vec<_>> = owned
+                .iter()
+                .map(|v| {
+                    SqliteSearchIndexWriter::to_sql_params(tenant_id, resource_type, resource_id, v)
+                })
+                .collect();
+            drop(marshal_span);
+            let mut i = 0;
+            while i + 8 <= rows.len() {
+                let refs: Vec<&dyn ToSql> = rows[i..i + 8]
+                    .iter()
+                    .flatten()
+                    .map(|p| self.sql_value_to_ref(p))
+                    .collect();
+                conn.prepare_cached(SqliteSearchIndexWriter::insert_sql_rows8())
+                    .and_then(|mut s| s.execute(refs.as_slice()))
+                    .map_err(|e| internal_error(format!("multi-row index insert: {e}")))?;
+                i += 8;
+                count += 8;
+            }
+            for row in &rows[i..] {
+                let refs: Vec<&dyn ToSql> = row.iter().map(|p| self.sql_value_to_ref(p)).collect();
+                conn.prepare_cached(SqliteSearchIndexWriter::insert_sql())
+                    .and_then(|mut s| s.execute(refs.as_slice()))
+                    .map_err(|e| internal_error(format!("index insert: {e}")))?;
+                count += 1;
+            }
         }
+        crate::perf::add_rows(crate::perf::Phase::IndexInsert, count as u64);
 
         // Also index any contained resources for `_contained` search.
         count +=
@@ -1323,6 +1403,7 @@ impl SqliteBackend {
     ) -> StorageResult<()> {
         use crate::search::converters::IndexValue;
 
+        let marshal_span = crate::perf::span(crate::perf::Phase::IndexMarshal);
         // For date values, normalize the date format for consistent SQLite comparisons
         let normalized_value = match &value.value {
             IndexValue::Date {
@@ -1354,7 +1435,15 @@ impl SqliteBackend {
             .map(|p| self.sql_value_to_ref(p))
             .collect();
 
-        conn.execute(SqliteSearchIndexWriter::insert_sql(), param_refs.as_slice())
+        drop(marshal_span);
+        // `prepare_cached`, not `execute`: `Connection::execute` compiles the
+        // statement on every call, and a bulk import runs this one ~14 times
+        // per resource. The 24-column INSERT costs more to compile than to
+        // run, and the cache is keyed on the `&'static str` above, so every
+        // row after the first on a given connection reuses the same program.
+        conn.prepare_cached(SqliteSearchIndexWriter::insert_sql())
+            .map_err(|e| internal_error(format!("Failed to prepare search index insert: {}", e)))?
+            .execute(param_refs.as_slice())
             .map_err(|e| internal_error(format!("Failed to insert search index entry: {}", e)))?;
 
         Ok(())
@@ -1439,16 +1528,84 @@ impl SqliteBackend {
             .map(|p| self.sql_value_to_ref(p))
             .collect();
 
-        conn.execute(
-            SqliteSearchIndexWriter::insert_contained_sql(),
-            param_refs.as_slice(),
+        conn.prepare_cached(SqliteSearchIndexWriter::insert_contained_sql())
+            .map_err(|e| {
+                internal_error(format!(
+                    "Failed to prepare contained search index insert: {}",
+                    e
+                ))
+            })?
+            .execute(param_refs.as_slice())
+            .map_err(|e| {
+                internal_error(format!(
+                    "Failed to insert contained search index entry: {}",
+                    e
+                ))
+            })?;
+
+        Ok(())
+    }
+
+    /// Removes one resource's `resource_fts` row(s) through the rowid mapping,
+    /// and the mapping itself.
+    ///
+    /// Falls back to the scanning delete when the resource has no mapping. That
+    /// is the self-heal for a row written before schema v23 by a build that
+    /// never recorded its rowid and that the migration's backfill somehow
+    /// missed: correct, slow, and it maps itself on the next write. After a
+    /// v23 migration it should never fire.
+    fn delete_fts_rows_for(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> StorageResult<()> {
+        if !fts_table_exists(conn)? {
+            return Ok(());
+        }
+
+        let rowids: Vec<i64> = {
+            let mut stmt = conn
+                .prepare_cached(
+                    "SELECT fts_rowid FROM resource_fts_map
+                     WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
+                )
+                .map_err(|e| internal_error(format!("prepare FTS map lookup: {e}")))?;
+            let rows = stmt
+                .query_map(params![tenant_id, resource_type, resource_id], |row| {
+                    row.get(0)
+                })
+                .map_err(|e| internal_error(format!("query FTS map: {e}")))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
+        if rowids.is_empty() {
+            tracing::debug!(
+                resource_type,
+                resource_id,
+                "no FTS rowid mapping; falling back to the scanning delete"
+            );
+            let _ = conn.execute(
+                "DELETE FROM resource_fts WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
+                params![tenant_id, resource_type, resource_id],
+            );
+            return Ok(());
+        }
+
+        for rowid in rowids {
+            conn.prepare_cached("DELETE FROM resource_fts WHERE rowid = ?1")
+                .map_err(|e| internal_error(format!("prepare FTS delete: {e}")))?
+                .execute(params![rowid])
+                .map_err(|e| internal_error(format!("delete FTS row: {e}")))?;
+        }
+        conn.prepare_cached(
+            "DELETE FROM resource_fts_map
+             WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
         )
-        .map_err(|e| {
-            internal_error(format!(
-                "Failed to insert contained search index entry: {}",
-                e
-            ))
-        })?;
+        .map_err(|e| internal_error(format!("prepare FTS map delete: {e}")))?
+        .execute(params![tenant_id, resource_type, resource_id])
+        .map_err(|e| internal_error(format!("delete FTS mapping: {e}")))?;
 
         Ok(())
     }
@@ -1502,17 +1659,25 @@ impl SqliteBackend {
         }
 
         // Delete from main search index
-        let deleted = conn.execute(
-            "DELETE FROM search_index WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
-            params![tenant_id, resource_type, resource_id],
-        )
-        .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
+        let deleted = conn
+            .prepare_cached(
+                "DELETE FROM search_index WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
+            )
+            .map_err(|e| internal_error(format!("Failed to prepare search index delete: {}", e)))?
+            .execute(params![tenant_id, resource_type, resource_id])
+            .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
 
-        // Delete from FTS table if it exists
-        let _ = conn.execute(
-            "DELETE FROM resource_fts WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
-            params![tenant_id, resource_type, resource_id],
-        );
+        // Delete from FTS by rowid. `resource_fts` is an FTS5 virtual table
+        // whose plain columns are UNINDEXED, so a WHERE on them scans the
+        // entire table — once per resource, which made every re-index
+        // quadratic in corpus size (#967: 0.2 entries/s against 6M FTS
+        // documents). FTS5 does index rowid, and `resource_fts_map` records
+        // the one it assigned. #949's `deleted > 0` guard still stands in
+        // front: a resource with no search_index rows was never FTS-indexed,
+        // so there is nothing to look up.
+        if deleted > 0 {
+            self.delete_fts_rows_for(conn, tenant_id, resource_type, resource_id)?;
+        }
 
         Ok(deleted as u64)
     }
@@ -2553,6 +2718,12 @@ impl PurgableStorage for SqliteBackend {
             "DELETE FROM resource_fts WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
             params![tenant_id, resource_type, id],
         )?;
+        tx.execute(
+            "DELETE FROM resource_fts_map
+             WHERE tenant_id = ?1 AND resource_type = ?2 AND resource_id = ?3",
+            params![tenant_id, resource_type, id],
+        )
+        .or_query_error("purge FTS mapping")?;
 
         tx.commit()
             .map_err(|e| internal_error(format!("purge commit: {e}")))?;
@@ -2606,6 +2777,11 @@ impl PurgableStorage for SqliteBackend {
             "DELETE FROM resource_fts WHERE tenant_id = ?1 AND resource_type = ?2",
             params![tenant_id, resource_type],
         )?;
+        tx.execute(
+            "DELETE FROM resource_fts_map WHERE tenant_id = ?1 AND resource_type = ?2",
+            params![tenant_id, resource_type],
+        )
+        .or_query_error("purge FTS mapping")?;
 
         tx.commit()
             .map_err(|e| internal_error(format!("purge_all commit: {e}")))?;
@@ -3733,6 +3909,13 @@ impl ReindexTarget for SqliteBackend {
             "DELETE FROM resource_fts WHERE tenant_id = ?1",
             params![tenant_id],
         )?;
+        // …and the rowid mapping that pointed at them (#967), or the reindex
+        // would leave every resource mapped to a row that no longer exists.
+        conn.execute(
+            "DELETE FROM resource_fts_map WHERE tenant_id = ?1",
+            params![tenant_id],
+        )
+        .or_query_error("clear FTS mapping")?;
 
         Ok(deleted as u64)
     }
@@ -6533,5 +6716,109 @@ mod tests {
             Some("MR"),
             "Identifier type code should be populated"
         );
+    }
+
+    /// #967: the FTS delete goes through `resource_fts_map`, so the mapping has
+    /// to stay exactly in step with the rows it points at — one mapping per
+    /// FTS row, pointing at that row, and gone once the row is.
+    #[tokio::test]
+    async fn fts_rowid_mapping_tracks_the_rows_it_points_at() {
+        let backend = create_test_backend();
+        let tenant = create_test_tenant();
+
+        let doc = |text: &str| {
+            json!({
+                "resourceType": "Patient",
+                "id": "map-1",
+                "text": {"status": "generated", "div": format!("<div>{text}</div>")}
+            })
+        };
+
+        let created = backend
+            .create(&tenant, "Patient", doc("first"), FhirVersion::default())
+            .await
+            .unwrap();
+
+        let mapping = || -> Vec<i64> {
+            let conn = backend.get_connection().unwrap();
+            let mut stmt = conn
+                .prepare(
+                    "SELECT fts_rowid FROM resource_fts_map
+                     WHERE tenant_id = ?1 AND resource_type = 'Patient' AND resource_id = 'map-1'",
+                )
+                .unwrap();
+            let v: Vec<i64> = stmt
+                .query_map([tenant.tenant_id().as_str()], |r| r.get(0))
+                .unwrap()
+                .filter_map(|r| r.ok())
+                .collect();
+            v
+        };
+        let fts_rows_for = |rowids: &[i64]| -> usize {
+            let conn = backend.get_connection().unwrap();
+            rowids
+                .iter()
+                .filter(|rowid| {
+                    conn.query_row(
+                        "SELECT 1 FROM resource_fts WHERE rowid = ?1",
+                        [**rowid],
+                        |_| Ok(()),
+                    )
+                    .is_ok()
+                })
+                .count()
+        };
+
+        let after_create = mapping();
+        assert_eq!(after_create.len(), 1, "the create must map exactly one row");
+        assert_eq!(fts_rows_for(&after_create), 1, "the mapping must resolve");
+
+        backend
+            .update(&tenant, &created, doc("second"))
+            .await
+            .unwrap();
+
+        let after_update = mapping();
+        assert_eq!(
+            after_update.len(),
+            1,
+            "an update must leave exactly one mapping, not accumulate them"
+        );
+        assert_eq!(fts_rows_for(&after_update), 1);
+        // The rowid itself may well be the same integer: FTS5 hands back the
+        // one the delete just freed. What has to be true is that the row it
+        // names now holds the *new* content — i.e. the delete really removed
+        // the old row rather than leaving two, and the mapping points at the
+        // survivor.
+        let content: String = {
+            let conn = backend.get_connection().unwrap();
+            conn.query_row(
+                "SELECT full_content FROM resource_fts WHERE rowid = ?1",
+                [after_update[0]],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        assert!(
+            content.contains("second") && !content.contains("first"),
+            "the mapped row must hold the updated content, got: {content}"
+        );
+        let total_rows: i64 = {
+            let conn = backend.get_connection().unwrap();
+            conn.query_row(
+                "SELECT COUNT(*) FROM resource_fts WHERE resource_id = 'map-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(total_rows, 1, "the update must not leave a second FTS row");
+
+        backend.purge(&tenant, "Patient", "map-1").await.unwrap();
+        assert!(
+            mapping().is_empty(),
+            "a purge must clear the mapping with the rows"
+        );
+        assert_eq!(fts_rows_for(&after_update), 0);
     }
 }

@@ -185,4 +185,15 @@ mod tests {
         assert!(!idx.contains(&37), "outbox dead-letter");
         assert_eq!(idx.len(), 35);
     }
+
+    #[test]
+    fn upstream_sqlite_v23_runs_dead_letter_after_helios_fts_map() {
+        // 24 steps: Helios v23 maps onto fork indices 16..=22 (provider …
+        // resource_fts_map). dead_letter is index 23 and must still run.
+        let idx = implied_applied_indices(23, Numbering::Upstream, 24);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&22), "resource_fts_map is Helios v23");
+        assert!(!idx.contains(&23), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 22, "all Helios steps except outbox");
+    }
 }

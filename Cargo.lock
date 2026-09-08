@@ -3540,12 +3540,14 @@ dependencies = [
  "helios-sof",
  "helios-subscriptions",
  "helios-ui",
+ "http-body-util",
  "openssl",
  "parking_lot",
  "reqwest",
  "serde_json",
  "sqlparser",
  "tokio",
+ "tower",
  "tracing",
 ]
 

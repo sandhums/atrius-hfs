@@ -11,11 +11,17 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 22;
+pub const SCHEMA_VERSION: i32 = 25;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
 /// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
+///
+/// Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes,
+/// `resource_fts_map`) sit *before* [`OUTBOX_DEAD_LETTER_STEP`] so an
+/// upstream-numbered SQLite DB at Helios v23 does not imply `dead_at`
+/// already applied (`implied_applied_indices` maps Helios v23 onto fork
+/// indices 16..=22).
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -37,7 +43,10 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_manifests_byte_progress", migrate_v18_to_v19),
     ("resources_reindex_keyset", migrate_v19_to_v20),
     ("search_index_partial_family_indexes", migrate_v20_to_v21),
-    (OUTBOX_DEAD_LETTER_STEP, migrate_v21_to_v22),
+    ("search_index_drop_resource_prefix", migrate_v21_to_v22),
+    ("search_index_partial_late_indexes", migrate_v22_to_v23),
+    ("resource_fts_map", migrate_v23_to_v24),
+    (OUTBOX_DEAD_LETTER_STEP, migrate_v24_to_v25),
 ];
 
 const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
@@ -464,10 +473,13 @@ fn create_indexes(conn: &Connection) -> StorageResult<()> {
         "CREATE INDEX IF NOT EXISTS idx_search_quantity ON search_index(tenant_id, resource_type, param_name, value_quantity_value, value_quantity_unit) WHERE value_quantity_value IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_search_reference ON search_index(tenant_id, resource_type, param_name, value_reference) WHERE value_reference IS NOT NULL",
         "CREATE INDEX IF NOT EXISTS idx_search_uri ON search_index(tenant_id, resource_type, param_name, value_uri) WHERE value_uri IS NOT NULL",
-        // Index for composite parameter matching
+        // Index for composite parameter matching, and for every lookup keyed
+        // by the owning resource. `idx_search_resource` used to sit alongside
+        // it on `(tenant_id, resource_type, resource_id)` — a strict leftmost
+        // prefix of this one, so it served no query this index cannot, while
+        // every single index row paid a second full b-tree insertion for it
+        // (schema v21).
         "CREATE INDEX IF NOT EXISTS idx_search_composite ON search_index(tenant_id, resource_type, resource_id, param_name, composite_group)",
-        // Index for resource-based lookups
-        "CREATE INDEX IF NOT EXISTS idx_search_resource ON search_index(tenant_id, resource_type, resource_id)",
         // Index for :text modifier searches (token display text)
         "CREATE INDEX IF NOT EXISTS idx_search_token_display ON search_index(tenant_id, resource_type, param_name, value_token_display) WHERE value_token_display IS NOT NULL",
         // Index for :of-type modifier searches (identifier type)
@@ -1711,8 +1723,139 @@ fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// v21 → v22: tombstone exhausted subscription outbox claims (`dead_at`).
+/// v21 → v22: drop `idx_search_resource` (Helios #947, their v20→v21).
+///
+/// It indexed `(tenant_id, resource_type, resource_id)` — a strict leftmost
+/// prefix of `idx_search_composite`. Every search_index row paid a second
+/// b-tree insertion for lookups the composite index already covers.
 fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
+    conn.execute("DROP INDEX IF EXISTS idx_search_resource", [])
+        .map_err(|e| migration_err(format!("v22 drop idx_search_resource: {e}")))?;
+    Ok(())
+}
+
+/// v22 → v23: late partial indexes (Helios #947, their v21→v22).
+///
+/// Rebuilds the last three `search_index` indexes that were still *full*
+/// indexes over a column almost every row leaves NULL, as partial indexes
+/// (#947). #944 did this for the v20 set and skipped these three because they
+/// were added later, by the v10 and v11 migrations.
+///
+/// A full index takes an entry for **every** row in the table, NULL or not.
+/// On a 86,453-resource ingest of the Synthea manifest — 1,182,409 index rows,
+/// of which 150,000 carry a reference display and none carry a canonical
+/// quantity or a contained flag — those three indexes held 1.18M entries each
+/// and cost 134 MB:
+///
+/// ```text
+///                                  before    after
+/// idx_search_reference_display     51.6 MB   9.8 MB
+/// idx_search_quantity_canonical    47.9 MB   0.0 MB
+/// idx_search_contained             34.0 MB   0.0 MB
+/// ```
+///
+/// Every row therefore paid three b-tree insertions it could never be found
+/// by. `idx_search_string_folded` is deliberately **not** in this list: it is
+/// also the only index leading with `(tenant_id, resource_type, param_name)`
+/// that covers every row, and the query planner falls back to it for the
+/// `LIKE`-shaped modifier searches (`:text`, `:contains`) whose predicate
+/// SQLite cannot prove implies `IS NOT NULL`. Making it partial pushed those
+/// onto `idx_search_composite`'s `(tenant_id, resource_type)` prefix, and
+/// replacing it with a narrow `(tenant_id, resource_type, param_name)` index
+/// made the planner prefer that for token searches too — a selective
+/// `code=…` lookup went from 2.9 ms to 22.1 ms because the value could no
+/// longer be filtered inside the index.
+///
+/// `EXPLAIN QUERY PLAN` over 15 representative search shapes (token, token
+/// `:text`, reference, reference `:text`, string prefix and exact, quantity
+/// raw and canonical, date, uri, identifier `:of-type`, `_contained`,
+/// composite, delete-by-resource) is byte-identical before and after this
+/// migration. Ingest of the same manifest went 2,238 -> 2,543 resources/s
+/// (+14%) with the database 124 MB (11%) smaller.
+fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
+    let statements = [
+        "DROP INDEX IF EXISTS idx_search_reference_display",
+        "CREATE INDEX idx_search_reference_display
+         ON search_index(tenant_id, resource_type, param_name, value_reference_display)
+         WHERE value_reference_display IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_quantity_canonical",
+        "CREATE INDEX idx_search_quantity_canonical
+         ON search_index(tenant_id, resource_type, param_name, value_quantity_canonical_unit, value_quantity_canonical_value)
+         WHERE value_quantity_canonical_value IS NOT NULL",
+        "DROP INDEX IF EXISTS idx_search_contained",
+        "CREATE INDEX idx_search_contained
+         ON search_index(tenant_id, contained_type, is_contained, param_name)
+         WHERE is_contained = 1",
+    ];
+    for sql in &statements {
+        conn.execute(sql, [])
+            .map_err(|e| migration_err(format!("v22 partial index rebuild: {e}")))?;
+    }
+    Ok(())
+}
+
+/// v23 → v24: `resource_fts_map` (Helios #967, their v22→v23).
+///
+/// Adds `resource_fts_map`, which records the `rowid` FTS5 assigned to each
+/// resource's `resource_fts` row, and backfills it from the rows already there
+/// (#967).
+///
+/// `resource_fts` is an FTS5 virtual table whose plain columns are
+/// `UNINDEXED`, so
+///
+/// ```text
+/// DELETE FROM resource_fts WHERE tenant_id = ? AND resource_type = ? AND resource_id = ?
+/// ```
+///
+/// cannot seek: it scans the whole table. That delete runs once per resource
+/// on every re-index — an update, a re-import, `$reindex` — which makes those
+/// operations quadratic in corpus size. Measured on a 104 GB database holding
+/// 6,036,052 FTS documents (3.02 GB of `resource_fts_data`): a resumed bulk
+/// import advanced 16,700 entries in 20 hours, one core at 100%, 835,000 page
+/// reads per second and no writes. #949 guarded the *create* path (a resource
+/// with no `search_index` rows was never FTS-indexed); every other path still
+/// paid the scan.
+///
+/// FTS5 does index `rowid`, so with the mapping the delete becomes a b-tree
+/// lookup. The backfill is one scan of the FTS table — the cost of a single
+/// delete under the old scheme.
+fn migrate_v23_to_v24(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS resource_fts_map (
+            tenant_id TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            fts_rowid INTEGER NOT NULL,
+            PRIMARY KEY (tenant_id, resource_type, resource_id, fts_rowid)
+        ) WITHOUT ROWID",
+        [],
+    )
+    .map_err(|e| migration_err(format!("v24 create resource_fts_map: {e}")))?;
+
+    // The FTS table is optional: a build without FTS5 never created it, and
+    // there is then nothing to map.
+    let fts_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'",
+            [],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+    if fts_exists {
+        // `OR IGNORE`: the primary key includes the rowid, so a resource that
+        // somehow has two FTS rows keeps both mappings and both get deleted.
+        conn.execute(
+            "INSERT OR IGNORE INTO resource_fts_map (tenant_id, resource_type, resource_id, fts_rowid)
+             SELECT tenant_id, resource_type, resource_id, rowid FROM resource_fts",
+            [],
+        )
+        .map_err(|e| migration_err(format!("v24 backfill resource_fts_map: {e}")))?;
+    }
+    Ok(())
+}
+
+/// v24 → v25: tombstone exhausted subscription outbox claims (`dead_at`).
+fn migrate_v24_to_v25(conn: &Connection) -> StorageResult<()> {
     ensure_outbox_dead_letter(conn)
 }
 
@@ -1722,6 +1865,7 @@ fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
 pub fn drop_all_tables(conn: &Connection) -> StorageResult<()> {
     // Drop FTS5 table first (if exists)
     let _ = conn.execute("DROP TABLE IF EXISTS resource_fts", []);
+    let _ = conn.execute("DROP TABLE IF EXISTS resource_fts_map", []);
     let _ = conn.execute("DROP TABLE IF EXISTS search_index_fts", []);
 
     // Drop bulk tables (order matters due to foreign keys)
@@ -1948,10 +2092,18 @@ mod tests {
         assert!(applied.contains("bulk_manifests_byte_progress"));
         assert!(applied.contains("resources_reindex_keyset"));
         assert!(applied.contains("search_index_partial_family_indexes"));
+        assert!(applied.contains("search_index_drop_resource_prefix"));
+        assert!(applied.contains("search_index_partial_late_indexes"));
+        assert!(applied.contains("resource_fts_map"));
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v22 must add subscription_outbox.dead_at"
+            "v25 must add subscription_outbox.dead_at"
+        );
+        assert_eq!(
+            table_exists("resource_fts_map"),
+            1,
+            "v24 must create resource_fts_map"
         );
         let has_reindex: i32 = conn
             .query_row(
@@ -1973,6 +2125,167 @@ mod tests {
 
         let version = get_schema_version(&conn).unwrap();
         assert_eq!(version, SCHEMA_VERSION);
+    }
+
+    /// The index layout the write path pays for on every `search_index` row
+    /// (#947). Two properties, both load-bearing:
+    ///
+    /// * `idx_search_resource` is gone (v21). It was a strict leftmost prefix
+    ///   of `idx_search_composite`, so it answered no query that index cannot
+    ///   while charging every row a second b-tree insertion.
+    /// * The three indexes rebuilt in v22 are partial. A full index over a
+    ///   column almost every row leaves NULL takes an entry per row for
+    ///   nothing.
+    ///
+    /// `idx_search_string_folded` is asserted to be *non*-partial on purpose:
+    /// it is also the only full index leading with
+    /// `(tenant_id, resource_type, param_name)`, and the planner falls back to
+    /// it for the `LIKE`-shaped modifier searches whose predicate SQLite
+    /// cannot prove implies `IS NOT NULL`. Making it partial silently pushes
+    /// `:text` and `:contains` onto a `(tenant_id, resource_type)` scan.
+    #[test]
+    fn search_index_carries_no_redundant_or_full_value_indexes() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+
+        let index_sql = |name: &str| -> Option<String> {
+            conn.query_row(
+                "SELECT sql FROM sqlite_master WHERE type='index' AND name=?1",
+                [name],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .ok()
+            .flatten()
+        };
+
+        assert!(
+            index_sql("idx_search_resource").is_none(),
+            "idx_search_resource is a prefix of idx_search_composite and must not be recreated"
+        );
+        assert!(
+            index_sql("idx_search_composite")
+                .expect("composite index")
+                .contains("resource_id"),
+            "idx_search_composite must still lead with the resource key"
+        );
+
+        for (name, predicate) in [
+            (
+                "idx_search_reference_display",
+                "value_reference_display IS NOT NULL",
+            ),
+            (
+                "idx_search_quantity_canonical",
+                "value_quantity_canonical_value IS NOT NULL",
+            ),
+            ("idx_search_contained", "is_contained = 1"),
+        ] {
+            let sql = index_sql(name).unwrap_or_else(|| panic!("{name} must exist"));
+            assert!(
+                sql.contains(predicate),
+                "{name} must be partial on `{predicate}`, got: {sql}"
+            );
+        }
+
+        let folded = index_sql("idx_search_string_folded").expect("folded index");
+        assert!(
+            !folded.to_ascii_uppercase().contains("WHERE"),
+            "idx_search_string_folded must stay full: it is the fallback index for \
+             LIKE-shaped modifier searches. Got: {folded}"
+        );
+    }
+
+    /// A database upgraded through the ladder must end up with exactly the
+    /// index set a fresh one gets — otherwise a long-lived server keeps paying
+    /// for indexes new installs no longer create.
+    #[test]
+    fn upgraded_database_has_the_same_search_index_indexes_as_a_fresh_one() {
+        let index_set = |conn: &Connection| -> Vec<(String, Option<String>)> {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT name, sql FROM sqlite_master
+                     WHERE type='index' AND tbl_name='search_index' ORDER BY name",
+                )
+                .unwrap();
+            let rows: Vec<(String, Option<String>)> = stmt
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+                .unwrap()
+                .filter_map(|r| r.ok())
+                .collect();
+            rows
+        };
+
+        let fresh = Connection::open_in_memory().unwrap();
+        initialize_schema(&fresh).unwrap();
+
+        let upgraded = Connection::open_in_memory().unwrap();
+        create_schema_v1(&upgraded).unwrap();
+        // Creates the version table, as `initialize_schema` would.
+        let _ = get_schema_version(&upgraded).unwrap();
+        set_schema_version(&upgraded, 1).unwrap();
+        initialize_schema(&upgraded).unwrap();
+
+        assert_eq!(index_set(&fresh), index_set(&upgraded));
+    }
+
+    /// #967: the mapping must exist and be backfilled from whatever FTS rows a
+    /// pre-`resource_fts_map` database already had, or those rows could never
+    /// be deleted by rowid and would linger as stale `_text`/`_content`
+    /// matches. Named dispatch re-runs the step when it is un-recorded.
+    #[test]
+    fn resource_fts_map_backfills_from_existing_rows() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE IF EXISTS resource_fts_map", [])
+            .unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = 'resource_fts_map'",
+            [],
+        )
+        .unwrap();
+
+        let fts_exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'",
+                [],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+        if !fts_exists {
+            return; // built without FTS5; nothing to map
+        }
+        for (id, text) in [("a", "alpha"), ("b", "beta")] {
+            conn.execute(
+                "INSERT INTO resource_fts (resource_id, resource_type, tenant_id, narrative_text, full_content)
+                 VALUES (?1, 'Patient', 't', ?2, ?2)",
+                rusqlite::params![id, text],
+            )
+            .unwrap();
+        }
+
+        initialize_schema(&conn).unwrap();
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        let mapped: Vec<(String, i64)> = conn
+            .prepare("SELECT resource_id, fts_rowid FROM resource_fts_map ORDER BY resource_id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert_eq!(mapped.len(), 2, "both pre-existing FTS rows must be mapped");
+
+        // Every mapping must point at the row it claims to.
+        for (resource_id, rowid) in mapped {
+            let found: String = conn
+                .query_row(
+                    "SELECT resource_id FROM resource_fts WHERE rowid = ?1",
+                    [rowid],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(found, resource_id);
+        }
     }
 
     /// Migrations must be re-runnable: a database already carrying the latest
