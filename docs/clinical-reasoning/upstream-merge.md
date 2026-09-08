@@ -178,6 +178,7 @@ evaluated. Remaining limitations (not a second engine):
 | `src/core/schema_ledger.rs` | Named `schema_migrations` ledger; fork vs upstream integer classification |
 | `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`; `subscription_outbox_dead_letter` is the tip step. Do not restore a pure integer `migrate_schema` loop |
 | `src/backends/*/subscription_outbox.rs` | Durable outbox store (`mark_dead` / `dead_at`; claim skips dead rows; SQLite process mutex + `BEGIN IMMEDIATE` + CAS so one file cannot double-claim — not a cluster outbox) |
+| `src/composite/storage.rs` | After search, resolve `_include`/`_revinclude` with `resolve_includes_iterative`; do not keep a search backend's partial `included` list (ES drops `_revinclude`). Do not invent a persistence `TerminologySearchProvider` — REST expands `:in` via `HFS_TERMINOLOGY_SERVER`. |
 
 `SCHEMA_VERSION` (25 SQLite / 39 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20). SQLite 22–24 are Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes, `resource_fts_map`; Helios numbered those v21–v23). `OUTBOX_DEAD_LETTER_STEP` is the SQLite tip (v25) so an upstream-numbered Helios v23 DB does not imply `dead_at` already applied. Postgres 39 is still `dead_at`. Do not restore hourly retry of exhausted outbox rows.
 
@@ -360,5 +361,6 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 - [Clinical reasoning stack overview](./README.md)
 - [Single-engine validation cutover](../validation-cutover.md)
+- [SQL-on-FHIR layering (`persistence` vs `sof`)](../sof-layering.md)
 - [Startup guide](./startup-guide.md) — local stack and smoke scripts
 - [Troubleshooting](./troubleshooting.md) — runtime issues after sync
