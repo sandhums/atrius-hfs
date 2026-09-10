@@ -9,7 +9,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 39;
+pub const SCHEMA_VERSION: i32 = 40;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -54,6 +54,7 @@ const PG_STEPS: &[&str] = &[
     "drop_unread_compress",
     "search_index_autovacuum",
     "search_index_slot2_columns",
+    "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
 ];
 
@@ -392,6 +393,7 @@ async fn run_pg_step(client: &deadpool_postgres::Client, name: &str) -> StorageR
         "drop_unread_compress" => migrate_v35_to_v36(client).await,
         "search_index_autovacuum" => migrate_v36_to_v37(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
+        "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
         other => Err(pg_error(format!("unknown schema step {other}"))),
     }
@@ -1048,6 +1050,12 @@ async fn add_bulk_submit_worker_schema(
         "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS submission_metadata TEXT",
         "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS bytes_processed BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS bytes_total BIGINT NOT NULL DEFAULT 0",
+        // Pre-ingest phase hint (#953). `phase` is nullable because a manifest
+        // has none until a worker claims it, and an unrecognized string decodes
+        // back to `None` rather than failing the read.
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS phase TEXT",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_done BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_total BIGINT NOT NULL DEFAULT 0",
     ];
     for sql in &migrations {
         client
@@ -3638,6 +3646,25 @@ async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult
 /// `processed_at` NULL so `$events` does not treat them as successful delivery.
 async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult<()> {
     ensure_outbox_dead_letter(client).await
+}
+
+/// Named step `bulk_manifests_phase_progress` (stamp v40): pre-ingest phase
+/// columns Helios stuffed into `add_bulk_submit_worker_schema` without bumping
+/// their Postgres integer. Existing fork DBs already recorded `bulk_submit_worker`,
+/// so those `IF NOT EXISTS` ALTERs would never re-run without this step.
+async fn migrate_v39_to_v40(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    for sql in [
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS phase TEXT",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_done BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_total BIGINT NOT NULL DEFAULT 0",
+    ] {
+        client.execute(sql, &[]).await.map_err(|e| {
+            pg_error(format!(
+                "Migration bulk_manifests_phase_progress failed: {e}"
+            ))
+        })?;
+    }
+    Ok(())
 }
 
 /// v24 -> v25: drop `fk_search_resource`.

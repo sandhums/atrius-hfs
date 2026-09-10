@@ -11,17 +11,18 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 25;
+pub const SCHEMA_VERSION: i32 = 27;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
 /// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
 ///
 /// Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes,
-/// `resource_fts_map`) sit *before* [`OUTBOX_DEAD_LETTER_STEP`] so an
-/// upstream-numbered SQLite DB at Helios v23 does not imply `dead_at`
-/// already applied (`implied_applied_indices` maps Helios v23 onto fork
-/// indices 16..=22).
+/// `resource_fts_map`) and Helios `#959`/`#953` (`idx_resources_live_type`,
+/// manifest `phase`/`files_*`) sit *before* [`OUTBOX_DEAD_LETTER_STEP`] so an
+/// upstream-numbered SQLite DB at Helios v25 does not imply `dead_at`
+/// already applied (`implied_applied_indices` maps Helios v25 onto fork
+/// indices 16..=24).
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -46,7 +47,9 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_drop_resource_prefix", migrate_v21_to_v22),
     ("search_index_partial_late_indexes", migrate_v22_to_v23),
     ("resource_fts_map", migrate_v23_to_v24),
-    (OUTBOX_DEAD_LETTER_STEP, migrate_v24_to_v25),
+    ("resources_live_type_index", migrate_v24_to_v25),
+    ("bulk_manifests_phase_progress", migrate_v25_to_v26),
+    (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
 const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
@@ -462,6 +465,17 @@ fn create_indexes(conn: &Connection) -> StorageResult<()> {
         "CREATE INDEX IF NOT EXISTS idx_resources_type ON resources(tenant_id, resource_type)",
         "CREATE INDEX IF NOT EXISTS idx_resources_updated ON resources(tenant_id, last_updated)",
         "CREATE INDEX IF NOT EXISTS idx_resources_reindex ON resources(tenant_id, resource_type, last_updated, id)",
+        // Covering index for the live-resource counts the dashboard runs
+        // (schema v24, #959). The column order is load-bearing: `tenant_id`
+        // and `is_deleted` are both equality-matched, so they form the probed
+        // prefix, and `resource_type` then arrives already sorted *within*
+        // that prefix — the `GROUP BY` needs no sort step and every column the
+        // query mentions lives in the index, so the table is never touched.
+        // `idx_resources_type` cannot serve these: it lacks `is_deleted`, so
+        // SQLite can walk it for the tenant but must then fetch each matching
+        // row from the table just to test `is_deleted = 0` — millions of row
+        // visits on a large corpus.
+        "CREATE INDEX IF NOT EXISTS idx_resources_live_type ON resources(tenant_id, is_deleted, resource_type)",
         // History table indexes
         "CREATE INDEX IF NOT EXISTS idx_history_resource ON resource_history(tenant_id, resource_type, id)",
         "CREATE INDEX IF NOT EXISTS idx_history_updated ON resource_history(tenant_id, last_updated)",
@@ -1854,8 +1868,108 @@ fn migrate_v23_to_v24(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// v24 → v25: tombstone exhausted subscription outbox claims (`dead_at`).
+/// v24 → v25: covering index for live-resource dashboard counts (Helios #959,
+/// their v23→v24).
+///
+/// Adds `idx_resources_live_type` on
+/// `(tenant_id, is_deleted, resource_type)`, the covering index for the
+/// live-resource counts the Home/Dashboard page runs on every load (#959).
+///
+/// Two query shapes, both hit once per dashboard render:
+///
+/// ```text
+/// SELECT resource_type, COUNT(*) FROM resources
+///  WHERE tenant_id = ?1 AND is_deleted = 0
+///  GROUP BY resource_type
+///
+/// SELECT COUNT(*) FROM resources
+///  WHERE tenant_id = ?1 AND is_deleted = 0
+/// ```
+///
+/// plus `count_by_types`, which is the first with an extra
+/// `AND resource_type IN (...)` — the same access path, narrowed.
+///
+/// Before this index the only candidate was `idx_resources_type` on
+/// `(tenant_id, resource_type)`, which does **not** contain `is_deleted`.
+/// SQLite can walk it for the tenant, but `is_deleted = 0` is not answerable
+/// from the index, so it must fetch every matching row out of the table just
+/// to evaluate that one predicate. On a 6,000,000-resource database that is
+/// six million random row visits per count — the dashboard took about 30
+/// seconds to load.
+///
+/// The column order is the whole point. `tenant_id` and `is_deleted` are both
+/// equality-matched, so they form the probed prefix; `resource_type` then
+/// arrives already sorted *within* that prefix, which means the `GROUP BY`
+/// needs no sort step and the aggregate is answered from the index alone,
+/// without touching the table. Any other order loses one of those two
+/// properties: leading with `resource_type` breaks the equality prefix, and
+/// putting `is_deleted` last leaves it unusable as a seek key.
+///
+/// Honest note on the cost of this migration: the index has to be built once,
+/// at the startup that performs the upgrade. On a multi-million-row database
+/// that means a full scan of `resources` plus a b-tree build, and it takes a
+/// noticeable amount of time (and transient disk for the sort) before the
+/// server begins serving. It is a one-off cost — subsequent startups find the
+/// index already there and skip this migration entirely.
 fn migrate_v24_to_v25(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_resources_live_type
+         ON resources(tenant_id, is_deleted, resource_type)",
+        [],
+    )
+    .map_err(|e| migration_err(format!("v25 create idx_resources_live_type: {e}")))?;
+    Ok(())
+}
+
+/// v25 → v26: coarse pre-ingest phase on manifests (Helios #953, their v24→v25).
+///
+/// `ManifestStatus::Processing` covers a worker's whole run, so the window
+/// before the first NDJSON byte lands — fetching the remote Bulk Export
+/// Manifest, HEAD-ing its output files to pre-size the byte denominator —
+/// reported a flat `0%`, indistinguishable at the status endpoint from a
+/// wedged job. `phase` is the kebab-case `ManifestPhase` the claiming worker
+/// last reported (NULL before any worker claims it, and for databases
+/// migrated from earlier versions); `files_done`/`files_total` are that
+/// phase's file counters.
+fn migrate_v25_to_v26(conn: &Connection) -> StorageResult<()> {
+    // SQLite has no `ADD COLUMN IF NOT EXISTS` and a duplicate column is a hard
+    // error, so gate each ALTER on PRAGMA table_info the way the earlier
+    // bulk-submit migrations do. A fresh database reaches this migration too
+    // (v1 is created, then every migration runs), and the guard also keeps the
+    // step re-runnable against a database a pre-release build already stamped.
+    let manifest_columns: Vec<String> = {
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(bulk_manifests)")
+            .map_err(|e| migration_err(format!("pragma bulk_manifests: {e}")))?;
+        let cols: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(1))
+            .map_err(|e| migration_err(format!("pragma rows: {e}")))?
+            .filter_map(|r| r.ok())
+            .collect();
+        cols
+    };
+    let adds = [
+        ("phase", "ALTER TABLE bulk_manifests ADD COLUMN phase TEXT"),
+        (
+            "files_done",
+            "ALTER TABLE bulk_manifests ADD COLUMN files_done INTEGER NOT NULL DEFAULT 0",
+        ),
+        (
+            "files_total",
+            "ALTER TABLE bulk_manifests ADD COLUMN files_total INTEGER NOT NULL DEFAULT 0",
+        ),
+    ];
+    for (col, sql) in &adds {
+        if !manifest_columns.iter().any(|c| c == col) {
+            conn.execute(sql, [])
+                .map_err(|e| migration_err(format!("add manifest phase columns: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
+/// v26 → v27: tombstone exhausted subscription outbox claims (`dead_at`).
+fn migrate_v26_to_v27(conn: &Connection) -> StorageResult<()> {
     ensure_outbox_dead_letter(conn)
 }
 
@@ -2098,7 +2212,7 @@ mod tests {
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v25 must add subscription_outbox.dead_at"
+            "v27 must add subscription_outbox.dead_at"
         );
         assert_eq!(
             table_exists("resource_fts_map"),
@@ -2226,6 +2340,107 @@ mod tests {
         initialize_schema(&upgraded).unwrap();
 
         assert_eq!(index_set(&fresh), index_set(&upgraded));
+    }
+
+    /// #959: the dashboard's live-resource counts must be answerable from an
+    /// index alone. `idx_resources_type` on `(tenant_id, resource_type)` has no
+    /// `is_deleted`, so SQLite had to visit every matching table row just to
+    /// test `is_deleted = 0` — ~30 s to render `/ui` over 6M resources.
+    ///
+    /// The column order of the live-type index is the whole point, so it is
+    /// asserted exactly: `tenant_id` and `is_deleted` are equality-matched and
+    /// form the probed prefix, after which `resource_type` is already sorted
+    /// within that prefix and the `GROUP BY` needs no sort. Reordering the
+    /// columns compiles and passes every functional test while quietly restoring
+    /// the 30 s load.
+    #[test]
+    fn resources_carries_the_live_type_covering_index_in_order() {
+        let resources_index_set = |conn: &Connection| -> Vec<(String, Option<String>)> {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT name, sql FROM sqlite_master
+                     WHERE type='index' AND tbl_name='resources' ORDER BY name",
+                )
+                .unwrap();
+            let rows: Vec<(String, Option<String>)> = stmt
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+                .unwrap()
+                .filter_map(|r| r.ok())
+                .collect();
+            rows
+        };
+        // `PRAGMA index_info` returns one row per indexed column, in index
+        // order (seqno, cid, name) — exactly what we need to pin down.
+        let index_columns = |conn: &Connection, name: &str| -> Vec<String> {
+            let mut stmt = conn
+                .prepare(&format!("PRAGMA index_info({name})"))
+                .unwrap_or_else(|e| panic!("index_info({name}): {e}"));
+            stmt.query_map([], |row| row.get::<_, String>(2))
+                .unwrap()
+                .filter_map(|r| r.ok())
+                .collect()
+        };
+        let has_index = |conn: &Connection, name: &str| -> bool {
+            conn.query_row(
+                "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?1",
+                [name],
+                |_| Ok(true),
+            )
+            .unwrap_or(false)
+        };
+
+        // A fresh database gets the index from `create_indexes`.
+        let fresh = Connection::open_in_memory().unwrap();
+        initialize_schema(&fresh).unwrap();
+        assert!(
+            has_index(&fresh, "idx_resources_live_type"),
+            "a fresh database must carry idx_resources_live_type"
+        );
+        assert_eq!(
+            index_columns(&fresh, "idx_resources_live_type"),
+            vec![
+                "tenant_id".to_string(),
+                "is_deleted".to_string(),
+                "resource_type".to_string()
+            ],
+            "the equality-matched columns must come first, resource_type last, \
+             or the GROUP BY loses both its seek prefix and its free ordering"
+        );
+
+        // A database walked up the whole ladder must match a fresh one, or a
+        // long-lived server never gets the index new installs are created with.
+        let upgraded = Connection::open_in_memory().unwrap();
+        create_schema_v1(&upgraded).unwrap();
+        let _ = get_schema_version(&upgraded).unwrap();
+        set_schema_version(&upgraded, 1).unwrap();
+        initialize_schema(&upgraded).unwrap();
+        assert_eq!(resources_index_set(&fresh), resources_index_set(&upgraded));
+
+        // Named dispatch re-runs the step when it is un-recorded.
+        let existing = Connection::open_in_memory().unwrap();
+        initialize_schema(&existing).unwrap();
+        existing
+            .execute("DROP INDEX idx_resources_live_type", [])
+            .unwrap();
+        existing
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'resources_live_type_index'",
+                [],
+            )
+            .unwrap();
+        assert!(!has_index(&existing, "idx_resources_live_type"));
+
+        initialize_schema(&existing).unwrap();
+        assert_eq!(get_schema_version(&existing).unwrap(), SCHEMA_VERSION);
+        assert!(
+            has_index(&existing, "idx_resources_live_type"),
+            "un-recording resources_live_type_index must recreate idx_resources_live_type"
+        );
+        assert_eq!(
+            index_columns(&existing, "idx_resources_live_type"),
+            index_columns(&fresh, "idx_resources_live_type"),
+            "the migrated index must match the one a fresh database creates"
+        );
     }
 
     /// #967: the mapping must exist and be backfilled from whatever FTS rows a

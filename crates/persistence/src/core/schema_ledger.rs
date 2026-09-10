@@ -179,21 +179,35 @@ mod tests {
 
     #[test]
     fn upstream_postgres_v36_skips_later_fork_tip_steps() {
-        let idx = implied_applied_indices(36, Numbering::Upstream, 38);
+        let idx = implied_applied_indices(36, Numbering::Upstream, 39);
         assert!(!idx.contains(&15), "outbox");
         assert!(!idx.contains(&36), "slot-2");
-        assert!(!idx.contains(&37), "outbox dead-letter");
+        assert!(!idx.contains(&37), "manifest phase");
+        assert!(!idx.contains(&38), "outbox dead-letter");
         assert_eq!(idx.len(), 35);
     }
 
     #[test]
     fn upstream_sqlite_v23_runs_dead_letter_after_helios_fts_map() {
-        // 24 steps: Helios v23 maps onto fork indices 16..=22 (provider …
-        // resource_fts_map). dead_letter is index 23 and must still run.
-        let idx = implied_applied_indices(23, Numbering::Upstream, 24);
+        // 26 steps: Helios v23 maps onto fork indices 16..=22 (provider …
+        // resource_fts_map). live_type (23), phase (24) and dead_letter (25)
+        // must still run.
+        let idx = implied_applied_indices(23, Numbering::Upstream, 26);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&22), "resource_fts_map is Helios v23");
-        assert!(!idx.contains(&23), "dead_letter is fork-only tip");
-        assert_eq!(idx.len(), 22, "all Helios steps except outbox");
+        assert!(!idx.contains(&23), "live_type is Helios v24");
+        assert!(!idx.contains(&24), "phase is Helios v25");
+        assert!(!idx.contains(&25), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 22, "all Helios steps through v23 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v25_runs_dead_letter_after_helios_phase() {
+        let idx = implied_applied_indices(25, Numbering::Upstream, 26);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&23), "live_type is Helios v24");
+        assert!(idx.contains(&24), "phase is Helios v25");
+        assert!(!idx.contains(&25), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 24, "all Helios steps except outbox");
     }
 }

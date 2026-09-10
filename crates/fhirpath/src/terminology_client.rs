@@ -51,7 +51,10 @@ fn map_term(err: HtsError, op: &str) -> FhirPathError {
         HtsError::Network(msg) => FhirPathError::NetworkError(msg),
         HtsError::Parse(msg) => FhirPathError::ParseError(msg),
         HtsError::ServerError { status, body } => {
-            FhirPathError::TerminologyError(format!("{op} failed with status {status}: {body}"))
+            let status_text = reqwest::StatusCode::from_u16(status)
+                .map(|s| s.to_string())
+                .unwrap_or_else(|_| status.to_string());
+            FhirPathError::TerminologyError(format!("{op} failed with status {status_text}: {body}"))
         }
     }
 }
@@ -74,6 +77,7 @@ impl TerminologyClient {
     ///
     /// The request timeout defaults to 30s and can be overridden with
     /// `FHIRPATH_TERMINOLOGY_TIMEOUT` (whole seconds; `0` disables it).
+    /// HTTP 502, 503, 504 and 530 responses are retried up to three times with backoff.
     pub fn new(base_url: String, fhir_version: FhirVersion) -> Self {
         let mut options = ClientOptions::fhirpath();
         options.timeout = request_timeout();
@@ -428,6 +432,7 @@ impl TerminologyClient {
             .await
             .map_err(|e| map_term(e, "Translation"))
     }
+
     fn split_valueset_canonical(valueset_url: &str) -> (&str, Option<&str>) {
         if let Some((base, version)) = valueset_url.split_once('|') {
             (base, Some(version))
@@ -516,6 +521,170 @@ fn build_translate_body(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn call_operation(client: &TerminologyClient, operation: &str) -> FhirPathResult<Value> {
+        match operation {
+            "expand" => client.expand("http://example.org/vs", None).await,
+            "lookup" => client.lookup("http://example.org/cs", "x", None).await,
+            "validate_vs" => {
+                client
+                    .validate_vs("http://example.org/vs", None, "x", None, None)
+                    .await
+            }
+            "validate_cs" => {
+                client
+                    .validate_cs("http://example.org/cs", "x", None, None)
+                    .await
+            }
+            "subsumes" => {
+                client
+                    .subsumes("http://example.org/cs", "x", "y", None)
+                    .await
+            }
+            "translate" => {
+                client
+                    .translate(
+                        "http://example.org/cm",
+                        "http://example.org/cs",
+                        "x",
+                        None,
+                        None,
+                    )
+                    .await
+            }
+            _ => panic!("unknown test operation: {operation}"),
+        }
+    }
+
+    async fn stub_responses(statuses: Vec<u16>, body: &str) -> wiremock::MockServer {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        let calls = AtomicUsize::new(0);
+        let body = body.to_owned();
+        Mock::given(|_: &Request| true)
+            .respond_with(move |_: &Request| {
+                let index = calls.fetch_add(1, Ordering::SeqCst).min(statuses.len() - 1);
+                ResponseTemplate::new(statuses[index]).set_body_string(body.clone())
+            })
+            .mount(&server)
+            .await;
+        server
+    }
+
+    #[tokio::test]
+    async fn terminology_retries_transient_gateway_errors_for_all_operations() {
+        for operation in [
+            "expand",
+            "lookup",
+            "validate_vs",
+            "validate_cs",
+            "subsumes",
+            "translate",
+        ] {
+            let body = json!({"resourceType": "Parameters", "parameter": []});
+            let server = stub_responses(vec![502, 503, 504, 200], &body.to_string()).await;
+            let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+
+            assert_eq!(
+                call_operation(&client, operation).await.unwrap(),
+                body,
+                "{operation}"
+            );
+            let requests = server.received_requests().await.unwrap();
+            assert_eq!(requests.len(), 4, "{operation}");
+            for request in &requests[1..] {
+                assert_eq!(request.method, requests[0].method);
+                assert_eq!(request.url, requests[0].url);
+                assert_eq!(request.body, requests[0].body);
+                assert_eq!(request.headers, requests[0].headers);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn terminology_retries_cloudflare_tunnel_errors_for_all_operations() {
+        for operation in [
+            "expand",
+            "lookup",
+            "validate_vs",
+            "validate_cs",
+            "subsumes",
+            "translate",
+        ] {
+            let body = json!({"resourceType": "Parameters", "parameter": []});
+            let server = stub_responses(vec![530, 200], &body.to_string()).await;
+            let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+
+            assert_eq!(
+                call_operation(&client, operation).await.unwrap(),
+                body,
+                "{operation}"
+            );
+            let requests = server.received_requests().await.unwrap();
+            assert_eq!(requests.len(), 2, "{operation}");
+            assert_eq!(requests[1].method, requests[0].method);
+            assert_eq!(requests[1].url, requests[0].url);
+            assert_eq!(requests[1].body, requests[0].body);
+            assert_eq!(requests[1].headers, requests[0].headers);
+        }
+    }
+
+    #[tokio::test]
+    async fn terminology_cloudflare_retry_limit_preserves_final_error() {
+        let body = "<html><h1>Error 1033</h1><h2>Cloudflare Tunnel error</h2></html>";
+        let server = stub_responses(vec![530], body).await;
+        let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+        let error = client
+            .expand("http://example.org/vs", None)
+            .await
+            .unwrap_err();
+        assert!(matches!(&error, FhirPathError::TerminologyError(message)
+            if message.contains("530") && message.contains(body)));
+        assert_eq!(server.received_requests().await.unwrap().len(), 4);
+    }
+
+    #[tokio::test]
+    async fn terminology_retry_limit_preserves_final_error() {
+        let server = stub_responses(vec![502, 503, 502, 504], "gateway unavailable").await;
+        let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+        let error = client
+            .expand("http://example.org/vs", None)
+            .await
+            .unwrap_err();
+        assert!(matches!(&error, FhirPathError::TerminologyError(message)
+            if message.contains("504 Gateway Timeout") && message.contains("gateway unavailable")));
+        assert_eq!(server.received_requests().await.unwrap().len(), 4);
+    }
+
+    #[tokio::test]
+    async fn terminology_does_not_retry_other_http_errors() {
+        for status in [400, 401, 403, 404, 422, 429, 500] {
+            let server = stub_responses(vec![status, 200], "operation failed").await;
+            let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+            assert!(matches!(
+                client.expand("http://example.org/vs", None).await,
+                Err(FhirPathError::TerminologyError(_))
+            ));
+            assert_eq!(
+                server.received_requests().await.unwrap().len(),
+                1,
+                "HTTP {status}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn terminology_does_not_retry_invalid_success_body() {
+        let server = stub_responses(vec![200], "invalid JSON").await;
+        let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+        assert!(matches!(
+            client.expand("http://example.org/vs", None).await,
+            Err(FhirPathError::ParseError(_))
+        ));
+        assert_eq!(server.received_requests().await.unwrap().len(), 1);
+    }
 
     /// Names of the `Parameters.parameter` entries, in order.
     fn param_names(body: &Value) -> Vec<&str> {

@@ -8,12 +8,19 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use reqwest::Client;
+use reqwest::{Client, RequestBuilder, Response};
 use serde_json::{Value, json};
 
 const VALIDATE_TTL: Duration = Duration::from_secs(300);
 const EXPAND_TTL: Duration = Duration::from_secs(300);
 const FHIR_JSON: &str = "application/fhir+json";
+
+/// Three retries after the initial request, with 1s, 2s and 4s backoff.
+const GATEWAY_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+    Duration::from_secs(4),
+];
 
 /// Errors talking to a terminology server.
 #[derive(Debug, thiserror::Error)]
@@ -138,6 +145,32 @@ impl TerminologyClient {
         Self::with_http(http, base_url, options.truncate_error_body)
     }
 
+    /// These terminology operations only read data, including those sent as POST.
+    /// Retry transient gateway/service failures, but preserve transport, parsing and
+    /// other HTTP errors. Each attempt retains the configured HTTP client timeout.
+    async fn send_with_retry(
+        &self,
+        request: impl Fn() -> RequestBuilder,
+    ) -> Result<Response, TerminologyError> {
+        let mut delays = GATEWAY_RETRY_DELAYS.into_iter();
+        loop {
+            let response = request()
+                .send()
+                .await
+                .map_err(|e| TerminologyError::Network(e.to_string()))?;
+            // Cloudflare uses HTTP 530 for tunnel failures, including error 1033
+            // when no healthy cloudflared instance can receive the request.
+            if !matches!(response.status().as_u16(), 502 | 503 | 504 | 530) {
+                return Ok(response);
+            }
+            let Some(delay) = delays.next() else {
+                return Ok(response);
+            };
+            drop(response);
+            tokio::time::sleep(delay).await;
+        }
+    }
+
     /// Wrap an existing reqwest client (tests, custom auth).
     pub fn with_http(
         http: Client,
@@ -160,14 +193,14 @@ impl TerminologyClient {
     pub async fn post_json(&self, path: &str, body: &Value) -> Result<Value, TerminologyError> {
         let url = format!("{}{path}", self.base_url);
         let response = self
-            .http
-            .post(&url)
-            .json(body)
-            .header("Content-Type", FHIR_JSON)
-            .header("Accept", FHIR_JSON)
-            .send()
-            .await
-            .map_err(|e| TerminologyError::Network(e.to_string()))?;
+            .send_with_retry(|| {
+                self.http
+                    .post(&url)
+                    .json(body)
+                    .header("Content-Type", FHIR_JSON)
+                    .header("Accept", FHIR_JSON)
+            })
+            .await?;
         self.read_json(response).await
     }
 
@@ -179,13 +212,8 @@ impl TerminologyClient {
     ) -> Result<Value, TerminologyError> {
         let url = format!("{}{path}", self.base_url);
         let response = self
-            .http
-            .get(&url)
-            .query(query)
-            .header("Accept", FHIR_JSON)
-            .send()
-            .await
-            .map_err(|e| TerminologyError::Network(e.to_string()))?;
+            .send_with_retry(|| self.http.get(&url).query(query).header("Accept", FHIR_JSON))
+            .await?;
         self.read_json(response).await
     }
 

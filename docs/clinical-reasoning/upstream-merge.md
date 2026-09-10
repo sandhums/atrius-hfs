@@ -180,7 +180,7 @@ evaluated. Remaining limitations (not a second engine):
 | `src/backends/*/subscription_outbox.rs` | Durable outbox store (`mark_dead` / `dead_at`; claim skips dead rows; SQLite process mutex + `BEGIN IMMEDIATE` + CAS so one file cannot double-claim — not a cluster outbox) |
 | `src/composite/storage.rs` | After search, resolve `_include`/`_revinclude` with `resolve_includes_iterative`; do not keep a search backend's partial `included` list (ES drops `_revinclude`). Do not invent a persistence `TerminologySearchProvider` — REST expands `:in` via `HFS_TERMINOLOGY_SERVER`. |
 
-`SCHEMA_VERSION` (25 SQLite / 39 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20). SQLite 22–24 are Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes, `resource_fts_map`; Helios numbered those v21–v23). `OUTBOX_DEAD_LETTER_STEP` is the SQLite tip (v25) so an upstream-numbered Helios v23 DB does not imply `dead_at` already applied. Postgres 39 is still `dead_at`. Do not restore hourly retry of exhausted outbox rows.
+`SCHEMA_VERSION` (27 SQLite / 40 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20). SQLite 22–24 are Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes, `resource_fts_map`; Helios numbered those v21–v23). SQLite 25–26 are Helios `#959`/`#953` (`idx_resources_live_type`, manifest `phase`/`files_*`; Helios numbered those v24–v25). `OUTBOX_DEAD_LETTER_STEP` is the SQLite tip (v27) so an upstream-numbered Helios v25 DB does not imply `dead_at` already applied. Postgres 40 is `bulk_manifests_phase_progress` then `dead_at` (still the tip). Do not restore hourly retry of exhausted outbox rows.
 
 ### `crates/hts`
 
@@ -191,7 +191,7 @@ SQLite URL→`system_id` and CodeSystem language memos live on `SqliteTerminolog
 | File | Atrius change |
 |------|----------------|
 | `src/lib.rs` | `pub mod terminology_client;` |
-| `src/terminology_client.rs` | `validate_code_with_parameters`, local ValueSet URL routing |
+| `src/terminology_client.rs` | `validate_code_with_parameters`, local ValueSet URL routing. Gateway retries (HTTP 502/503/504/530) live in `helios-terminology-client` (`send_with_retry`). Map `HtsError::ServerError` with `reqwest::StatusCode` display so Helios tests see `504 Gateway Timeout` |
 | `src/handlers.rs` | `pub fn json_value_to_evaluation_result` |
 | `src/evaluator.rs` | `pub fn convert_resource_to_result` |
 

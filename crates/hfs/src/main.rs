@@ -1833,11 +1833,32 @@ async fn build_bulk_submit(
         Some(Arc::new(svc))
     };
 
+    // SQLite serialises writers, so a fan-out queues batch writes behind one
+    // lock until they outlast `busy_timeout` and abort the manifest (#942).
+    // Ignore the configured value there, and warn about it, rather than letting
+    // it fail the import.
+    let backend_kind = config
+        .storage_backend_mode()
+        .map(|mode| mode.primary_backend_kind())
+        .unwrap_or(BackendKind::Sqlite);
+    let file_concurrency = cfg.effective_file_concurrency(backend_kind);
+    if file_concurrency < cfg.file_concurrency.max(1) {
+        warn!(
+            configured = cfg.file_concurrency,
+            effective = file_concurrency,
+            "Bulk submit file fan-out is not supported on SQLite and is \
+             running at 1: SQLite serialises writers, so a fan-out queues \
+             batch writes past busy_timeout and aborts the import. Use \
+             PostgreSQL for a higher file concurrency."
+        );
+    }
+
     spawn_submit_workers(
         jobs.clone(),
         fetcher.clone(),
         output.clone(),
         &cfg,
+        file_concurrency,
         reindex_hook,
         ingest_validator,
     );
@@ -1862,6 +1883,7 @@ fn spawn_submit_workers(
     fetcher: Arc<dyn SubmitInputFetcher>,
     output: Arc<dyn ExportOutputStore>,
     cfg: &helios_rest::config::BulkSubmitConfig,
+    file_concurrency: u32,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
     ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>>,
 ) {
@@ -1874,7 +1896,7 @@ fn spawn_submit_workers(
     if defer_indexing {
         info!("Bulk submit fast-load: search indexing deferred to post-manifest reindex");
     }
-    let file_concurrency = cfg.file_concurrency.max(1) as usize;
+    let file_concurrency = file_concurrency.max(1) as usize;
     if file_concurrency > 1 {
         info!(
             file_concurrency,
