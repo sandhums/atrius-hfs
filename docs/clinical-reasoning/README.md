@@ -9,7 +9,7 @@ Helios splits responsibilities across Rust services (orchestration, FHIR storage
 | Layer | Role |
 |-------|------|
 | **cds-server** | CDS Hooks discovery + invocation; `$apply` when manifest has `planDefinitionId`, else legacy evaluate |
-| **cds-server::clinical_reasoning** | Rust HTTP client for `POST /v1/evaluate/expression`, `POST /v1/plandefinition/apply`, and `POST /v1/activitydefinition/apply` |
+| **cds-server::clinical_reasoning** | Rust HTTP client for `POST /v1/evaluate/expression`, `POST /v1/plandefinition/apply`, `POST /v1/activitydefinition/apply`, and `POST /v1/measure/evaluate` |
 | **JVM sidecar** (external) | CQFramework CQL + **CQF Clinical Reasoning** (`PlanDefinition/$apply`, `ActivityDefinition/$apply`); Library includes from KR |
 | **Clinical HFS** | Patient chart data (Conditions, Observations, Encounters, …) |
 | **KR HFS** | Knowledge Repository: `Library` (primary + includes), `Measure`, CDS manifest `Binary` |
@@ -97,7 +97,17 @@ curl -s -X POST http://127.0.0.1:8088/v1/evaluate/expression \
 
 During evaluation the sidecar drives HFS searches with `:in` modifiers; **clinical HFS** calls **HTS** `$expand` for each referenced ValueSet.
 
-### 3. Terminology during CQL
+### 3. Measure analytics and CQL cohorts (cds-server)
+
+cds-server exposes first-class analytics routes that wrap the sidecar (not Helios REST):
+
+- `POST /v1/measure/evaluate` — CMS165 / any KR `Measure`; persists `MeasureReport` to clinical HFS
+- `POST /v1/cohorts` — Patient-context CQL over a candidate id list → `Group` for `$sql-export` `group`
+- `POST /v1/nl-views` — catalog-grounded ViewDefinition / SQLQuery suggestion (no execute)
+
+See [crates/cds-server/README.md](../../crates/cds-server/README.md#analytics-quality-measures-cohorts-view-suggestion).
+
+### 4. Terminology during CQL
 
 CQL `InValueSet` / retrieve with ValueSet filters → sidecar → HTS `POST /ValueSet/$expand`.
 

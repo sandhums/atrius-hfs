@@ -134,3 +134,46 @@ async fn evaluate_expression_non_success_preserves_body_detail() {
         other => panic!("expected SidecarRejected, got {other:?}"),
     }
 }
+
+#[tokio::test]
+async fn evaluate_measure_posts_to_sidecar() {
+    let srv = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/measure/evaluate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "measureId": "AtriusCMS165ControllingHighBP",
+            "measureReport": {
+                "resourceType": "MeasureReport",
+                "status": "complete",
+                "type": "individual"
+            }
+        })))
+        .mount(&srv)
+        .await;
+
+    let cfg = ClinicalReasoningConfig::new(srv.uri().to_string());
+    let client = ClinicalReasoningClient::new(cfg).expect("client");
+    let out = client
+        .evaluate_measure(cds_server::clinical_reasoning::EvaluateMeasureRequest {
+            measure_id: Some("AtriusCMS165ControllingHighBP".into()),
+            measure_url: None,
+            patient_id: "cms165-demo".into(),
+            period_start: Some("2026-01-01".into()),
+            period_end: Some("2026-12-31".into()),
+            report_type: "subject".into(),
+            hfs_base_url: "http://hfs".into(),
+            hts_base_url: "http://hts".into(),
+            library_base_url: Some("http://kr".into()),
+            use_server_data: true,
+            prefetch: None,
+            parameters: None,
+            fhir_authorization: None,
+        })
+        .await
+        .expect("eval");
+    assert_eq!(
+        out.measure_id.as_deref(),
+        Some("AtriusCMS165ControllingHighBP")
+    );
+    assert_eq!(out.measure_report_value()["resourceType"], "MeasureReport");
+}

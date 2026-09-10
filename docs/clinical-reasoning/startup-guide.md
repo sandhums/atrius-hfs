@@ -108,7 +108,14 @@ curl -s -X POST http://127.0.0.1:8095/cds-services/atriuscms165controllinghighbp
   -d @docs/clinical-reasoning/postman/cms165-invoke-context-only.json | jq .
 ```
 
-cds-server returns plain text (not JSON) on 502/412 — check HTTP status before piping to `jq`.
+cds-server returns plain text (not JSON) on 502/412 for CDS Hooks — check HTTP status before piping to `jq`. Analytics routes (`/v1/measure/evaluate`, `/v1/cohorts`, `/v1/nl-views`) return JSON errors.
+
+```bash
+# Subject-level MeasureReport (sidecar + persist to clinical HFS):
+curl -s -X POST http://127.0.0.1:8095/v1/measure/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{"measureId":"AtriusCMS165ControllingHighBP","patientId":"cms165-demo","periodStart":"2026-01-01","periodEnd":"2026-12-31"}'
+```
 
 ### ER chest pain pathway (encounter-start)
 

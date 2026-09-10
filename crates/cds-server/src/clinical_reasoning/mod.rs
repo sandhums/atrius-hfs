@@ -6,6 +6,7 @@
 //! - **`POST /v1/evaluate/expression`** — named CQL expression (legacy / fallback)
 //! - **`POST /v1/plandefinition/apply`** — FHIR **`PlanDefinition/$apply`** via CQF Clinical Reasoning
 //! - **`POST /v1/activitydefinition/apply`** — FHIR **`ActivityDefinition/$apply`** via CQF Clinical Reasoning
+//! - **`POST /v1/measure/evaluate`** — FHIR **`Measure/$evaluate-measure`** (MeasureReport)
 //!
 //! Full architecture: `docs/clinical-reasoning/README.md`.
 
@@ -22,7 +23,7 @@ pub use config::ClinicalReasoningConfig;
 pub use dto::{
     ApplyActivityDefinitionRequest, ApplyActivityDefinitionResponse, ApplyPlanDefinitionRequest,
     ApplyPlanDefinitionResponse, ClearLibraryCacheResponse, ElmFormat, EvaluateExpressionRequest,
-    EvaluateExpressionResponse, IncludedLibrary,
+    EvaluateExpressionResponse, EvaluateMeasureRequest, EvaluateMeasureResponse, IncludedLibrary,
 };
 pub use error::{ClinicalReasoningError, SidecarRejectionDetail};
 pub use fhir_authorization::SidecarFhirAuthorization;

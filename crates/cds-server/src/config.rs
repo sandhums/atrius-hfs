@@ -20,6 +20,7 @@
 //! | `CDS_SUBSCRIPTION_WEBHOOK_SECRET` | Optional shared secret for HFS → cds-server rest-hooks |
 //! | `CDS_FEEDBACK_FHIR_*` | Also used to POST critical-lab `Flag` resources from subscription events |
 //! | `CDS_FEEDBACK_OAUTH_*` | Client-credentials mint for feedback/Flag writes (preferred over static bearer) |
+//! | `CDS_ANALYTICS_CATALOG_PATH` | Optional JSON catalog for `POST /v1/nl-views` (defaults to the embedded bronze/SQLQuery pack) |
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -169,6 +170,10 @@ pub struct Args {
     /// (`Authorization: Bearer` or `X-Cds-Webhook-Secret`).
     #[arg(long, env = "CDS_SUBSCRIPTION_WEBHOOK_SECRET")]
     pub subscription_webhook_secret: Option<String>,
+
+    /// Override the embedded bronze/SQLQuery catalog used by `POST /v1/nl-views`.
+    #[arg(long, env = "CDS_ANALYTICS_CATALOG_PATH")]
+    pub analytics_catalog_path: Option<PathBuf>,
 }
 
 impl Args {
@@ -296,6 +301,54 @@ impl Args {
             auth,
             self.feedback_fhir_tenant_id.clone(),
         ))))
+    }
+
+    /// Measure / cohort / ViewDefinition suggestion façade.
+    pub fn analytics_state(
+        &self,
+        sidecar: Option<(Arc<ClinicalReasoningClient>, Arc<FhirServiceEndpoints>)>,
+        write_auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
+        measurement_period: Option<crate::measurement_period::MeasurementPeriod>,
+    ) -> anyhow::Result<crate::analytics::AnalyticsState> {
+        let catalog = if let Some(path) = &self.analytics_catalog_path {
+            crate::analytics::catalog::ViewCatalog::load_file(path).map_err(anyhow::Error::msg)?
+        } else {
+            crate::analytics::catalog::ViewCatalog::embedded()
+        };
+        catalog.validate().map_err(anyhow::Error::msg)?;
+
+        let persist_base = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.hfs_base_url.trim());
+        let persist = if persist_base.is_empty() {
+            None
+        } else {
+            let http = self.feedback_http_client()?;
+            Some(Arc::new(crate::analytics::persist::FhirPersister::new(
+                http,
+                persist_base,
+                write_auth,
+                self.feedback_fhir_tenant_id.clone(),
+            )))
+        };
+
+        let engine = sidecar.map(|(client, endpoints)| {
+            Arc::new(crate::analytics::AnalyticsEngine {
+                client,
+                endpoints,
+                persist: persist.clone(),
+                measurement_period,
+                cohort_concurrency: crate::analytics::cohort::DEFAULT_COHORT_CONCURRENCY,
+            })
+        });
+
+        Ok(crate::analytics::AnalyticsState {
+            catalog: Arc::new(catalog),
+            engine,
+        })
     }
 
     /// Rest-hook receiver config (Observation fetch + optional Flag writes).

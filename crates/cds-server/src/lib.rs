@@ -9,8 +9,13 @@
 //! 2. **Invocation** — `POST /cds-services/{id}` maps hook context →
 //!    [`clinical_reasoning::EvaluateExpressionRequest`] → sidecar evaluate / `$apply` → CDS [`Card`]s.
 //!
+//! 3. **Analytics** — `POST /v1/measure/evaluate` (sidecar `$evaluate-measure` + MeasureReport
+//!    persist), `POST /v1/cohorts` (CQL expression → `Group`), `POST /v1/nl-views`
+//!    (catalog-grounded ViewDefinition / SQLQuery suggestion; never executes).
+//!
 //! See `docs/clinical-reasoning/README.md` in the repo root.
 
+pub mod analytics;
 pub mod apply_context;
 pub mod clinical_reasoning;
 pub mod config;
@@ -48,6 +53,8 @@ pub struct AppState {
     pub kr_readiness: Option<KrReadinessReport>,
     /// HFS rest-hook → critical-labs pipeline (`POST /internal/cds/fhir-notifications`).
     pub subscription_notify: Option<Arc<SubscriptionNotifyConfig>>,
+    /// Measure / cohort / ViewDefinition suggestion façade.
+    pub analytics: analytics::AnalyticsState,
 }
 
 /// Axum router with CDS Hooks routes (state applied; ready for [`axum::serve`]).
@@ -62,6 +69,12 @@ pub fn build_router(state: AppState, enable_cors: bool) -> Router {
             "/internal/cds/fhir-notifications",
             post(subscription_notifications::receive_fhir_notification),
         )
+        .route(
+            "/v1/measure/evaluate",
+            post(analytics::handlers::evaluate_measure),
+        )
+        .route("/v1/cohorts", post(analytics::handlers::materialize_cohort))
+        .route("/v1/nl-views", post(analytics::handlers::nl_views))
         .with_state(state)
         .merge(helios_observability::metrics::router())
         .layer(middleware::from_fn(helios_observability::middleware::track));

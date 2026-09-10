@@ -15,13 +15,14 @@ use super::super::config::ClinicalReasoningConfig;
 use super::super::dto::{
     ApplyActivityDefinitionRequest, ApplyActivityDefinitionResponse, ApplyPlanDefinitionRequest,
     ApplyPlanDefinitionResponse, ClearLibraryCacheResponse, EvaluateExpressionRequest,
-    EvaluateExpressionResponse,
+    EvaluateExpressionResponse, EvaluateMeasureRequest, EvaluateMeasureResponse,
 };
 
 /// Sidecar evaluate path (appended to configured base URL).
 const EVAL_EXPR_PATH: &str = "/v1/evaluate/expression";
 const APPLY_PLAN_DEFINITION_PATH: &str = "/v1/plandefinition/apply";
 const APPLY_ACTIVITY_DEFINITION_PATH: &str = "/v1/activitydefinition/apply";
+const EVALUATE_MEASURE_PATH: &str = "/v1/measure/evaluate";
 const CLEAR_LIBRARY_CACHE_PATH: &str = "/v1/admin/cache/libraries/clear";
 
 #[derive(Debug, Clone)]
@@ -82,6 +83,14 @@ impl ClinicalReasoningClient {
     ) -> Result<ApplyActivityDefinitionResponse, ClinicalReasoningError> {
         self.post_json(APPLY_ACTIVITY_DEFINITION_PATH, &request)
             .await
+    }
+
+    /// Run **`Measure/$evaluate-measure`** and return the resulting MeasureReport JSON.
+    pub async fn evaluate_measure(
+        &self,
+        request: EvaluateMeasureRequest,
+    ) -> Result<EvaluateMeasureResponse, ClinicalReasoningError> {
+        self.post_json(EVALUATE_MEASURE_PATH, &request).await
     }
 
     /// Flush JVM sidecar ELM / KR Library / ValueSet expansion caches after KR re-import.

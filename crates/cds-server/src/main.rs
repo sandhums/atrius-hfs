@@ -81,12 +81,13 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let backend = match args.shared_sidecar()? {
+    let sidecar = args.shared_sidecar()?;
+    let backend = match sidecar.clone() {
         None => CdsEvalBackend::Demo,
         Some((client, endpoints)) => CdsEvalBackend::Sidecar {
             client,
             endpoints,
-            measurement_period,
+            measurement_period: measurement_period.clone(),
             fhir_access_policy: args.fhir_access_policy(),
             library_version_policy: library_version_policy.clone(),
         },
@@ -113,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    let subscription_notify = args.subscription_notify_config(write_auth)?;
+    let subscription_notify = args.subscription_notify_config(write_auth.clone())?;
     match &subscription_notify {
         Some(cfg) if cfg.webhook_secret.is_some() => {
             tracing::info!(
@@ -135,12 +136,24 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let registry = registry_from_manifest(&manifest, backend, feedback_store);
+    let analytics = args.analytics_state(sidecar, write_auth.clone(), measurement_period)?;
+    tracing::info!(
+        sidecar = analytics.engine.is_some(),
+        catalog_entries = analytics.catalog.entries.len(),
+        persist = analytics
+            .engine
+            .as_ref()
+            .map(|e| e.persist.is_some())
+            .unwrap_or(false),
+        "cds-server analytics façade"
+    );
 
     let app = build_router(
         AppState {
             registry,
             kr_readiness,
             subscription_notify,
+            analytics,
         },
         args.enable_cors,
     );

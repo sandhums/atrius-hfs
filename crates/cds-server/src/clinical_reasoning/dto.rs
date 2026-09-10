@@ -6,6 +6,7 @@
 //! - `POST {sidecarBase}/v1/evaluate/expression` — named CQL expression evaluation
 //! - `POST {sidecarBase}/v1/plandefinition/apply` — FHIR **`PlanDefinition/$apply`** (returns CarePlan + RequestGroup)
 //! - `POST {sidecarBase}/v1/activitydefinition/apply` — FHIR **`ActivityDefinition/$apply`** (returns draft request resource)
+//! - `POST {sidecarBase}/v1/measure/evaluate` — FHIR **`Measure/$evaluate-measure`** (returns MeasureReport)
 //!
 //! # URL fields (critical for stack wiring)
 //!
@@ -251,6 +252,61 @@ impl ApplyActivityDefinitionResponse {
     }
 }
 
+/// Invoke FHIR R4 **`Measure/$evaluate-measure`** on the JVM sidecar.
+///
+/// Provide [`measure_id`] or [`measure_url`]. [`patient_id`] is the subject
+/// (logical id or `Patient/{id}`). Period fields are ISO-8601 instants or
+/// date-only strings; [`report_type`] defaults to `subject`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EvaluateMeasureRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measure_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measure_url: Option<String>,
+    pub patient_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_start: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_end: Option<String>,
+    #[serde(default = "default_measure_report_type")]
+    pub report_type: String,
+    #[serde(alias = "fhirDataUrl")]
+    pub hfs_base_url: String,
+    #[serde(alias = "fhirTerminologyUrl")]
+    pub hts_base_url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub library_base_url: Option<String>,
+    #[serde(default)]
+    pub use_server_data: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefetch: Option<serde_json::Map<String, Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fhir_authorization: Option<SidecarFhirAuthorization>,
+}
+
+fn default_measure_report_type() -> String {
+    "subject".into()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EvaluateMeasureResponse {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measure_id: Option<String>,
+    /// FHIR `$evaluate-measure` return — MeasureReport JSON.
+    pub measure_report: Value,
+}
+
+impl EvaluateMeasureResponse {
+    #[must_use]
+    pub fn measure_report_value(&self) -> &Value {
+        &self.measure_report
+    }
+}
+
 /// Response from sidecar `POST /v1/admin/cache/libraries/clear`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -437,5 +493,39 @@ mod tests {
         let r: ApplyActivityDefinitionResponse = serde_json::from_value(j).unwrap();
         assert_eq!(r.activity_definition_id.as_deref(), Some("order-ecg"));
         assert_eq!(r.resource_value()["resourceType"], "ServiceRequest");
+    }
+
+    #[test]
+    fn deserializes_evaluate_measure_request_defaults() {
+        let j = json!({
+            "measureId": "AtriusCMS165ControllingHighBP",
+            "patientId": "cms165-demo",
+            "hfsBaseUrl": "http://hfs",
+            "htsBaseUrl": "http://hts"
+        });
+        let r: EvaluateMeasureRequest = serde_json::from_value(j).unwrap();
+        assert_eq!(r.report_type, "subject");
+        assert!(!r.use_server_data);
+        assert_eq!(r.patient_id, "cms165-demo");
+    }
+
+    #[test]
+    fn deserializes_evaluate_measure_response() {
+        let j = json!({
+            "measureId": "AtriusCMS165ControllingHighBP",
+            "measureReport": {
+                "resourceType": "MeasureReport",
+                "status": "complete",
+                "type": "individual",
+                "measure": "https://atrius.in/fhir/r4/atrius-in/Measure/AtriusCMS165ControllingHighBP",
+                "period": { "start": "2026-01-01", "end": "2026-12-31" }
+            }
+        });
+        let r: EvaluateMeasureResponse = serde_json::from_value(j).unwrap();
+        assert_eq!(
+            r.measure_id.as_deref(),
+            Some("AtriusCMS165ControllingHighBP")
+        );
+        assert_eq!(r.measure_report_value()["resourceType"], "MeasureReport");
     }
 }

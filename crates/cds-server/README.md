@@ -186,8 +186,47 @@ Endpoints:
 - `GET /cds-services` — discovery (all manifest ids)
 - `POST /cds-services/{id}` — hook payload (`application/json`)
 - `POST /cds-services/{id}/feedback`
+- `POST /v1/measure/evaluate` — sidecar `Measure/$evaluate-measure`, optional MeasureReport persist
+- `POST /v1/cohorts` — CQL expression over candidate patients → `Group` for `$export` / `$sql-export`
+- `POST /v1/nl-views` — catalog-grounded ViewDefinition / SQLQuery suggestion (no PHI, no execute)
 
 See **`cargo run -p cds-server -- --help`** for env names (`CDS_*`).
+
+### Analytics (quality measures, cohorts, view suggestion)
+
+These live on cds-server because it already owns the JVM sidecar client and clinical HFS writes. They are **not** Helios `$evaluate-measure` or `$nl-search` — those stay untouched for merge cost.
+
+**Measure (CMS165 and any KR `Measure`):**
+
+```bash
+curl -s -X POST http://127.0.0.1:8095/v1/measure/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "measureId": "AtriusCMS165ControllingHighBP",
+    "patientId": "cms165-demo",
+    "periodStart": "2026-01-01",
+    "periodEnd": "2026-12-31"
+  }'
+```
+
+cds-server fills `hfsBaseUrl` / `htsBaseUrl` / `libraryBaseUrl` from `CDS_*`, calls sidecar `POST /v1/measure/evaluate`, and PUTs/POSTs the `MeasureReport` to clinical HFS (`CDS_FEEDBACK_FHIR_BASE_URL` or `CDS_HFS_BASE_URL`). Set `"persist": false` to skip the write.
+
+**CQL cohort → Group:** Patient-context CQL is evaluated per candidate id. True results become `Group.member` (`AtriusInGroup` profile). Pass that `Group/{id}` as the `group` parameter on HFS `$sql-run` / `$sql-export`, or `GET Group/{id}/$export`.
+
+```bash
+curl -s -X POST http://127.0.0.1:8095/v1/cohorts \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "libraryId": "AtriusCMS165ControllingHighBP",
+    "libraryVersion": "0.1.0",
+    "expression": "Initial Population",
+    "patientIds": ["cms165-demo"],
+    "periodStart": "2026-01-01",
+    "periodEnd": "2026-12-31"
+  }'
+```
+
+**ViewDefinition suggestion:** `POST /v1/nl-views` ranks the bronze / SQLQuery catalog by token overlap. It never runs SQL or FHIR search. Override the catalog with `CDS_ANALYTICS_CATALOG_PATH`. Authoring copy: `AtriusIGDraft/analytics/nl-views/catalog.json`.
 
 **Clinical data 404s with Spring-style JSON:** If evaluation errors mention HTTP 404 with a body like `"timestamp"`, `"path":"/Condition"`, `"error":"Not Found"`, that shape is almost never from Helios HFS (FHIR uses `OperationOutcome` or search `Bundle`s). It usually means the **JVM FHIR client inside the sidecar** hit a **non-FHIR** HTTP stack—often **`localhost` vs `127.0.0.1`**, a **path prefix** mismatch, or the sidecar running in **Docker** where `localhost` is not the host. **`CDS_HFS_BASE_URL`** must be the exact clinical base reachable **from the sidecar process**, matching what you verify with Postman (same scheme/host/port/prefix). Example ports (yours may differ): HFS **8082**, KR **8079**, JVM sidecar **8088**, cds-server **8095**.
 
