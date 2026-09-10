@@ -2,6 +2,8 @@
 
 use axum::http::StatusCode;
 use serde_json::json;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 mod common;
 
@@ -346,16 +348,37 @@ async fn test_run_view_definition_unsupported_format() {
     assert_eq!(json["resourceType"], "OperationOutcome");
 }
 
+/// `source` names an external `http(s)://` data source that the server
+/// fetches and runs the view against. Served from a local `wiremock` so the
+/// test never touches the network (a live `example.com` fetch could hang
+/// past the 30s `TimeoutLayer` and surface as 408).
 #[tokio::test]
 async fn test_run_view_definition_post_with_source_parameter() {
     let server = common::test_server().await;
 
-    // Create a request body with source parameter
+    let source = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/fhir-data"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [
+                {"resource": {"resourceType": "Patient", "id": "src-1"}},
+                {"resource": {"resourceType": "Patient", "id": "src-2"}}
+            ]
+        })))
+        .expect(1)
+        .mount(&source)
+        .await;
+
     let request_body = json!({
         "resourceType": "Parameters",
         "parameter": [{
             "name": "source",
-            "valueString": "https://example.com/fhir-data"
+            "valueString": format!("{}/fhir-data", source.uri())
+        }, {
+            "name": "_format",
+            "valueCode": "json"
         }, {
             "name": "subjectResource",
             "resource": {
@@ -369,16 +392,15 @@ async fn test_run_view_definition_post_with_source_parameter() {
 
     let response = server.post("/$sql-run").json(&request_body).await;
 
-    // Note: The actual server handler now supports source parameter,
-    // but the test mock handler doesn't yet implement it.
-    // For now, we'll accept either NOT_IMPLEMENTED from the mock
-    // or a real error from attempting to fetch the URL
-    assert!(
-        response.status_code() == StatusCode::NOT_IMPLEMENTED
-            || response.status_code() == StatusCode::OK
-            || response.status_code() == StatusCode::BAD_REQUEST
-            || response.status_code() == StatusCode::UNPROCESSABLE_ENTITY
-    );
+    assert_eq!(response.status_code(), StatusCode::OK, "{}", response.text());
+    let rows: serde_json::Value = response.json();
+    let ids: Vec<&str> = rows
+        .as_array()
+        .expect("json format returns an array of rows")
+        .iter()
+        .map(|row| row["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids, ["src-1", "src-2"]);
 }
 
 #[tokio::test]
@@ -467,9 +489,21 @@ async fn test_post_group_unresolvable_returns_bad_request() {
     );
 }
 
+/// A `source` the server can reach but that answers with an HTTP error is a
+/// fetch failure: `SofError::SourceFetchError` → `422` + `OperationOutcome`
+/// (`issue.code = processing`). Served from a local `wiremock` so the test
+/// never touches the network.
 #[tokio::test]
-async fn test_post_source_not_implemented() {
+async fn test_post_source_fetch_error_returns_422() {
     let server = common::test_server().await;
+
+    let source = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/fhir"))
+        .respond_with(ResponseTemplate::new(404))
+        .expect(1)
+        .mount(&source)
+        .await;
 
     let body = json!({
         "resourceType": "Parameters",
@@ -485,7 +519,7 @@ async fn test_post_source_not_implemented() {
             },
             {
                 "name": "source",
-                "valueString": "http://example.com/fhir"
+                "valueString": format!("{}/fhir", source.uri())
             }
         ]
     });
@@ -496,15 +530,16 @@ async fn test_post_source_not_implemented() {
         .json(&body)
         .await;
 
-    // Note: The actual server handler now supports source parameter,
-    // but the test mock handler doesn't yet implement it.
-    // For now, we'll accept either NOT_IMPLEMENTED from the mock
-    // or a real error from attempting to fetch the URL
+    assert_eq!(response.status_code(), StatusCode::UNPROCESSABLE_ENTITY);
+    let json: serde_json::Value = response.json();
+    assert_eq!(json["resourceType"], "OperationOutcome");
+    assert_eq!(json["issue"][0]["code"], "processing");
     assert!(
-        response.status_code() == StatusCode::NOT_IMPLEMENTED
-            || response.status_code() == StatusCode::OK
-            || response.status_code() == StatusCode::BAD_REQUEST
-            || response.status_code() == StatusCode::UNPROCESSABLE_ENTITY
+        json["issue"][0]["details"]["text"]
+            .as_str()
+            .unwrap()
+            .contains("404"),
+        "{json}"
     );
 }
 
