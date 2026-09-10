@@ -13,9 +13,11 @@ use crate::core::bulk_export::ExportJobId;
 use crate::core::bulk_export_worker::{LeaseError, WorkerId};
 use crate::core::bulk_submit::{
     BulkEntryOutcome, BulkEntryResult, BulkProcessingOptions, BulkSubmitProvider,
-    BulkSubmitRollbackProvider, ChangeType, EntryCountSummary, ManifestStatus, NdjsonEntry,
-    StreamProcessingResult, StreamingBulkSubmitProvider, SubmissionChange, SubmissionId,
-    SubmissionManifest, SubmissionStatus, SubmissionSummary,
+    BulkSubmitRollbackProvider, ChangeType, EntryCountSummary, EntryResultContinuation,
+    EntryResultCursor, EntryResultPage, ManifestPhase, ManifestStatus, NdjsonEntry,
+    PagedEntryResult, StreamProcessingResult, StreamingBulkSubmitProvider, SubmissionChange,
+    SubmissionId, SubmissionManifest, SubmissionStatus, SubmissionSummary,
+    invalid_entry_result_page,
 };
 use crate::core::bulk_submit_worker::{
     ManifestFetchParams, ManifestLease, ManifestWorkerView, PollTokenTarget, SubmitClaimStrategy,
@@ -507,6 +509,9 @@ impl BulkSubmitProvider for PostgresBackend {
             lease_expiry: None,
             bytes_processed: 0,
             bytes_total: 0,
+            phase: None,
+            files_done: 0,
+            files_total: 0,
         })
     }
 
@@ -521,7 +526,7 @@ impl BulkSubmitProvider for PostgresBackend {
 
         let rows = client
             .query(
-                "SELECT manifest_url, replaces_manifest_url, status, added_at, total_entries, processed_entries, failed_entries, lease_expiry, bytes_processed, bytes_total
+                "SELECT manifest_url, replaces_manifest_url, status, added_at, total_entries, processed_entries, failed_entries, lease_expiry, bytes_processed, bytes_total, phase, files_done, files_total
                  FROM bulk_manifests
                  WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4",
                 &[
@@ -549,6 +554,12 @@ impl BulkSubmitProvider for PostgresBackend {
         let lease_expiry: Option<chrono::DateTime<Utc>> = row.get(7);
         let bytes_processed: i64 = row.get(8);
         let bytes_total: i64 = row.get(9);
+        // Unlike `status`, an unreadable phase is not an error: it is a
+        // cosmetic hint, and a row written by a newer HFS must still be
+        // readable here (#953).
+        let phase: Option<String> = row.get(10);
+        let files_done: i64 = row.get(11);
+        let files_total: i64 = row.get(12);
 
         let status: ManifestStatus = status_str
             .parse()
@@ -566,6 +577,9 @@ impl BulkSubmitProvider for PostgresBackend {
             lease_expiry,
             bytes_processed: bytes_processed.max(0) as u64,
             bytes_total: bytes_total.max(0) as u64,
+            phase: phase.and_then(|p| p.parse::<ManifestPhase>().ok()),
+            files_done: files_done.max(0) as u64,
+            files_total: files_total.max(0) as u64,
         }))
     }
 
@@ -759,6 +773,13 @@ impl BulkSubmitProvider for PostgresBackend {
         }
 
         // Update manifest counts, on a fresh client for the tail statements.
+        //
+        // Every column here accumulates: these counters are cumulative across
+        // all runs of the manifest (including resumes) and are the ones the
+        // submit status endpoint reports (#969). `processed_entries` counts the
+        // entries that did not fail — successes plus deliberate skips — so that
+        // `processed_entries + failed_entries` equals the entries walked, and
+        // `last_processed_line` advances by the entries this batch consumed.
         let now = Utc::now();
         let client = self.get_client().await?;
         client
@@ -766,12 +787,14 @@ impl BulkSubmitProvider for PostgresBackend {
                 "UPDATE bulk_manifests SET
                     total_entries = total_entries + $1,
                     processed_entries = processed_entries + $2,
-                    failed_entries = failed_entries + $3
-                 WHERE tenant_id = $4 AND submitter = $5 AND submission_id = $6 AND manifest_id = $7",
+                    failed_entries = failed_entries + $3,
+                    last_processed_line = last_processed_line + $4
+                 WHERE tenant_id = $5 AND submitter = $6 AND submission_id = $7 AND manifest_id = $8",
                 &[
                     &(results.len() as i32),
                     &(results.iter().filter(|r| r.is_success()).count() as i32),
                     &(error_count as i32),
+                    &(results.len() as i64),
                     &tenant_id,
                     &submission_id.submitter.as_str(),
                     &submission_id.submission_id.as_str(),
@@ -799,77 +822,115 @@ impl BulkSubmitProvider for PostgresBackend {
         Ok(results)
     }
 
-    async fn get_entry_results(
+    async fn get_entry_results_page(
         &self,
         tenant: &TenantContext,
         submission_id: &SubmissionId,
         manifest_id: &str,
         outcome_filter: Option<BulkEntryOutcome>,
         limit: u32,
-        offset: u32,
-    ) -> StorageResult<Vec<BulkEntryResult>> {
+        continuation: Option<&EntryResultContinuation>,
+    ) -> StorageResult<EntryResultPage> {
+        if limit == 0 {
+            return Err(invalid_entry_result_page(
+                "Receipt page limit must be greater than zero",
+            ));
+        }
+        let after = match continuation {
+            None => None,
+            Some(EntryResultContinuation::Keyset(cursor)) => Some((
+                cursor.file_url.as_str(),
+                i32::try_from(cursor.line_number).map_err(|_| {
+                    invalid_entry_result_page(
+                        "Receipt cursor line exceeds PostgreSQL INTEGER range",
+                    )
+                })?,
+            )),
+            Some(EntryResultContinuation::Offset(_)) => {
+                return Err(invalid_entry_result_page(
+                    "PostgreSQL receipt pages require a keyset continuation",
+                ));
+            }
+        };
         let client = self.get_client().await?;
-        let tenant_id = tenant.tenant_id().as_str();
-
-        let mut sql =
-            "SELECT line_number, resource_type, resource_id, created, outcome, operation_outcome
+        let mut sql = "SELECT file_url, line_number, resource_type, resource_id, created, outcome, operation_outcome
              FROM bulk_entry_results
-             WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4"
-                .to_string();
-
+             WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4".to_string();
         let mut params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = vec![
-            Box::new(tenant_id.to_string()),
+            Box::new(tenant.tenant_id().as_str().to_string()),
             Box::new(submission_id.submitter.clone()),
             Box::new(submission_id.submission_id.clone()),
             Box::new(manifest_id.to_string()),
         ];
-
         if let Some(outcome) = outcome_filter {
-            sql.push_str(" AND outcome = $5");
+            sql.push_str(&format!(" AND outcome = ${}", params.len() + 1));
             params.push(Box::new(outcome.to_string()));
         }
-
+        if let Some((file, line)) = after {
+            sql.push_str(&format!(
+                " AND (file_url, line_number) > (${}, ${})",
+                params.len() + 1,
+                params.len() + 2
+            ));
+            params.push(Box::new(file.to_string()));
+            params.push(Box::new(line));
+        }
         sql.push_str(&format!(
-            " ORDER BY line_number LIMIT {} OFFSET {}",
-            limit, offset
+            " ORDER BY file_url, line_number LIMIT ${}",
+            params.len() + 1
         ));
-
+        params.push(Box::new(i64::from(limit)));
         let param_refs: Vec<&(dyn tokio_postgres::types::ToSql + Sync)> = params
             .iter()
             .map(|p| p.as_ref() as &(dyn tokio_postgres::types::ToSql + Sync))
             .collect();
-
         let rows = client
             .query(&sql, &param_refs)
             .await
-            .map_err(|e| internal_error(format!("Failed to query results: {}", e)))?;
-
-        let results: Vec<BulkEntryResult> = rows
+            .map_err(|e| internal_error(format!("Failed to query receipt page: {e}")))?;
+        let entries: Vec<PagedEntryResult> = rows
             .iter()
-            .map(|row| {
-                let line_number: i32 = row.get(0);
-                let resource_type: String = row.get(1);
-                let resource_id: Option<String> = row.get(2);
-                let created: Option<bool> = row.get(3);
-                let outcome_str: String = row.get(4);
-                let operation_outcome: Option<Value> = row.get(5);
-
-                let outcome: BulkEntryOutcome = outcome_str
+            .map(|row| -> StorageResult<_> {
+                let decode = |e| internal_error(format!("Failed to decode receipt page: {e}"));
+                let file_url: String = row.try_get(0).map_err(decode)?;
+                let line: i32 = row.try_get(1).map_err(decode)?;
+                let line_number = u64::try_from(line).map_err(|_| {
+                    internal_error("Negative stored receipt line number".to_string())
+                })?;
+                let resource_type = row.try_get(2).map_err(decode)?;
+                let resource_id = row.try_get(3).map_err(decode)?;
+                let created: Option<bool> = row.try_get(4).map_err(decode)?;
+                let outcome_str: String = row.try_get(5).map_err(decode)?;
+                let operation_outcome = row.try_get(6).map_err(decode)?;
+                // Preserve the existing interpretation of unknown outcome labels.
+                let outcome = outcome_str
                     .parse()
                     .unwrap_or(BulkEntryOutcome::ProcessingError);
-
-                BulkEntryResult {
-                    line_number: line_number as u64,
-                    resource_type,
-                    resource_id,
-                    created: created.unwrap_or(false),
-                    outcome,
-                    operation_outcome,
-                }
+                Ok(PagedEntryResult {
+                    stored_identity: Some(EntryResultCursor {
+                        file_url,
+                        line_number,
+                    }),
+                    result: BulkEntryResult {
+                        line_number,
+                        resource_type,
+                        resource_id,
+                        created: created.unwrap_or(false),
+                        outcome,
+                        operation_outcome,
+                    },
+                })
             })
-            .collect();
-
-        Ok(results)
+            .collect::<StorageResult<_>>()?;
+        let next = if entries.len() == limit as usize {
+            entries
+                .last()
+                .and_then(|entry| entry.stored_identity.clone())
+                .map(EntryResultContinuation::Keyset)
+        } else {
+            None
+        };
+        Ok(EntryResultPage { entries, next })
     }
 
     async fn get_entry_counts(
@@ -1155,7 +1216,10 @@ impl StreamingBulkSubmitProvider for PostgresBackend {
                                 }]
                             }),
                         );
+                        // Rejected here, so no batch will charge it to the
+                        // manifest's counters; the worker adds it (#969).
                         result.counts.increment(error_result.outcome);
+                        result.unbatched_errors += 1;
 
                         if !options.continue_on_error
                             && (options.max_errors == 0
@@ -1170,6 +1234,7 @@ impl StreamingBulkSubmitProvider for PostgresBackend {
                 }
                 Err(e) => {
                     result.counts.increment(BulkEntryOutcome::ValidationError);
+                    result.unbatched_errors += 1;
 
                     if !options.continue_on_error
                         && (options.max_errors == 0
@@ -1596,24 +1661,29 @@ impl SubmitWorkerStorage for PostgresBackend {
         }
     }
 
-    async fn update_manifest_progress(
+    async fn add_manifest_progress(
         &self,
         lease: &ManifestLease,
-        processed_entries: u64,
-        failed_entries: u64,
-        last_processed_line: u64,
+        processed_delta: u64,
+        failed_delta: u64,
+        lines_delta: u64,
     ) -> Result<(), LeaseError> {
         let client = self.get_client().await.map_err(LeaseError::Storage)?;
+        // Deltas, not absolutes: the ingestion engine's per-batch bookkeeping
+        // accumulates into the same columns, so an absolute `SET` here would
+        // stomp its writes and walk the counters backwards on resume (#969).
         let affected = client
             .execute(
                 "UPDATE bulk_manifests
-                 SET processed_entries = $1, failed_entries = $2, last_processed_line = $3
+                 SET processed_entries = processed_entries + $1,
+                     failed_entries = failed_entries + $2,
+                     last_processed_line = last_processed_line + $3
                  WHERE tenant_id = $4 AND submitter = $5 AND submission_id = $6
                    AND manifest_id = $7 AND worker_id = $8 AND fencing_token = $9",
                 &[
-                    &(processed_entries as i32),
-                    &(failed_entries as i32),
-                    &(last_processed_line as i64),
+                    &(processed_delta as i32),
+                    &(failed_delta as i32),
+                    &(lines_delta as i64),
                     &lease.tenant.tenant_id().as_str(),
                     &lease.submission_id.submitter,
                     &lease.submission_id.submission_id,
@@ -1658,6 +1728,44 @@ impl SubmitWorkerStorage for PostgresBackend {
             )
             .await
             .map_err(|e| LeaseError::Storage(internal_error(format!("update bytes: {e}"))))?;
+        if affected == 0 {
+            Err(lease_lost(lease))
+        } else {
+            Ok(())
+        }
+    }
+
+    async fn update_manifest_phase(
+        &self,
+        lease: &ManifestLease,
+        phase: ManifestPhase,
+        files_done: u64,
+        files_total: u64,
+    ) -> Result<(), LeaseError> {
+        let client = self.get_client().await.map_err(LeaseError::Storage)?;
+        // A plain overwrite, not the monotonic GREATEST the byte counters use:
+        // the phases advance and their file counters restart per phase, so the
+        // last write from the lease holder is the truth.
+        let affected = client
+            .execute(
+                "UPDATE bulk_manifests
+                 SET phase = $1, files_done = $2, files_total = $3
+                 WHERE tenant_id = $4 AND submitter = $5 AND submission_id = $6
+                   AND manifest_id = $7 AND worker_id = $8 AND fencing_token = $9",
+                &[
+                    &phase.to_string(),
+                    &(files_done as i64),
+                    &(files_total as i64),
+                    &lease.tenant.tenant_id().as_str(),
+                    &lease.submission_id.submitter,
+                    &lease.submission_id.submission_id,
+                    &lease.manifest_id,
+                    &lease.worker_id.as_str(),
+                    &(lease.fencing_token as i64),
+                ],
+            )
+            .await
+            .map_err(|e| LeaseError::Storage(internal_error(format!("update phase: {e}"))))?;
         if affected == 0 {
             Err(lease_lost(lease))
         } else {
