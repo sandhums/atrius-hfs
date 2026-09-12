@@ -656,7 +656,6 @@ async fn create_fts_tables(client: &deadpool_postgres::Client) -> StorageResult<
     Ok(())
 }
 
-
 /// v1 -> v2: Add new columns for enhanced search.
 async fn migrate_v1_to_v2(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let migrations = [

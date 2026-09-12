@@ -6,12 +6,12 @@ use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior};
 use serde_json::Value;
 
 use crate::core::bulk_submit_legacy::{
-    classify_legacy_publications, LegacyArtifactMetadata, LegacyFile, LegacyManifest,
-    LegacyPublicationAction,
+    LegacyArtifactMetadata, LegacyFile, LegacyManifest, LegacyPublicationAction,
+    classify_legacy_publications,
 };
 use crate::core::schema_ledger::{
-    classify_numbering, implied_applied_indices, BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP,
-    OUTBOX_STEP_INDEX,
+    BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering,
+    implied_applied_indices,
 };
 use crate::error::StorageResult;
 
@@ -3444,9 +3444,11 @@ mod tests {
         .unwrap();
 
         let error = initialize_schema(&conn).unwrap_err();
-        assert!(error
-            .to_string()
-            .contains("injected v26 publication failure"));
+        assert!(
+            error
+                .to_string()
+                .contains("injected v26 publication failure")
+        );
         assert_eq!(get_schema_version(&conn).unwrap(), 25);
         assert!(v26_column_names(&conn, "bulk_manifests").is_empty());
         assert!(v26_column_names(&conn, "bulk_submit_files").is_empty());
