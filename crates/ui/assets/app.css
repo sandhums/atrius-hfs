@@ -6359,6 +6359,11 @@ details.card > summary.card-head::-webkit-details-marker {
   display: block;
 }
 
+.bulk-export-form .combobox--scope-patient + .field__hint--error {
+  margin-top: -8px;
+  margin-bottom: 14px;
+}
+
 .typegrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -6557,6 +6562,10 @@ details.card > summary.card-head::-webkit-details-marker {
   background: var(--accent);
 }
 
+.progress--in-progress .progress__bar {
+  background: var(--accent);
+}
+
 .progress--complete .progress__bar {
   background: var(--ok);
 }
@@ -6572,6 +6581,10 @@ details.card > summary.card-head::-webkit-details-marker {
 .job-card__meta {
   margin: 0;
   font-size: 13px;
+  color: var(--muted);
+}
+
+.job-card__window {
   color: var(--muted);
 }
 

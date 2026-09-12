@@ -631,6 +631,11 @@ bulk-import-status-in-progress = In Progress
 bulk-import-status-stopped = Stopped
 bulk-import-status-completed = Completed
 bulk-import-status-failed = Failed
+# Persistent banner on a submission whose last Abort / Mark completed never
+# reached the Data Recipient (#968): the submission is still running and the
+# button can simply be pressed again. { $detail } is the recipient's own
+# untranslated diagnosis — an HTTP status and reason, or a transport error.
+bulk-import-status-error = The last status change did not reach the Data Recipient, so this submission is unchanged — try again. ({ $detail })
 bulk-import-detail-recipient = Data Recipient
 bulk-import-detail-id = Submission ID
 bulk-import-detail-submitter = Submitter
@@ -726,12 +731,13 @@ bulk-export-field-group-id = Group ID
 bulk-export-field-group-id-hint = Required for the Group scope: the id of the FHIR Group to export.
 bulk-export-field-patients = Patients
 bulk-export-field-patients-placeholder = Search patients
-bulk-export-field-patients-hint = Search by name, surname or exact identifier. Leave empty to export every patient.
+bulk-export-field-patients-hint = Search by name, surname or exact identifier. At least one patient is required.
 bulk-export-field-patients-fallback-placeholder = Patient FHIR IDs
-bulk-export-field-patients-fallback-hint = Enter exact logical FHIR IDs separated by commas or new lines. Leave empty to export every patient.
-bulk-export-field-patients-id-only-hint = Search by exact FHIR ID. Leave empty to export every patient.
+bulk-export-field-patients-fallback-hint = Enter exact logical FHIR IDs separated by commas or new lines. At least one is required.
+bulk-export-field-patients-id-only-hint = Search by exact FHIR ID. At least one patient is required.
 bulk-export-patient-options-empty = No matching patients found.
 bulk-export-patient-invalid = Enter only valid logical Patient IDs, separated by commas or new lines.
+bulk-export-patients-required = Select at least one patient. To export every patient, choose the Everything scope.
 bulk-export-field-name = Name
 bulk-export-field-name-placeholder = Diabetes registry 2024
 bulk-export-name-required = Enter a name for this export.
@@ -764,6 +770,8 @@ bulk-export-status-failed = Failed
 bulk-export-status-cancelled = Cancelled
 bulk-export-progress = Progress
 bulk-export-progress-waiting = Waiting for the first status report…
+bulk-export-writing = Writing { $name }
+bulk-export-types-progress = { $done } of { $total } types
 bulk-export-files = Files
 bulk-export-finished-in = finished in
 bulk-export-error = Error

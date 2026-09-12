@@ -142,6 +142,21 @@ pub struct MongoBackendConfig {
     /// When true, search indexing is offloaded to a secondary backend.
     #[serde(default)]
     pub search_offloaded: bool,
+
+    /// Upper bound on the number of resources `_include`/`_revinclude`
+    /// resolution will add to a searchset's `included`, applied per directive
+    /// (`_revinclude=Observation:patient&_revinclude=Condition:patient` can
+    /// therefore each independently reach this cap; forward and reverse
+    /// resolution are separate passes, each subject to this bound).
+    ///
+    /// Reverse resolution in particular has no other bound: the referring set
+    /// for a page of primary matches can be arbitrarily large regardless of
+    /// `_count` (#1061). Hitting the cap on any directive appends one
+    /// synthetic `OperationOutcome` warning entry (`search.mode = outcome`)
+    /// to the Bundle rather than silently dropping resources. Clamped to at
+    /// least 1.
+    #[serde(default = "default_max_included_resources")]
+    pub max_included_resources: usize,
 }
 
 fn default_connection_string() -> String {
@@ -164,6 +179,10 @@ fn default_server_selection_timeout_ms() -> u64 {
     15_000
 }
 
+fn default_max_included_resources() -> usize {
+    1000
+}
+
 impl Default for MongoBackendConfig {
     fn default() -> Self {
         Self {
@@ -175,6 +194,7 @@ impl Default for MongoBackendConfig {
             fhir_version: FhirVersion::default_enabled(),
             data_dir: None,
             search_offloaded: false,
+            max_included_resources: default_max_included_resources(),
         }
     }
 }
@@ -275,6 +295,7 @@ impl MongoBackend {
     /// - `HFS_MONGODB_DATABASE` (default: `helios`)
     /// - `HFS_MONGODB_MAX_CONNECTIONS` (default: `10`)
     /// - `HFS_MONGODB_CONNECT_TIMEOUT_MS` (default: `5000`)
+    /// - `HFS_MONGODB_MAX_INCLUDED_RESOURCES` (default: `1000`)
     pub fn from_env() -> StorageResult<Self> {
         let connection_string = std::env::var("HFS_MONGODB_URL")
             .or_else(|_| std::env::var("HFS_MONGODB_URI"))
@@ -294,11 +315,18 @@ impl MongoBackend {
             .and_then(|v| v.parse::<u64>().ok())
             .unwrap_or_else(default_connect_timeout_ms);
 
+        let max_included_resources = std::env::var("HFS_MONGODB_MAX_INCLUDED_RESOURCES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or_else(default_max_included_resources)
+            .max(1);
+
         let config = MongoBackendConfig {
             connection_string,
             database_name,
             max_connections,
             connect_timeout_ms,
+            max_included_resources,
             ..Default::default()
         };
 
@@ -693,21 +721,46 @@ use crate::types::{
 
 impl MongoBackend {
     /// Returns the search modifiers the MongoDB backend actually honors for a
-    /// parameter type. Unlike the SQL backends, the Mongo search implementation
-    /// does not implement `:missing`, token `:not`/`:of-type`, reference
-    /// `:identifier`, or uri `:above`/`:below`; advertising only what
-    /// `search_impl` accepts keeps the CapabilityStatement honest.
+    /// parameter type.
+    ///
+    /// `:missing` (true and false) and token `:not` ARE implemented (#881):
+    /// both are resolved generically in `search_impl::matching_resource_ids`
+    /// from search-index-entry presence/absence and positive-filter
+    /// complement respectively, *before* any type-specific value parsing
+    /// runs — which is why `:missing` is safe to advertise on date/number/
+    /// quantity even though a literal `"true"`/`"false"` value would fail
+    /// their parsers. They are advertised on exactly the types
+    /// `SearchModifier::is_valid_for` permits (the same gate
+    /// `search_query_builder` uses to reject a modifier before it reaches any
+    /// backend): `:missing` on every index-backed type (string, token, date,
+    /// number, quantity, reference, uri), `:not` on token only. Composite and
+    /// special params stay unadvertised for both — they are never indexed by
+    /// value, so `:missing` there would answer from an empty index rather
+    /// than a real absence check.
+    ///
+    /// One known-imprecise case, not fixed here: `matching_resource_ids`
+    /// skips `_id`/`_lastUpdated` by name and never evaluates their modifiers
+    /// at all, but this function is keyed on parameter type only, so the
+    /// common-param loop in `resource_search_capabilities` will still
+    /// advertise `:missing` on `_lastUpdated` (and `:not`/`:missing` on
+    /// `_id`, via its Token fallback type) even though the Mongo index path
+    /// silently ignores those modifiers there.
+    ///
+    /// Still unimplemented and therefore still unadvertised: `:above`/
+    /// `:below`/`:in`/`:not-in` (rejected outright by `validate_query_support`
+    /// for every type), token `:of-type`/`:text-advanced`, and reference
+    /// `:identifier`/`:above`/`:below`/`:text-advanced` — each still hits an
+    /// `UnsupportedModifier` catch-all in its type-specific builder.
     pub(super) fn modifiers_for_type(param_type: SearchParamType) -> Vec<&'static str> {
         match param_type {
-            SearchParamType::String => vec!["exact", "contains", "text"],
-            SearchParamType::Token => vec!["text", "code-text"],
-            SearchParamType::Reference => vec!["contains", "text", "code-text"],
-            SearchParamType::Uri => vec!["exact", "contains"],
-            SearchParamType::Date
-            | SearchParamType::Number
-            | SearchParamType::Quantity
-            | SearchParamType::Composite
-            | SearchParamType::Special => vec![],
+            SearchParamType::String => vec!["exact", "contains", "text", "missing"],
+            SearchParamType::Token => vec!["text", "code-text", "not", "missing"],
+            SearchParamType::Reference => vec!["contains", "text", "code-text", "missing"],
+            SearchParamType::Uri => vec!["exact", "contains", "missing"],
+            SearchParamType::Date | SearchParamType::Number | SearchParamType::Quantity => {
+                vec!["missing"]
+            }
+            SearchParamType::Composite | SearchParamType::Special => vec![],
         }
     }
 }
@@ -775,32 +828,184 @@ impl SearchCapabilityProvider for MongoBackend {
 #[cfg(test)]
 mod capability_tests {
     use super::*;
+    use crate::types::{SearchModifier, SearchParameter, SearchValue};
 
     #[test]
     fn test_modifiers_for_type_reflects_mongo_support() {
-        // String honors exact/contains/text but not :missing.
+        // String honors exact/contains/text, and :missing (#881, presence-only).
         let s = MongoBackend::modifiers_for_type(SearchParamType::String);
         assert!(s.contains(&"exact"));
         assert!(s.contains(&"text"));
-        assert!(!s.contains(&"missing"));
+        assert!(s.contains(&"missing"));
 
-        // Token honors text/code-text but not the non-spec :code, nor :not / :of-type.
+        // Token honors text/code-text but not the non-spec :code; :not and
+        // :missing ARE honored (#881, generically in `matching_resource_ids`),
+        // but :of-type is still rejected by `build_token_filter`.
         let t = MongoBackend::modifiers_for_type(SearchParamType::Token);
         assert!(!t.contains(&"code"));
         assert!(t.contains(&"code-text"));
-        assert!(!t.contains(&"not"));
+        assert!(t.contains(&"not"));
+        assert!(t.contains(&"missing"));
         assert!(!t.contains(&"of-type"));
 
-        // Reference honors contains/text/code-text but not :identifier.
+        // Reference honors contains/text/code-text/missing but not :identifier.
         let r = MongoBackend::modifiers_for_type(SearchParamType::Reference);
         assert!(r.contains(&"contains"));
         assert!(r.contains(&"text"));
+        assert!(r.contains(&"missing"));
         assert!(!r.contains(&"identifier"));
 
-        // Uri honors exact/contains but not :above/:below.
+        // Uri honors exact/contains/missing but not :above/:below.
         let u = MongoBackend::modifiers_for_type(SearchParamType::Uri);
         assert!(u.contains(&"contains"));
+        assert!(u.contains(&"missing"));
         assert!(!u.contains(&"above"));
         assert!(!u.contains(&"below"));
+    }
+
+    /// Every `SearchParamType` variant paired with a value `matching_resource_ids`
+    /// (`search_impl.rs`) can build a *positive* index filter from. Written as
+    /// an exhaustive match with no wildcard arm: adding a new `SearchParamType`
+    /// variant makes this fail to compile, which is the point — it forces the
+    /// author to also decide what `modifiers_for_type` should advertise for it,
+    /// rather than silently skipping it in these tests.
+    fn sample_value_for(param_type: SearchParamType) -> &'static str {
+        match param_type {
+            SearchParamType::String => "smith",
+            SearchParamType::Uri => "http://example.org/x",
+            SearchParamType::Number => "5",
+            SearchParamType::Date => "2020-01-01",
+            SearchParamType::Quantity => "5|http://unitsofmeasure.org|mg",
+            SearchParamType::Token => "http://loinc.org|1234-5",
+            SearchParamType::Reference => "Patient/123",
+            SearchParamType::Composite => "unused-composite-has-no-single-value",
+            SearchParamType::Special => "unused-special-has-no-single-value",
+        }
+    }
+
+    /// All nine `SearchParamType` variants, built through `sample_value_for` so
+    /// the exhaustiveness guarantee above actually applies to this list.
+    fn all_param_types() -> Vec<SearchParamType> {
+        [
+            SearchParamType::String,
+            SearchParamType::Uri,
+            SearchParamType::Number,
+            SearchParamType::Date,
+            SearchParamType::Quantity,
+            SearchParamType::Token,
+            SearchParamType::Reference,
+            SearchParamType::Composite,
+            SearchParamType::Special,
+        ]
+        .into_iter()
+        .inspect(|t| {
+            let _ = sample_value_for(*t);
+        })
+        .collect()
+    }
+
+    /// #1054: the CapabilityStatement must advertise `:missing`/`:not` on
+    /// exactly the parameter types where a client is actually allowed to send
+    /// them. `SearchModifier::is_valid_for` is that gate in production — it is
+    /// what `crates/rest/src/extractors/search_query_builder.rs` calls to 400 a
+    /// modifier before it ever reaches a backend — so the expected answer is
+    /// derived from it rather than hardcoded here. Both modifiers are resolved
+    /// generically (type-agnostically) in
+    /// `MongoBackend::matching_resource_ids` (`search_impl.rs`, #881): `:missing`
+    /// from search-index-entry presence/absence, `:not` from the positive
+    /// filter's complement. Neither reaches type-specific value parsing, which
+    /// is why `:missing` is safe on date/number/quantity (see
+    /// `query_support_tests::missing_is_supported_without_type_specific_value_parsing`
+    /// in search_impl.rs) and is not gated here on anything Mongo-specific.
+    #[test]
+    fn missing_and_not_are_advertised_wherever_the_gate_allows_them() {
+        for param_type in all_param_types() {
+            let advertised = MongoBackend::modifiers_for_type(param_type);
+
+            assert_eq!(
+                advertised.contains(&"missing"),
+                SearchModifier::Missing.is_valid_for(param_type),
+                "advertised `missing` for {param_type} disagrees with \
+                 SearchModifier::Missing::is_valid_for"
+            );
+            assert_eq!(
+                advertised.contains(&"not"),
+                SearchModifier::Not.is_valid_for(param_type),
+                "advertised `not` for {param_type} disagrees with \
+                 SearchModifier::Not::is_valid_for"
+            );
+        }
+    }
+
+    /// Companion guard to the test above: for every modifier `modifiers_for_type`
+    /// actually advertises for a type, the Mongo index-filter path must be able
+    /// to build a filter from it (never advertise something the query builders
+    /// reject), the string must round-trip through `SearchModifier::parse` (no
+    /// stray/typo'd modifier spellings), and it must never be one of the four
+    /// modifiers `MongoBackend::validate_query_support` (`search_impl.rs`,
+    /// private to that module) hard-rejects for every type regardless of
+    /// per-type support. This is the closest hermetic stand-in for a literal
+    /// cross-check against `validate_query_support`: that method is private to
+    /// `search_impl`, which is off-limits for edits this wave, so it cannot be
+    /// called directly from here.
+    #[test]
+    fn advertised_modifiers_are_honored_by_the_mongo_index_path() {
+        let backend = MongoBackend::new(MongoBackendConfig::default()).unwrap();
+
+        for param_type in all_param_types() {
+            for &modifier_str in &MongoBackend::modifiers_for_type(param_type) {
+                // `validate_query_support` (search_impl.rs) rejects these four
+                // outright for every parameter type; advertising any of them
+                // would be a straightforward regression back to over-promising.
+                assert!(
+                    !matches!(modifier_str, "above" | "below" | "in" | "not-in"),
+                    "{param_type} advertises `{modifier_str}`, which \
+                     validate_query_support rejects unconditionally"
+                );
+
+                // The advertised string must be a real, round-trippable
+                // modifier spelling, not a typo or a legacy alias.
+                let parsed = SearchModifier::parse(modifier_str).unwrap_or_else(|| {
+                    panic!(
+                        "{param_type} advertises `{modifier_str}`, which \
+                         SearchModifier::parse does not recognize"
+                    )
+                });
+                assert_eq!(
+                    parsed.to_string(),
+                    modifier_str,
+                    "{param_type}'s advertised `{modifier_str}` does not round-trip \
+                     through SearchModifier::parse/Display"
+                );
+
+                // `:missing` and `:not` are resolved generically in
+                // `matching_resource_ids` *before* any type-specific value
+                // filter is built (#881: presence-only / positive-complement),
+                // so the faithful probe for them clears the modifier rather
+                // than setting it — setting it would wrongly fail (e.g. token's
+                // `build_token_filter` has no `Missing`/`Not` arm and would hit
+                // its `Some(other) => Err(UnsupportedModifier)` catch-all).
+                let probe_modifier = match modifier_str {
+                    "missing" | "not" => None,
+                    other => Some(SearchModifier::parse(other).unwrap()),
+                };
+
+                let param = SearchParameter {
+                    name: "test_param".to_string(),
+                    param_type,
+                    modifier: probe_modifier,
+                    values: vec![SearchValue::eq(sample_value_for(param_type))],
+                    ..Default::default()
+                };
+
+                let result = backend.build_search_index_filter("t1", "Patient", &param);
+                assert!(
+                    result.is_ok(),
+                    "{param_type} advertises `{modifier_str}` but the Mongo index \
+                     filter path rejected it: {:?}",
+                    result.err()
+                );
+            }
+        }
     }
 }
