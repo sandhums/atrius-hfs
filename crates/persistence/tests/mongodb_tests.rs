@@ -317,6 +317,241 @@ async fn mongodb_day_precision_date_boundaries() {
     date_boundary_suite::day_precision_boundaries(&backend, "date-boundary-519").await;
 }
 
+/// #1062: a comma-separated value list on one `SearchParameter` is OR per
+/// FHIR (https://build.fhir.org/search.html#combining) — for date same as
+/// every other type. Drives the real `SearchProvider::search` /
+/// `search_count` path so the assertion is on behavior, not just the filter
+/// document shape (see `value_list_tests` in `search_impl.rs` for that
+/// Docker-free half of the pin).
+///
+/// This is deliberately distinct from the *repeated*-parameter form
+/// (`?birthdate=ge...&birthdate=le...`), which is two separate
+/// `SearchParameter` entries and is intersected, not OR-ed — case (d) below
+/// guards that it is untouched (MANUAL_TESTING_MATRIX row 4.3 relies on it).
+#[tokio::test]
+async fn mongodb_comma_separated_date_values_are_ored() {
+    let Some(backend) = create_backend_with_full_registry("comma_or_date").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    let tenant = create_tenant("tenant-comma-or-date");
+
+    const BIRTHDATES: [&str; 3] = ["1985-05-05", "1995-10-02", "2005-01-01"];
+    for (i, birth) in BIRTHDATES.iter().enumerate() {
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"id": format!("cod-{i}"), "birthDate": birth}),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("seed patient");
+    }
+
+    // One `birthdate` SearchParameter carrying all the values
+    // (a comma list), as opposed to `repeated_birthdate_query` below which
+    // builds one SearchParameter per value.
+    fn comma_birthdate_query(values: &[&str]) -> SearchQuery {
+        SearchQuery::new("Patient").with_parameter(SearchParameter {
+            name: "birthdate".to_string(),
+            param_type: SearchParamType::Date,
+            values: values.iter().map(|v| SearchValue::parse(v)).collect(),
+            ..Default::default()
+        })
+    }
+
+    fn repeated_birthdate_query(values: &[&str]) -> SearchQuery {
+        let mut query = SearchQuery::new("Patient");
+        for v in values {
+            query = query.with_parameter(SearchParameter {
+                name: "birthdate".to_string(),
+                param_type: SearchParamType::Date,
+                values: vec![SearchValue::parse(v)],
+                ..Default::default()
+            });
+        }
+        query
+    }
+
+    // Eventually-consistent search backends need the seed to land in the
+    // index first; poll on the broadest query until all 3 are visible (same
+    // idiom as `date_boundary_suite::day_precision_boundaries`).
+    let visibility_probe = comma_birthdate_query(&["ge1900-01-01"]);
+    for attempt in 0..60 {
+        let visible = backend
+            .search(&tenant, &visibility_probe)
+            .await
+            .expect("visibility probe")
+            .resources
+            .items
+            .len();
+        if visible == BIRTHDATES.len() {
+            break;
+        }
+        assert!(
+            attempt < 59,
+            "cohort never became searchable: {visible}/{} visible",
+            BIRTHDATES.len()
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+
+    // (a) Precondition: extraction really produced 3 rows, so a failure
+    // below is never blamed on extraction instead of the fix under test.
+    let precondition = backend
+        .search(&tenant, &comma_birthdate_query(&["ge1900-01-01"]))
+        .await
+        .expect("precondition search");
+    assert_eq!(
+        precondition.resources.items.len(),
+        3,
+        "precondition: birthdate=ge1900-01-01 must see all 3 patients"
+    );
+
+    // (b) Disjoint comma list -> the union, not the empty set. Before the
+    // fix the $and over one search_index row can never be satisfied by a
+    // disjoint pair, `matching_resource_ids` short-circuits to an empty
+    // set, and the whole search returns 0.
+    let disjoint = comma_birthdate_query(&["1985-05-05", "2005-01-01"]);
+    let disjoint_result = backend
+        .search(&tenant, &disjoint)
+        .await
+        .expect("disjoint comma search");
+    assert_eq!(
+        disjoint_result.resources.items.len(),
+        2,
+        "birthdate=1985-05-05,2005-01-01 must return the union (FHIR comma = OR)"
+    );
+    let disjoint_count = backend
+        .search_count(&tenant, &disjoint)
+        .await
+        .expect("disjoint comma count");
+    assert_eq!(
+        disjoint_count, 2,
+        "search_count must agree with search() on the same query"
+    );
+
+    // (c) Range-shaped comma list -> the deliberate widening. Before the
+    // fix this behaved as a closed range (1: only the 1995-10-02 patient).
+    // After, it is "any date >= 1995-01-01 OR any date <= 1995-12-31" (in
+    // FHIR terms, ge OR le), which every patient in this cohort satisfies —
+    // the widening this fix pins on purpose (see PR description / issue
+    // #1062 for the migration to the repeated form).
+    let range_shaped = comma_birthdate_query(&["ge1995-01-01", "le1995-12-31"]);
+    let range_result = backend
+        .search(&tenant, &range_shaped)
+        .await
+        .expect("range-shaped comma search");
+    assert_eq!(
+        range_result.resources.items.len(),
+        3,
+        "birthdate=ge1995-01-01,le1995-12-31 widens to OR across all 3 patients"
+    );
+
+    // (d) Guard: the repeated-parameter form is a different mechanism (two
+    // `SearchParameter` entries, intersected in `matching_resource_ids`)
+    // and must be unaffected — it stays a closed range.
+    let repeated = repeated_birthdate_query(&["ge1995-01-01", "le1995-12-31"]);
+    let repeated_result = backend
+        .search(&tenant, &repeated)
+        .await
+        .expect("repeated-parameter search");
+    assert_eq!(
+        repeated_result.resources.items.len(),
+        1,
+        "repeated birthdate parameters (ge&le) must still AND to a closed range"
+    );
+}
+
+/// #1062, Number: same defect class as the date case above. `ChargeItem`
+/// is chosen deliberately over `RiskAssessment.probability`: the latter is
+/// an uncast choice element (`RiskAssessment.prediction.probability`) that
+/// the schema-less extractor does not resolve, so a failure there would be
+/// ambiguous between "extraction didn't run" and "the fix is wrong".
+/// `ChargeItem.factorOverride` is a plain decimal path.
+#[tokio::test]
+async fn mongodb_comma_separated_number_values_are_ored() {
+    let Some(backend) = create_backend_with_full_registry("comma_or_number").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    let tenant = create_tenant("tenant-comma-or-number");
+
+    const FACTORS: [f64; 3] = [0.25, 0.75, 1.5];
+    for (i, factor) in FACTORS.iter().enumerate() {
+        backend
+            .create(
+                &tenant,
+                "ChargeItem",
+                json!({
+                    "id": format!("con-{i}"),
+                    "status": "billable",
+                    "factorOverride": factor,
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("seed chargeitem");
+    }
+
+    fn factor_query(values: &[&str]) -> SearchQuery {
+        SearchQuery::new("ChargeItem").with_parameter(SearchParameter {
+            name: "factor-override".to_string(),
+            param_type: SearchParamType::Number,
+            values: values.iter().map(|v| SearchValue::parse(v)).collect(),
+            ..Default::default()
+        })
+    }
+
+    let visibility_probe = factor_query(&["ge0"]);
+    for attempt in 0..60 {
+        let visible = backend
+            .search(&tenant, &visibility_probe)
+            .await
+            .expect("visibility probe")
+            .resources
+            .items
+            .len();
+        if visible == FACTORS.len() {
+            break;
+        }
+        assert!(
+            attempt < 59,
+            "cohort never became searchable: {visible}/{} visible",
+            FACTORS.len()
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+
+    // (a) Precondition: proves ChargeItem.factorOverride actually extracts
+    // into a `value_number` row, isolating that risk from the fix itself.
+    let precondition = backend
+        .search(&tenant, &visibility_probe)
+        .await
+        .expect("precondition search");
+    assert_eq!(
+        precondition.resources.items.len(),
+        3,
+        "precondition: factor-override=ge0 must see all 3 ChargeItems \
+         (a failure here means ChargeItem.factorOverride did not extract, \
+         which is unrelated to #1062 — see comma_separated_number_values_are_ored \
+         in search_impl.rs for the extraction-free pin of the same fix)"
+    );
+
+    // (b) Disjoint comma list -> the union, not the empty set.
+    let disjoint = factor_query(&["0.25", "1.5"]);
+    let disjoint_result = backend
+        .search(&tenant, &disjoint)
+        .await
+        .expect("disjoint comma search");
+    assert_eq!(
+        disjoint_result.resources.items.len(),
+        2,
+        "factor-override=0.25,1.5 must return the union (FHIR comma = OR)"
+    );
+}
+
 fn create_tenant(tenant_id: &str) -> TenantContext {
     TenantContext::new(TenantId::new(tenant_id), TenantPermissions::full_access())
 }
@@ -2087,6 +2322,747 @@ async fn mongodb_integration_history_providers() {
     assert!(system_count >= 4);
 }
 
+// ---------------------------------------------------------------------------
+// #1053: history_type / history_system must page via a server-side sort +
+// limit + cursor predicate rather than draining the whole history corpus into
+// memory before sorting/paging in Rust. See the inline comments in
+// history_type / history_system in mongodb/storage.rs.
+// ---------------------------------------------------------------------------
+
+use mongodb::Collection;
+
+/// Seeds `obs_count` Observations with 3 versions each (create + 2 updates)
+/// and returns the (id, version_id) history keys in creation order:
+/// `hist-obs-0` v1, v2, v3, `hist-obs-1` v1, v2, v3, ...
+async fn seed_type_history_corpus(
+    backend: &MongoBackend,
+    tenant: &TenantContext,
+    obs_count: usize,
+) -> Vec<(String, String)> {
+    let mut keys = Vec::new();
+    for i in 0..obs_count {
+        let id = format!("hist-obs-{i}");
+        let v1 = backend
+            .create(
+                tenant,
+                "Observation",
+                json!({"resourceType": "Observation", "id": id, "status": "final"}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        keys.push((id.clone(), "1".to_string()));
+
+        let v2 = backend
+            .update(
+                tenant,
+                &v1,
+                json!({"resourceType": "Observation", "id": id, "status": "amended"}),
+            )
+            .await
+            .unwrap();
+        keys.push((id.clone(), "2".to_string()));
+
+        backend
+            .update(
+                tenant,
+                &v2,
+                json!({"resourceType": "Observation", "id": id, "status": "final"}),
+            )
+            .await
+            .unwrap();
+        keys.push((id.clone(), "3".to_string()));
+    }
+    keys
+}
+
+/// Overwrites `last_updated` on one `resource_history` row directly, so tests
+/// can pin a deterministic, wall-clock-independent ordering instead of
+/// trusting back-to-back millisecond-resolution writes not to tie.
+async fn stamp_history_last_updated(
+    history: &Collection<Document>,
+    tenant: &TenantContext,
+    resource_type: &str,
+    id: &str,
+    version_id: &str,
+    ts: mongodb::bson::DateTime,
+) {
+    let result = history
+        .update_one(
+            doc! {
+                "tenant_id": tenant.tenant_id().as_str(),
+                "resource_type": resource_type,
+                "id": id,
+                "version_id": version_id,
+            },
+            doc! { "$set": { "last_updated": ts } },
+        )
+        .await
+        .expect("failed to stamp resource_history.last_updated");
+    assert_eq!(
+        result.matched_count, 1,
+        "expected exactly one history row for ({resource_type}, {id}, v{version_id})"
+    );
+}
+
+fn history_ts(base_millis: i64, offset_secs: i64) -> mongodb::bson::DateTime {
+    mongodb::bson::DateTime::from_millis(base_millis + offset_secs * 1000)
+}
+
+/// Pin for #1053: `history_type` must not read rows outside the requested
+/// page. A `data`-less sentinel row sits at the *oldest* timestamp (well
+/// outside the first two pages); today's unbounded `find` drains it into
+/// `parse_history_row`, which errors on the missing payload even though the
+/// sentinel is nowhere near the page being requested. After the fix the
+/// server-side `sort + limit` means the sentinel is never fetched for a
+/// small page, and assertion (3) below proves the sentinel is still live
+/// (and still errors) once the requested window actually reaches it — so a
+/// future tolerant parse that swallowed missing-payload rows could not make
+/// this test pass vacuously.
+#[tokio::test]
+async fn mongodb_history_type_does_not_read_rows_outside_the_page() {
+    let Some(backend) = create_backend("history_page_bounds").await else {
+        eprintln!(
+            "Skipping mongodb_history_type_does_not_read_rows_outside_the_page (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-history-page-bounds");
+
+    // 10 Observations x 3 versions = 30 good history rows.
+    seed_type_history_corpus(&backend, &tenant, 10).await;
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect raw MongoDB client");
+    let database = client.database(&backend.config().database_name);
+    let history: Collection<Document> = database.collection("resource_history");
+
+    // Deterministic timestamps: row k (k = i*3 + (v-1)) gets base + k seconds,
+    // so descending last_updated order is exactly descending k, with no ties.
+    let base_millis = chrono::Utc::now().timestamp_millis() - 1_000_000;
+    for i in 0..10usize {
+        for v in 1..=3usize {
+            let k = (i * 3 + (v - 1)) as i64;
+            stamp_history_last_updated(
+                &history,
+                &tenant,
+                "Observation",
+                &format!("hist-obs-{i}"),
+                &v.to_string(),
+                history_ts(base_millis, k),
+            )
+            .await;
+        }
+    }
+
+    // Sentinel: oldest timestamp of all, no `data` field, unique id so the
+    // (tenant_id, resource_type, id, version_id) unique index is satisfied.
+    history
+        .insert_one(doc! {
+            "tenant_id": tenant.tenant_id().as_str(),
+            "resource_type": "Observation",
+            "id": "sentinel-1053",
+            "version_id": "1",
+            "last_updated": history_ts(base_millis, -1000),
+            "is_deleted": false,
+            "fhir_version": "R4",
+        })
+        .await
+        .expect("failed to insert sentinel history row");
+
+    // Expected global order (newest first) is descending k: 29, 28, ..., 0.
+    let expected: Vec<(String, String)> = (0..30i64)
+        .rev()
+        .map(|k| {
+            let i = k / 3;
+            let v = (k % 3) + 1;
+            (format!("hist-obs-{i}"), v.to_string())
+        })
+        .collect();
+
+    // --- Assertion (1): THE PIN ---
+    let params = HistoryParams::new().count(10).include_deleted(true);
+    let page1 = backend
+        .history_type(&tenant, "Observation", &params)
+        .await
+        .expect(
+            "history_type must not read past the requested page \
+             (a data-less sentinel far outside the page must not surface)",
+        );
+    assert_eq!(page1.items.len(), 10);
+    let page1_keys: Vec<(String, String)> = page1
+        .items
+        .iter()
+        .map(|e| {
+            (
+                e.resource.id().to_string(),
+                e.resource.version_id().to_string(),
+            )
+        })
+        .collect();
+    assert_eq!(page1_keys, expected[0..10]);
+    assert!(page1.page_info.has_next);
+    let next_cursor = page1
+        .page_info
+        .next_cursor
+        .clone()
+        .expect("expected a next_cursor for page 1");
+
+    // --- Assertion (2): CURSOR CONSISTENCY ---
+    let mut params2 = HistoryParams::new().count(10).include_deleted(true);
+    params2.pagination = helios_persistence::types::Pagination::with_cursor(10, next_cursor);
+    let page2 = backend
+        .history_type(&tenant, "Observation", &params2)
+        .await
+        .expect("page 2 must succeed (its fetch window does not reach the sentinel)");
+    assert_eq!(page2.items.len(), 10);
+    let page2_keys: Vec<(String, String)> = page2
+        .items
+        .iter()
+        .map(|e| {
+            (
+                e.resource.id().to_string(),
+                e.resource.version_id().to_string(),
+            )
+        })
+        .collect();
+    assert_eq!(page2_keys, expected[10..20]);
+    // Disjoint from page 1, contiguous with it.
+    for key in &page2_keys {
+        assert!(
+            !page1_keys.contains(key),
+            "page 2 repeated a page 1 row: {key:?}"
+        );
+    }
+
+    // --- Assertion (3): CANARY PREMISE ---
+    // A window wide enough to actually reach the sentinel must still error,
+    // proving the sentinel is live and matches the filter (i.e. it is only
+    // absent from assertion (1) because the page stopped short of it).
+    let wide_params = HistoryParams::new().count(100).include_deleted(true);
+    let err = backend
+        .history_type(&tenant, "Observation", &wide_params)
+        .await
+        .expect_err("a window reaching the sentinel must surface its missing payload");
+    let message = format!("{err}");
+    assert!(
+        message.contains("Missing history payload"),
+        "expected a missing-payload error, got: {message}"
+    );
+}
+
+/// Companion to the pin test: no sentinel, walks every page via `next_cursor`
+/// and checks the full corpus comes back in the right order with no
+/// duplicates or omissions. Includes one deliberate (last_updated, id) tie
+/// pair placed strictly inside page 1, to pin that the version_id tie-break
+/// (last_updated desc, id desc, version_id desc) survives in Rust once the
+/// sort/limit/cursor predicate move server-side.
+#[tokio::test]
+async fn mongodb_history_type_paging_is_ordered_and_complete() {
+    let Some(backend) = create_backend("history_paging_complete").await else {
+        eprintln!(
+            "Skipping mongodb_history_type_paging_is_ordered_and_complete (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-history-paging-complete");
+
+    // 8 Observations x 3 versions = 24 rows, plus 2 extra versions on
+    // "hist-obs-0" (v4, v5) sharing v3's timestamp to create a tie group that
+    // straddles nothing but sits inside page 1 (count=5).
+    seed_type_history_corpus(&backend, &tenant, 8).await;
+    let obs0_v3 = backend
+        .read(&tenant, "Observation", "hist-obs-0")
+        .await
+        .unwrap()
+        .unwrap();
+    let obs0_v4 = backend
+        .update(
+            &tenant,
+            &obs0_v3,
+            json!({"resourceType": "Observation", "id": "hist-obs-0", "status": "final"}),
+        )
+        .await
+        .unwrap();
+    backend
+        .update(
+            &tenant,
+            &obs0_v4,
+            json!({"resourceType": "Observation", "id": "hist-obs-0", "status": "final"}),
+        )
+        .await
+        .unwrap();
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect raw MongoDB client");
+    let database = client.database(&backend.config().database_name);
+    let history: Collection<Document> = database.collection("resource_history");
+
+    let base_millis = chrono::Utc::now().timestamp_millis() - 1_000_000;
+    // 26 total rows: assign distinct k = 0..25 to every (id, version) except
+    // that hist-obs-0's v4 and v5 both get k = 25 (the newest slot), forming
+    // the deliberate tie: version_id 5 must sort before version_id 4.
+    let mut k = 0i64;
+    let mut expected_by_k: Vec<(i64, String, String)> = Vec::new();
+    for i in 0..8usize {
+        for v in 1..=3usize {
+            expected_by_k.push((k, format!("hist-obs-{i}"), v.to_string()));
+            stamp_history_last_updated(
+                &history,
+                &tenant,
+                "Observation",
+                &format!("hist-obs-{i}"),
+                &v.to_string(),
+                history_ts(base_millis, k),
+            )
+            .await;
+            k += 1;
+        }
+    }
+    // Tie pair: v4 and v5 of hist-obs-0 share the *next* timestamp (k = 25).
+    let tie_k = k;
+    for v in [4usize, 5usize] {
+        stamp_history_last_updated(
+            &history,
+            &tenant,
+            "Observation",
+            "hist-obs-0",
+            &v.to_string(),
+            history_ts(base_millis, tie_k),
+        )
+        .await;
+    }
+    expected_by_k.push((tie_k, "hist-obs-0".to_string(), "5".to_string()));
+    expected_by_k.push((tie_k, "hist-obs-0".to_string(), "4".to_string()));
+
+    // Expected global order: descending k; within a k tie, descending
+    // version_id (the Rust-side tie-break).
+    let mut expected = expected_by_k;
+    expected.sort_by(|a, b| {
+        b.0.cmp(&a.0).then_with(|| {
+            b.2.parse::<i64>()
+                .unwrap()
+                .cmp(&a.2.parse::<i64>().unwrap())
+        })
+    });
+    let expected: Vec<(String, String)> = expected.into_iter().map(|(_, id, v)| (id, v)).collect();
+    assert_eq!(expected.len(), 26);
+    // The tie pair (v5, v4) must be strictly inside page 1 (count=5): it's
+    // rank 1-2 of 26, well inside the first 5.
+    assert_eq!(expected[0], ("hist-obs-0".to_string(), "5".to_string()));
+    assert_eq!(expected[1], ("hist-obs-0".to_string(), "4".to_string()));
+
+    let mut all_rows: Vec<(String, String)> = Vec::new();
+    let mut params = HistoryParams::new().count(5).include_deleted(true);
+    loop {
+        let page = backend
+            .history_type(&tenant, "Observation", &params)
+            .await
+            .expect("paging through the full corpus must not error");
+        let keys: Vec<(String, String)> = page
+            .items
+            .iter()
+            .map(|e| {
+                (
+                    e.resource.id().to_string(),
+                    e.resource.version_id().to_string(),
+                )
+            })
+            .collect();
+        all_rows.extend(keys);
+
+        if page.page_info.has_next {
+            let cursor = page
+                .page_info
+                .next_cursor
+                .expect("has_next implies a cursor");
+            params = HistoryParams::new().count(5).include_deleted(true);
+            params.pagination = helios_persistence::types::Pagination::with_cursor(5, cursor);
+        } else {
+            break;
+        }
+    }
+
+    assert_eq!(all_rows.len(), expected.len(), "row count mismatch");
+    assert_eq!(all_rows, expected, "row order mismatch");
+    let mut dedup_check = all_rows.clone();
+    dedup_check.sort();
+    dedup_check.dedup();
+    assert_eq!(
+        dedup_check.len(),
+        all_rows.len(),
+        "found duplicate rows across pages"
+    );
+}
+
+/// Mirror of the pin test for `history_system`: sentinel row of a resource
+/// type that already appears in the corpus, at the oldest timestamp, no
+/// `data` field.
+#[tokio::test]
+async fn mongodb_history_system_does_not_read_rows_outside_the_page() {
+    let Some(backend) = create_backend("history_system_page_bounds").await else {
+        eprintln!(
+            "Skipping mongodb_history_system_does_not_read_rows_outside_the_page (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-history-system-page-bounds");
+
+    // 5 Patients + 5 Observations, 3 versions each = 30 rows.
+    for i in 0..5usize {
+        let id = format!("sys-pat-{i}");
+        let v1 = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType": "Patient", "id": id, "name": [{"family": "X"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let v2 = backend
+            .update(
+                &tenant,
+                &v1,
+                json!({"resourceType": "Patient", "id": id, "name": [{"family": "Y"}]}),
+            )
+            .await
+            .unwrap();
+        backend
+            .update(
+                &tenant,
+                &v2,
+                json!({"resourceType": "Patient", "id": id, "name": [{"family": "Z"}]}),
+            )
+            .await
+            .unwrap();
+    }
+    seed_type_history_corpus(&backend, &tenant, 5).await;
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect raw MongoDB client");
+    let database = client.database(&backend.config().database_name);
+    let history: Collection<Document> = database.collection("resource_history");
+
+    // Deterministic, distinct timestamps across all 30 rows: Patients get
+    // k = 0..14, Observations get k = 15..29 (so ordering is unambiguous by
+    // timestamp alone; resource_type/id tie-break is covered by the type
+    // history companion test).
+    let base_millis = chrono::Utc::now().timestamp_millis() - 1_000_000;
+    let mut expected: Vec<(String, String, String)> = Vec::new();
+    let mut k = 0i64;
+    for i in 0..5usize {
+        for v in 1..=3usize {
+            let id = format!("sys-pat-{i}");
+            stamp_history_last_updated(
+                &history,
+                &tenant,
+                "Patient",
+                &id,
+                &v.to_string(),
+                history_ts(base_millis, k),
+            )
+            .await;
+            expected.push(("Patient".to_string(), id, v.to_string()));
+            k += 1;
+        }
+    }
+    for i in 0..5usize {
+        for v in 1..=3usize {
+            let id = format!("hist-obs-{i}");
+            stamp_history_last_updated(
+                &history,
+                &tenant,
+                "Observation",
+                &id,
+                &v.to_string(),
+                history_ts(base_millis, k),
+            )
+            .await;
+            expected.push(("Observation".to_string(), id, v.to_string()));
+            k += 1;
+        }
+    }
+    expected.reverse(); // newest (highest k) first
+
+    history
+        .insert_one(doc! {
+            "tenant_id": tenant.tenant_id().as_str(),
+            "resource_type": "Patient",
+            "id": "sentinel-1053-system",
+            "version_id": "1",
+            "last_updated": history_ts(base_millis, -1000),
+            "is_deleted": false,
+            "fhir_version": "R4",
+        })
+        .await
+        .expect("failed to insert sentinel history row");
+
+    let params = HistoryParams::new().count(10).include_deleted(true);
+    let page1 = backend
+        .history_system(&tenant, &params)
+        .await
+        .expect("history_system must not read past the requested page");
+    assert_eq!(page1.items.len(), 10);
+    let page1_keys: Vec<(String, String, String)> = page1
+        .items
+        .iter()
+        .map(|e| {
+            (
+                e.resource.resource_type().to_string(),
+                e.resource.id().to_string(),
+                e.resource.version_id().to_string(),
+            )
+        })
+        .collect();
+    assert_eq!(page1_keys, expected[0..10]);
+    assert!(page1.page_info.has_next);
+
+    let wide_params = HistoryParams::new().count(100).include_deleted(true);
+    let err = backend
+        .history_system(&tenant, &wide_params)
+        .await
+        .expect_err("a window reaching the sentinel must surface its missing payload");
+    assert!(
+        format!("{err}").contains("Missing history payload"),
+        "expected a missing-payload error"
+    );
+}
+
+/// Scale-free plan guard: the winning plan for the *first* (no-cursor) page
+/// must be a bounded index walk — sort and limit pushed to MongoDB, no
+/// blocking in-memory SORT stage, and keys/docs examined bounded by
+/// `_count`, not by the size of the corpus. Per code review: on a tiny
+/// corpus the cursor-page query can legitimately choose a residual-filter
+/// plan whose keysExamined scale with the cursor's rank rather than just
+/// `_count` (still O(rank + count), still non-blocking) — so this test only
+/// asserts the hard bound on the first page, where no cursor predicate is
+/// involved and the index alone must satisfy the whole query.
+#[tokio::test]
+async fn mongodb_history_type_plan_is_a_bounded_index_walk() {
+    let Some(backend) = create_backend("history_plan_guard").await else {
+        eprintln!(
+            "Skipping mongodb_history_type_plan_is_a_bounded_index_walk (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-history-plan-guard");
+
+    seed_type_history_corpus(&backend, &tenant, 10).await; // 30 rows
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect raw MongoDB client");
+    let db_name = backend.config().database_name.clone();
+    let database = client.database(&db_name);
+
+    if let Err(e) = database.run_command(doc! { "profile": 2_i32 }).await {
+        eprintln!(
+            "Skipping mongodb_history_type_plan_is_a_bounded_index_walk plan assertions: \
+             {{profile: 2}} was refused ({e})"
+        );
+        return;
+    }
+
+    let params = HistoryParams::new().count(10).include_deleted(true);
+    backend
+        .history_type(&tenant, "Observation", &params)
+        .await
+        .expect("history_type must succeed");
+
+    let _ = database.run_command(doc! { "profile": 0_i32 }).await;
+
+    let profile: Collection<Document> = database.collection("system.profile");
+    let opts = mongodb::options::FindOptions::builder()
+        .sort(doc! { "ts": -1_i32 })
+        .limit(20)
+        .build();
+    let mut cursor = profile
+        .find(doc! {
+            "ns": format!("{db_name}.resource_history"),
+            "op": "query",
+            "command.find": "resource_history",
+        })
+        .with_options(opts)
+        .await
+        .expect("failed to query system.profile");
+
+    // Only the newest matching entry is of interest, so advance once rather
+    // than looping (a `while` with an unconditional `break` trips
+    // `clippy::never_loop`, which CI denies).
+    let entry: Option<Document> = if cursor
+        .advance()
+        .await
+        .expect("failed to advance profile cursor")
+    {
+        Some(
+            cursor
+                .deserialize_current()
+                .expect("failed to deserialize profile entry"),
+        )
+    } else {
+        None
+    };
+    let entry = entry.expect("expected a profiled find on resource_history");
+
+    let command = entry
+        .get_document("command")
+        .expect("profile entry missing command");
+    assert_eq!(
+        command.get_document("sort").ok(),
+        Some(&doc! { "last_updated": -1_i32, "id": -1_i32 })
+    );
+    let limit = command
+        .get_i32("limit")
+        .map(i64::from)
+        .or_else(|_| command.get_i64("limit"))
+        .expect("command missing limit");
+    assert_eq!(limit, 11);
+
+    // On MongoDB 5.0 `hasSortStage` is simply absent when there is no sort
+    // stage — must not unwrap a missing field as an error.
+    let has_sort_stage = entry.get_bool("hasSortStage").unwrap_or(false);
+    assert!(
+        !has_sort_stage,
+        "expected no blocking sort stage on the first page"
+    );
+
+    let docs_examined = entry
+        .get_i64("docsExamined")
+        .or_else(|_| entry.get_i32("docsExamined").map(i64::from));
+    let keys_examined = entry
+        .get_i64("keysExamined")
+        .or_else(|_| entry.get_i32("keysExamined").map(i64::from));
+    if let Ok(d) = docs_examined {
+        assert!(
+            d <= 11,
+            "docsExamined {d} exceeds count+1 (11) on the first page"
+        );
+    }
+    if let Ok(k) = keys_examined {
+        assert!(
+            k <= 11,
+            "keysExamined {k} exceeds count+1 (11) on the first page"
+        );
+    }
+
+    let plan_summary = entry.get_str("planSummary").unwrap_or_default();
+    assert!(
+        plan_summary.contains("IXSCAN"),
+        "expected an IXSCAN plan, got: {plan_summary}"
+    );
+
+    // Rebuild the inner find command from exactly what the server recorded
+    // (command also carries $db/lsid/$readPreference, which explain rejects).
+    let mut inner = Document::new();
+    for key in ["find", "filter", "sort", "limit", "projection"] {
+        if let Some(v) = command.get(key) {
+            inner.insert(key, v.clone());
+        }
+    }
+    let explain = database
+        .run_command(doc! { "explain": inner, "verbosity": "executionStats" })
+        .await
+        .expect("explain of the recorded find command failed");
+
+    let stats = explain
+        .get_document("executionStats")
+        .expect("explain missing executionStats");
+    let total_keys = stats
+        .get_i64("totalKeysExamined")
+        .or_else(|_| stats.get_i32("totalKeysExamined").map(i64::from))
+        .unwrap();
+    let total_docs = stats
+        .get_i64("totalDocsExamined")
+        .or_else(|_| stats.get_i32("totalDocsExamined").map(i64::from))
+        .unwrap();
+    assert!(
+        total_keys <= 11,
+        "explain totalKeysExamined {total_keys} exceeds 11"
+    );
+    assert!(
+        total_docs <= 11,
+        "explain totalDocsExamined {total_docs} exceeds 11"
+    );
+
+    // Only the *winning* plan matters here. `explain` also carries
+    // `queryPlanner.rejectedPlans` — other candidates the multi-planner
+    // tried and discarded (e.g. via idx_history_identity or
+    // idx_history_resource_updated), several of which legitimately contain
+    // their own SORT stage. Scanning the whole explain document (including
+    // rejected plans) would false-positive on those, so only the winning
+    // plan tree is searched for a blocking SORT.
+    let winning_plan = explain
+        .get_document("queryPlanner")
+        .expect("explain missing queryPlanner")
+        .get_document("winningPlan")
+        .expect("explain missing winningPlan");
+    assert!(
+        !contains_stage_named(winning_plan, "SORT"),
+        "winning plan contains a blocking SORT stage: {winning_plan:?}"
+    );
+    let mut index_names = Vec::new();
+    collect_index_names(winning_plan, &mut index_names);
+    assert!(
+        index_names.iter().any(|n| n == "idx_history_type_updated"),
+        "expected idx_history_type_updated in the winning plan, got: {index_names:?}"
+    );
+}
+
+/// Recursively searches a BSON document for a nested `"stage"` field equal
+/// exactly to `name` (case-sensitive). Used to assert the *absence* of a
+/// blocking `SORT` stage without false-positiving on the non-blocking
+/// `SORT_MERGE`.
+fn contains_stage_named(doc: &Document, name: &str) -> bool {
+    if doc.get_str("stage").map(|s| s == name).unwrap_or(false) {
+        return true;
+    }
+    for (_, v) in doc.iter() {
+        match v {
+            mongodb::bson::Bson::Document(d) => {
+                if contains_stage_named(d, name) {
+                    return true;
+                }
+            }
+            mongodb::bson::Bson::Array(arr) => {
+                for item in arr {
+                    if let mongodb::bson::Bson::Document(d) = item {
+                        if contains_stage_named(d, name) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Recursively collects every `"indexName"` field found anywhere in a BSON
+/// document (explain output nests it under queryPlanner/winningPlan/inputStages).
+fn collect_index_names(doc: &Document, out: &mut Vec<String>) {
+    if let Ok(name) = doc.get_str("indexName") {
+        out.push(name.to_string());
+    }
+    for (_, v) in doc.iter() {
+        match v {
+            mongodb::bson::Bson::Document(d) => collect_index_names(d, out),
+            mongodb::bson::Bson::Array(arr) => {
+                for item in arr {
+                    if let mongodb::bson::Bson::Document(d) = item {
+                        collect_index_names(d, out);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 #[tokio::test]
 async fn mongodb_integration_history_delete_trial_use_not_supported() {
     let Some(backend) = create_backend("history_delete_not_supported").await else {
@@ -3374,6 +4350,85 @@ async fn mongodb_integration_search_offloaded_prevents_search_index_writes() {
     );
 }
 
+/// Schema v9 replaces `idx_resources_type_deleted` with a longer index that also
+/// carries the `$reindex` page order (#1021). The old index is that index's
+/// strict prefix, so keeping both would cost a second B-tree on every write for
+/// no reader — the migration has to actually drop it, on a deployment that
+/// already has it.
+#[tokio::test]
+async fn mongodb_integration_schema_v9_swaps_in_the_reindex_scan_index() {
+    let Some(backend) = create_backend("schema_v9_index_swap").await else {
+        eprintln!(
+            "Skipping mongodb_integration_schema_v9_swaps_in_the_reindex_scan_index (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect MongoDB client for index assertions");
+    let database = client.database(&backend.config().database_name);
+    let resources = database.collection::<Document>("resources");
+
+    async fn index_names(collection: &mongodb::Collection<Document>) -> Vec<String> {
+        use futures::stream::TryStreamExt;
+        collection
+            .list_indexes()
+            .await
+            .expect("list indexes")
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("collect indexes")
+            .into_iter()
+            .filter_map(|i| i.options.and_then(|o| o.name))
+            .collect()
+    }
+
+    // Put the collection back into its v8 shape: the superseded index present,
+    // the new one absent, as an upgraded deployment finds it.
+    let _ = resources.drop_index("idx_resources_type_scan").await;
+    resources
+        .create_index(
+            mongodb::IndexModel::builder()
+                .keys(doc! { "tenant_id": 1_i32, "resource_type": 1_i32, "is_deleted": 1_i32 })
+                .options(Some(
+                    mongodb::options::IndexOptions::builder()
+                        .name(Some("idx_resources_type_deleted".to_string()))
+                        .build(),
+                ))
+                .build(),
+        )
+        .await
+        .expect("recreate the v7 index");
+    assert!(
+        index_names(&resources)
+            .await
+            .contains(&"idx_resources_type_deleted".to_string())
+    );
+
+    backend.init_schema().await.expect("re-run schema init");
+
+    let names = index_names(&resources).await;
+    assert!(
+        names.contains(&"idx_resources_type_scan".to_string()),
+        "the reindex page order must be indexed, got {names:?}"
+    );
+    assert!(
+        !names.contains(&"idx_resources_type_deleted".to_string()),
+        "the superseded prefix must be dropped, not kept beside it, got {names:?}"
+    );
+
+    // Idempotent: the second run finds nothing to drop, which is also the
+    // fresh-deployment path.
+    backend
+        .init_schema()
+        .await
+        .expect("schema init is idempotent");
+    let names = index_names(&resources).await;
+    assert!(names.contains(&"idx_resources_type_scan".to_string()));
+    assert!(!names.contains(&"idx_resources_type_deleted".to_string()));
+}
+
 #[tokio::test]
 async fn mongodb_integration_standalone_search_writes_search_index() {
     let Some(backend) = create_backend("search_index_written_standalone").await else {
@@ -3405,6 +4460,303 @@ async fn mongodb_integration_standalone_search_writes_search_index() {
         count > 0,
         "search_index should contain entries in standalone mode"
     );
+}
+
+/// #1064: `MongoBackend` had no `write_search_entries_page` override, so
+/// `$reindex` fell through to `ReindexTarget`'s default loop — per resource,
+/// one `delete_many` (`delete_search_entries`) followed by ANOTHER
+/// `delete_many` plus one `insert_many` (`write_search_entries` ->
+/// `index_resource`). An 8-resource page issued 16 deletes and 8 inserts
+/// instead of 1 and 1, strictly sequential.
+///
+/// MongoDB's per-database profiler is the seam that proves the command
+/// count: every test here gets a unique database
+/// (`build_test_database_name`), so `system.profile` is immune to the other
+/// integration tests running in parallel against the shared container — the
+/// reason a `serverStatus` counter would not work here.
+#[tokio::test]
+async fn mongodb_integration_reindex_page_batches_index_writes() {
+    use futures::stream::TryStreamExt;
+    use helios_persistence::search::ReindexTarget;
+    use helios_persistence::types::StoredResource;
+
+    let Some(backend) = create_backend("reindex_page_batches").await else {
+        eprintln!(
+            "Skipping mongodb_integration_reindex_page_batches_index_writes (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("reindex-page-tenant");
+
+    let make_patient = |n: usize| {
+        StoredResource::from_storage(
+            "Patient",
+            format!("page-{n}"),
+            "1",
+            tenant.tenant_id().clone(),
+            json!({
+                "resourceType": "Patient",
+                "id": format!("page-{n}"),
+                "name": [{"family": format!("Paged{n}")}]
+            }),
+            chrono::Utc::now(),
+            chrono::Utc::now(),
+            None,
+            FhirVersion::default(),
+        )
+    };
+
+    let page: Vec<StoredResource> = (0..8).map(make_patient).collect();
+    let untouched = make_patient(8);
+
+    // Seed: every resource — the page plus one that will NOT be reindexed —
+    // already has search_index rows, as a prior write or reindex would leave
+    // them. This also runs the override once before the profiled window, so
+    // that window measures only the second rebuild below.
+    let mut seed = page.clone();
+    seed.push(untouched.clone());
+    let seed_outcomes = backend.write_search_entries_page(&tenant, &seed).await;
+    assert!(
+        seed_outcomes.iter().all(|o| o.is_ok()),
+        "seeding failed: {seed_outcomes:?}"
+    );
+
+    let mut before_counts = Vec::with_capacity(page.len());
+    for resource in &page {
+        let count = search_index_entry_count(&backend, &tenant, "Patient", resource.id()).await;
+        assert!(
+            count > 0,
+            "resource {} should already be indexed",
+            resource.id()
+        );
+        before_counts.push(count);
+    }
+    let untouched_before =
+        search_index_entry_count(&backend, &tenant, "Patient", untouched.id()).await;
+    assert!(untouched_before > 0);
+
+    let db = backend.get_database().await.unwrap();
+    let profiling_enabled = db.run_command(doc! { "profile": 2_i32 }).await.is_ok();
+    if !profiling_enabled {
+        eprintln!(
+            "mongodb_integration_reindex_page_batches_index_writes: server refused \
+             {{profile: 2}} (likely a managed/shared HFS_TEST_MONGODB_URL); skipping the \
+             command-count assertions and running the contract assertions only"
+        );
+    }
+
+    let outcomes = backend.write_search_entries_page(&tenant, &page).await;
+
+    if profiling_enabled {
+        db.run_command(doc! { "profile": 0_i32 })
+            .await
+            .expect("failed to disable profiling");
+
+        let ns = format!("{}.search_index", db.name());
+        let entries: Vec<Document> = db
+            .collection::<Document>("system.profile")
+            .find(doc! { "ns": ns.as_str() })
+            .await
+            .expect("failed to read system.profile")
+            .try_collect()
+            .await
+            .expect("failed to collect system.profile");
+
+        assert!(
+            !entries.is_empty(),
+            "profiler produced no entries for {ns} — the assertions below would be vacuous"
+        );
+
+        let removes = entries
+            .iter()
+            .filter(|e| e.get_str("op").ok() == Some("remove"))
+            .count();
+        let inserts = entries
+            .iter()
+            .filter(|e| e.get_str("op").ok() == Some("insert"))
+            .count();
+
+        assert!(
+            removes <= 1,
+            "a reindex page must issue at most one delete_many, got {removes}: {entries:?}"
+        );
+        assert!(
+            inserts <= 1,
+            "a reindex page must issue at most one insert_many, got {inserts}: {entries:?}"
+        );
+        assert!(
+            entries.len() <= 2,
+            "a reindex page must issue at most 2 write commands total, got {}: {entries:?}",
+            entries.len()
+        );
+    }
+
+    // Contract, checked whether or not profiling was available: one outcome
+    // per resource, in order, each reporting the rows actually present, and
+    // the rewrite left the row count for each resource unchanged (a
+    // delete-then-rewrite of identical content).
+    assert_eq!(outcomes.len(), page.len());
+    for (i, (outcome, resource)) in outcomes.iter().zip(&page).enumerate() {
+        let count = outcome
+            .as_ref()
+            .unwrap_or_else(|e| panic!("resource {i} failed: {e:?}"));
+        let actual = search_index_entry_count(&backend, &tenant, "Patient", resource.id()).await;
+        assert_eq!(
+            *count as u64, actual,
+            "resource {i} reported count must match rows actually present"
+        );
+        assert_eq!(
+            actual, before_counts[i],
+            "resource {i} row count drifted across the rebuild"
+        );
+    }
+
+    // Scoping: the ninth Patient, not in the page, must be untouched — proves
+    // the single grouped `delete_many` is scoped by the page's resource ids
+    // and did not wipe the tenant's other rows.
+    let untouched_after =
+        search_index_entry_count(&backend, &tenant, "Patient", untouched.id()).await;
+    assert_eq!(
+        untouched_after, untouched_before,
+        "the page's delete_many must not touch resources outside the page"
+    );
+}
+
+/// #1064: `write_search_entries` used to report `extract(..).len()` — the
+/// container's own extracted values — even though `index_resource` (and,
+/// after the fix, `write_search_entries_page`) also inserts `_contained`
+/// rows for anything nested under `contained`. The reported count therefore
+/// undercounted whenever a resource has `contained` entries. Uses the full
+/// registry so both the Observation's own parameters and the contained
+/// Patient's `name` are guaranteed to extract, not just whichever handful
+/// ship in the embedded default registry.
+#[tokio::test]
+async fn mongodb_integration_reindex_page_counts_contained_entries() {
+    use helios_persistence::search::ReindexTarget;
+    use helios_persistence::types::StoredResource;
+
+    let Some(backend) = create_backend_with_full_registry("reindex_page_contained").await else {
+        eprintln!(
+            "Skipping mongodb_integration_reindex_page_counts_contained_entries (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("reindex-contained-tenant");
+
+    let with_contained = StoredResource::from_storage(
+        "Observation",
+        "obs-contained",
+        "1",
+        tenant.tenant_id().clone(),
+        json!({
+            "resourceType": "Observation",
+            "id": "obs-contained",
+            "status": "final",
+            "contained": [{
+                "resourceType": "Patient",
+                "id": "inner",
+                "name": [{"family": "Contained"}]
+            }],
+            "subject": {"reference": "#inner"},
+            "code": {"coding": [{"system": "http://loinc.org", "code": "1234-5"}]}
+        }),
+        chrono::Utc::now(),
+        chrono::Utc::now(),
+        None,
+        FhirVersion::default(),
+    );
+
+    let outcomes = backend
+        .write_search_entries_page(&tenant, std::slice::from_ref(&with_contained))
+        .await;
+    assert_eq!(
+        outcomes.len(),
+        1,
+        "one outcome per resource, not per document"
+    );
+    let reported = outcomes[0]
+        .as_ref()
+        .unwrap_or_else(|e| panic!("reindex failed: {e:?}"));
+
+    let actual = search_index_entry_count(&backend, &tenant, "Observation", "obs-contained").await;
+    assert_eq!(
+        *reported as u64, actual,
+        "reported entry count must match rows actually written, including _contained rows"
+    );
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect MongoDB client for search_index assertions");
+    let database = client.database(&backend.config().database_name);
+    let contained_rows = database
+        .collection::<Document>("search_index")
+        .count_documents(doc! {
+            "tenant_id": tenant.tenant_id().as_str(),
+            "resource_type": "Observation",
+            "resource_id": "obs-contained",
+            "is_contained": true,
+        })
+        .await
+        .expect("failed to count contained search_index rows");
+    assert!(
+        contained_rows > 0,
+        "the contained Patient's values must be indexed alongside the container"
+    );
+}
+
+/// Guard for the `is_search_offloaded()` short-circuit the batched override
+/// needs. The default loop honors the flag via `delete_search_entries` and
+/// `write_search_entries`'s own guards; the page override has to reproduce
+/// it directly rather than issuing commands a search-offloaded backend must
+/// never run. Passes both before and after #1064 — it pins the guard, not
+/// the defect.
+#[tokio::test]
+async fn mongodb_integration_reindex_page_is_a_no_op_when_search_offloaded() {
+    use helios_persistence::search::ReindexTarget;
+    use helios_persistence::types::StoredResource;
+
+    let Some(backend) = create_backend_with_search_offloaded("reindex_page_offloaded", true).await
+    else {
+        eprintln!(
+            "Skipping mongodb_integration_reindex_page_is_a_no_op_when_search_offloaded (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("reindex-offloaded-tenant");
+
+    let resources: Vec<StoredResource> = (0..2)
+        .map(|n| {
+            StoredResource::from_storage(
+                "Patient",
+                format!("offloaded-{n}"),
+                "1",
+                tenant.tenant_id().clone(),
+                json!({
+                    "resourceType": "Patient",
+                    "id": format!("offloaded-{n}"),
+                    "name": [{"family": format!("Offloaded{n}")}]
+                }),
+                chrono::Utc::now(),
+                chrono::Utc::now(),
+                None,
+                FhirVersion::default(),
+            )
+        })
+        .collect();
+
+    let outcomes = backend.write_search_entries_page(&tenant, &resources).await;
+    assert_eq!(outcomes.len(), 2);
+    for outcome in &outcomes {
+        assert_eq!(*outcome.as_ref().unwrap(), 0usize);
+    }
+
+    for resource in &resources {
+        let count = search_index_entry_count(&backend, &tenant, "Patient", resource.id()).await;
+        assert_eq!(count, 0, "search-offloaded backend must write nothing");
+    }
 }
 
 #[tokio::test]
@@ -3589,6 +4941,454 @@ async fn mongodb_integration_resolve_include_and_revinclude() {
             .any(|r| r.resource_type() == "Observation" && r.id() == observation.id()),
         "search() should populate `included` from revinclude resolution"
     );
+}
+
+/// Like [`create_backend_with_full_registry`] but with a custom
+/// `max_included_resources` cap (#1061), so cap/truncation tests can use a
+/// small fixture instead of exercising the 1000-resource default.
+async fn create_backend_with_full_registry_and_cap(
+    test_name: &str,
+    max_included_resources: usize,
+) -> Option<MongoBackend> {
+    let connection_string = shared_mongo::connection_string().await?;
+    let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.join("data"))?;
+    let config = MongoBackendConfig {
+        connection_string,
+        database_name: build_test_database_name(test_name),
+        data_dir: Some(data_dir),
+        max_included_resources,
+        ..Default::default()
+    };
+    build_backend(config).await
+}
+
+/// #1061 part (a): `resolve_revincludes` must resolve the referring id set via
+/// a driver-paged `find` against `search_index`, never via
+/// `Collection::distinct` — a `distinct` reply is a single BSON document
+/// capped at 16 MiB by mongod (error 17217 past ~372k 36-char ids), which is
+/// exactly the failure mode this fix removes.
+///
+/// Enables the per-database profiler around a *direct* `resolve_revincludes`
+/// call (not `search()`, which would also route through the fenced
+/// `matching_resource_ids` — itself still `distinct`-based pending #999 — and
+/// pollute the profiled window with an unrelated `distinct`), then asserts
+/// `system.profile` recorded zero `distinct` commands against `search_index`
+/// and at least one `find` — the second assertion is what keeps the first
+/// from being vacuously true if profiling silently failed to enable.
+#[tokio::test]
+async fn mongodb_revinclude_streams_ids_without_distinct() {
+    let Some(backend) = create_backend_with_full_registry("revinclude_no_distinct").await else {
+        eprintln!(
+            "Skipping mongodb_revinclude_streams_ids_without_distinct (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("tenant-revinclude-profiler");
+
+    let patient = backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({"resourceType": "Patient", "name": [{"family": "Streamed"}]}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    for i in 0..12 {
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "subject": {"reference": format!("Patient/{}", patient.id())},
+                    "code": {"coding": [{"code": format!("stream-{i}")}]}
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+    }
+
+    let Some(connection_string) = shared_mongo::connection_string().await else {
+        eprintln!(
+            "Skipping mongodb_revinclude_streams_ids_without_distinct (shared mongo unreachable)"
+        );
+        return;
+    };
+    let raw_client = raw_test_client(&connection_string)
+        .await
+        .expect("failed to build raw test client");
+    let db = raw_client.database(&backend.config().database_name);
+
+    let profiling_enabled = db.run_command(doc! { "profile": 2_i32 }).await.is_ok();
+    if !profiling_enabled {
+        eprintln!(
+            "mongodb_revinclude_streams_ids_without_distinct: server refused {{profile: 2}} \
+             (likely a managed/shared HFS_TEST_MONGODB_URL); skipping"
+        );
+        return;
+    }
+
+    let revinclude = IncludeDirective {
+        include_type: IncludeType::Revinclude,
+        source_type: "Observation".to_string(),
+        search_param: "subject".to_string(),
+        target_type: None,
+        iterate: false,
+    };
+    let result = backend
+        .resolve_revincludes(
+            &tenant,
+            std::slice::from_ref(&patient),
+            std::slice::from_ref(&revinclude),
+        )
+        .await
+        .expect("resolve_revincludes must succeed");
+
+    db.run_command(doc! { "profile": 0_i32 })
+        .await
+        .expect("failed to disable profiling");
+
+    assert_eq!(
+        result.len(),
+        12,
+        "all 12 Observations should resolve under the default 1000 cap"
+    );
+
+    let ns = format!("{}.search_index", db.name());
+    let profile = db.collection::<Document>("system.profile");
+    let distinct_count = profile
+        .count_documents(doc! { "ns": ns.as_str(), "command.distinct": "search_index" })
+        .await
+        .expect("failed to count distinct commands in system.profile");
+    let find_count = profile
+        .count_documents(doc! { "ns": ns.as_str(), "command.find": "search_index" })
+        .await
+        .expect("failed to count find commands in system.profile");
+
+    assert_eq!(
+        distinct_count, 0,
+        "resolve_revincludes must not issue `distinct` against search_index"
+    );
+    assert!(
+        find_count >= 1,
+        "resolve_revincludes must issue `find` against search_index (find_count=0 would mean \
+         profiling silently captured nothing, making the distinct_count==0 assertion vacuous)"
+    );
+}
+
+/// #1061 part (b): the referring set must be bounded at
+/// `max_included_resources`, applied per directive, with truncation signaled
+/// by a synthetic `OperationOutcome` (`search.mode = outcome`) rather than
+/// silently dropped — proven both through the unsorted `search()` path and
+/// through the fenced `search_param_sorted` path (#1040/#1056), which carries
+/// its own duplicate copy of the include-resolution block and must not be
+/// missed by this fix.
+#[tokio::test]
+async fn mongodb_revinclude_caps_included_and_signals_truncation() {
+    let Some(backend) =
+        create_backend_with_full_registry_and_cap("revinclude_cap_truncation", 5).await
+    else {
+        eprintln!(
+            "Skipping mongodb_revinclude_caps_included_and_signals_truncation (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("tenant-revinclude-cap");
+
+    let patient = backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({"resourceType": "Patient", "name": [{"family": "Capped"}]}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    for i in 0..12 {
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "subject": {"reference": format!("Patient/{}", patient.id())},
+                    "code": {"coding": [{"code": format!("cap-{i}")}]}
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+    }
+
+    let revinclude = IncludeDirective {
+        include_type: IncludeType::Revinclude,
+        source_type: "Observation".to_string(),
+        search_param: "subject".to_string(),
+        target_type: None,
+        iterate: false,
+    };
+    let id_filter = SearchParameter {
+        name: "_id".to_string(),
+        param_type: SearchParamType::Token,
+        modifier: None,
+        values: vec![SearchValue::eq(patient.id())],
+        chain: vec![],
+        components: vec![],
+    };
+
+    let query = SearchQuery::new("Patient")
+        .with_parameter(id_filter.clone())
+        .with_include(revinclude.clone());
+    let result = backend
+        .search(&tenant, &query)
+        .await
+        .expect("search with _revinclude must succeed");
+
+    assert!(
+        result
+            .resources
+            .items
+            .iter()
+            .any(|r| r.id() == patient.id()),
+        "primary page must still contain the Patient"
+    );
+
+    let observation_count = result
+        .included
+        .iter()
+        .filter(|r| r.resource_type() == "Observation")
+        .count();
+    assert_eq!(
+        observation_count, 5,
+        "included Observations must be capped at max_included_resources (5), not all 12"
+    );
+
+    let outcomes: Vec<_> = result
+        .included
+        .iter()
+        .filter(|r| r.resource_type() == "OperationOutcome")
+        .collect();
+    assert_eq!(
+        outcomes.len(),
+        1,
+        "exactly one truncation marker, got: {:?}",
+        result
+            .included
+            .iter()
+            .map(|r| format!("{}/{}", r.resource_type(), r.id()))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        outcomes[0].id(),
+        helios_persistence::core::INCLUDE_TRUNCATION_OUTCOME_ID
+    );
+    let issue = &outcomes[0].content()["issue"][0];
+    assert_eq!(issue["severity"], "warning");
+    let diagnostics = issue["diagnostics"].as_str().expect("diagnostics text");
+    assert!(
+        diagnostics.contains('5'),
+        "diagnostics should name the limit (5): {diagnostics}"
+    );
+    assert!(
+        diagnostics.contains("HFS_MONGODB_MAX_INCLUDED_RESOURCES"),
+        "diagnostics should name the env var: {diagnostics}"
+    );
+
+    // The fenced `search_param_sorted` path (lines ~727-831) carries its own
+    // duplicate include-resolution block — prove the cap and the marker
+    // apply there too, since this fix must not touch that fenced code to get
+    // it right.
+    let sorted_query = SearchQuery::new("Patient")
+        .with_parameter(id_filter)
+        .with_include(revinclude)
+        .with_sort(SortDirective::parse("birthdate").with_param_type(Some(SearchParamType::Date)));
+    let sorted_result = backend
+        .search(&tenant, &sorted_query)
+        .await
+        .expect("sorted search with _revinclude must succeed");
+    let sorted_observation_count = sorted_result
+        .included
+        .iter()
+        .filter(|r| r.resource_type() == "Observation")
+        .count();
+    assert_eq!(
+        sorted_observation_count, 5,
+        "the sorted path (search_param_sorted) must apply the same per-directive cap"
+    );
+    let sorted_outcome_count = sorted_result
+        .included
+        .iter()
+        .filter(|r| r.resource_type() == "OperationOutcome")
+        .count();
+    assert_eq!(
+        sorted_outcome_count, 1,
+        "the sorted path must carry the truncation marker too"
+    );
+}
+
+/// #1063: MongoDB's inline `resolve_includes` never even looks at
+/// `IncludeDirective::iterate` — it applies every directive against the
+/// SAME primary result set on every pass, so a directive whose `source_type`
+/// only matches a resource introduced by an earlier hop (here: `Patient`,
+/// produced by hop 1) contributes nothing. This proves both halves of that:
+/// MongoDB's own `search()` stops at hop 1, and composing it with
+/// `resolve_includes_iterate_continuation` — the composition the REST guard
+/// performs — reaches hop 2 without re-returning hop 1's Patient.
+#[tokio::test]
+async fn mongodb_include_iterate_follows_the_second_hop() {
+    let Some(backend) = create_backend_with_full_registry("include_iterate_second_hop").await
+    else {
+        eprintln!(
+            "Skipping mongodb_include_iterate_follows_the_second_hop (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+
+    let tenant = create_tenant("tenant-include-iterate");
+
+    let (org, _) = backend
+        .create_or_update(
+            &tenant,
+            "Organization",
+            "org-iter-1",
+            json!({"resourceType": "Organization", "id": "org-iter-1", "name": "Iterate Org"}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+    let (patient, _) = backend
+        .create_or_update(
+            &tenant,
+            "Patient",
+            "patient-iter-1",
+            json!({
+                "resourceType": "Patient",
+                "id": "patient-iter-1",
+                "name": [{"family": "Iterate"}],
+                "managingOrganization": {"reference": "Organization/org-iter-1"}
+            }),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+    let observation = backend
+        .create(
+            &tenant,
+            "Observation",
+            json!({
+                "resourceType": "Observation",
+                "status": "final",
+                "subject": {"reference": "Patient/patient-iter-1"},
+                "code": {"coding": [{"code": "iter"}]}
+            }),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    let includes = vec![
+        IncludeDirective {
+            include_type: IncludeType::Include,
+            source_type: "Observation".to_string(),
+            search_param: "subject".to_string(),
+            target_type: Some("Patient".to_string()),
+            iterate: false,
+        },
+        IncludeDirective {
+            include_type: IncludeType::Include,
+            source_type: "Patient".to_string(),
+            search_param: "organization".to_string(),
+            target_type: Some("Organization".to_string()),
+            iterate: true,
+        },
+    ];
+
+    let mut query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+        name: "_id".to_string(),
+        param_type: SearchParamType::Token,
+        modifier: None,
+        values: vec![SearchValue::eq(observation.id())],
+        chain: vec![],
+        components: vec![],
+    });
+    for directive in &includes {
+        query = query.with_include(directive.clone());
+    }
+
+    let result = backend
+        .search(&tenant, &query)
+        .await
+        .expect("search must succeed");
+
+    assert!(
+        result
+            .included
+            .iter()
+            .any(|r| r.resource_type() == "Patient"),
+        "hop 1 (Observation:subject) should resolve inline"
+    );
+    assert!(
+        !result
+            .included
+            .iter()
+            .any(|r| r.resource_type() == "Organization"),
+        "MongoDB's inline resolution must NOT itself chase :iterate hops — that's what makes \
+         this the REST guard's job (#1063)"
+    );
+
+    // The composition `execute_search_bundle`'s `IterativePass::Continuation`
+    // branch performs.
+    let continuation = helios_persistence::core::resolve_includes_iterate_continuation(
+        &backend,
+        &tenant,
+        &result.resources.items,
+        &includes,
+        &result.included,
+    )
+    .await
+    .expect("continuation must succeed");
+
+    assert_eq!(
+        continuation.len(),
+        1,
+        "continuation should return exactly the Organization, got: {:?}",
+        continuation
+            .iter()
+            .map(|r| format!("{}/{}", r.resource_type(), r.id()))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(continuation[0].resource_type(), "Organization");
+    assert_eq!(continuation[0].id(), org.id());
+
+    let mut all_included: Vec<String> = result
+        .included
+        .iter()
+        .map(|r| format!("{}/{}", r.resource_type(), r.id()))
+        .collect();
+    all_included.extend(
+        continuation
+            .iter()
+            .map(|r| format!("{}/{}", r.resource_type(), r.id())),
+    );
+    let unique: std::collections::HashSet<&String> = all_included.iter().collect();
+    assert_eq!(
+        all_included.len(),
+        unique.len(),
+        "no duplicates across hop 1 + continuation: {all_included:?}"
+    );
+    assert!(all_included.contains(&format!("Patient/{}", patient.id())));
+    assert!(all_included.contains(&format!("Organization/{}", org.id())));
 }
 
 // The unreachable-server test that used to live here now sits alongside the same
@@ -4011,12 +5811,13 @@ async fn mongodb_integration_purging_one_tenant_leaves_the_look_alikes_intact() 
 mod bulk_submit {
     use super::*;
 
+    use helios_persistence::core::bulk_submit::{CANCELLED_ABORT_REASON, CancelToken};
     use helios_persistence::core::{
         BulkProcessingOptions, BulkSubmitProvider, BulkSubmitRollbackProvider, ChangeType,
-        DefaultSubmitWorker, IMPORT_MODE_PARAMETER_URL, ManifestFetchParams, ManifestStatus,
-        NdjsonEntry, RemoteFile, RemoteManifest, StreamingBulkSubmitProvider, SubmissionId,
-        SubmissionStatus, SubmitClaimStrategy, SubmitFileRecord, SubmitInputFetcher,
-        SubmitWorkerStorage, WorkerId,
+        DefaultSubmitWorker, IMPORT_MODE_PARAMETER_URL, LeaseError, ManifestFetchParams,
+        ManifestPublicationStatus, ManifestStatus, NdjsonEntry, RemoteFile, RemoteManifest,
+        StreamingBulkSubmitProvider, SubmissionId, SubmissionStatus, SubmitClaimStrategy,
+        SubmitFileRecord, SubmitInputFetcher, SubmitWorkerStorage, WorkerId,
     };
     use helios_persistence::error::StorageResult;
     use std::collections::HashMap;
@@ -4749,6 +6550,96 @@ mod bulk_submit {
         );
     }
 
+    /// #1007: `mark_entries_unindexed` flips only the named `(type, id)`
+    /// entry results to `processing-error`, leaving the rest untouched, and
+    /// is a no-op on an empty entry list.
+    #[tokio::test]
+    async fn mark_entries_unindexed_flips_only_the_named_resources() {
+        use helios_persistence::core::{BulkEntryOutcome, UnindexedEntry};
+
+        let Some(backend) = create_backend("submit_mark_unindexed").await else {
+            return;
+        };
+        let tenant = create_tenant("submit-tenant");
+        let (id, manifest_id) = seed(&backend, &tenant).await;
+
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType": "Patient", "id": "mongo-unidx-1"}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType": "Patient", "id": "mongo-unidx-2"}),
+            ),
+            NdjsonEntry::new(
+                3,
+                "Patient",
+                json!({"resourceType": "Patient", "id": "mongo-unidx-3"}),
+            ),
+        ];
+        let results = backend
+            .process_entries(
+                &tenant,
+                &id,
+                &manifest_id,
+                entries,
+                &BulkProcessingOptions::new(),
+            )
+            .await
+            .unwrap();
+        assert!(results.iter().all(|r| r.is_success()));
+
+        assert_eq!(
+            backend
+                .mark_entries_unindexed(&tenant, &id, &manifest_id, &[])
+                .await
+                .unwrap(),
+            0,
+            "an empty entry list is a no-op"
+        );
+
+        let oo = json!({
+            "resourceType": "OperationOutcome",
+            "issue": [{
+                "severity": "error",
+                "code": "incomplete",
+                "diagnostics": "Patient/mongo-unidx-2 was stored but could not be indexed for \
+                                search on es: timeout. Run POST /Patient/$reindex to repair."
+            }]
+        });
+        let changed = backend
+            .mark_entries_unindexed(
+                &tenant,
+                &id,
+                &manifest_id,
+                &[UnindexedEntry {
+                    resource_type: "Patient".to_string(),
+                    resource_id: "mongo-unidx-2".to_string(),
+                    operation_outcome: oo.clone(),
+                }],
+            )
+            .await
+            .unwrap();
+        assert_eq!(changed, 1);
+
+        let page = backend
+            .get_entry_results_page(&tenant, &id, &manifest_id, None, 10, None)
+            .await
+            .unwrap();
+        for paged in &page.entries {
+            let result = &paged.result;
+            if result.resource_id.as_deref() == Some("mongo-unidx-2") {
+                assert_eq!(result.outcome, BulkEntryOutcome::ProcessingError);
+                assert_eq!(result.operation_outcome.as_ref(), Some(&oo));
+            } else {
+                assert_eq!(result.outcome, BulkEntryOutcome::Success);
+            }
+        }
+    }
+
     /// Line numbers restart in every manifest output file, so the file is part
     /// of an entry result's identity (#457). Without it the second file's line 1
     /// overwrites the first file's.
@@ -5358,6 +7249,420 @@ mod bulk_submit {
                 .is_none(),
             "a line of the wrong type must not be stored"
         );
+    }
+
+    /// Wraps a reader so that `token` is tripped the first time the ingest
+    /// actually reads from the stream.
+    struct CancelOnFirstRead<R> {
+        inner: R,
+        token: CancelToken,
+        tripped: bool,
+    }
+
+    impl<R: tokio::io::AsyncRead + Unpin> tokio::io::AsyncRead for CancelOnFirstRead<R> {
+        fn poll_read(
+            self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+            buf: &mut tokio::io::ReadBuf<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            let this = self.get_mut();
+            if !this.tripped {
+                this.tripped = true;
+                this.token.cancel();
+            }
+            std::pin::Pin::new(&mut this.inner).poll_read(cx, buf)
+        }
+    }
+
+    /// Six one-per-line Patients, enough for three batches of two.
+    fn six_patient_lines() -> Vec<u8> {
+        (1..=6)
+            .map(|i| format!("{{\"resourceType\":\"Patient\",\"id\":\"cancel-{i}\"}}\n"))
+            .collect::<String>()
+            .into_bytes()
+    }
+
+    /// #968, MongoDB: cancelling mid-manifest stops at the next batch boundary,
+    /// keeping the batches already committed and skipping the rest. Mongo has no
+    /// enclosing transaction around the manifest, so "durable partial progress"
+    /// is a property of the backend, not of a rollback that never happened.
+    #[tokio::test]
+    async fn cancelled_mid_stream_keeps_committed_batches_and_stops() {
+        let Some(backend) = create_backend("submit_cancel_mid_stream").await else {
+            return;
+        };
+        let tenant = create_tenant("submit-tenant");
+        let (sub_id, manifest_id) = seed(&backend, &tenant).await;
+
+        let cancel = CancelToken::new();
+        let options = BulkProcessingOptions::new()
+            .with_batch_size(2)
+            .with_cancel(cancel.clone());
+
+        let reader = Box::new(tokio::io::BufReader::new(CancelOnFirstRead {
+            inner: std::io::Cursor::new(six_patient_lines()),
+            token: cancel,
+            tripped: false,
+        }));
+        let result = backend
+            .process_ndjson_stream(&tenant, &sub_id, &manifest_id, "Patient", reader, &options)
+            .await
+            .unwrap();
+
+        assert!(result.aborted);
+        assert_eq!(result.abort_reason.as_deref(), Some(CANCELLED_ABORT_REASON));
+        assert_eq!(
+            result.counts.success, 2,
+            "the batch already committed when the token tripped is kept"
+        );
+        assert_eq!(
+            result.lines_processed, 2,
+            "the remaining four lines were never read"
+        );
+
+        let counts = backend
+            .get_entry_counts(&tenant, &sub_id, &manifest_id)
+            .await
+            .unwrap();
+        assert_eq!(counts.total, 2, "the partial counts are durable");
+        assert!(
+            backend
+                .read(&tenant, "Patient", "cancel-2")
+                .await
+                .unwrap()
+                .is_some(),
+            "the first batch really landed"
+        );
+        assert!(
+            backend
+                .read(&tenant, "Patient", "cancel-3")
+                .await
+                .unwrap()
+                .is_none(),
+            "nothing after the cancellation point was ingested"
+        );
+    }
+
+    /// #968, MongoDB: `abort_submission` fails in-flight manifests without
+    /// clearing the lease, so the worker's late verdict must lose rather than
+    /// resurrect the manifest as `completed`. Mongo enforces this with a
+    /// `status: processing` clause added to the fenced-write filter, so this
+    /// also pins that the status is spelled the way the filter expects.
+    #[tokio::test]
+    async fn abort_beats_a_late_finish_manifest() {
+        let Some(backend) = create_backend("submit_abort_beats_finish").await else {
+            return;
+        };
+        let tenant = create_tenant("submit-tenant");
+        let (sub_id, _manifest_id) = seed(&backend, &tenant).await;
+
+        let lease = backend
+            .claim_next_manifest(&WorkerId::new("w1"), lease_duration())
+            .await
+            .unwrap()
+            .expect("a manifest should be claimable");
+        backend.mark_manifest_processing(&lease).await.unwrap();
+
+        // The submitter aborts while the worker still holds a valid lease.
+        backend
+            .abort_submission(&tenant, &sub_id, "user cancelled")
+            .await
+            .unwrap();
+
+        // The worker's verdicts arrive too late and change nothing.
+        assert!(
+            matches!(
+                backend.finish_manifest(&lease).await,
+                Err(LeaseError::LeaseLost { .. })
+            ),
+            "a finish after an abort must not win"
+        );
+        let stored = backend
+            .get_manifest(&tenant, &sub_id, &lease.manifest_id)
+            .await
+            .unwrap()
+            .expect("manifest");
+        assert_eq!(
+            stored.status,
+            ManifestStatus::Failed,
+            "the abort's verdict stands"
+        );
+
+        assert!(
+            matches!(
+                backend.fail_manifest(&lease, "worker gave up").await,
+                Err(LeaseError::LeaseLost { .. })
+            ),
+            "a late failure verdict is equally a no-op"
+        );
+        let stored = backend
+            .get_manifest(&tenant, &sub_id, &lease.manifest_id)
+            .await
+            .unwrap()
+            .expect("manifest");
+        assert_eq!(stored.status, ManifestStatus::Failed);
+    }
+
+    /// Reconstructs the pre-v8 Mongo artifact shape, migrates it through the
+    /// public backend migration, and verifies manifest-aware v8 identity for
+    /// two generations under one submission.
+    #[tokio::test]
+    async fn test_v7_to_v8_manifest_aware_submit_file_identity() {
+        use futures::TryStreamExt;
+
+        let Some(backend) = create_backend("submit_v7_to_v8_manifest_identity").await else {
+            eprintln!("skipping: no MongoDB container available");
+            return;
+        };
+        let tenant = create_tenant("submit-v7");
+        let submission_id = SubmissionId::new("v7-provider", "legacy-generation");
+        let db = backend.get_database().await.unwrap();
+        let files = db.collection::<Document>("bulk_submit_files");
+
+        files
+            .drop_index("idx_bulk_submit_files_manifest")
+            .await
+            .unwrap();
+        files
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! {
+                        "tenant_id": 1_i32,
+                        "submitter": 1_i32,
+                        "submission_id": 1_i32,
+                        "file_type": 1_i32,
+                        "resource_type": 1_i32,
+                        "part_index": 1_i32,
+                        "fencing_token": 1_i32,
+                    })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .name(Some("idx_bulk_submit_files_part".to_string()))
+                            .unique(Some(true))
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await
+            .unwrap();
+        db.collection::<Document>("schema_version")
+            .update_one(
+                doc! { "_id": "schema_version" },
+                doc! { "$set": { "version": 7_i32 } },
+            )
+            .await
+            .unwrap();
+        files
+            .insert_one(doc! {
+                "tenant_id": tenant.tenant_id().as_str(),
+                "submitter": &submission_id.submitter,
+                "submission_id": &submission_id.submission_id,
+                "manifest_url": "https://provider.example/legacy.json",
+                "file_type": "output",
+                "resource_type": "Patient",
+                "part_index": 0_i64,
+                "fencing_token": 1_i64,
+                "file_path": "legacy/output/Patient-0.ndjson",
+                "line_count": 2_i64,
+                "byte_count": 19_i64,
+                "created_at": mongodb::bson::DateTime::from_millis(
+                    chrono::Utc::now().timestamp_millis(),
+                ),
+            })
+            .await
+            .unwrap();
+
+        backend.migrate().await.unwrap();
+        let schema_version = db
+            .collection::<Document>("schema_version")
+            .find_one(doc! { "_id": "schema_version" })
+            .await
+            .unwrap()
+            .expect("schema version document");
+        assert_eq!(schema_version.get_i32("version").unwrap(), 9_i32);
+
+        let indexes = files
+            .list_indexes()
+            .await
+            .unwrap()
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+        let manifest_index = indexes
+            .iter()
+            .find(|index| {
+                index
+                    .options
+                    .as_ref()
+                    .and_then(|options| options.name.as_deref())
+                    == Some("idx_bulk_submit_files_manifest")
+            })
+            .expect("v8 submit-file identity index");
+        assert_eq!(
+            manifest_index.keys,
+            doc! {
+                "tenant_id": 1_i32,
+                "submitter": 1_i32,
+                "submission_id": 1_i32,
+                "manifest_id": 1_i32,
+                "file_type": 1_i32,
+                "resource_type": 1_i32,
+                "part_index": 1_i32,
+                "fencing_token": 1_i32,
+            }
+        );
+        assert_eq!(manifest_index.options.as_ref().unwrap().unique, Some(true));
+        assert!(
+            indexes.iter().all(|index| index
+                .options
+                .as_ref()
+                .and_then(|options| options.name.as_deref())
+                != Some("idx_bulk_submit_files_part")),
+            "legacy submit-file index must be dropped, got {indexes:?}"
+        );
+
+        // A second pass on the already-migrated database is a no-op.
+        backend.migrate().await.unwrap();
+        let legacy_rows = backend
+            .list_submit_files(&tenant, &submission_id)
+            .await
+            .unwrap();
+        assert_eq!(legacy_rows.len(), 1);
+        assert!(legacy_rows[0].manifest_id.is_none());
+        assert!(legacy_rows[0].legacy_locator);
+        assert_eq!(legacy_rows[0].line_count, 2);
+        assert_eq!(legacy_rows[0].byte_count, 19);
+
+        let new_submission_id = SubmissionId::new("v8-provider", "manifest-aware-generation");
+        backend
+            .create_submission(&tenant, &new_submission_id, None)
+            .await
+            .unwrap();
+        let first = backend
+            .add_manifest(
+                &tenant,
+                &new_submission_id,
+                Some("https://provider.example/first.json"),
+                None,
+            )
+            .await
+            .unwrap();
+        let second = backend
+            .add_manifest(
+                &tenant,
+                &new_submission_id,
+                Some("https://provider.example/second.json"),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_ne!(first.manifest_id, second.manifest_id);
+
+        let worker_id = WorkerId::new("v8-identity-worker");
+        let first_lease = backend
+            .claim_next_manifest(&worker_id, lease_duration())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(first_lease.submission_id, new_submission_id);
+        assert_eq!(first_lease.manifest_id, first.manifest_id);
+        assert_eq!(first_lease.fencing_token, 1);
+        let record = SubmitFileRecord {
+            manifest_url: Some("https://provider.example/first.json".to_string()),
+            file_type: "output".to_string(),
+            resource_type: Some("Patient".to_string()),
+            part_index: 0,
+            file_path: "legacy/output/Patient-0.ndjson".to_string(),
+            line_count: 2,
+            byte_count: 19,
+            count_severity: None,
+        };
+        backend
+            .record_submit_file(&first_lease, &record)
+            .await
+            .unwrap();
+        backend
+            .record_submit_file(&first_lease, &record)
+            .await
+            .unwrap();
+        backend
+            .publish_manifest_artifacts(
+                &first_lease,
+                std::slice::from_ref(&record),
+                ManifestPublicationStatus::Completed,
+            )
+            .await
+            .unwrap();
+
+        let second_lease = backend
+            .claim_next_manifest(&worker_id, lease_duration())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(second_lease.submission_id, new_submission_id);
+        assert_eq!(second_lease.manifest_id, second.manifest_id);
+        assert_eq!(second_lease.fencing_token, 1);
+        let second_record = SubmitFileRecord {
+            manifest_url: Some("https://provider.example/second.json".to_string()),
+            ..record.clone()
+        };
+        backend
+            .record_submit_file(&second_lease, &second_record)
+            .await
+            .unwrap();
+        backend
+            .publish_manifest_artifacts(
+                &second_lease,
+                &[second_record],
+                ManifestPublicationStatus::Completed,
+            )
+            .await
+            .unwrap();
+
+        let rows = backend
+            .list_submit_files(&tenant, &new_submission_id)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().all(|row| !row.legacy_locator));
+        let mut actual_manifest_ids: Vec<_> = rows
+            .iter()
+            .map(|row| row.manifest_id.as_deref().unwrap())
+            .collect();
+        actual_manifest_ids.sort_unstable();
+        let mut expected_manifest_ids =
+            vec![first.manifest_id.as_str(), second.manifest_id.as_str()];
+        expected_manifest_ids.sort_unstable();
+        assert_eq!(actual_manifest_ids, expected_manifest_ids);
+        assert!(rows.iter().all(|row| row.file_type == "output"));
+        assert!(
+            rows.iter()
+                .all(|row| row.resource_type.as_deref() == Some("Patient"))
+        );
+        assert!(rows.iter().all(|row| row.part_index == 0));
+        assert!(rows.iter().all(|row| row.line_count == 2));
+        assert!(rows.iter().all(|row| row.byte_count == 19));
+        assert!(
+            rows.iter()
+                .all(|row| row.file_path == "legacy/output/Patient-0.ndjson")
+        );
+        let manifests = backend
+            .list_manifests(&tenant, &new_submission_id)
+            .await
+            .unwrap();
+        assert_eq!(manifests.len(), 2);
+        assert_ne!(manifests[0].manifest_id, manifests[1].manifest_id);
+        assert!(manifests.iter().all(|manifest| {
+            manifest.manifest_id == first.manifest_id || manifest.manifest_id == second.manifest_id
+        }));
+
+        let preserved_legacy_rows = backend
+            .list_submit_files(&tenant, &submission_id)
+            .await
+            .unwrap();
+        assert_eq!(preserved_legacy_rows.len(), 1);
+        assert!(preserved_legacy_rows[0].manifest_id.is_none());
+        assert!(preserved_legacy_rows[0].legacy_locator);
     }
 }
 

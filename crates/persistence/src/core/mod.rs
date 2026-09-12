@@ -96,6 +96,11 @@ pub mod bulk_export_worker;
 pub mod bulk_provider;
 pub mod bulk_submit;
 pub mod bulk_submit_input;
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
+pub(crate) mod bulk_submit_legacy;
+pub mod bulk_submit_output;
+pub mod bulk_submit_publication;
+pub(crate) mod bulk_submit_receipts;
 pub mod bulk_submit_worker;
 pub mod capabilities;
 pub mod history;
@@ -134,15 +139,17 @@ pub use bulk_submit::{
     EntryResultCursor, EntryResultPage, IMPORT_MODE_PARAMETER_URL, ImportMode, IngestValidator,
     ManifestPhase, ManifestStatus, NdjsonEntry, PagedEntryResult, StreamProcessingResult,
     StreamingBulkSubmitProvider, SubmissionChange, SubmissionId, SubmissionManifest,
-    SubmissionStatus, SubmissionSummary, merge_resource,
+    SubmissionStatus, SubmissionSummary, UnindexedEntry, merge_resource,
 };
 pub use bulk_submit_input::{
     FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher, submission_output_job_id,
 };
+pub use bulk_submit_output::{submit_artifact_key, submit_artifact_locator};
+pub use bulk_submit_publication::{ManifestPublicationResult, ManifestPublicationStatus};
 pub use bulk_submit_worker::{
-    BulkSubmitJobStore, DefaultSubmitWorker, DeferredReindexHook, ManifestFetchParams,
-    ManifestLease, ManifestWorkerView, PollTokenTarget, SubmitClaimStrategy, SubmitFileRecord,
-    SubmitFileRow, SubmitWorkerStorage,
+    BulkSubmitJobStore, DefaultSubmitWorker, DeferredReindexHook, IndexDrift, IngestSyncReport,
+    ManifestFetchParams, ManifestLease, ManifestWorkerView, PollTokenTarget, SubmitClaimStrategy,
+    SubmitFileRecord, SubmitFileRow, SubmitWorkerStorage,
 };
 pub use capabilities::{
     CapabilityProvider, GlobalSearchCapabilities, Interaction, ResourceCapabilities,
@@ -163,9 +170,11 @@ pub use preconditions::{
 };
 pub use schema_ledger::{BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{
-    ChainedSearchProvider, FullSearchProvider, IncludeProvider, MultiTypeSearchProvider,
-    RevincludeProvider, SearchProvider, SearchResult, TerminologySearchProvider,
-    TextSearchProvider, resolve_includes_iterative,
+    ChainedSearchProvider, FullSearchProvider, INCLUDE_TRUNCATION_OUTCOME_ID, IncludeProvider,
+    MAX_ITERATE_INCLUDED, MultiTypeSearchProvider, RevincludeProvider, SearchProvider,
+    SearchResult, TerminologySearchProvider, TextSearchProvider, include_truncation_outcome,
+    is_include_truncation_marker, resolve_includes_iterate_continuation,
+    resolve_includes_iterative,
 };
 pub use sof_runner::{RowStream, SofError, SofRunner, ViewFilters, ViewRow};
 pub use storage::{

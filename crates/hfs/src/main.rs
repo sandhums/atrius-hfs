@@ -195,6 +195,12 @@ where
     let server_selection_timeout_ms = env("HFS_MONGODB_SERVER_SELECTION_TIMEOUT_MS")
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(15_000);
+    // Bounds `_include`/`_revinclude` resolution per directive (#1061), so a
+    // wide reverse-reference set can't grow a searchset Bundle without limit.
+    let max_included_resources = env("HFS_MONGODB_MAX_INCLUDED_RESOURCES")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(1000)
+        .max(1);
 
     MongoBackendConfig {
         connection_string,
@@ -205,6 +211,7 @@ where
         fhir_version: config.default_fhir_version,
         data_dir: config.data_dir.clone(),
         search_offloaded,
+        max_included_resources,
     }
 }
 
@@ -424,6 +431,9 @@ async fn create_audit_mongodb_storage(
             fhir_version: server_config.default_fhir_version,
             data_dir: server_config.data_dir.clone(),
             search_offloaded: false,
+            // Audit storage doesn't resolve _include/_revinclude; the default
+            // (and any future new field) is fine here.
+            ..Default::default()
         };
         MongoBackend::new(config)?
     } else {
@@ -1318,6 +1328,88 @@ fn spawn_s3_search_param_refresh(
     });
 }
 
+/// Registers the shared base SearchParameters — embedded fallback, the FHIR
+/// spec file, and every custom file in `data_dir` (e.g. the SQL-on-FHIR
+/// `ViewDefinition` params in `sql-on-fhir-search-parameters.json`) — into
+/// `registry`.
+///
+/// This is the same three-tier load the SQLite, PostgreSQL, and MongoDB
+/// backends perform when they build their own registries. A primary with no
+/// `data_dir` of its own (S3) needs a starter to do it instead; skipping the
+/// custom tier left Elasticsearch unaware of params such as `ViewDefinition`
+/// `name`, so `name:contains` was silently dropped from searches (#1070).
+#[cfg(all(feature = "s3", feature = "elasticsearch"))]
+fn populate_base_search_registry(
+    registry: &mut helios_persistence::search::SearchParameterRegistry,
+    fhir_version: helios_fhir::FhirVersion,
+    data_dir: &std::path::Path,
+) {
+    use helios_persistence::search::SearchParameterLoader;
+
+    let loader = SearchParameterLoader::new(fhir_version);
+    let mut fallback_count = 0;
+    let mut spec_count = 0;
+    let mut custom_count = 0;
+    let mut custom_files: Vec<String> = Vec::new();
+
+    match loader.load_embedded() {
+        Ok(params) => {
+            for p in params {
+                if registry.register(p).is_ok() {
+                    fallback_count += 1;
+                }
+            }
+        }
+        Err(e) => warn!("Failed to load embedded SearchParameters: {e}"),
+    }
+
+    let spec_path = data_dir.join(loader.spec_filename());
+    match loader.load_from_spec_file(data_dir) {
+        Ok(params) => {
+            for p in params {
+                if registry.register(p).is_ok() {
+                    spec_count += 1;
+                }
+            }
+        }
+        Err(e) => warn!(
+            "Could not load spec SearchParameters from {}: {e}. Using minimal fallback.",
+            spec_path.display()
+        ),
+    }
+
+    match loader.load_custom_from_directory_with_files(data_dir) {
+        Ok((params, files)) => {
+            for p in params {
+                if registry.register(p).is_ok() {
+                    custom_count += 1;
+                }
+            }
+            custom_files = files;
+        }
+        Err(e) => warn!(
+            "Error loading custom SearchParameters from {}: {e}",
+            data_dir.display()
+        ),
+    }
+
+    let custom_info = if custom_files.is_empty() {
+        String::new()
+    } else {
+        format!(" [{}]", custom_files.join(", "))
+    };
+    info!(
+        "SearchParameter registry initialized: {} total ({} spec from {}, {} fallback, {} custom{}) covering {} resource types",
+        registry.len(),
+        spec_count,
+        spec_path.display(),
+        fallback_count,
+        custom_count,
+        custom_info,
+        registry.resource_types().len()
+    );
+}
+
 /// Starts the server with SQLite-only backend.
 #[cfg(feature = "sqlite")]
 async fn start_sqlite(
@@ -1673,20 +1765,6 @@ fn spawn_export_workers<Dp>(
     );
 }
 
-/// Builds the bulk-submit subsystem (input fetcher + output store + file auth +
-/// worker pool) from a caller-supplied job store. Returns `None` when bulk submit
-/// is disabled. The job store is the same backend instance that holds the FHIR
-/// resources (so ingestion writes go to the primary store).
-///
-/// Unlike bulk *export*, every backend that can run `$bulk-submit` hosts its own
-/// job state — MongoDB in its own collections, S3 in the same objects its
-/// ingestion engine already writes — so there is no sidecar variant here.
-#[cfg(any(
-    feature = "sqlite",
-    feature = "postgres",
-    feature = "mongodb",
-    feature = "s3"
-))]
 /// Picks the `$bulk-submit` job store for a primary + Elasticsearch composite.
 ///
 /// The raw primary never feeds Elasticsearch, so by default the store is
@@ -1698,6 +1776,10 @@ fn spawn_export_workers<Dp>(
 /// the wrapper, otherwise the data never reaches Elasticsearch.
 ///
 /// [`CompositeSubmitJobs`]: helios_persistence::composite::CompositeSubmitJobs
+#[cfg(all(
+    feature = "elasticsearch",
+    any(feature = "sqlite", feature = "postgres")
+))]
 fn composite_submit_jobs(
     primary: Arc<dyn BulkSubmitJobStore>,
     composite: Arc<helios_persistence::composite::CompositeStorage>,
@@ -1713,6 +1795,20 @@ fn composite_submit_jobs(
     }
 }
 
+/// Builds the bulk-submit subsystem (input fetcher + output store + file auth +
+/// worker pool) from a caller-supplied job store. Returns `None` when bulk submit
+/// is disabled. The job store is the same backend instance that holds the FHIR
+/// resources (so ingestion writes go to the primary store).
+///
+/// Unlike bulk *export*, every backend that can run `$bulk-submit` hosts its own
+/// job state — MongoDB in its own collections, S3 in the same objects its
+/// ingestion engine already writes — so there is no sidecar variant here.
+#[cfg(any(
+    feature = "sqlite",
+    feature = "postgres",
+    feature = "mongodb",
+    feature = "s3"
+))]
 async fn build_bulk_submit(
     config: &ServerConfig,
     jobs: Arc<dyn BulkSubmitJobStore>,
@@ -2115,7 +2211,10 @@ async fn start_sqlite_elasticsearch(
     let ui_settings = settings_store.clone();
     let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(sqlite.clone());
 
-    let export_bundle = build_bulk_export(&config, sqlite.clone(), sqlite.clone()).await?;
+    // The worker searches through `composite` (not the bare `sqlite` primary)
+    // so a `_typeFilter` runs against Elasticsearch, the index that actually
+    // serves search in this deployment.
+    let export_bundle = build_bulk_export(&config, composite.clone(), sqlite.clone()).await?;
     // Reindex reads from the SQLite primary and rebuilds BOTH indexes: SQLite's
     // own search_index table and the Elasticsearch index that actually serves
     // search here.
@@ -2388,7 +2487,10 @@ async fn start_postgres_elasticsearch(
     let ui_settings = settings_store.clone();
     let ui_bulk_provider: Option<Arc<dyn BulkProviderStore>> = Some(pg.clone());
 
-    let export_bundle = build_bulk_export(&config, pg.clone(), pg.clone()).await?;
+    // The worker searches through `composite` (not the bare `pg` primary) so a
+    // `_typeFilter` runs against Elasticsearch, the index that actually serves
+    // search in this deployment.
+    let export_bundle = build_bulk_export(&config, composite.clone(), pg.clone()).await?;
     let ops = composite_ops(
         composite.clone(),
         pg.clone(),
@@ -2593,7 +2695,10 @@ async fn start_mongodb_elasticsearch(
         #[cfg(feature = "sqlite")]
         {
             let jobs = build_embedded_job_store(&config)?;
-            build_bulk_export(&config, mongo.clone(), jobs).await?
+            // The worker searches through `composite` (not the bare `mongo`
+            // primary) so a `_typeFilter` runs against Elasticsearch, the
+            // index that actually serves search in this deployment.
+            build_bulk_export(&config, composite.clone(), jobs).await?
         }
         #[cfg(not(feature = "sqlite"))]
         {
@@ -2607,15 +2712,25 @@ async fn start_mongodb_elasticsearch(
         mongo.tenant_registries().clone(),
         audit_state.as_ref(),
     );
-    // Bulk submit runs against the MongoDB primary, which hosts its own job
-    // state. Ingestion deliberately goes to `mongo` rather than the composite:
-    // the composite's search half is fed by the primary's own indexing hooks.
     let reindex_hook = ops.reindex.clone().map(|op| {
         Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
             as Arc<dyn helios_persistence::core::DeferredReindexHook>
     });
-    let submit_bundle =
-        build_bulk_submit(&config, mongo.clone(), mongo.clone(), reindex_hook).await?;
+    // Bulk submit runs against the MongoDB primary, which hosts its own job
+    // state, but wrapped like sqlite-es and pg-es so finished manifests sync
+    // their resources into Elasticsearch (#882). The comment this replaces said
+    // the composite's search half was "fed by the primary's own indexing
+    // hooks" — on this backend those hooks are exactly what is turned off
+    // (`search_offloaded`, logged above as "MongoDB search indexing disabled"),
+    // so nothing indexed the bulk-loaded data anywhere and 99.9 % of an import
+    // was readable by id and invisible to every search (#1021).
+    let submit_jobs = composite_submit_jobs(
+        mongo.clone(),
+        composite.clone(),
+        config.bulk_submit.defer_indexing,
+        reindex_hook.is_some(),
+    );
+    let submit_bundle = build_bulk_submit(&config, submit_jobs, mongo.clone(), reindex_hook).await?;
     let app = create_app_with_auth_bulk_settings_and_ops(
         composite.clone(),
         config.clone(),
@@ -2909,32 +3024,26 @@ async fn start_s3_elasticsearch(
     );
 
     // Populate S3's own per-tenant registry container with the shared base
-    // (embedded + spec) — S3 has no `data_dir`/FHIR version of its own to load
-    // these from, so a composite starter does it once here, the same params
-    // `build_search_registry` used to load into a standalone container. Unlike
+    // (embedded + spec + custom, e.g. the SQL-on-FHIR `ViewDefinition` params) —
+    // S3 has no `data_dir`/FHIR version of its own to load these from, so a
+    // composite starter does it once here, the same three tiers the SQLite,
+    // PostgreSQL, and MongoDB primaries load into theirs. Omitting the custom
+    // tier left ES blind to `ViewDefinition?name:contains=…` (#1070). Unlike
     // before, this container is *S3's real registries* (`s3.tenant_registries()`),
     // not a throwaway one: S3's own create/update/delete hooks now keep each
     // tenant's stored SearchParameter overlay on it current (#787), so sharing
     // it with Elasticsearch below gives ES the same live overlay every other
     // composite's search backend already gets from its primary.
     {
-        use helios_persistence::search::SearchParameterLoader;
-        let loader = SearchParameterLoader::new(config.default_fhir_version);
-        let mut base = s3.tenant_registries().base().write();
-        if let Ok(params) = loader.load_embedded() {
-            for p in params {
-                let _ = base.register(p);
-            }
-        }
         let data_dir = config
             .data_dir
             .clone()
             .unwrap_or_else(|| std::path::PathBuf::from("./data"));
-        if let Ok(params) = loader.load_from_spec_file(&data_dir) {
-            for p in params {
-                let _ = base.register(p);
-            }
-        }
+        populate_base_search_registry(
+            &mut s3.tenant_registries().base().write(),
+            config.default_fhir_version,
+            &data_dir,
+        );
     }
     let es = Arc::new(ElasticsearchBackend::with_shared_registry(
         es_config,
@@ -3022,7 +3131,10 @@ async fn start_s3_elasticsearch(
         #[cfg(feature = "sqlite")]
         {
             let jobs = build_embedded_job_store(&config)?;
-            build_bulk_export(&config, s3.clone(), jobs).await?
+            // The worker searches through `composite` (not the bare `s3`
+            // primary) so a `_typeFilter` runs against Elasticsearch, the
+            // only search index in this deployment.
+            build_bulk_export(&config, composite.clone(), jobs).await?
         }
         #[cfg(not(feature = "sqlite"))]
         {
@@ -3030,19 +3142,24 @@ async fn start_s3_elasticsearch(
         }
     };
     // Bulk submit needs no sidecar here either: the S3 primary hosts its own
-    // job state. Ingestion goes to `s3` rather than the composite because the
-    // composite's Elasticsearch half is fed by the primary's indexing hooks.
+    // job state. It is wrapped like every other composite (#882): S3 maintains
+    // no search index of its own — Elasticsearch is the only one in this
+    // deployment, as the `ops` comment above says — so the primary has no
+    // indexing hooks for the composite's search half to be "fed by", which is
+    // what the comment this replaces claimed. Without the wrapper a completed
+    // `$bulk-submit` here leaves its resources searchable nowhere (#1021).
+    let reindex_hook = ops.reindex.clone().map(|op| {
+        Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
+            as Arc<dyn helios_persistence::core::DeferredReindexHook>
+    });
     let bulk_submit = if s3.supports_bulk_submit_worker() {
-        build_bulk_submit(
-            &config,
+        let submit_jobs = composite_submit_jobs(
             s3.clone(),
-            s3.clone(),
-            ops.reindex.clone().map(|op| {
-                Arc::new(helios_persistence::search::ReindexOnFinish::new(op))
-                    as Arc<dyn helios_persistence::core::DeferredReindexHook>
-            }),
-        )
-        .await?
+            composite.clone(),
+            config.bulk_submit.defer_indexing,
+            reindex_hook.is_some(),
+        );
+        build_bulk_submit(&config, submit_jobs, s3.clone(), reindex_hook).await?
     } else {
         tracing::warn!(
             "S3 is configured bucket-per-tenant with no default system bucket; \

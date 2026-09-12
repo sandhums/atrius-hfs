@@ -137,6 +137,29 @@ fn app_with_path_tenant(ctx: &Ctx, tenant: &str) -> Router {
     )
 }
 
+/// Same as [`app_with_path_tenant`] but header-only routing
+/// (`tenant_path_routing = false`, HFS's default): the effective tenant of a
+/// request is the server's default tenant, with no tenant registry or
+/// per-tenant settings needed to exercise it (#1006).
+fn app_with_header_tenant(ctx: &Ctx, tenant: &str) -> Router {
+    helios_ui::mount_with_conformance_source_and_body_limit_and_tenant_routing(
+        Router::new(),
+        "9.9.9",
+        None,
+        helios_ui::NlSearch::default(),
+        None,
+        Some(Arc::clone(&ctx.settings)),
+        tenant.to_string(),
+        Arc::new(helios_ui::StaticConformanceSource::empty()),
+        FhirVersion::R4,
+        None,
+        ctx.recipient.clone(),
+        10 * 1024 * 1024,
+        false,
+        Some(Arc::clone(&ctx.bulk_provider)),
+    )
+}
+
 async fn body_text(response: axum::response::Response) -> String {
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
     String::from_utf8(bytes.to_vec()).unwrap()
@@ -499,6 +522,284 @@ async fn mock_recipient(
     (format!("http://{addr}"), received)
 }
 
+/// One self-call HFS's own Import workspace made against a recipient —
+/// recorded so a test can assert the request actually carried the selected
+/// tenant, not merely that some header existed (#1006).
+#[derive(Debug, Clone)]
+struct SeenSelfCall {
+    method: String,
+    path: String,
+    tenant: Option<String>,
+}
+
+/// A loopback Data Recipient — standing in for this HFS process (#689) —
+/// that records every self-call's method, path and `x-tenant-id` header,
+/// answering both the header-routing paths (no tenant segment) and the
+/// `both`-mode paths (one tenant path segment), the way HFS's own recipient
+/// side does (#1006).
+async fn mock_recipient_capturing_tenant() -> (String, Arc<std::sync::Mutex<Vec<SeenSelfCall>>>) {
+    use axum::extract::{Path as AxPath, State as AxState};
+    use axum::http::HeaderMap;
+
+    #[derive(Clone)]
+    struct S {
+        seen: Arc<std::sync::Mutex<Vec<SeenSelfCall>>>,
+        base: Arc<std::sync::Mutex<String>>,
+    }
+
+    fn tenant_of(headers: &HeaderMap) -> Option<String> {
+        headers
+            .get("x-tenant-id")
+            .and_then(|v| v.to_str().ok())
+            .map(String::from)
+    }
+
+    let state = S {
+        seen: Arc::new(std::sync::Mutex::new(Vec::new())),
+        base: Arc::new(std::sync::Mutex::new(String::new())),
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    *state.base.lock().unwrap() = format!("http://{addr}");
+    let seen = Arc::clone(&state.seen);
+
+    let app = Router::new()
+        .route(
+            "/$bulk-submit",
+            axum::routing::post(|AxState(s): AxState<S>, headers: HeaderMap| async move {
+                s.seen.lock().unwrap().push(SeenSelfCall {
+                    method: "POST".to_string(),
+                    path: "/$bulk-submit".to_string(),
+                    tenant: tenant_of(&headers),
+                });
+                (
+                    StatusCode::OK,
+                    axum::Json(serde_json::json!({"resourceType": "Parameters"})),
+                )
+            }),
+        )
+        .route(
+            "/{tenant}/$bulk-submit",
+            axum::routing::post(
+                |AxState(s): AxState<S>, AxPath(tenant): AxPath<String>, headers: HeaderMap| async move {
+                    s.seen.lock().unwrap().push(SeenSelfCall {
+                        method: "POST".to_string(),
+                        path: format!("/{tenant}/$bulk-submit"),
+                        tenant: tenant_of(&headers),
+                    });
+                    (
+                        StatusCode::OK,
+                        axum::Json(serde_json::json!({"resourceType": "Parameters"})),
+                    )
+                },
+            ),
+        )
+        .route(
+            "/$bulk-submit-status",
+            axum::routing::post(|AxState(s): AxState<S>, headers: HeaderMap| async move {
+                s.seen.lock().unwrap().push(SeenSelfCall {
+                    method: "POST".to_string(),
+                    path: "/$bulk-submit-status".to_string(),
+                    tenant: tenant_of(&headers),
+                });
+                let base = s.base.lock().unwrap().clone();
+                (
+                    StatusCode::ACCEPTED,
+                    [("content-location", format!("{base}/poll"))],
+                    "",
+                )
+            }),
+        )
+        .route(
+            "/{tenant}/$bulk-submit-status",
+            axum::routing::post(
+                |AxState(s): AxState<S>, AxPath(tenant): AxPath<String>, headers: HeaderMap| async move {
+                    s.seen.lock().unwrap().push(SeenSelfCall {
+                        method: "POST".to_string(),
+                        path: format!("/{tenant}/$bulk-submit-status"),
+                        tenant: tenant_of(&headers),
+                    });
+                    let base = s.base.lock().unwrap().clone();
+                    (
+                        StatusCode::ACCEPTED,
+                        [("content-location", format!("{base}/poll"))],
+                        "",
+                    )
+                },
+            ),
+        )
+        .route(
+            "/poll",
+            axum::routing::get(|AxState(s): AxState<S>, headers: HeaderMap| async move {
+                s.seen.lock().unwrap().push(SeenSelfCall {
+                    method: "GET".to_string(),
+                    path: "/poll".to_string(),
+                    tenant: tenant_of(&headers),
+                });
+                (
+                    StatusCode::ACCEPTED,
+                    [
+                        ("retry-after", "120".to_string()),
+                        ("x-progress", "processing 10% complete".to_string()),
+                    ],
+                    String::new(),
+                )
+            }),
+        )
+        .with_state(state);
+    tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    (format!("http://{addr}"), seen)
+}
+
+/// Posts the standard one-shot create form against `router`, returning the
+/// created submission's detail path.
+async fn post_create_via(router: Router) -> String {
+    let created = router
+        .oneshot(
+            Request::post("/ui/bulk-import")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(
+                    "name=BrettTest&manifest_url=http%3A%2F%2Fone.example%2Fm.json&auth=none",
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::SEE_OTHER);
+    created
+        .headers()
+        .get(header::LOCATION)
+        .and_then(|v| v.to_str().ok())
+        .expect("redirect to the detail page")
+        .to_string()
+}
+
+/// #1006: under header routing the default (and only) transport for the
+/// tenant, both self-calls a create fires — the kick-off and the recipient
+/// status kick-off — must carry the request's tenant, and neither path may
+/// gain a tenant path segment (that is `both`/`url_path` territory).
+#[tokio::test]
+async fn header_mode_kickoffs_carry_the_selected_tenant() {
+    let (recipient_url, seen) = mock_recipient_capturing_tenant().await;
+    let ctx = ctx(&recipient_url);
+
+    let _detail_path = post_create_via(app_with_header_tenant(&ctx, "acme")).await;
+
+    let calls = seen.lock().unwrap().clone();
+    let kickoff = calls
+        .iter()
+        .find(|c| c.method == "POST" && c.path == "/$bulk-submit")
+        .expect("kick-off recorded");
+    assert_eq!(kickoff.tenant.as_deref(), Some("acme"));
+    let status_kickoff = calls
+        .iter()
+        .find(|c| c.method == "POST" && c.path == "/$bulk-submit-status")
+        .expect("status kick-off recorded");
+    assert_eq!(status_kickoff.tenant.as_deref(), Some("acme"));
+    assert!(
+        calls.iter().all(|c| !c.path.starts_with("/acme/")),
+        "header routing must not add a tenant path segment: {calls:?}"
+    );
+}
+
+/// #1006: the recipient-status poll fired by `GET .../status` must carry the
+/// selected tenant too, or the poll is rejected server-side once it lands on
+/// a real HFS recipient (`crates/rest/src/handlers/bulk_submit.rs`).
+#[tokio::test]
+async fn header_mode_status_poll_carries_the_selected_tenant() {
+    let (recipient_url, seen) = mock_recipient_capturing_tenant().await;
+    let ctx = ctx(&recipient_url);
+
+    let detail_path = post_create_via(app_with_header_tenant(&ctx, "acme")).await;
+    seen.lock().unwrap().clear();
+
+    let status = app_with_header_tenant(&ctx, "acme")
+        .oneshot(
+            Request::get(format!("{detail_path}/status"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(status.status(), StatusCode::OK);
+
+    let calls = seen.lock().unwrap().clone();
+    let poll = calls
+        .iter()
+        .find(|c| c.method == "GET" && c.path == "/poll")
+        .expect("poll recorded");
+    assert_eq!(poll.tenant.as_deref(), Some("acme"));
+}
+
+/// #1006: Abort (`set_status`) reuses `post_kickoff` for a status-only
+/// kick-off — it must carry the selected tenant exactly like the create-time
+/// kick-off does; Complete shares the same code path.
+#[tokio::test]
+async fn header_mode_abort_carries_the_selected_tenant() {
+    let (recipient_url, seen) = mock_recipient_capturing_tenant().await;
+    let ctx = ctx(&recipient_url);
+
+    let detail_path = post_create_via(app_with_header_tenant(&ctx, "acme")).await;
+    seen.lock().unwrap().clear();
+
+    let aborted = app_with_header_tenant(&ctx, "acme")
+        .oneshot(
+            Request::post(format!("{detail_path}/abort"))
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(aborted.status(), StatusCode::SEE_OTHER);
+
+    let calls = seen.lock().unwrap().clone();
+    let kickoff = calls
+        .iter()
+        .find(|c| c.method == "POST" && c.path == "/$bulk-submit")
+        .expect("abort kick-off recorded");
+    assert_eq!(kickoff.tenant.as_deref(), Some("acme"));
+}
+
+/// #1006: under `url_path`/`both` routing the tenant travels both as a URL
+/// path segment (kick-off, status kick-off) and as the header — the poll URL
+/// itself carries no tenant segment (it is the recipient's own
+/// `Content-Location`), so the poll relies on the header alone.
+#[tokio::test]
+async fn url_path_mode_self_calls_carry_tenant_in_path_and_header() {
+    let (recipient_url, seen) = mock_recipient_capturing_tenant().await;
+    let ctx = ctx(&recipient_url);
+
+    let detail_path = post_create_via(app_with_path_tenant(&ctx, "acme")).await;
+
+    let status = app_with_path_tenant(&ctx, "acme")
+        .oneshot(
+            Request::get(format!("{detail_path}/status"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(status.status(), StatusCode::OK);
+
+    let calls = seen.lock().unwrap().clone();
+    let kickoff = calls
+        .iter()
+        .find(|c| c.method == "POST" && c.path == "/acme/$bulk-submit")
+        .expect("kick-off recorded under the tenant path");
+    assert_eq!(kickoff.tenant.as_deref(), Some("acme"));
+    let status_kickoff = calls
+        .iter()
+        .find(|c| c.method == "POST" && c.path == "/acme/$bulk-submit-status")
+        .expect("status kick-off recorded under the tenant path");
+    assert_eq!(status_kickoff.tenant.as_deref(), Some("acme"));
+    let poll = calls
+        .iter()
+        .find(|c| c.method == "GET" && c.path == "/poll")
+        .expect("poll recorded");
+    assert_eq!(poll.tenant.as_deref(), Some("acme"));
+}
+
 #[tokio::test]
 async fn creating_posts_the_kickoff_and_logs_the_outcome() {
     let (recipient_url, received) = mock_recipient(StatusCode::OK).await;
@@ -582,8 +883,15 @@ async fn abort_sends_a_status_only_kickoff() {
     let abort_path = create_submission(&ctx).await;
     post_form(&ctx, &format!("{abort_path}/abort"), "").await;
     let (_, html) = get(&ctx, &abort_path).await;
-    assert!(html.contains("Stopped"));
+    assert!(
+        html.contains(r#"<div id="submission-status">Stopped</div>"#),
+        "{html}"
+    );
     assert!(html.contains("Recipient acknowledged (200)"));
+    // The landed Abort closes the submission out: its card is the settled
+    // result, not a progress card that keeps polling (#1069).
+    let (_, fragment) = get(&ctx, &format!("{abort_path}/status")).await;
+    assert_closed_out_card(&fragment, &abort_path, "Stopped");
 
     // The abort kick-off is status-only: no manifestUrl rides along.
     let bodies = received.lock().unwrap().clone();
@@ -609,8 +917,13 @@ async fn complete_sends_a_status_only_kickoff() {
     set_submission_status(&ctx, &detail_path, "in-progress").await;
     post_form(&ctx, &format!("{detail_path}/complete"), "").await;
     let (_, html) = get(&ctx, &detail_path).await;
-    assert!(html.contains("Completed"), "{html}");
+    assert!(
+        html.contains(r#"<div id="submission-status">Completed</div>"#),
+        "{html}"
+    );
     assert!(html.contains("Recipient acknowledged (200)"), "{html}");
+    let (_, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+    assert_closed_out_card(&fragment, &detail_path, "Completed");
 
     let bodies = received.lock().unwrap().clone();
     let params = bodies.last().unwrap()["parameter"].as_array().unwrap();
@@ -635,6 +948,411 @@ async fn a_rejected_status_change_keeps_the_status_and_logs_it() {
     let (_, html) = get(&ctx, &detail_path).await;
     assert!(html.contains("Recipient rejected the status change: 409"));
     assert!(html.contains("In Progress"));
+    // The log line is no longer the only trace: the rejection is banner-level
+    // state on the submission itself (#968).
+    assert!(html.contains(BANNER), "{html}");
+    assert!(html.contains("409:"), "{html}");
+}
+
+/// The localized frame of the persistent status-change banner (#968); every
+/// assertion below matches on it rather than on the whole sentence.
+const BANNER: &str = "The last status change did not reach the Data Recipient";
+
+/// #968: an Abort the recipient never accepted leaves the submission running,
+/// and until now said so only in the run log — a saturated recipient could
+/// swallow the press and the page still read In Progress with no explanation.
+/// The banner must also survive the status card's own 5s refresh, which
+/// re-renders that whole region with `outerHTML`.
+#[tokio::test]
+async fn a_failed_abort_persists_an_error_banner_across_polls() {
+    let (recipient_url, _) = mock_recipient(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let ctx = ctx(&recipient_url);
+
+    let detail_path = create_submission(&ctx).await;
+    set_submission_status(&ctx, &detail_path, "in-progress").await;
+    post_form(&ctx, &format!("{detail_path}/abort"), "").await;
+
+    // A hard reload shows it: the page renders the banner host filled.
+    let (_, html) = get(&ctx, &detail_path).await;
+    assert!(
+        html.contains(r#"<div id="submission-error" class="alert" role="alert">"#),
+        "{html}"
+    );
+    assert!(html.contains(BANNER), "{html}");
+    assert!(
+        html.contains("500:"),
+        "the recipient's own answer rides along"
+    );
+    assert!(html.contains("In Progress"), "the submission is unchanged");
+
+    // And every poll of the status fragment carries it out-of-band. This
+    // submission never got a poll URL, so the card itself renders empty —
+    // exactly the case where a banner nested inside it would disappear.
+    for poll in 1..=2 {
+        let (status, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            fragment.contains(
+                r#"<div id="submission-error" class="alert" role="alert" hx-swap-oob="true">"#
+            ),
+            "poll {poll}: {fragment}"
+        );
+        assert!(fragment.contains(BANNER), "poll {poll}: {fragment}");
+    }
+
+    // Only the sentence is translated; the recipient's diagnosis is stored
+    // as it came back, so it reads the same in every locale.
+    let (_, german) = get(&ctx, &format!("{detail_path}?lang=de")).await;
+    assert!(
+        german.contains("Die letzte Statusänderung hat den Datenempfänger nicht erreicht"),
+        "{german}"
+    );
+    assert!(german.contains("500:"), "{german}");
+    assert!(!german.contains(BANNER), "{german}");
+}
+
+/// #968: the banner describes the *last* status change, so a retry that lands
+/// clears it — and the now-Stopped submission drops Abort/Mark completed with
+/// it.
+#[tokio::test]
+async fn a_successful_abort_clears_the_error_banner_and_the_buttons() {
+    // The recipient base URL is captured on the submission at create time, so
+    // the retry must reach the same origin — this mock changes its mind
+    // instead.
+    let recipient = mock_recipient_with_switchable_status(StatusCode::OK, 3600).await;
+    let answer = &recipient.answer;
+    let ctx = ctx(&recipient.url);
+    let detail_path = create_submission(&ctx).await;
+
+    // First Abort: the recipient is saturated and rejects it.
+    answer.store(
+        StatusCode::SERVICE_UNAVAILABLE.as_u16(),
+        std::sync::atomic::Ordering::SeqCst,
+    );
+    post_form(&ctx, &format!("{detail_path}/abort"), "").await;
+    let (_, html) = get(&ctx, &detail_path).await;
+    assert!(html.contains(BANNER), "{html}");
+    assert!(html.contains("In Progress"), "{html}");
+    // The card is still polling, so the banner rides beside a rendered card
+    // here — and retrying stays one click away.
+    let (_, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+    assert!(fragment.contains(BANNER), "{fragment}");
+    assert!(
+        fragment.contains(&format!(r#"action="{detail_path}/abort""#)),
+        "the rejected Abort must stay retryable: {fragment}"
+    );
+
+    // Second Abort: it lands.
+    answer.store(StatusCode::OK.as_u16(), std::sync::atomic::Ordering::SeqCst);
+    post_form(&ctx, &format!("{detail_path}/abort"), "").await;
+
+    let (_, html) = get(&ctx, &detail_path).await;
+    assert!(
+        html.contains(r#"<div id="submission-error"></div>"#),
+        "the banner host is empty again: {html}"
+    );
+    assert!(!html.contains(BANNER), "{html}");
+    assert!(html.contains("Stopped"), "{html}");
+    // The log still remembers the failed attempt: it is the banner, not the
+    // history, that is bound to the *last* status change.
+    assert!(
+        html.contains("Recipient rejected the status change: 503"),
+        "{html}"
+    );
+
+    let (_, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+    assert!(
+        fragment.contains(r#"<div id="submission-error" hx-swap-oob="true"></div>"#),
+        "{fragment}"
+    );
+    assert!(!fragment.contains(BANNER), "{fragment}");
+    assert!(
+        !fragment.contains(&format!(r#"action="{detail_path}/abort""#)),
+        "a stopped submission cannot be aborted: {fragment}"
+    );
+    assert!(
+        !fragment.contains(&format!(r#"action="{detail_path}/complete""#)),
+        "{fragment}"
+    );
+    // A landed Abort closes the submission out, so the card stops polling and
+    // settles on the result (#1069).
+    assert!(!fragment.contains("every 5s"), "{fragment}");
+    assert!(fragment.contains(RESULT_CARD), "{fragment}");
+}
+
+/// The opening of the settled, non-polling status card — the one a finished
+/// or closed-out submission renders.
+const RESULT_CARD: &str = r#"<div id="bulk-status" class="card panel bulk-import-section">"#;
+
+/// Asserts the status fragment shows a closed-out submission: the result card
+/// (its "Result" label and closing instant), no htmx refresh, no Abort or
+/// Mark completed, and the out-of-band STATUS cell reading `label`.
+fn assert_closed_out_card(fragment: &str, detail_path: &str, label: &str) {
+    assert!(
+        !fragment.contains("every 5s"),
+        "polling stopped: {fragment}"
+    );
+    assert!(fragment.contains(RESULT_CARD), "{fragment}");
+    assert!(fragment.contains("<span>Result</span>"), "{fragment}");
+    assert!(
+        fragment.contains("Processing finished at <code>"),
+        "{fragment}"
+    );
+    assert!(
+        fragment.contains(&format!(
+            r#"<div id="submission-status" hx-swap-oob="true">{label}</div>"#
+        )),
+        "{fragment}"
+    );
+    assert!(
+        !fragment.contains(&format!(r#"action="{detail_path}/abort""#)),
+        "{fragment}"
+    );
+    assert!(
+        !fragment.contains(&format!(r#"action="{detail_path}/complete""#)),
+        "{fragment}"
+    );
+}
+
+/// #1069: Abort showed Stopped, then the next 5s refresh flipped it to
+/// Completed. The landed Abort left the poll URL on the submission, so the
+/// card kept polling — and HFS answers an aborted submission's status poll
+/// with a terminal `200` whose `outcome` is empty, which read as a clean
+/// finish. Here the recipient does exactly that, with no `Retry-After` hold
+/// in the way, so the only thing keeping the submission Stopped is the UI
+/// refusing to poll (or believe) the recipient once it is closed out.
+#[tokio::test]
+async fn an_aborted_submission_stays_stopped_when_the_recipient_later_answers_200() {
+    let recipient = mock_recipient_with_switchable_status(StatusCode::OK, 0).await;
+    let ctx = ctx(&recipient.url);
+    let detail_path = create_submission(&ctx).await;
+    let status_path = format!("{detail_path}/status");
+
+    // Before the abort the card polls the recipient, which is still running.
+    let (_, fragment) = get(&ctx, &status_path).await;
+    assert!(fragment.contains("every 5s"), "{fragment}");
+    assert!(
+        fragment.contains(&format!(r#"action="{detail_path}/abort""#)),
+        "{fragment}"
+    );
+    let polls_before_abort = recipient.polls.load(std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(polls_before_abort, 1, "the card polled the recipient");
+
+    let (status, _, _) = post_form(&ctx, &format!("{detail_path}/abort"), "").await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+    // The recipient now answers the poll the way HFS does once aborted.
+    *recipient.poll_manifest.lock().unwrap() = Some(aborted_status_manifest());
+
+    // The card's refresh keeps firing on an open page; every one of them must
+    // still read Stopped.
+    for refresh in 1..=2 {
+        let (status, fragment) = get(&ctx, &status_path).await;
+        assert_eq!(status, StatusCode::OK, "refresh {refresh}");
+        assert_closed_out_card(&fragment, &detail_path, "Stopped");
+    }
+    assert_eq!(
+        recipient.polls.load(std::sync::atomic::Ordering::SeqCst),
+        polls_before_abort,
+        "a stopped submission is never polled again"
+    );
+
+    let (_, detail) = get(&ctx, &detail_path).await;
+    assert!(
+        detail.contains(r#"<div id="submission-status">Stopped</div>"#),
+        "{detail}"
+    );
+    assert!(
+        !detail.contains(r#"<div id="submission-status">Completed</div>"#),
+        "{detail}"
+    );
+    assert!(!detail.contains("finished cleanly"), "{detail}");
+    assert!(!detail.contains("submission completed"), "{detail}");
+}
+
+/// #1069's companion for Mark completed: a closed-out submission keeps the
+/// provider's verdict, so a recipient poll that would report error files does
+/// not reopen it as Failed.
+#[tokio::test]
+async fn a_completed_submission_is_not_failed_by_a_later_poll_with_errors() {
+    let recipient = mock_recipient_with_switchable_status(StatusCode::OK, 0).await;
+    let ctx = ctx(&recipient.url);
+    let detail_path = create_submission(&ctx).await;
+    let status_path = format!("{detail_path}/status");
+
+    let (_, fragment) = get(&ctx, &status_path).await;
+    assert!(fragment.contains("every 5s"), "{fragment}");
+    let polls_before = recipient.polls.load(std::sync::atomic::Ordering::SeqCst);
+
+    let (status, _, _) = post_form(&ctx, &format!("{detail_path}/complete"), "").await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+    *recipient.poll_manifest.lock().unwrap() = Some(serde_json::json!({
+        "output": [{"type": "Patient", "url": "http://example/out.ndjson"}],
+        "outcome": [{
+            "type": "OperationOutcome",
+            "url": "http://example/errors.ndjson",
+            "countSeverity": {"error": 2}
+        }]
+    }));
+
+    for _ in 1..=2 {
+        let (_, fragment) = get(&ctx, &status_path).await;
+        assert_closed_out_card(&fragment, &detail_path, "Completed");
+    }
+    assert_eq!(
+        recipient.polls.load(std::sync::atomic::Ordering::SeqCst),
+        polls_before
+    );
+    let (_, detail) = get(&ctx, &detail_path).await;
+    assert!(
+        detail.contains(r#"<div id="submission-status">Completed</div>"#),
+        "{detail}"
+    );
+    assert!(!detail.contains("marked failed"), "{detail}");
+}
+
+/// #1069: submissions the old UI already stopped still carry a live poll URL
+/// in storage. The card must not poll the recipient for them either — nor let
+/// its terminal `200` rewrite the status.
+#[tokio::test]
+async fn a_stored_stopped_submission_with_a_poll_url_is_not_polled() {
+    let recipient = mock_recipient_with_switchable_status(StatusCode::OK, 0).await;
+    let ctx = ctx(&recipient.url);
+    let detail_path = create_submission(&ctx).await;
+    // Stopped the old way: the status changed, the poll URL stayed.
+    set_submission_status(&ctx, &detail_path, "stopped").await;
+    *recipient.poll_manifest.lock().unwrap() = Some(aborted_status_manifest());
+
+    for _ in 1..=2 {
+        let (_, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+        assert!(!fragment.contains("every 5s"), "{fragment}");
+        assert!(
+            fragment.contains(r#"<div id="submission-status" hx-swap-oob="true">Stopped</div>"#),
+            "{fragment}"
+        );
+    }
+    assert_eq!(recipient.polls.load(std::sync::atomic::Ordering::SeqCst), 0);
+    let (_, detail) = get(&ctx, &detail_path).await;
+    assert!(
+        detail.contains(r#"<div id="submission-status">Stopped</div>"#),
+        "{detail}"
+    );
+    assert!(!detail.contains("submission completed"), "{detail}");
+}
+
+/// The handles of [`mock_recipient_with_switchable_status`].
+struct SwitchableRecipient {
+    url: String,
+    /// The status code the *next* `$bulk-submit` kick-off gets.
+    answer: Arc<std::sync::atomic::AtomicU16>,
+    /// What the *next* `/poll` gets: `None` is `202` with `X-Progress`, while
+    /// `Some(manifest)` is `200` with that status manifest — the recipient
+    /// saying the submission is over.
+    poll_manifest: Arc<std::sync::Mutex<Option<serde_json::Value>>>,
+    /// How many `/poll` requests actually arrived.
+    polls: Arc<std::sync::atomic::AtomicUsize>,
+}
+
+/// A recipient that accepts the submission, hands out a status poll URL, and
+/// whose answers the test can change between requests: the `$bulk-submit`
+/// status code, and whether `/poll` is still running (`202`) or has finished
+/// (`200` with a manifest).
+///
+/// Two reasons for the shape: a submission stores one recipient base URL for
+/// its whole life, so a retry cannot simply be pointed at a second mock; and
+/// only a submission with a poll URL renders the status card that carries
+/// Abort and Mark completed, which is the state #968 was reported from.
+///
+/// A running `/poll` answers `202` with the given `Retry-After`. A long one
+/// (`3600`) means reading the card never moves the submission on its own; `0`
+/// leaves the next poll due at once, which is what #1069 needs — HFS answers
+/// an aborted submission's poll with a terminal `200`, and only a poll that
+/// actually goes out after the abort can show whether the UI trusts it.
+async fn mock_recipient_with_switchable_status(
+    initial: StatusCode,
+    retry_after: u64,
+) -> SwitchableRecipient {
+    use axum::extract::State as AxState;
+    #[derive(Clone)]
+    struct S {
+        answer: Arc<std::sync::atomic::AtomicU16>,
+        poll_manifest: Arc<std::sync::Mutex<Option<serde_json::Value>>>,
+        polls: Arc<std::sync::atomic::AtomicUsize>,
+        base: Arc<std::sync::Mutex<String>>,
+    }
+    let state = S {
+        answer: Arc::new(std::sync::atomic::AtomicU16::new(initial.as_u16())),
+        poll_manifest: Arc::new(std::sync::Mutex::new(None)),
+        polls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        base: Arc::new(std::sync::Mutex::new(String::new())),
+    };
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    *state.base.lock().unwrap() = format!("http://{addr}");
+    let handles = SwitchableRecipient {
+        url: format!("http://{addr}"),
+        answer: Arc::clone(&state.answer),
+        poll_manifest: Arc::clone(&state.poll_manifest),
+        polls: Arc::clone(&state.polls),
+    };
+    let recipient = Router::new()
+        .route(
+            "/$bulk-submit",
+            axum::routing::post(|AxState(s): AxState<S>| async move {
+                let status =
+                    StatusCode::from_u16(s.answer.load(std::sync::atomic::Ordering::SeqCst))
+                        .expect("a valid status code");
+                (
+                    status,
+                    axum::Json(serde_json::json!({"resourceType": "Parameters"})),
+                )
+            }),
+        )
+        .route(
+            "/$bulk-submit-status",
+            axum::routing::post(|AxState(s): AxState<S>| async move {
+                let base = s.base.lock().unwrap().clone();
+                (
+                    StatusCode::ACCEPTED,
+                    [("content-location", format!("{base}/poll"))],
+                    "",
+                )
+            }),
+        )
+        .route(
+            "/poll",
+            axum::routing::get(move |AxState(s): AxState<S>| async move {
+                s.polls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let manifest = s.poll_manifest.lock().unwrap().clone();
+                match manifest {
+                    Some(manifest) => axum::Json(manifest).into_response(),
+                    None => (
+                        StatusCode::ACCEPTED,
+                        [
+                            ("x-progress", "50%".to_string()),
+                            ("retry-after", retry_after.to_string()),
+                        ],
+                        "",
+                    )
+                        .into_response(),
+                }
+            }),
+        )
+        .with_state(state);
+    tokio::spawn(async move { axum::serve(listener, recipient).await.unwrap() });
+    handles
+}
+
+/// The status manifest HFS answers an aborted submission's poll with: a
+/// terminal `200` listing what was ingested before the abort, with an empty
+/// `outcome` — indistinguishable, on its own, from a clean finish (#1069).
+fn aborted_status_manifest() -> serde_json::Value {
+    serde_json::json!({
+        "transactionTime": "2026-09-11T10:00:00Z",
+        "request": "http://recipient.example/$bulk-submit-status",
+        "requiresAccessToken": false,
+        "output": [{"type": "Patient", "url": "http://example/out.ndjson", "count": 3}],
+        "outcome": []
+    })
 }
 
 #[tokio::test]
@@ -671,7 +1389,10 @@ async fn terminal_submissions_reject_status_changes_without_side_effects() {
     assert_eq!(stored_after, stored_before);
 
     let (_, html) = get(&ctx, &detail_path).await;
-    assert!(html.contains("Completed"));
+    assert!(
+        html.contains(r#"<div id="submission-status">Completed</div>"#),
+        "{html}"
+    );
 }
 
 #[tokio::test]
@@ -684,6 +1405,15 @@ async fn an_unreachable_recipient_fails_the_status_change() {
     let (_, html) = get(&ctx, &detail_path).await;
     assert!(html.contains("Status change failed:"));
     assert!(html.contains("In Progress"));
+    // A recipient that never answers is the case #968 was reported against:
+    // the press has to leave a banner on the submission, not just a log line.
+    assert!(html.contains(BANNER), "{html}");
+    assert!(
+        html.contains(r#"<div id="submission-error" class="alert" role="alert">"#),
+        "{html}"
+    );
+    let (_, fragment) = get(&ctx, &format!("{detail_path}/status")).await;
+    assert!(fragment.contains(BANNER), "{fragment}");
 }
 
 #[tokio::test]
@@ -1548,13 +2278,13 @@ async fn mock_recipient_reporting(reports: &'static [&'static str]) -> String {
 #[tokio::test]
 async fn pre_ingest_phases_show_their_text_on_an_indeterminate_bar() {
     const PHASES: [&str; 4] = [
-        "waiting for a worker",
+        "Queued - starting shortly",
         "reading manifest",
         "sizing 37 of 412 files",
         "downloading file 1 of 412",
     ];
     let recipient = mock_recipient_reporting(&[
-        "waiting for a worker",
+        "Queued - starting shortly",
         "reading manifest",
         "sizing 37 of 412 files",
         "downloading file 1 of 412",
@@ -1610,15 +2340,14 @@ async fn pre_ingest_phases_show_their_text_on_an_indeterminate_bar() {
 /// reintroduced by an encoding detail. Decoding lossily keeps the report.
 #[tokio::test]
 async fn a_non_ascii_progress_report_still_reaches_the_operator() {
-    let recipient =
-        mock_recipient_reporting(&["Processing 35% of bytes — 1,024 resources written"]).await;
+    let recipient = mock_recipient_reporting(&["Processing 35% — 1,024 Resources written"]).await;
     let ctx = ctx(&recipient);
     let detail_path = create_submission(&ctx).await;
 
     let (status, html) = get(&ctx, &format!("{detail_path}/status")).await;
     assert_eq!(status, StatusCode::OK);
     assert!(
-        html.contains("1,024 resources written"),
+        html.contains("1,024 Resources written"),
         "the report must survive its non-ASCII byte: {html}"
     );
     assert!(
