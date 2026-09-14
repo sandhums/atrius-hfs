@@ -65,6 +65,8 @@ json-patch = "3"
 humantime = "2"
 futures = "0.3"
 unicode-normalization = "0.1"
+# Parallel search-value extraction for bulk ingest and reindex pages.
+rayon = "1.8"
 # Bulk-submit result receipts spool to a per-run temp directory (#982) instead
 # of accumulating in memory. Uses the platform temp dir, so `TMPDIR` isolates it.
 tempfile = "3"
@@ -134,6 +136,9 @@ tokio-test = "0.4"
 criterion = { version = "0.5", features = ["async_tokio"] }
 testcontainers-modules = { version = "0.15", features = ["postgres", "elastic_search", "minio", "mongo"] }
 paste = "1.0"
+# `#[ctor::dtor]` exit hook that removes testcontainers held in `static`s
+# (tests/common/container_cleanup.rs).
+ctor = "0.2"
 
 # `watchdog` pulls in `signal_hook::iterator`/`SIGQUIT`, which only compile on Unix.
 # Windows test runs don't need SIGTERM cleanup, so drop the feature there.
