@@ -150,10 +150,10 @@ docker run -d --name hfs-mongo -p 27017:27017 mongo:7.0
 # MinIO (s3, s3-es, and the S3 output-backend variants of T5/T7)
 docker run -d --name hfs-minio -p 9000:9000 -p 9001:9001 \
   -e MINIO_ROOT_USER=hfs-minio -e MINIO_ROOT_PASSWORD=hfs-minio-secret \
-  minio/minio:latest server /data --console-address ":9001"
+  quay.io/minio/minio:latest server /data --console-address ":9001"
 # create the buckets once MinIO is up (console at http://localhost:9001)
 docker run --rm --network host -e MC_HOST_local=http://hfs-minio:hfs-minio-secret@localhost:9000 \
-  minio/mc mb --ignore-existing local/hfs local/hfs-export local/hfs-sql-export
+  quay.io/minio/mc mb --ignore-existing local/hfs local/hfs-export local/hfs-sql-export
 ```
 
 Readiness checks:
@@ -346,6 +346,19 @@ references; 6.4 gives the exact messages. On `s3`/`s3-es` run 6.2 and 6.4 only.
 For issue #1086 development measurements, use the bounded 2,000-resource
 [PostgreSQL reindex benchmark](docs/postgres-reindex-benchmark.md). That protocol
 does not replace this full-corpus release-matrix test or change its pass criteria.
+
+For issue #1087 coordination measurements, use the focused
+[deferred reindex coordination benchmark](docs/deferred-reindex-coordination-benchmark.md).
+It submits combined, consecutive, overlapping, and burst manifests against a
+dedicated PostgreSQL instance. The controller records physical reindex jobs,
+summed job totals, processed resources, created index entries, observed overlap,
+and indexed-search readiness. Run the controller separately because its
+concurrent API traffic does not fit this UI-only release pass.
+
+Deferred automatic reindex coordination is common to every backend that wires a
+`ReindexOperation`, but the #1087 performance protocol supports claims about
+PostgreSQL only. The guarantee is process-local. Explicit `$reindex` jobs and
+jobs started on another HFS process can overlap the automatic work.
 
 The corpus is a Bulk Data export of 11,704 Synthea patients (18,955,865 resources in
 24 NDJSON files) plus a `manifest.json` that references those files at

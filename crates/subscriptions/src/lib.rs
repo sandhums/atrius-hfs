@@ -17,7 +17,9 @@
 //! - **Channel Dispatcher** — delivers notifications via rest-hook, WebSocket, etc.
 //!
 //! The [`SubscriptionEngine`] orchestrates all five concerns and is the main
-//! entry point, invoked asynchronously after each resource write.
+//! entry point, invoked asynchronously after each resource write. The server
+//! feeds it through [`SubscriptionWriteObserver`], subscribed to the post-commit
+//! write observer every write path reports to.
 
 pub mod channels;
 pub mod config;
@@ -29,6 +31,7 @@ pub mod event;
 pub mod heartbeat;
 pub mod manager;
 pub mod notification;
+pub mod observer;
 pub mod outbox;
 pub mod rehydrate;
 pub mod topics;
@@ -43,4 +46,5 @@ pub use delivery_stats::{DeliveryStats, DeliveryWindow};
 pub use engine::SubscriptionEngine;
 pub use error::SubscriptionError;
 pub use event::{ResourceEvent, ResourceEventType};
+pub use observer::SubscriptionWriteObserver;
 pub use rehydrate::{RehydrationConfig, RehydrationReport};

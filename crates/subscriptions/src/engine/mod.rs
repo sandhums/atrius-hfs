@@ -251,7 +251,8 @@ impl SubscriptionEngine {
     /// When a durable outbox is attached, SQL backends write the outbox row in
     /// the **same transaction** as the resource. This method only notifies the
     /// outbox worker (no second enqueue). Without an outbox, falls back to
-    /// in-process `tokio::spawn` of [`Self::on_resource_event`].
+    /// in-process spawn of [`Self::on_resource_event`]. Without a Tokio
+    /// runtime the in-process path is dropped rather than panicked.
     pub fn enqueue_resource_event(self: &Arc<Self>, event: ResourceEvent) {
         if self.outbox.is_some() {
             debug!(
@@ -264,8 +265,16 @@ impl SubscriptionEngine {
             return;
         }
 
+        let Ok(handle) = tokio::runtime::Handle::try_current() else {
+            debug!(
+                resource_type = %event.resource_type,
+                resource_id = %event.resource_id,
+                "No Tokio runtime; subscription event not dispatched"
+            );
+            return;
+        };
         let engine = Arc::clone(self);
-        tokio::spawn(async move {
+        handle.spawn(async move {
             engine.on_resource_event(event).await;
         });
     }

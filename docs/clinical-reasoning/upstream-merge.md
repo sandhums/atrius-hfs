@@ -150,7 +150,7 @@ One engine. Writes go through `ValidationService::check_write` (`HFS_VALIDATION_
 | `src/config.rs` | `HFS_FHIR_PACKAGE_CACHE`, `HFS_FHIR_PACKAGES` (Helios already owns `HFS_VALIDATION_MODE`) |
 | `src/state.rs` | `validation: Arc<ValidationService>` — **not** a `profile_validation` field |
 | `src/handlers/create.rs` / `update.rs` / `patch.rs` | `state.validation().check_write(...)` before persist |
-| `src/handlers/batch.rs` | `check_write` on batch POST/PUT/PATCH; transaction pre-flight for POST/PUT/PATCH and DELETE existence. Do **not** take Helios's 501 PATCH-in-bundle arm |
+| `src/handlers/batch.rs` | `check_write` on batch POST/PUT/PATCH; transaction pre-flight for POST/PUT/PATCH and DELETE existence. Take Helios `write_event::report` (including PATCH success). Do **not** take Helios's 501 PATCH-in-bundle arm. Accept Helios's delete of `handlers/subscription_event.rs` once batch no longer calls it |
 | `src/handlers/validate.rs` | `$validate` `mode` enforcement (create/update/delete/profile); do not restore the deleted Atrius handler |
 | `tests/validation_enforcement_tests.rs` | Write-path `HFS_VALIDATION_MODE` tests |
 
@@ -182,7 +182,7 @@ evaluated. Remaining limitations (not a second engine):
 | `src/core/schema_ledger.rs` | Named `schema_migrations` ledger; fork vs upstream integer classification |
 | `src/backends/{sqlite,postgres}/schema.rs` | Dispatch by step **name**; `subscription_outbox` is `OUTBOX_STEP`; `subscription_outbox_dead_letter` is the tip step. Do not restore a pure integer `migrate_schema` loop |
 | `src/backends/*/subscription_outbox.rs` | Durable outbox store (`mark_dead` / `dead_at`; claim skips dead rows; SQLite process mutex + `BEGIN IMMEDIATE` + CAS so one file cannot double-claim — not a cluster outbox) |
-| `src/composite/storage.rs` | After search, resolve `_include`/`_revinclude` with `resolve_includes_iterative`; do not keep a search backend's partial `included` list (ES drops `_revinclude`). Do not invent a persistence `TerminologySearchProvider` — REST expands `:in` via `HFS_TERMINOLOGY_SERVER`. |
+| `src/composite/storage.rs` | After search, resolve `_include`/`_revinclude` with `resolve_includes_iterative` (Helios `#1103` is the shared resolver; do not keep a search backend's partial `included` list). Do not invent a persistence `TerminologySearchProvider` — REST expands `:in` via `HFS_TERMINOLOGY_SERVER`. |
 
 `SCHEMA_VERSION` (30 SQLite / 42 Postgres) is an operator stamp. Clinical restart after the ledger lands creates `schema_migrations` and backfills names; it must not replay the full Postgres index ladder. SQLite 20/21 are Helios `#903` `idx_resources_reindex` and `#944` partial family indexes (Helios numbered those v19/v20). SQLite 22–24 are Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes, `resource_fts_map`; Helios numbered those v21–v23). SQLite 25–26 are Helios `#959`/`#953` (`idx_resources_live_type`, manifest `phase`/`files_*`; Helios numbered those v24–v25). SQLite 27–28 are Helios manifest publication and export `types_*` (Helios numbered those v26–v27). SQLite 29 is Helios v28 (partial `idx_search_string_folded`). `OUTBOX_DEAD_LETTER_STEP` is the SQLite tip (v30) so an upstream-numbered Helios v28 DB does not imply `dead_at` already applied (`implied_applied_indices` maps Helios v27 onto fork indices 16..=26 and Helios v28 onto 16..=27). Postgres 37–38 are the same publication/`types_*` steps (Helios numbered those v37–v38), then fork-only slot-2, `bulk_manifests_phase_progress`, and `dead_at` (tip v42). Do not restore hourly retry of exhausted outbox rows.
 
@@ -226,7 +226,11 @@ Merge carefully — do **not** replace the whole file with an old feat copy (you
 
 ### `crates/subscriptions`
 
-Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `with_status_store` — do not restore `SubscriptionStatusStore`.
+Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `with_status_store` — do not restore `SubscriptionStatusStore`. Take Helios `SubscriptionWriteObserver` (`#1078`) **and** keep the outbox: `on_write` must call `SubscriptionEngine::enqueue_resource_event` (same-TX outbox row already written; enqueue only `notify_one()`). Do **not** spawn `on_resource_event` from the observer — that double-notifies or skips the outbox. Without a Tokio runtime, the in-process fallback is dropped rather than panicked.
+
+### `crates/hfs`
+
+`build_bulk_submit` takes `(config, jobs, storage, reindex_hook, write_observer)`. Keep the `storage` clone for `IngestValidator`. Take Helios `automatic_reindex_hook` / `with_bulk_index_rebuild`. `spawn_submit_workers` takes **both** `ingest_validator` and `write_observer`; the worker chains `.with_ingest_validator` and `.with_write_observer` as separate methods.
 
 ### Root workspace
 
@@ -245,8 +249,10 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 | `crates/fhir/src/r4.rs` (Helios) vs `crates/fhir/src/r4/` (this fork) | Keep the **directory**. Do not take Helios's flat `r4.rs` (E0761 if it sits beside `r4/`). There is no `r4/terminology/`. If Helios's `r*.rs` changed more than buildId, regenerate — [fhir-model-regen.md](../fhir-model-regen.md) |
 | `crates/rest/**` | Take **`main`**, re-apply [REST touch points](#cratesrest) |
 | `crates/persistence/**` | Take **`main`**, re-apply named ledger + outbox |
-| `crates/hfs/**` | Take **`main`** |
+| `crates/hfs/**` | Take **`main`**, re-apply [HFS touch points](#crateshfs) (`storage` + ingest validator + write observer) |
 | `crates/cds-hooks/**` | **Merge** — keep measurement period + BadGateway |
+| `crates/subscriptions/src/observer.rs` | Take Helios observer; `on_write` must `enqueue_resource_event`, not spawn `on_resource_event` |
+| `crates/rest/src/handlers/subscription_event.rs` | Accept Helios **delete** once batch uses `write_event` |
 | `Cargo.toml` | Take **`main`** pins/version, keep Atrius `default-members` |
 | `Cargo.lock` | Do not hand-merge — fix `Cargo.toml`, run `cargo build` |
 | `.gitattributes` | Keep fork rule: `helios_fhir/** merge=ours` |
@@ -371,4 +377,4 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 ## Last feat sync
 
-14 Sep 2026: `main` `eecaa42dc` → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-09-14` → `fe280b3ed`. Ledger stamp SQLite 30 / Postgres 42. Bundle PATCH stays implemented (missing target is 404, not Helios 501).
+14 Sep 2026 evening: `main` `2b7e8e9fb` → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-09-14b` → `5fb72611f`. Ledger stamp SQLite 30 / Postgres 42 (Helios did not bump schema). Helios `#1078` write observer is subscribed **and** calls `enqueue_resource_event` (durable outbox). Bundle PATCH stays implemented (missing target is 404, not Helios 501). Prior same-day merge: `main` `eecaa42dc`, tag `pre-merge-main-2026-09-14` → `fe280b3ed`.
