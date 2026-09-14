@@ -52,8 +52,10 @@ If Git reports conflicts, use the [conflict resolution table](#conflict-resoluti
 ```bash
 cargo build
 cargo build -p cds-server
-cargo test -p helios-rest --test validation_enforcement_tests
-cargo test -p helios-rest --test validate_operation_tests
+# Matches `.github/workflows/atrius-ci.yml`. Includes `--lib`: Helios
+# PATCH-501 unit tests can merge independently of feat's three-entry
+# bundle fixture (14 Sep 2026).
+cargo test -p helios-rest --features R4,sqlite
 ```
 
 Optional (requires running stack):
@@ -168,8 +170,10 @@ evaluated. Remaining limitations (not a second engine):
   Bundle entries). It does not hit storage; an unresolved reference does not
   match.
 - Binding discriminators do not expand a ValueSet at mark time.
-- Conditional PATCH inside a Bundle is refused (instance PATCH and Bundle
-  instance-url PATCH are implemented).
+- Conditional PATCH is **resolved in a batch** (one match `200`, none `404`,
+  several `412`) and **refused in a transaction** (any non-`GET` URL criteria
+  still `400 not-supported`, #859). Instance PATCH and Bundle instance-url
+  PATCH are implemented; do not take Helios's 501 PATCH-in-bundle arm.
 
 ### `crates/persistence`
 
@@ -290,8 +294,7 @@ git checkout origin/feat-clinical-reasoning -- \
 # 4. Build and test
 cargo build
 cargo build -p cds-server
-cargo test -p helios-rest --test validation_enforcement_tests
-cargo test -p helios-rest --test validate_operation_tests
+cargo test -p helios-rest --features R4,sqlite
 
 # 5. When validated, rename branches
 git branch -m feat-clinical-reasoning feat-clinical-reasoning-archive
@@ -338,8 +341,7 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 - [ ] `cargo build` (default workspace)
 - [ ] `cargo build -p cds-server`
-- [ ] `cargo test -p helios-rest --test validation_enforcement_tests`
-- [ ] `cargo test -p helios-rest --test validate_operation_tests`
+- [ ] `cargo test -p helios-rest --features R4,sqlite` (includes `--lib`; do not skip — Helios 501 PATCH unit tests)
 - [ ] No accidental deletion of `handlers/sof/`, `bulk_submit`, or `persistence/src/sof/`
 - [ ] No resurrection of `fhir-validation*` or `HFS_PROFILE_MANIFEST`
 - [ ] `schema_migrations` dispatch still present in SQLite and Postgres schema.rs

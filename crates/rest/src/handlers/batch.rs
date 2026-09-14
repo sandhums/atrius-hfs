@@ -4438,10 +4438,11 @@ mod tests {
                 "400 Bad Request",
             ]
         );
-        // The four refusals were indistinguishable below the status line until
-        // #504 — every one carried `processing`. PATCH and HEAD are capability
-        // gaps, a lowercase verb is an unusable value, and an absent method is
-        // a missing element.
+        // The three refusals were indistinguishable below the status line until
+        // #504 — every one carried `processing`. HEAD is a capability gap, a
+        // lowercase verb is an unusable value, and an absent method is a
+        // missing element. Bundle PATCH is implemented on this fork, so it is
+        // not a refusal here (Helios still answers 501 not-supported).
         let codes: Vec<&str> = entries
             .iter()
             .map(|e| {
@@ -4450,10 +4451,7 @@ mod tests {
                     .unwrap()
             })
             .collect();
-        assert_eq!(
-            codes,
-            vec!["not-supported", "not-supported", "value", "required"]
-        );
+        assert_eq!(codes, vec!["not-supported", "value", "required"]);
         assert_eq!(state.storage().peak(), 0, "no entry may reach storage");
     }
 
