@@ -1189,6 +1189,7 @@ fn write_entry_rows(
     let tenant_id = txn.tenant().tenant_id().as_str().to_string();
     txn.with_connection(|conn| {
         if let Some(change) = change {
+            let _span = crate::perf::span(crate::perf::Phase::BookkeepingChange);
             let previous_content_bytes = change
                 .previous_content
                 .as_ref()
@@ -1216,6 +1217,7 @@ fn write_entry_rows(
             .map_err(|e| internal_error(format!("Failed to record change: {}", e)))?;
         }
 
+        let _span = crate::perf::span(crate::perf::Phase::BookkeepingResult);
         let outcome_bytes = result
             .operation_outcome
             .as_ref()
@@ -1327,8 +1329,12 @@ impl SqliteBackend {
                     {
                         return Ok((failed, None));
                     }
+                    let resource = {
+                        let _span = crate::perf::span(crate::perf::Phase::EntryClone);
+                        entry.resource.clone()
+                    };
                     let created = txn
-                        .create_prepared(&entry.resource_type, entry.resource.clone(), prepared)
+                        .create_prepared(&entry.resource_type, resource, prepared)
                         .await?;
                     let change = SubmissionChange::create(
                         manifest_id,
@@ -1360,8 +1366,12 @@ impl SqliteBackend {
             {
                 return Ok((failed, None));
             }
+            let resource = {
+                let _span = crate::perf::span(crate::perf::Phase::EntryClone);
+                entry.resource.clone()
+            };
             let created = txn
-                .create_prepared(&entry.resource_type, entry.resource.clone(), prepared)
+                .create_prepared(&entry.resource_type, resource, prepared)
                 .await?;
             let change = SubmissionChange::create(
                 manifest_id,
@@ -1397,6 +1407,11 @@ impl StreamingBulkSubmitProvider for SqliteBackend {
         let mut result = StreamProcessingResult::new();
         let mut line_number = 0u64;
         let mut batch = Vec::new();
+        // Clock for the phase report (#947): reset after every batch so each
+        // `ingest_progress` call covers exactly the lines read, parsed and
+        // written since the last one.
+        let mut batch_started = std::time::Instant::now();
+        crate::perf::mark_ingest_start();
 
         // An ingest cancelled before it read anything persists nothing.
         if options.is_cancelled() {
@@ -1484,6 +1499,7 @@ impl StreamingBulkSubmitProvider for SqliteBackend {
                         options,
                     )
                     .await?;
+                report_ingest_progress(resource_type, batch_results.len(), &mut batch_started);
 
                 for r in batch_results {
                     result.counts.increment(r.outcome);
@@ -1511,6 +1527,7 @@ impl StreamingBulkSubmitProvider for SqliteBackend {
             let batch_results = self
                 .process_entries(tenant, submission_id, manifest_id, batch, options)
                 .await?;
+            report_ingest_progress(resource_type, batch_results.len(), &mut batch_started);
 
             for r in batch_results {
                 result.counts.increment(r.outcome);
@@ -1518,6 +1535,27 @@ impl StreamingBulkSubmitProvider for SqliteBackend {
         }
 
         Ok(result)
+    }
+}
+
+/// Feeds one finished batch to the phase counters and logs the cumulative
+/// breakdown when [`crate::perf::ingest_progress`] says it is time (#947).
+/// Free in a build without `--cfg perf_phases`: `ingest_progress` folds to
+/// `None`, and the clock reset is the only thing left.
+fn report_ingest_progress(
+    resource_type: &str,
+    entries: usize,
+    batch_started: &mut std::time::Instant,
+) {
+    let wall = batch_started.elapsed();
+    *batch_started = std::time::Instant::now();
+    if let Some(report) = crate::perf::ingest_progress(entries as u64, wall) {
+        tracing::info!(
+            target: "hfs_perf",
+            resource_type,
+            process_global = true,
+            "ingest phase breakdown (cumulative)\n{report}"
+        );
     }
 }
 
@@ -4427,8 +4465,12 @@ mod tests {
 
     #[tokio::test]
     async fn bulk_submit_exact_keyset_pages() {
-        paging_contract::exact_sql_pages(&create_test_backend(), &create_test_tenant(), i64::MAX)
-            .await;
+        paging_contract::exact_keyset_pages(
+            &create_test_backend(),
+            &create_test_tenant(),
+            i64::MAX,
+        )
+        .await;
     }
 
     #[tokio::test]

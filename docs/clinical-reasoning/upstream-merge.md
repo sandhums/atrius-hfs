@@ -254,7 +254,8 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 | `crates/subscriptions/src/observer.rs` | Take Helios observer; `on_write` must `enqueue_resource_event`, not spawn `on_resource_event` |
 | `crates/rest/src/handlers/subscription_event.rs` | Accept Helios **delete** once batch uses `write_event` |
 | `Cargo.toml` | Take **`main`** pins/version, keep Atrius `default-members` |
-| `Cargo.lock` | Do not hand-merge — fix `Cargo.toml`, run `cargo build` |
+| `Cargo.lock` | Do not hand-merge — take feat, run `cargo build`. If Helios only bumped the lock (e.g. rustls), `cargo update -p rustls@OLD --precise NEW`; `cargo build` will not pick a newer locked crate by itself |
+| `crates/persistence/src/backends/sqlite/bulk_submit.rs` | Keep **both**: feat `ingest_validation_error` **then** Helios `EntryClone` span around `entry.resource.clone()`. Taking only feat leaves `resource` undefined on `create_prepared` |
 | `.gitattributes` | Keep fork rule: `helios_fhir/** merge=ours` |
 | `.gitignore` | Keep fork entries (e.g. `/crates/fhir/tests/`, `/data/fhir-packages/`) |
 
@@ -377,4 +378,4 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 ## Last feat sync
 
-14 Sep 2026 evening: `main` `2b7e8e9fb` → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-09-14b` → `5fb72611f`. Ledger stamp SQLite 30 / Postgres 42 (Helios did not bump schema). Helios `#1078` write observer is subscribed **and** calls `enqueue_resource_event` (durable outbox). Bundle PATCH stays implemented (missing target is 404, not Helios 501). Prior same-day merge: `main` `eecaa42dc`, tag `pre-merge-main-2026-09-14` → `fe280b3ed`.
+15 Sep 2026: `main` `9665cd848` → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-09-15` → `258aff539`. Ledger stamp SQLite 30 / Postgres 42 (unchanged). Mongo Helios schema 9 → 10 (receipt keyset index, `#1046`). rustls `0.23.38` → `0.23.45` (`RUSTSEC-2026-0285`). Bundle PATCH and write-observer `enqueue_resource_event` unchanged. Prior: 14 Sep evening `2b7e8e9fb`, tag `pre-merge-main-2026-09-14b`.
