@@ -134,6 +134,11 @@ fn parse_date_for_query(value: &str) -> Option<DateTime<Utc>> {
         .map(|dt| dt.with_timezone(&Utc))
 }
 
+const CANDIDATE_BATCH_SIZE: usize = 512;
+const PROBE_ROW_LIMIT: u64 = 100_000;
+// 300k × ~45 bytes/UUID ≈ 13.5 MB — safely under the 16 MB BSON document cap.
+const MAX_RESULT_ID_SET: usize = 300_000;
+
 async fn collect_documents(mut cursor: Cursor<Document>) -> StorageResult<Vec<Document>> {
     let mut docs = Vec::new();
     while cursor
@@ -205,6 +210,27 @@ fn sort_key_type_rank(value: &Bson) -> u8 {
         Bson::DateTime(_) => 3,
         _ => 4,
     }
+}
+
+async fn read_cursor_batch(
+    cursor: &mut Cursor<Document>,
+    limit: usize,
+) -> StorageResult<Vec<Document>> {
+    let mut docs = Vec::with_capacity(limit);
+    while docs.len() < limit {
+        if !cursor
+            .advance()
+            .await
+            .or_query_error("Failed to advance cursor")?
+        {
+            break;
+        }
+        let doc = cursor
+            .deserialize_current()
+            .or_query_error("Failed to deserialize cursor document")?;
+        docs.push(doc);
+    }
+    Ok(docs)
 }
 
 /// Finds the `contained[]` entry with the given local `id` in a container's
@@ -1169,90 +1195,307 @@ impl MongoBackend {
         query: &SearchQuery,
     ) -> StorageResult<Option<HashSet<String>>> {
         let search_index = db.collection::<Document>(MongoBackend::SEARCH_INDEX_COLLECTION);
-        let mut matched: Option<HashSet<String>> = None;
+
+        let mut normal: Vec<&SearchParameter> = Vec::new();
+        let mut missing: Vec<&SearchParameter> = Vec::new();
+        let mut not_params: Vec<&SearchParameter> = Vec::new();
 
         for param in &query.parameters {
             if matches!(param.name.as_str(), "_id" | "_lastUpdated") {
                 continue;
             }
+            match &param.modifier {
+                Some(SearchModifier::Missing) => missing.push(param),
+                Some(SearchModifier::Not) => not_params.push(param),
+                _ => normal.push(param),
+            }
+        }
 
-            // `:missing` resolves from index-entry presence alone (#881),
-            // exactly like the SQL backends: `missing=false` is the set of
-            // resources with any entry for the parameter, `missing=true` its
-            // complement over the type's live resources.
-            let ids = if matches!(param.modifier, Some(SearchModifier::Missing)) {
+        let has_compartment = query
+            .compartment
+            .as_ref()
+            .is_some_and(|c| !c.params.is_empty() && !c.reference.is_empty());
+
+        if normal.is_empty() && missing.is_empty() && not_params.is_empty() && !has_compartment {
+            return Ok(None);
+        }
+
+        // :missing=true and :not require complementing against the full resource
+        // universe. When no normal params exist to drive paging, fall back to the
+        // complement-only path that materialises the universe via distinct().
+        if normal.is_empty() {
+            return self
+                .matching_resource_ids_complement_only(
+                    db,
+                    &search_index,
+                    tenant_id,
+                    resource_type,
+                    &missing,
+                    &not_params,
+                    query,
+                )
+                .await;
+        }
+
+        let driver_idx = if normal.len() == 1 {
+            0
+        } else {
+            let mut best: Option<(usize, u64)> = None;
+            for (i, param) in normal.iter().enumerate() {
+                let filter = self.build_search_index_filter(tenant_id, resource_type, param)?;
+                let count = search_index
+                    .count_documents(filter)
+                    .limit(PROBE_ROW_LIMIT)
+                    .await
+                    .or_query_error("Failed to probe search_index for driver selection")?;
+                if count == 0 {
+                    return Ok(Some(HashSet::new()));
+                }
+                if best.is_none_or(|(_, prev)| count < prev) {
+                    best = Some((i, count));
+                }
+            }
+            best.map(|(i, _)| i).unwrap_or(0)
+        };
+
+        let driver_filter =
+            self.build_search_index_filter(tenant_id, resource_type, normal[driver_idx])?;
+
+        let mut driver_cursor = search_index
+            .find(driver_filter)
+            .projection(doc! { "resource_id": 1 })
+            .await
+            .or_query_error("Failed to open driver cursor")?;
+
+        let mut confirmed: HashSet<String> = HashSet::new();
+
+        loop {
+            let batch_docs = read_cursor_batch(&mut driver_cursor, CANDIDATE_BATCH_SIZE).await?;
+            let docs_read = batch_docs.len();
+
+            if docs_read == 0 {
+                break;
+            }
+
+            let mut candidates: HashSet<String> = HashSet::new();
+            for doc in &batch_docs {
+                if let Ok(rid) = doc.get_str("resource_id") {
+                    candidates.insert(rid.to_string());
+                }
+            }
+
+            for (i, param) in normal.iter().enumerate() {
+                if i == driver_idx || candidates.is_empty() {
+                    continue;
+                }
+                let param_filter =
+                    self.build_search_index_filter(tenant_id, resource_type, param)?;
+                let bounded = doc! {
+                    "$and": [
+                        param_filter,
+                        { "resource_id": { "$in": candidates.iter().cloned().collect::<Vec<_>>() } }
+                    ]
+                };
+                let passing: HashSet<String> = search_index
+                    .distinct("resource_id", bounded)
+                    .await
+                    .or_query_error("Failed to intersect search_index")?
+                    .into_iter()
+                    .filter_map(|v| v.as_str().map(ToString::to_string))
+                    .collect();
+                candidates.retain(|id| passing.contains(id));
+            }
+
+            // :missing — check per batch against surviving candidates.
+            for param in &missing {
+                if candidates.is_empty() {
+                    break;
+                }
                 let wants_missing = param
                     .values
                     .first()
                     .map(|v| v.value == "true")
                     .unwrap_or(false);
-                let with_entry = self
-                    .distinct_resource_ids(
-                        &search_index,
+                let with_entry: HashSet<String> = search_index
+                    .distinct(
+                        "resource_id",
                         doc! {
                             "tenant_id": tenant_id,
                             "resource_type": resource_type,
                             "param_name": &param.name,
+                            "resource_id": { "$in": candidates.iter().cloned().collect::<Vec<_>>() },
                         },
                     )
-                    .await?;
+                    .await
+                    .or_query_error("Failed to check :missing")?
+                    .into_iter()
+                    .filter_map(|v| v.as_str().map(ToString::to_string))
+                    .collect();
                 if wants_missing {
-                    let all = self.all_resource_ids(db, tenant_id, resource_type).await?;
-                    all.difference(&with_entry).cloned().collect::<HashSet<_>>()
+                    candidates.retain(|id| !with_entry.contains(id));
                 } else {
-                    with_entry
+                    candidates.retain(|id| with_entry.contains(id));
                 }
-            } else if matches!(param.modifier, Some(SearchModifier::Not)) {
-                // `:not` is the complement of the positive match, and per the
-                // spec it includes resources with no value for the parameter
-                // at all (#881).
-                let mut positive = param.clone();
-                positive.modifier = None;
-                let filter = self.build_search_index_filter(tenant_id, resource_type, &positive)?;
-                let matching = self.distinct_resource_ids(&search_index, filter).await?;
-                let all = self.all_resource_ids(db, tenant_id, resource_type).await?;
-                all.difference(&matching).cloned().collect::<HashSet<_>>()
-            } else {
-                let filter = self.build_search_index_filter(tenant_id, resource_type, param)?;
-                self.distinct_resource_ids(&search_index, filter).await?
-            };
+            }
 
+            // :not — per the spec, includes resources with no value for the
+            // parameter at all (#881). Check per batch against surviving candidates.
+            for param in &not_params {
+                if candidates.is_empty() {
+                    break;
+                }
+                let mut positive = (*param).clone();
+                positive.modifier = None;
+                let pos_filter =
+                    self.build_search_index_filter(tenant_id, resource_type, &positive)?;
+                let bounded = doc! {
+                    "$and": [
+                        pos_filter,
+                        { "resource_id": { "$in": candidates.iter().cloned().collect::<Vec<_>>() } }
+                    ]
+                };
+                let matching: HashSet<String> = search_index
+                    .distinct("resource_id", bounded)
+                    .await
+                    .or_query_error("Failed to check :not")?
+                    .into_iter()
+                    .filter_map(|v| v.as_str().map(ToString::to_string))
+                    .collect();
+                candidates.retain(|id| !matching.contains(id));
+            }
+
+            // Compartment — checked per batch against surviving candidates.
+            if has_compartment {
+                if let Some(comp) = &query.compartment {
+                    if !candidates.is_empty() {
+                        let base = strip_reference_version(&comp.reference);
+                        let params: Vec<Bson> =
+                            comp.params.iter().cloned().map(Bson::String).collect();
+                        let comp_filter = doc! {
+                            "tenant_id": tenant_id,
+                            "resource_type": resource_type,
+                            "param_name": { "$in": Bson::Array(params) },
+                            "resource_id": { "$in": candidates.iter().cloned().collect::<Vec<_>>() },
+                            "$or": [
+                                { "value_reference": &base },
+                                { "value_reference": {
+                                    "$regex": format!("^{}/_history/", regex_escape(base))
+                                }},
+                            ],
+                        };
+                        let in_comp: HashSet<String> = search_index
+                            .distinct("resource_id", comp_filter)
+                            .await
+                            .or_query_error("Failed to check compartment membership")?
+                            .into_iter()
+                            .filter_map(|v| v.as_str().map(ToString::to_string))
+                            .collect();
+                        candidates.retain(|id| in_comp.contains(id));
+                    }
+                }
+            }
+
+            confirmed.extend(candidates);
+
+            if confirmed.len() > MAX_RESULT_ID_SET {
+                return Err(StorageError::Search(SearchError::TooManyResults {
+                    count: confirmed.len(),
+                    max: MAX_RESULT_ID_SET,
+                }));
+            }
+
+            if docs_read < CANDIDATE_BATCH_SIZE {
+                break;
+            }
+        }
+
+        Ok(Some(confirmed))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn matching_resource_ids_complement_only(
+        &self,
+        db: &mongodb::Database,
+        search_index: &mongodb::Collection<Document>,
+        tenant_id: &str,
+        resource_type: &str,
+        missing: &[&SearchParameter],
+        not_params: &[&SearchParameter],
+        query: &SearchQuery,
+    ) -> StorageResult<Option<HashSet<String>>> {
+        let has_compartment = query
+            .compartment
+            .as_ref()
+            .is_some_and(|c| !c.params.is_empty() && !c.reference.is_empty());
+        let mut matched: Option<HashSet<String>> = None;
+
+        for param in missing {
+            let wants_missing = param
+                .values
+                .first()
+                .map(|v| v.value == "true")
+                .unwrap_or(false);
+            let with_entry = self
+                .distinct_resource_ids(
+                    search_index,
+                    doc! {
+                        "tenant_id": tenant_id,
+                        "resource_type": resource_type,
+                        "param_name": &param.name,
+                    },
+                )
+                .await?;
+            let ids = if wants_missing {
+                let all = self.all_resource_ids(db, tenant_id, resource_type).await?;
+                all.difference(&with_entry).cloned().collect::<HashSet<_>>()
+            } else {
+                with_entry
+            };
             if ids.is_empty() {
                 return Ok(Some(HashSet::new()));
             }
-
             matched = Some(match matched {
-                Some(current) => current
-                    .intersection(&ids)
-                    .cloned()
-                    .collect::<HashSet<String>>(),
+                Some(current) => current.intersection(&ids).cloned().collect(),
                 None => ids,
             });
-
-            if matched.as_ref().is_some_and(|set| set.is_empty()) {
+            if matched.as_ref().is_some_and(|s| s.is_empty()) {
                 return Ok(matched);
             }
         }
 
-        // Compartment membership: a resource joins the compartment if it
-        // references the compartment via ANY of the membership params (OR),
-        // per the FHIR CompartmentDefinition. Computed as a single OR query
-        // over the search_index and intersected with the parameter matches.
-        if let Some(comp) = &query.compartment {
-            if let Some(ids) = self
-                .compartment_resource_ids(&search_index, tenant_id, resource_type, comp)
-                .await?
-            {
-                if ids.is_empty() {
-                    return Ok(Some(HashSet::new()));
+        for param in not_params {
+            let mut positive = (*param).clone();
+            positive.modifier = None;
+            let filter = self.build_search_index_filter(tenant_id, resource_type, &positive)?;
+            let matching = self.distinct_resource_ids(search_index, filter).await?;
+            let all = self.all_resource_ids(db, tenant_id, resource_type).await?;
+            let ids = all.difference(&matching).cloned().collect::<HashSet<_>>();
+            if ids.is_empty() {
+                return Ok(Some(HashSet::new()));
+            }
+            matched = Some(match matched {
+                Some(current) => current.intersection(&ids).cloned().collect(),
+                None => ids,
+            });
+            if matched.as_ref().is_some_and(|s| s.is_empty()) {
+                return Ok(matched);
+            }
+        }
+
+        if has_compartment {
+            if let Some(comp) = &query.compartment {
+                if let Some(ids) = self
+                    .compartment_resource_ids(search_index, tenant_id, resource_type, comp)
+                    .await?
+                {
+                    if ids.is_empty() {
+                        return Ok(Some(HashSet::new()));
+                    }
+                    matched = Some(match matched {
+                        Some(current) => current.intersection(&ids).cloned().collect(),
+                        None => ids,
+                    });
                 }
-                matched = Some(match matched {
-                    Some(current) => current
-                        .intersection(&ids)
-                        .cloned()
-                        .collect::<HashSet<String>>(),
-                    None => ids,
-                });
             }
         }
 
@@ -1594,7 +1837,11 @@ impl MongoBackend {
     /// Value form: `[prefix]number[|system|code]` (or the `number|code` shorthand).
     /// The comparison runs on `value_quantity_value`; an optional system/code
     /// further constrain `value_quantity_system` / `value_quantity_unit` (the
-    /// extractor stores the quantity code under the unit field).
+    /// extractor stores the quantity code under the unit field). Per the FHIR
+    /// number search spec (see `crate::search::range`), `eq`/`ne` match the
+    /// implicit-precision range derived from the number's textual form (`60`
+    /// ⇒ `[59.5, 60.5)`), while `gt`/`lt`/`ge`/`le`/`sa`/`eb` compare against
+    /// the exact value.
     fn build_quantity_filter(&self, value: &SearchValue) -> StorageResult<Document> {
         let parts: Vec<&str> = value.value.splitn(3, '|').collect();
         let parsed = parts[0].parse::<f64>().map_err(|e| {
@@ -1607,6 +1854,14 @@ impl MongoBackend {
             SearchPrefix::Ap => {
                 let delta = (parsed.abs() * 0.1).max(0.1);
                 doc! { "$gte": parsed - delta, "$lte": parsed + delta }
+            }
+            SearchPrefix::Eq => {
+                let (lo, hi) = crate::search::implicit_range(parsed, parts[0]);
+                doc! { "$gte": lo, "$lt": hi }
+            }
+            SearchPrefix::Ne => {
+                let (lo, hi) = crate::search::implicit_range(parsed, parts[0]);
+                doc! { "$not": { "$gte": lo, "$lt": hi } }
             }
             _ => {
                 let op = Self::prefix_to_mongo_operator(value.prefix)?;
@@ -1637,6 +1892,12 @@ impl MongoBackend {
         Ok(filter)
     }
 
+    /// Builds a MongoDB filter for a number parameter, comparing against
+    /// `value_number`. Per the FHIR number search spec (see
+    /// `crate::search::range`), `eq`/`ne` match the implicit-precision range
+    /// derived from the number's textual form (`60` ⇒ `[59.5, 60.5)`, `60.0`
+    /// ⇒ `[59.95, 60.05)`), while `gt`/`lt`/`ge`/`le`/`sa`/`eb` compare
+    /// against the exact value.
     fn build_number_filter(&self, value: &SearchValue) -> StorageResult<Document> {
         let parsed = value.value.parse::<f64>().map_err(|e| {
             StorageError::Search(SearchError::QueryParseError {
@@ -1654,6 +1915,18 @@ impl MongoBackend {
                     }
                 })
             }
+            SearchPrefix::Eq => {
+                let (lo, hi) = crate::search::implicit_range(parsed, &value.value);
+                Ok(doc! {
+                    "value_number": { "$gte": lo, "$lt": hi }
+                })
+            }
+            SearchPrefix::Ne => {
+                let (lo, hi) = crate::search::implicit_range(parsed, &value.value);
+                Ok(doc! {
+                    "value_number": { "$not": { "$gte": lo, "$lt": hi } }
+                })
+            }
             _ => {
                 let op = Self::prefix_to_mongo_operator(value.prefix)?;
                 Ok(doc! {
@@ -1665,6 +1938,10 @@ impl MongoBackend {
         }
     }
 
+    /// Maps a comparator prefix to its MongoDB query operator. The number and
+    /// quantity filters only route `gt`/`lt`/`ge`/`le`/`sa`/`eb` through here:
+    /// `eq`/`ne` build the implicit-precision range and `ap` its delta range
+    /// directly in `build_number_filter` / `build_quantity_filter`.
     fn prefix_to_mongo_operator(prefix: SearchPrefix) -> StorageResult<&'static str> {
         match prefix {
             SearchPrefix::Eq => Ok("$eq"),
@@ -1692,6 +1969,12 @@ impl MongoBackend {
         }];
 
         if let Some(ids) = matched_ids {
+            if ids.len() > MAX_RESULT_ID_SET {
+                return Err(StorageError::Search(SearchError::TooManyResults {
+                    count: ids.len(),
+                    max: MAX_RESULT_ID_SET,
+                }));
+            }
             let id_values = ids.iter().cloned().map(Bson::String).collect::<Vec<_>>();
             conditions.push(doc! {
                 "id": { "$in": Bson::Array(id_values) }
@@ -2643,6 +2926,132 @@ mod value_list_tests {
                 "a single-value condition stays flat, not wrapped in $or"
             );
         }
+    }
+}
+
+/// #1011: `eq`/`ne` on number/quantity match the implicit-precision range
+/// derived from the value's textual form, per `crate::search::range`, while
+/// every other comparator prefix compares against the exact value.
+#[cfg(test)]
+mod number_quantity_precision_tests {
+    use super::*;
+    use crate::backends::mongodb::MongoBackendConfig;
+
+    fn backend() -> MongoBackend {
+        MongoBackend::new(MongoBackendConfig::default()).unwrap()
+    }
+
+    fn number_bounds(raw: &str) -> Document {
+        let backend = backend();
+        let param = SearchParameter {
+            name: "value-number".to_string(),
+            param_type: SearchParamType::Number,
+            modifier: None,
+            values: vec![SearchValue::parse(raw)],
+            chain: vec![],
+            components: vec![],
+        };
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &param)
+            .expect("valid filter");
+        filter
+            .get_document("value_number")
+            .expect("value_number condition")
+            .clone()
+    }
+
+    #[test]
+    fn number_eq_uses_text_precision_range() {
+        let bounds = number_bounds("60");
+        assert!((bounds.get_f64("$gte").unwrap() - 59.5).abs() < 1e-9);
+        assert!((bounds.get_f64("$lt").unwrap() - 60.5).abs() < 1e-9);
+
+        // A trailing zero narrows the implicit precision: "60.0" carries one
+        // more significant figure than "60", so the range is ten times
+        // tighter around the same center.
+        let bounds = number_bounds("60.0");
+        assert!((bounds.get_f64("$gte").unwrap() - 59.95).abs() < 1e-9);
+        assert!((bounds.get_f64("$lt").unwrap() - 60.05).abs() < 1e-9);
+    }
+
+    #[test]
+    fn number_ne_excludes_text_precision_range() {
+        let bounds = number_bounds("ne60");
+        let not_doc = bounds.get_document("$not").expect("$not condition");
+        assert!((not_doc.get_f64("$gte").unwrap() - 59.5).abs() < 1e-9);
+        assert!((not_doc.get_f64("$lt").unwrap() - 60.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn quantity_eq_uses_text_precision_range() {
+        let backend = backend();
+        let param = SearchParameter {
+            name: "value-quantity".to_string(),
+            param_type: SearchParamType::Quantity,
+            modifier: None,
+            values: vec![SearchValue::parse("60.0|http://unitsofmeasure.org|kg")],
+            chain: vec![],
+            components: vec![],
+        };
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &param)
+            .expect("valid filter");
+
+        let bounds = filter
+            .get_document("value_quantity_value")
+            .expect("value_quantity_value condition");
+        assert!((bounds.get_f64("$gte").unwrap() - 59.95).abs() < 1e-9);
+        assert!((bounds.get_f64("$lt").unwrap() - 60.05).abs() < 1e-9);
+        assert_eq!(filter.get_str("value_quantity_unit").unwrap(), "kg");
+    }
+
+    #[test]
+    fn number_comparators_stay_exact() {
+        let gt = number_bounds("gt60");
+        assert_eq!(gt.get_f64("$gt").unwrap(), 60.0);
+
+        let le = number_bounds("le60");
+        assert_eq!(le.get_f64("$lte").unwrap(), 60.0);
+    }
+
+    /// #1011 finding 1: MongoDB's `$not` also matches documents where the
+    /// field is missing, so an unscoped `ne` filter could over-match. But
+    /// `build_search_index_filter` always ANDs the value condition with
+    /// `tenant_id`/`resource_type`/`param_name` in the same top-level
+    /// document (:1560), and a given `param_name` is indexed with exactly
+    /// one `IndexValue` variant per parameter (`storage.rs`'s
+    /// `index_value_to_document`, e.g. `IndexValue::Number` always inserts
+    /// `value_number`). So every `search_index` document that matches this
+    /// filter's `tenant_id`/`resource_type`/`param_name` already carries
+    /// `value_number`, and no `search_index` document for a *different*
+    /// parameter or resource type can match — `$not` never reaches into
+    /// another parameter's rows or missing-field rows. No `$exists` guard is
+    /// needed; this pins the sibling keys are present alongside `$not`.
+    #[test]
+    fn ne_filter_stays_scoped_to_tenant_resource_and_param() {
+        let backend = backend();
+        let param = SearchParameter {
+            name: "value-number".to_string(),
+            param_type: SearchParamType::Number,
+            modifier: None,
+            values: vec![SearchValue::parse("ne60")],
+            chain: vec![],
+            components: vec![],
+        };
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &param)
+            .expect("valid filter");
+
+        assert_eq!(filter.get_str("tenant_id").unwrap(), "t1");
+        assert_eq!(filter.get_str("resource_type").unwrap(), "Observation");
+        assert_eq!(filter.get_str("param_name").unwrap(), "value-number");
+        assert!(
+            filter
+                .get_document("value_number")
+                .expect("value_number condition")
+                .contains_key("$not"),
+            "ne is a value_number-scoped $not, sitting alongside the tenant/resource/param keys: {filter:?}"
+        );
     }
 }
 

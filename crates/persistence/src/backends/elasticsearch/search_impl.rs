@@ -149,11 +149,28 @@ enum RetryableFailure {
     Transient { status: u16, body: String },
 }
 
+/// The result of searching an index that does not exist.
+///
+/// Indices are created lazily on the first write of a resource type, so a type
+/// that has never been stored has no index and Elasticsearch answers with
+/// `index_not_found_exception`. That is a factual answer about the data — the
+/// set is known to be empty — so the result carries `total = Some(0)`, exactly
+/// as `search_count` reports `0` for the same 404. Leaving `total` unset made
+/// the REST layer emit `"total": null` (invalid FHIR JSON) for a plain search
+/// and fail closed on `_summary=count` (#990).
+fn empty_index_result() -> SearchResult {
+    let page_info = PageInfo {
+        total: Some(0),
+        ..PageInfo::end()
+    };
+    SearchResult::new(Page::new(vec![], page_info)).with_total(0)
+}
+
 /// Sends an ES search and retries on transient errors with exponential backoff.
 ///
 /// Returns:
 /// - `Ok(Some(value))` — successful response, parsed JSON body
-/// - `Ok(None)` — index does not exist (caller returns empty results)
+/// - `Ok(None)` — index does not exist (caller returns [`empty_index_result`])
 /// - `Err(...)` — non-transient failure, or retries exhausted
 ///
 /// `Ok(None)` is returned ONLY for a genuine `index_not_found_exception`. An
@@ -269,13 +286,15 @@ impl SearchProvider for ElasticsearchBackend {
         let index = self.index_name(tenant_id, resource_type);
 
         // Build ES query
-        let builder = EsQueryBuilder::new(tenant_id, resource_type, index.clone());
+        let builder = EsQueryBuilder::new(tenant_id, resource_type, index.clone())
+            .with_max_result_window(self.config().max_result_window);
         let es_query = builder.build(query);
+        let over_fetched = es_query.over_fetched;
 
         // Execute search (with retry on transient shard-availability errors)
         let body = match send_search_with_retry(self, &index, es_query.body).await? {
             Some(v) => v,
-            None => return Ok(SearchResult::new(Page::new(vec![], PageInfo::end()))),
+            None => return Ok(empty_index_result()),
         };
 
         // Parse hits
@@ -338,8 +357,12 @@ impl SearchProvider for ElasticsearchBackend {
             .is_some_and(|c| c.direction() == CursorDirection::Previous);
 
         let page_info = if backward {
-            let has_previous = hits_with_sort.len() > count;
-            if has_previous {
+            let has_previous = if over_fetched {
+                hits_with_sort.len() > count
+            } else {
+                hits_with_sort.len() >= count
+            };
+            if hits_with_sort.len() > count {
                 hits_with_sort.truncate(count);
             }
             hits_with_sort.reverse();
@@ -372,7 +395,15 @@ impl SearchProvider for ElasticsearchBackend {
                 }
             }
         } else {
-            let has_next = hits_with_sort.len() >= count;
+            // Without the extra hit (window boundary) fall back to "page is full" — a possible phantom next beats losing a page.
+            let has_next = if over_fetched {
+                hits_with_sort.len() > count
+            } else {
+                hits_with_sort.len() >= count
+            };
+            if hits_with_sort.len() > count {
+                hits_with_sort.truncate(count);
+            }
             let has_previous = query.cursor.is_some() || query.offset.unwrap_or(0) > 0;
             let next_cursor = if has_next {
                 hits_with_sort
@@ -504,7 +535,7 @@ impl ElasticsearchBackend {
 
         let body = match send_search_with_retry(self, &index, es_query.body).await? {
             Some(v) => v,
-            None => return Ok(SearchResult::new(Page::new(vec![], PageInfo::end()))),
+            None => return Ok(empty_index_result()),
         };
         let hits = body
             .get("hits")
@@ -681,7 +712,7 @@ async fn execute_text_search(
 ) -> StorageResult<SearchResult> {
     let body = match send_search_with_retry(backend, index, body).await? {
         Some(v) => v,
-        None => return Ok(SearchResult::new(Page::new(vec![], PageInfo::end()))),
+        None => return Ok(empty_index_result()),
     };
 
     let hits = body

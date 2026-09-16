@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 30;
+pub const SCHEMA_VERSION: i32 = 31;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -26,10 +26,12 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// `resource_fts_map`) and Helios `#959`/`#953` (`idx_resources_live_type`,
 /// manifest `phase`/`files_*`) sit *before* Helios `#882`/`#961` (manifest
 /// publication, export `types_*`), Helios v28 (partial `idx_search_string_folded`),
-/// and [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at Helios
+/// Helios v29 (`idx_search_token_display` drop, `#945`), and
+/// [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at Helios
 /// v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps through
 /// types (26). Helios v28 maps through the partial folded index (27) and still
-/// runs `dead_at`.
+/// runs the token-display drop and `dead_at`. Helios v29 maps through the drop
+/// (28) and still runs `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -59,20 +61,25 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_submit_manifest_publication", migrate_publication),
     ("bulk_export_types_progress", migrate_export_types_progress),
     ("search_index_partial_folded", migrate_v27_to_v28),
+    ("search_index_drop_token_display", migrate_v28_to_v29),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
 const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
 
-/// The `search_index` value indexes: every index on the table except
-/// `idx_search_composite`, which the delete-by-resource path needs at all
-/// times. This is the canonical set — a test asserts a fresh schema carries
-/// exactly these — and the list the bulk index rebuild drops and recreates
-/// (see [`drop_search_value_indexes`] / [`ensure_search_value_indexes`]).
+/// The `search_index` value indexes. Excludes `idx_search_composite`, which the
+/// delete-by-resource path needs at all times, and `idx_search_token_display`,
+/// dropped in v29 for write volume (#945): `value_token_display` is populated on
+/// most Coding rows but its only reader is the uncommon token `:text` /
+/// `:code-text` modifier, which is a `COLLATE NOCASE` scan rather than an index
+/// seek — `:text-advanced` uses the FTS table instead. This is the canonical set
+/// — a test asserts a fresh schema carries exactly these — and the list the bulk
+/// index rebuild drops and recreates (see [`drop_search_value_indexes`] /
+/// [`ensure_search_value_indexes`]).
 ///
 /// Keep each entry's SQL byte-for-byte what the migration ladder creates,
 /// normalised to one line, so the self-heal on startup and the ladder agree.
-pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 13] = [
+pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 12] = [
     (
         "idx_search_string",
         "CREATE INDEX IF NOT EXISTS idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
@@ -100,10 +107,6 @@ pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 13] = [
     (
         "idx_search_uri",
         "CREATE INDEX IF NOT EXISTS idx_search_uri ON search_index(tenant_id, resource_type, param_name, value_uri) WHERE value_uri IS NOT NULL",
-    ),
-    (
-        "idx_search_token_display",
-        "CREATE INDEX IF NOT EXISTS idx_search_token_display ON search_index(tenant_id, resource_type, param_name, value_token_display) WHERE value_token_display IS NOT NULL",
     ),
     (
         "idx_search_identifier_type",
@@ -1588,6 +1591,19 @@ fn migrate_v27_to_v28(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Migrate from schema version 28 to version 29.
+///
+/// Drops `idx_search_token_display` (#945). The column stays and keeps feeding
+/// the FTS trigger; only the b-tree index goes. Token `:text` / `:code-text`
+/// (the index's only readers, and already `COLLATE NOCASE` scans rather than
+/// seeks) fall back to a partition scan over the parameter's rows, while every
+/// bulk-ingested Coding-with-display row stops paying an index insertion.
+fn migrate_v28_to_v29(conn: &Connection) -> StorageResult<()> {
+    conn.execute("DROP INDEX IF EXISTS idx_search_token_display", [])
+        .map_err(|e| migration_err(format!("v29 drop token_display index: {e}")))?;
+    Ok(())
+}
+
 /// Migrate from schema version 10 to version 11.
 ///
 /// Adds columns supporting `_contained` search: index rows extracted from a
@@ -2929,10 +2945,11 @@ mod tests {
         assert!(applied.contains("search_index_partial_late_indexes"));
         assert!(applied.contains("resource_fts_map"));
         assert!(applied.contains("search_index_partial_folded"));
+        assert!(applied.contains("search_index_drop_token_display"));
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v30 must add subscription_outbox.dead_at"
+            "v31 must add subscription_outbox.dead_at"
         );
         assert_eq!(
             table_exists("resource_fts_map"),

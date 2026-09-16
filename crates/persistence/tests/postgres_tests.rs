@@ -570,10 +570,9 @@ mod query_builder_tests {
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_number"));
         assert!(fragment.sql.contains(">= $"));
-        // ge matches from the low boundary of the implicit range: "0.5" has
-        // precision 0.1, so the bound is 0.5 - 0.05 = 0.45.
+        // ge ignores implicit precision and matches the exact search value.
         match &fragment.params[0] {
-            SqlParam::Float(f) => assert!((f - 0.45).abs() < 1e-9),
+            SqlParam::Float(f) => assert!((f - 0.5).abs() < 1e-9),
             _ => panic!("Expected Float param"),
         }
     }
@@ -4181,6 +4180,249 @@ mod postgres_integration {
     }
 
     #[tokio::test]
+    async fn postgres_integration_quantity_comparators_ignore_search_precision() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchParamType, SearchParameter, SearchPrefix, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Issue #1011: `value-quantity=gt60` must exclude 60.2 kg exactly at
+        // the boundary while still matching every value strictly above 60,
+        // regardless of how the search value's own precision is written.
+        let weights = [
+            ("obs-weight-55-4", 55.4),
+            ("obs-weight-58-5", 58.5),
+            ("obs-weight-60-2", 60.2),
+            ("obs-weight-64-5", 64.5),
+        ];
+        for (id, value) in weights {
+            backend
+                .create(
+                    &tenant,
+                    "Observation",
+                    json!({
+                        "resourceType": "Observation",
+                        "id": id,
+                        "status": "final",
+                        "code": { "coding": [{ "system": "http://loinc.org", "code": "29463-7" }] },
+                        "valueQuantity": {
+                            "value": value,
+                            "unit": "kg",
+                            "system": "http://unitsofmeasure.org",
+                            "code": "kg"
+                        }
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+
+        async fn search_ids(
+            backend: &PostgresBackend,
+            tenant: &TenantContext,
+            prefix: SearchPrefix,
+            value: &str,
+        ) -> Vec<String> {
+            let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "value-quantity".to_string(),
+                param_type: SearchParamType::Quantity,
+                modifier: None,
+                values: vec![SearchValue::new(prefix, value)],
+                chain: vec![],
+                components: vec![],
+            });
+            let result = backend.search(tenant, &query).await.unwrap();
+            let mut ids: Vec<String> = result
+                .resources
+                .items
+                .iter()
+                .map(|r| r.id().to_string())
+                .collect();
+            ids.sort();
+            ids
+        }
+
+        let gt60 = search_ids(&backend, &tenant, SearchPrefix::Gt, "60").await;
+        assert_eq!(gt60, vec!["obs-weight-60-2", "obs-weight-64-5"], "gt60");
+
+        let gt60_0 = search_ids(&backend, &tenant, SearchPrefix::Gt, "60.0").await;
+        assert_eq!(
+            gt60_0,
+            vec!["obs-weight-60-2", "obs-weight-64-5"],
+            "gt60.0 must match gt60 exactly: implicit precision is ignored"
+        );
+
+        let le60_2 = search_ids(&backend, &tenant, SearchPrefix::Le, "60.2").await;
+        assert_eq!(
+            le60_2,
+            vec!["obs-weight-55-4", "obs-weight-58-5", "obs-weight-60-2"],
+            "le60.2"
+        );
+
+        let lt58_5 = search_ids(&backend, &tenant, SearchPrefix::Lt, "58.5").await;
+        assert_eq!(lt58_5, vec!["obs-weight-55-4"], "lt58.5");
+
+        let eq60 = search_ids(&backend, &tenant, SearchPrefix::Eq, "60").await;
+        assert_eq!(
+            eq60,
+            vec!["obs-weight-60-2"],
+            "eq60 ranges over [59.5, 60.5), which contains 60.2"
+        );
+
+        let eq60_0 = search_ids(&backend, &tenant, SearchPrefix::Eq, "60.0").await;
+        assert!(
+            eq60_0.is_empty(),
+            "eq60.0 ranges over [59.95, 60.05), which excludes 60.2: got {eq60_0:?}"
+        );
+
+        let gt60_kg = search_ids(
+            &backend,
+            &tenant,
+            SearchPrefix::Gt,
+            "60|http://unitsofmeasure.org|kg",
+        )
+        .await;
+        assert_eq!(
+            gt60_kg,
+            vec!["obs-weight-60-2", "obs-weight-64-5"],
+            "gt60|...|kg (raw branch)"
+        );
+
+        // Cross-unit boundary: 60.2 kg canonicalizes to exactly 60200 g, so
+        // `ge60200|...|g` must match it (and everything above) through the
+        // canonical branch.
+        let ge60200_g = search_ids(
+            &backend,
+            &tenant,
+            SearchPrefix::Ge,
+            "60200|http://unitsofmeasure.org|g",
+        )
+        .await;
+        assert_eq!(
+            ge60200_g,
+            vec!["obs-weight-60-2", "obs-weight-64-5"],
+            "ge60200|...|g (canonical branch, cross-unit exact boundary)"
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_quantity_ne_uses_canonical_values() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchParamType, SearchParameter, SearchPrefix, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("test-tenant");
+
+        // Issue #1011 (gate follow-up): `ne60|...|kg` must exclude resources
+        // whose value equals 60 kg *by unit conversion*, not only resources
+        // stored literally as kg. Mixed kg/g dataset around the 60 kg / 60000 g
+        // boundary.
+        let weights = [
+            ("obs-ne-55-4-kg", 55.4, "kg"),
+            ("obs-ne-60-2-kg", 60.2, "kg"),
+            ("obs-ne-55000-g", 55000.0, "g"),
+            ("obs-ne-60000-g", 60000.0, "g"),
+            ("obs-ne-64500-g", 64500.0, "g"),
+        ];
+        for (id, value, unit) in weights {
+            backend
+                .create(
+                    &tenant,
+                    "Observation",
+                    json!({
+                        "resourceType": "Observation",
+                        "id": id,
+                        "status": "final",
+                        "code": { "coding": [{ "system": "http://loinc.org", "code": "29463-7" }] },
+                        "valueQuantity": {
+                            "value": value,
+                            "unit": unit,
+                            "system": "http://unitsofmeasure.org",
+                            "code": unit
+                        }
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+
+        async fn search_ids(
+            backend: &PostgresBackend,
+            tenant: &TenantContext,
+            prefix: SearchPrefix,
+            value: &str,
+        ) -> Vec<String> {
+            let query = SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "value-quantity".to_string(),
+                param_type: SearchParamType::Quantity,
+                modifier: None,
+                values: vec![SearchValue::new(prefix, value)],
+                chain: vec![],
+                components: vec![],
+            });
+            let result = backend.search(tenant, &query).await.unwrap();
+            let mut ids: Vec<String> = result
+                .resources
+                .items
+                .iter()
+                .map(|r| r.id().to_string())
+                .collect();
+            ids.sort();
+            ids
+        }
+
+        let ne60_kg = search_ids(
+            &backend,
+            &tenant,
+            SearchPrefix::Ne,
+            "60|http://unitsofmeasure.org|kg",
+        )
+        .await;
+        assert_eq!(
+            ne60_kg,
+            vec!["obs-ne-55-4-kg", "obs-ne-55000-g", "obs-ne-64500-g"],
+            "ne60|...|kg must exclude 60.2 kg and its canonical equivalent 60000 g"
+        );
+
+        let ne60000_g = search_ids(
+            &backend,
+            &tenant,
+            SearchPrefix::Ne,
+            "60000|http://unitsofmeasure.org|g",
+        )
+        .await;
+        assert_eq!(
+            ne60000_g,
+            vec![
+                "obs-ne-55-4-kg",
+                "obs-ne-55000-g",
+                "obs-ne-60-2-kg",
+                "obs-ne-64500-g"
+            ],
+            "ne60000|...|g must exclude 60000 g and its canonical equivalent 60.2 kg"
+        );
+
+        let ne60_raw = search_ids(&backend, &tenant, SearchPrefix::Ne, "60").await;
+        assert_eq!(
+            ne60_raw,
+            vec![
+                "obs-ne-55-4-kg",
+                "obs-ne-55000-g",
+                "obs-ne-60000-g",
+                "obs-ne-64500-g"
+            ],
+            "ne60 without a unit only excludes the raw value 60.2, regardless of unit"
+        );
+    }
+
+    #[tokio::test]
     async fn postgres_integration_search_by_token() {
         use helios_persistence::core::SearchProvider;
         use helios_persistence::types::{
@@ -4315,6 +4557,273 @@ mod postgres_integration {
             vec!["p-alice", "p-bob", "p-charlie"],
             "cursor paging with custom sort must preserve global order"
         );
+    }
+
+    /// Creates Patients `cp-1..cp-n` (inclusive) in the given tenant.
+    async fn create_cursor_paging_patients(
+        backend: &PostgresBackend,
+        tenant: &TenantContext,
+        n: usize,
+    ) {
+        for i in 1..=n {
+            backend
+                .create(
+                    tenant,
+                    "Patient",
+                    json!({
+                        "resourceType": "Patient",
+                        "id": format!("cp-{i}"),
+                        "name": [{"family": "CursorPaging"}]
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+    }
+
+    /// Collects the resource ids of a search result's page, in page order.
+    fn page_ids(result: &helios_persistence::core::SearchResult) -> Vec<String> {
+        result
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect()
+    }
+
+    /// Walks forward through 7 Patients 3 at a time (no explicit `_sort`),
+    /// then walks all the way back via `previous_cursor` and confirms every
+    /// page is reproduced exactly, including the page-3-to-page-2 hop that a
+    /// naive truncate-after-reverse implementation gets wrong (#1079).
+    #[tokio::test]
+    async fn postgres_integration_cursor_paging_round_trip_previous() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::SearchQuery;
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("cursor-prev");
+        create_cursor_paging_patients(&backend, &tenant, 7).await;
+
+        let query = SearchQuery::new("Patient").with_count(3);
+
+        let page1 = backend.search(&tenant, &query).await.unwrap();
+        assert_eq!(page1.resources.items.len(), 3);
+        assert!(!page1.resources.page_info.has_previous);
+        assert!(page1.resources.page_info.previous_cursor.is_none());
+        assert!(page1.resources.page_info.has_next);
+        assert!(page1.resources.page_info.next_cursor.is_some());
+
+        let page2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page1.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page2.resources.items.len(), 3);
+        assert!(page2.resources.page_info.has_previous);
+        assert!(page2.resources.page_info.has_next);
+
+        let page3 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page2.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page3.resources.items.len(), 1);
+        assert!(!page3.resources.page_info.has_next);
+        assert!(page3.resources.page_info.next_cursor.is_none());
+        assert!(page3.resources.page_info.previous_cursor.is_some());
+
+        let page1_ids = page_ids(&page1);
+        let page2_ids = page_ids(&page2);
+        let page3_ids = page_ids(&page3);
+        let mut all_ids = page1_ids.clone();
+        all_ids.extend(page2_ids.clone());
+        all_ids.extend(page3_ids.clone());
+        let mut unique_ids = all_ids.clone();
+        unique_ids.sort();
+        unique_ids.dedup();
+        assert_eq!(unique_ids.len(), 7, "all 7 ids must be distinct");
+
+        // Walk back: page 3 -> page 2 must be exact, including order. This is
+        // the case a naive truncate-after-reverse gets wrong: it drops the
+        // nearest hit instead of the farthest one.
+        let back2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page3.resources.page_info.previous_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&back2), page2_ids);
+        assert!(back2.resources.page_info.has_previous);
+        assert!(back2.resources.page_info.has_next);
+        assert!(back2.resources.page_info.next_cursor.is_some());
+
+        let back1 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(back2.resources.page_info.previous_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&back1), page1_ids);
+        assert!(!back1.resources.page_info.has_previous);
+        assert!(back1.resources.page_info.previous_cursor.is_none());
+        assert!(back1.resources.page_info.has_next);
+
+        let again2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(back1.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&again2), page2_ids);
+    }
+
+    /// Same round trip, but with an explicit `_sort=_id` ascending so the
+    /// exact page contents (not just their distinctness) can be asserted.
+    #[tokio::test]
+    async fn postgres_integration_cursor_paging_round_trip_previous_with_sort() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchQuery, SortDirective};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("cursor-prev-sort");
+        create_cursor_paging_patients(&backend, &tenant, 7).await;
+
+        let query = SearchQuery::new("Patient")
+            .with_count(3)
+            .with_sort(SortDirective::parse("_id"));
+
+        let page1 = backend.search(&tenant, &query).await.unwrap();
+        assert_eq!(page_ids(&page1), vec!["cp-1", "cp-2", "cp-3"]);
+        assert!(!page1.resources.page_info.has_previous);
+        assert!(page1.resources.page_info.previous_cursor.is_none());
+        assert!(page1.resources.page_info.has_next);
+
+        let page2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page1.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&page2), vec!["cp-4", "cp-5", "cp-6"]);
+        assert!(page2.resources.page_info.has_previous);
+        assert!(page2.resources.page_info.has_next);
+
+        let page3 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page2.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&page3), vec!["cp-7"]);
+        assert!(!page3.resources.page_info.has_next);
+        assert!(page3.resources.page_info.next_cursor.is_none());
+        assert!(page3.resources.page_info.previous_cursor.is_some());
+
+        let back2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page3.resources.page_info.previous_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&back2), vec!["cp-4", "cp-5", "cp-6"]);
+        assert!(back2.resources.page_info.has_previous);
+        assert!(back2.resources.page_info.has_next);
+        assert!(back2.resources.page_info.next_cursor.is_some());
+
+        let back1 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(back2.resources.page_info.previous_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&back1), vec!["cp-1", "cp-2", "cp-3"]);
+        assert!(!back1.resources.page_info.has_previous);
+        assert!(back1.resources.page_info.previous_cursor.is_none());
+        assert!(back1.resources.page_info.has_next);
+
+        let again2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(back1.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&again2), vec!["cp-4", "cp-5", "cp-6"]);
+    }
+
+    /// Backward from page 2 of a 4-item, count-3 listing has no extra row
+    /// beyond page 1, so `has_previous` must be false and no
+    /// `previous_cursor` is produced.
+    #[tokio::test]
+    async fn postgres_integration_cursor_paging_backward_from_page_two_has_no_previous() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchQuery, SortDirective};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("cursor-prev-short");
+        create_cursor_paging_patients(&backend, &tenant, 4).await;
+
+        let query = SearchQuery::new("Patient")
+            .with_count(3)
+            .with_sort(SortDirective::parse("_id"));
+
+        let page1 = backend.search(&tenant, &query).await.unwrap();
+        let page2 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page1.resources.page_info.next_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&page2), vec!["cp-4"]);
+
+        let back1 = backend
+            .search(
+                &tenant,
+                &query
+                    .clone()
+                    .with_cursor(page2.resources.page_info.previous_cursor.clone().unwrap()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(page_ids(&back1), vec!["cp-1", "cp-2", "cp-3"]);
+        assert!(!back1.resources.page_info.has_previous);
+        assert!(back1.resources.page_info.has_next);
+        assert!(back1.resources.page_info.next_cursor.is_some());
     }
 
     #[tokio::test]
