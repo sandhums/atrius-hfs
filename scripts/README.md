@@ -7,6 +7,10 @@ Hospital foundation, ADT journeys, and FHIR Subscription seeds/smokes live in
 **atrius-his** (`../atrius-his/scripts` — see that repo’s `scripts/README.md`).
 Do not duplicate patient/encounter/subscription demo seeding here.
 
+Synthea (`import-synthea-atrius.py`) is the **HFS/CDS scale corpus only**. Never
+load those Patients onto a HIS bed board. See
+`AtriusIGDraft/docs/platform/network-testing.md`.
+
 ## Start the stack (separate terminals)
 
 ```bash

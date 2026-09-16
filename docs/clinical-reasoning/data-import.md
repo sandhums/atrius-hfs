@@ -81,6 +81,7 @@ Script: [`scripts/import-synthea-atrius.py`](../../scripts/import-synthea-atrius
 - Adds Atrius `meta.profile` to Synthea resources before POST
 - Default base URL: `http://127.0.0.1:8082`
 - Requires clinical HFS with `HFS_FHIR_PACKAGES` + `HFS_VALIDATION_MODE=enforce`
+- **Scale corpus only.** Do not admit Synthea Patients through HIS or expect them on the bed board. Hospital journeys mint patients via HIS (`persona-factory.py` / `journey-ipd-stay.sh`).
 
 ```bash
 ./scripts/import-synthea-atrius.py --base-url http://127.0.0.1:8082 ./synthea/output/fhir/
