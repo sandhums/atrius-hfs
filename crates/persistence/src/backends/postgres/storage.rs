@@ -3705,6 +3705,7 @@ impl ReindexSource for PostgresBackend {
         Ok(ResourcePage {
             resources,
             next_cursor,
+            skipped: Vec::new(),
         })
     }
 }

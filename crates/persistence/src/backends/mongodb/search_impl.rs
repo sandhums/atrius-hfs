@@ -1,6 +1,6 @@
 //! Search and conditional-operation implementation for MongoDB backend.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Utc};
@@ -244,6 +244,22 @@ fn extract_contained_resource(content: &Value, local_id: &str) -> Option<Value> 
         .cloned()
 }
 
+/// One contained match: the container and, for `_containedType=contained`,
+/// the local id of the contained entity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct ContainedKey {
+    rtype: String,
+    rid: String,
+    lid: Option<String>,
+}
+
+/// A server-side page of contained matches.
+struct ContainedPage {
+    keys: Vec<ContainedKey>,
+    /// Only when `_total` was requested.
+    total: Option<u64>,
+}
+
 /// Builds a `StoredResource` for a contained resource, inheriting the
 /// container's version/tenant/timestamps. Used for `_containedType=contained`.
 fn build_contained_stored(
@@ -273,6 +289,55 @@ fn parse_simple_search_params(params: &str) -> Vec<(String, String)> {
             Some((name.to_string(), value.to_string()))
         })
         .collect()
+}
+
+/// The `search_index` field a parameter type's value lives in. `None` for
+/// `Composite`/`Special`, which have no single value field of their own
+/// (composite rows carry each sub-parameter's own field; special params like
+/// `_id`/`_lastUpdated` are not stored in `search_index` at all).
+pub(super) fn value_field_for(param_type: SearchParamType) -> Option<&'static str> {
+    match param_type {
+        SearchParamType::String => Some("value_string"),
+        SearchParamType::Token => Some("value_token_code"),
+        SearchParamType::Date => Some("value_date"),
+        SearchParamType::Number => Some("value_number"),
+        SearchParamType::Quantity => Some("value_quantity_value"),
+        SearchParamType::Reference => Some("value_reference"),
+        SearchParamType::Uri => Some("value_uri"),
+        SearchParamType::Composite | SearchParamType::Special => None,
+    }
+}
+
+/// The envelope filter for a `:missing` presence check
+/// (`{tenant_id, resource_type, param_name}`, matching every row `search_index`
+/// carries for the parameter regardless of value), plus — when the parameter
+/// type has a value field — a `{value_field: {"$ne": null}}` conjunct.
+///
+/// The extra conjunct is not redundant with the envelope: every generation-2
+/// value index (`idx_search_*_v2`) is a *partial* index built with
+/// `partialFilterExpression: {value_field: {"$exists": true}}`, so MongoDB
+/// only considers it for a query it can prove is a subset of that filter.
+/// The bare envelope has no predicate on any value field at all, so no
+/// partial index qualifies and the planner falls back to a full scan of the
+/// `(tenant_id, resource_type)` slice on `idx_search_composite` — every
+/// parameter, every row of the type. Adding the value-field conjunct lets
+/// the planner pick that parameter's own partial index and, since
+/// `distinct_resource_ids` reads only `resource_id` (the index's trailing
+/// key), serves the scan fully covered. Measured on MongoDB 7.0.40.
+pub(super) fn missing_presence_filter(
+    tenant_id: &str,
+    resource_type: &str,
+    param: &SearchParameter,
+) -> Document {
+    let mut filter = doc! {
+        "tenant_id": tenant_id,
+        "resource_type": resource_type,
+        "param_name": &param.name,
+    };
+    if let Some(value_field) = value_field_for(param.param_type) {
+        filter.insert(value_field, doc! { "$ne": Bson::Null });
+    }
+    filter
 }
 
 #[async_trait]
@@ -613,79 +678,130 @@ impl MongoBackend {
     /// Executes a `_contained=true|both` search (see the SQLite backend's
     /// `search_contained` for shared semantics). Returns containers (default) or
     /// contained resources (`_containedType=contained`); `both` merges top-level
-    /// matches first. Single window (no keyset cursor).
+    /// matches first. Paged on the server over `idx_search_contained` (#1059).
     async fn search_contained(
         &self,
         tenant: &TenantContext,
         query: &SearchQuery,
     ) -> StorageResult<SearchResult> {
-        use crate::types::{ContainedMode, ContainedReturn};
+        use crate::types::{ContainedMode, ContainedReturn, TotalMode};
 
         let db = self.get_database().await?;
         let tenant_id = tenant.tenant_id().as_str();
         let contained_type = query.resource_type.as_str();
-
-        let matches = self
-            .matching_contained(&db, tenant_id, contained_type, query)
-            .await?;
-
-        let mut items: Vec<StoredResource> = Vec::new();
-        let mut seen: HashSet<String> = HashSet::new();
-        match query.contained_return {
-            ContainedReturn::Container => {
-                for (ctype, cid, _) in &matches {
-                    if !seen.insert(format!("{ctype}/{cid}")) {
-                        continue;
-                    }
-                    if let Some(container) = self.read(tenant, ctype, cid).await? {
-                        items.push(container);
-                    }
-                }
-            }
-            ContainedReturn::Contained => {
-                for (ctype, cid, local) in &matches {
-                    let Some(local_id) = local else { continue };
-                    if !seen.insert(format!("{ctype}/{cid}#{local_id}")) {
-                        continue;
-                    }
-                    if let Some(container) = self.read(tenant, ctype, cid).await? {
-                        if let Some(c) = extract_contained_resource(container.content(), local_id) {
-                            items.push(build_contained_stored(
-                                &container,
-                                contained_type,
-                                local_id,
-                                c,
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-
-        if query.contained == ContainedMode::Both {
-            let mut top_query = query.clone();
-            top_query.contained = ContainedMode::Off;
-            top_query.contained_return = ContainedReturn::Container;
-            let top = self.search(tenant, &top_query).await?;
-            let mut merged = top.resources.items;
-            let top_urls: HashSet<String> = merged.iter().map(|r| r.url()).collect();
-            for item in items {
-                if !top_urls.contains(&item.url()) {
-                    merged.push(item);
-                }
-            }
-            items = merged;
-        }
-
-        let count = query.count.unwrap_or(100) as usize;
+        let count = query.count.unwrap_or(100).max(1) as usize;
         let offset = query.offset.unwrap_or(0) as usize;
-        let total = if query.total.is_some() {
-            Some(items.len() as u64)
-        } else {
-            None
+        let want_total = query.wants_total();
+
+        let (mut items, total) = match query.contained {
+            ContainedMode::Both => {
+                // Top-level matches come first, contained matches second. The
+                // standard search is asked for its total so the boundary is
+                // known, and each source is paged on the server. Dedupe below
+                // is against the current top-level *page* only, as before
+                // this change, so a container that was a top-level match on
+                // an earlier page can still appear in a later contained page.
+                let mut top_query = query.clone();
+                top_query.contained = ContainedMode::Off;
+                top_query.contained_return = ContainedReturn::Container;
+                top_query.total = Some(TotalMode::Accurate);
+                let top = self.search(tenant, &top_query).await?;
+                let top_total = top.total.ok_or_else(|| {
+                    internal_error(
+                        "standard search returned no total for _contained=both".to_string(),
+                    )
+                })? as usize;
+                let mut items = top.resources.items;
+                let top_urls: HashSet<String> = items.iter().map(|r| r.url()).collect();
+
+                let (c_offset, c_limit) = if offset < top_total {
+                    (0, count.saturating_sub(items.len()))
+                } else {
+                    (offset - top_total, count)
+                };
+                let mut contained_total = None;
+                if c_limit > 0 {
+                    let page = self
+                        .matching_contained(
+                            &db,
+                            tenant_id,
+                            contained_type,
+                            query.contained_return,
+                            query,
+                            c_offset,
+                            c_limit,
+                            want_total,
+                        )
+                        .await?;
+                    contained_total = page.total;
+                    let mut contained = self
+                        .materialize_contained(
+                            &db,
+                            tenant,
+                            contained_type,
+                            query.contained_return,
+                            &page.keys,
+                        )
+                        .await?;
+                    // Containers already on the top-level page are dropped
+                    // here rather than refilled: they are still within
+                    // [c_offset, c_offset + c_limit), so an offset-based
+                    // refill would just re-fetch the same keys on a later
+                    // page. The page may come back short by that many items.
+                    contained.retain(|r| !top_urls.contains(&r.url()));
+                    items.extend(contained);
+                } else if want_total {
+                    // No room left on this page for contained items, but the
+                    // caller still wants a total: fetch the count only.
+                    let page = self
+                        .matching_contained(
+                            &db,
+                            tenant_id,
+                            contained_type,
+                            query.contained_return,
+                            query,
+                            c_offset,
+                            1,
+                            true,
+                        )
+                        .await?;
+                    contained_total = page.total;
+                }
+                let total = if want_total {
+                    Some(top_total as u64 + contained_total.unwrap_or(0))
+                } else {
+                    None
+                };
+                (items, total)
+            }
+            _ => {
+                let page = self
+                    .matching_contained(
+                        &db,
+                        tenant_id,
+                        contained_type,
+                        query.contained_return,
+                        query,
+                        offset,
+                        count,
+                        want_total,
+                    )
+                    .await?;
+                let items = self
+                    .materialize_contained(
+                        &db,
+                        tenant,
+                        contained_type,
+                        query.contained_return,
+                        &page.keys,
+                    )
+                    .await?;
+                (items, page.total)
+            }
         };
-        let windowed: Vec<StoredResource> = items.into_iter().skip(offset).take(count).collect();
-        let page = Page::new(windowed, PageInfo::end());
+
+        items.truncate(count);
+        let page = Page::new(items, PageInfo::end());
         let mut result = SearchResult::new(page);
         if let Some(t) = total {
             result = result.with_total(t);
@@ -693,18 +809,36 @@ impl MongoBackend {
         Ok(result)
     }
 
-    /// Resolves `_contained` matches via an aggregation over `search_index`,
-    /// grouping contained rows by the contained entity
-    /// `(resource_type, resource_id, contained_local_id)` and requiring every
-    /// searched parameter to be present on that entity. Returns
-    /// `(container_type, container_id, contained_local_id)` tuples.
+    /// Resolves one server-side page of `_contained` matches over
+    /// `idx_search_contained` (#1059): `$match` in the index's key order,
+    /// then a two-stage grouping (#1059 review N1). The first `$group` is
+    /// always per contained *entity* — `{ rtype, rid, lid }` — because a
+    /// multi-parameter AND (the `names: $all` `$match` that follows it) must
+    /// hold within one contained entity, not across every entity a container
+    /// happens to hold: grouping straight to the container would let one
+    /// contained Patient matching `name=Smith` and a different contained
+    /// Patient matching `gender=male` in the same container satisfy
+    /// `name=Smith&gender=male` together, which is wrong. Only for the
+    /// default `_containedType=container` is there a second `$group`, which
+    /// collapses the surviving per-entity slots down to one slot per
+    /// container (dropping `lid`) so a container is one page slot, `_total`
+    /// counts containers, and a page cannot straddle a container with
+    /// multiple internal matches. Then `$sort` for a stable page order, then
+    /// `$skip`/`$limit`, with a `$facet` count alongside when `_total` is
+    /// requested.
+    #[allow(clippy::too_many_arguments)]
     async fn matching_contained(
         &self,
         db: &mongodb::Database,
         tenant_id: &str,
         contained_type: &str,
+        contained_return: crate::types::ContainedReturn,
         query: &SearchQuery,
-    ) -> StorageResult<Vec<(String, String, Option<String>)>> {
+        offset: usize,
+        limit: usize,
+        want_total: bool,
+    ) -> StorageResult<ContainedPage> {
+        use crate::types::ContainedReturn;
         let search_index = db.collection::<Document>(MongoBackend::SEARCH_INDEX_COLLECTION);
 
         let mut branches: Vec<Bson> = Vec::new();
@@ -729,16 +863,21 @@ impl MongoBackend {
             }
         }
         if branches.is_empty() {
-            return Ok(Vec::new());
+            return Ok(ContainedPage {
+                keys: Vec::new(),
+                total: want_total.then_some(0),
+            });
         }
 
         let mut pipeline = vec![
             doc! { "$match": {
                 "tenant_id": tenant_id,
-                "is_contained": true,
                 "contained_type": contained_type,
+                "is_contained": true,
                 "$or": branches,
             }},
+            // Always per entity: the AND below must hold within one
+            // contained resource, not across every entity a container holds.
             doc! { "$group": {
                 "_id": {
                     "rtype": "$resource_type",
@@ -751,6 +890,28 @@ impl MongoBackend {
         if distinct_names.len() > 1 {
             pipeline.push(doc! { "$match": { "names": { "$all": distinct_names } } });
         }
+        let sort = match contained_return {
+            ContainedReturn::Container => {
+                // Collapse the surviving per-entity slots to one per
+                // container now that the per-entity AND has been applied.
+                pipeline.push(doc! { "$group": {
+                    "_id": { "rtype": "$_id.rtype", "rid": "$_id.rid" },
+                }});
+                doc! { "_id.rtype": 1, "_id.rid": 1 }
+            }
+            ContainedReturn::Contained => doc! { "_id.rtype": 1, "_id.rid": 1, "_id.lid": 1 },
+        };
+        pipeline.push(doc! { "$sort": sort });
+        let page_stages = vec![
+            doc! { "$skip": offset as i64 },
+            doc! { "$limit": limit as i64 },
+        ];
+        if want_total {
+            pipeline
+                .push(doc! { "$facet": { "page": page_stages, "total": [ { "$count": "n" } ] } });
+        } else {
+            pipeline.extend(page_stages);
+        }
 
         let cursor = search_index
             .aggregate(pipeline)
@@ -758,18 +919,123 @@ impl MongoBackend {
             .or_query_error("Failed to aggregate contained search")?;
         let docs = collect_documents(cursor).await?;
 
-        let mut out = Vec::new();
-        for doc in docs {
-            if let Ok(id) = doc.get_document("_id") {
-                let rtype = id.get_str("rtype").unwrap_or_default().to_string();
-                let rid = id.get_str("rid").unwrap_or_default().to_string();
-                let lid = id.get_str("lid").ok().map(ToString::to_string);
-                if !rtype.is_empty() && !rid.is_empty() {
-                    out.push((rtype, rid, lid));
+        let (page_docs, total): (Vec<Document>, Option<u64>) = if want_total {
+            let facet = docs.into_iter().next().unwrap_or_default();
+            let page = facet
+                .get_array("page")
+                .map(|a| a.iter().filter_map(|b| b.as_document().cloned()).collect())
+                .unwrap_or_default();
+            let n = facet
+                .get_array("total")
+                .ok()
+                .and_then(|a| a.first())
+                .and_then(|b| b.as_document())
+                .and_then(|d| {
+                    d.get_i64("n")
+                        .ok()
+                        .or_else(|| d.get_i32("n").ok().map(i64::from))
+                })
+                .unwrap_or(0);
+            (page, Some(n.max(0) as u64))
+        } else {
+            (docs, None)
+        };
+
+        let mut keys = Vec::with_capacity(page_docs.len());
+        for doc in page_docs {
+            let Ok(id) = doc.get_document("_id") else {
+                continue;
+            };
+            let rtype = id.get_str("rtype").unwrap_or_default().to_string();
+            let rid = id.get_str("rid").unwrap_or_default().to_string();
+            if rtype.is_empty() || rid.is_empty() {
+                continue;
+            }
+            let lid = id.get_str("lid").ok().map(ToString::to_string);
+            keys.push(ContainedKey { rtype, rid, lid });
+        }
+        Ok(ContainedPage { keys, total })
+    }
+
+    /// Fetches the containers for `keys` in one `find` on `resources`, in
+    /// `keys` order, and shapes them per `contained_return`. Deleted or
+    /// missing containers are skipped.
+    async fn materialize_contained(
+        &self,
+        db: &mongodb::Database,
+        tenant: &TenantContext,
+        contained_type: &str,
+        contained_return: crate::types::ContainedReturn,
+        keys: &[ContainedKey],
+    ) -> StorageResult<Vec<StoredResource>> {
+        use crate::types::ContainedReturn;
+        if keys.is_empty() {
+            return Ok(Vec::new());
+        }
+        let resources = db.collection::<Document>(MongoBackend::RESOURCES_COLLECTION);
+
+        let mut pairs: Vec<(String, String)> = keys
+            .iter()
+            .map(|k| (k.rtype.clone(), k.rid.clone()))
+            .collect();
+        pairs.sort();
+        pairs.dedup();
+        let or: Vec<Bson> = pairs
+            .iter()
+            .map(|(t, i)| Bson::Document(doc! { "resource_type": t, "id": i }))
+            .collect();
+        let cursor = resources
+            .find(doc! {
+                "tenant_id": tenant.tenant_id().as_str(),
+                "is_deleted": { "$ne": true },
+                "$or": or,
+            })
+            .hint(mongodb::options::Hint::Name(
+                "idx_resources_identity".to_string(),
+            ))
+            .await
+            .or_query_error("Failed to fetch contained-search containers")?;
+        let mut by_key: HashMap<(String, String), StoredResource> = HashMap::new();
+        for doc in collect_documents(cursor).await? {
+            let rtype = doc.get_str("resource_type").unwrap_or_default().to_string();
+            let stored = super::storage::document_to_stored_resource(&doc, tenant, &rtype)?;
+            by_key.insert(
+                (stored.resource_type().to_string(), stored.id().to_string()),
+                stored,
+            );
+        }
+
+        let mut items = Vec::with_capacity(keys.len());
+        let mut seen: HashSet<String> = HashSet::new();
+        for key in keys {
+            let Some(container) = by_key.get(&(key.rtype.clone(), key.rid.clone())) else {
+                continue;
+            };
+            match contained_return {
+                ContainedReturn::Container => {
+                    if seen.insert(format!("{}/{}", key.rtype, key.rid)) {
+                        items.push(container.clone());
+                    }
+                }
+                ContainedReturn::Contained => {
+                    let Some(local_id) = &key.lid else {
+                        continue;
+                    };
+                    if !seen.insert(format!("{}/{}#{}", key.rtype, key.rid, local_id)) {
+                        continue;
+                    }
+                    if let Some(c) = extract_contained_resource(container.content(), local_id) {
+                        items.push(build_contained_stored(
+                            container,
+                            contained_type,
+                            local_id,
+                            c,
+                        ));
+                    }
                 }
             }
         }
-        Ok(out)
+        Ok(items)
     }
 
     fn validate_query_support(&self, query: &SearchQuery) -> StorageResult<()> {
@@ -1075,20 +1341,17 @@ impl MongoBackend {
         directive: &crate::types::SortDirective,
         allowed: Option<&HashSet<String>>,
     ) -> StorageResult<Vec<String>> {
-        use crate::types::{SearchParamType as Spt, SortDirection};
+        use crate::types::SortDirection;
 
-        let value_field = match directive.param_type {
-            Some(Spt::Date) => "value_date",
-            Some(Spt::Number) => "value_number",
-            // The writer stores quantities in `value_quantity_value`, not
-            // `value_number`; mapping them to the latter made every quantity
-            // sort degrade silently to id order (#1040).
-            Some(Spt::Quantity) => "value_quantity_value",
-            Some(Spt::Token) => "value_token_code",
-            Some(Spt::Reference) => "value_reference",
-            Some(Spt::Uri) => "value_uri",
-            _ => "value_string",
-        };
+        // The writer stores quantities in `value_quantity_value`, not
+        // `value_number`; mapping them to the latter made every quantity
+        // sort degrade silently to id order (#1040). `value_field_for`
+        // covers that; a missing/composite/special param type falls back to
+        // `value_string`, matching the old catch-all arm.
+        let value_field = directive
+            .param_type
+            .and_then(value_field_for)
+            .unwrap_or("value_string");
         let (accumulator, order) = match directive.direction {
             SortDirection::Ascending => ("$min", 1),
             SortDirection::Descending => ("$max", -1),
@@ -1263,7 +1526,7 @@ impl MongoBackend {
 
         let mut driver_cursor = search_index
             .find(driver_filter)
-            .projection(doc! { "resource_id": 1 })
+            .projection(doc! { "resource_id": 1, "_id": 0 })
             .await
             .or_query_error("Failed to open driver cursor")?;
 
@@ -1438,11 +1701,7 @@ impl MongoBackend {
             let with_entry = self
                 .distinct_resource_ids(
                     search_index,
-                    doc! {
-                        "tenant_id": tenant_id,
-                        "resource_type": resource_type,
-                        "param_name": &param.name,
-                    },
+                    missing_presence_filter(tenant_id, resource_type, param),
                 )
                 .await?;
             let ids = if wants_missing {
@@ -1563,10 +1822,25 @@ impl MongoBackend {
             "param_name": &param.name,
         };
 
+        // #1083: resolve the parameter's declared reference target types once,
+        // up front, so `build_reference_filter` can emit index-bounded `$in`/
+        // anchored-regex arms for the bare-id form instead of an unanchored
+        // scan. Only the bare-id branch (no modifier) needs this — every other
+        // reference modifier (`:contains`, `:text`, ...) never reaches it. The
+        // read lock is dropped here (the `Vec` is owned) before the value loop.
+        let targets: Vec<String> =
+            if param.param_type == SearchParamType::Reference && param.modifier.is_none() {
+                let registry = self.tenant_registry(tenant_id);
+                let registry = registry.read();
+                crate::search::resolve_param_targets(&registry, resource_type, &param.name)
+            } else {
+                Vec::new()
+            };
+
         let value_filters = param
             .values
             .iter()
-            .map(|value| self.build_index_value_filter(param, value))
+            .map(|value| self.build_index_value_filter(param, value, &targets))
             .collect::<StorageResult<Vec<_>>>()?;
 
         if value_filters.len() == 1 {
@@ -1606,6 +1880,7 @@ impl MongoBackend {
         &self,
         param: &SearchParameter,
         value: &SearchValue,
+        reference_targets: &[String],
     ) -> StorageResult<Document> {
         match param.name.as_str() {
             "_text" | "_content" => {
@@ -1627,7 +1902,9 @@ impl MongoBackend {
             SearchParamType::Token => self.build_token_filter(param, value),
             SearchParamType::Date => self.build_date_filter(value, "value_date"),
             SearchParamType::Number => self.build_number_filter(value),
-            SearchParamType::Reference => self.build_reference_filter(param, value),
+            SearchParamType::Reference => {
+                self.build_reference_filter(param, value, reference_targets)
+            }
             SearchParamType::Uri => self.build_uri_filter(param, value),
             SearchParamType::Quantity => self.build_quantity_filter(value),
             SearchParamType::Composite => {
@@ -1737,10 +2014,30 @@ impl MongoBackend {
         }
     }
 
+    /// Builds the `search_index` filter for a `Reference`-typed parameter.
+    ///
+    /// #1083: bare-id search (`subject=123`) used to emit a single
+    /// unanchored `$regex: "/123$"`, forcing MongoDB to scan every key in
+    /// the index. When the registry declares target types
+    /// (`reference_targets`, resolved once by the caller), this builds an
+    /// index-bounded `$or` instead: an `$in` of the bare id plus each
+    /// `Target/id`; one anchored `^Target/id/_history/` regex per target;
+    /// and anchored `^https?://.*/id$` / `^https?://.*/id/_history/`
+    /// regexes for absolute-URL references. Every branch must stay
+    /// bounded, or MongoDB abandons the index for the whole `$or`
+    /// (measured: 827,985 keys+docs / 263s with one unanchored arm vs. 53
+    /// keys / 11ms with all bounded). With no declared targets, this falls
+    /// back to today's unchanged two-branch filter. The qualified form
+    /// (`subject=Patient/123`) also grows an anchored `_history` arm.
+    ///
+    /// Divergence from SQLite: SQLite's bare form matches any `Type/id`;
+    /// Mongo's matches only declared target types, by design, since an
+    /// unbounded per-any-type arm can't be index-bounded.
     fn build_reference_filter(
         &self,
         param: &SearchParameter,
         value: &SearchValue,
+        reference_targets: &[String],
     ) -> StorageResult<Document> {
         if value.prefix != SearchPrefix::Eq {
             return Err(StorageError::Search(SearchError::QueryParseError {
@@ -1785,19 +2082,63 @@ impl MongoBackend {
         }
 
         if value.value.contains('/') {
-            return Ok(doc! { "value_reference": &value.value });
+            return Ok(doc! {
+                "$or": [
+                    { "value_reference": &value.value },
+                    {
+                        "value_reference": {
+                            "$regex": format!("^{}/_history/", regex_escape(&value.value))
+                        }
+                    }
+                ]
+            });
         }
 
-        Ok(doc! {
-            "$or": [
-                { "value_reference": &value.value },
-                {
-                    "value_reference": {
-                        "$regex": format!("/{}$", regex_escape(&value.value))
+        if reference_targets.is_empty() {
+            return Ok(doc! {
+                "$or": [
+                    { "value_reference": &value.value },
+                    {
+                        "value_reference": {
+                            "$regex": format!("/{}$", regex_escape(&value.value))
+                        }
                     }
+                ]
+            });
+        }
+
+        let escaped_id = regex_escape(&value.value);
+        let mut in_values: Vec<Bson> = vec![Bson::String(value.value.clone())];
+        let mut history_arms: Vec<Bson> = Vec::new();
+        let mut seen_targets: HashSet<&str> = HashSet::new();
+        for target in reference_targets {
+            if !seen_targets.insert(target.as_str()) {
+                continue;
+            }
+            in_values.push(Bson::String(format!("{target}/{}", value.value)));
+            history_arms.push(Bson::Document(doc! {
+                "value_reference": {
+                    "$regex": format!("^{}/{escaped_id}/_history/", regex_escape(target))
                 }
-            ]
-        })
+            }));
+        }
+
+        let mut or_arms: Vec<Bson> = vec![Bson::Document(doc! {
+            "value_reference": { "$in": in_values }
+        })];
+        or_arms.extend(history_arms);
+        // Anchored absolute-URL arms: still match `http://.../Patient/123`
+        // and its `_history` versions, which the bounded `Target/id` arms
+        // above cannot express. The `^https?://` prefix keeps both branches
+        // index-bounded (see the doc comment above).
+        or_arms.push(Bson::Document(doc! {
+            "value_reference": { "$regex": format!("^https?://.*/{escaped_id}$") }
+        }));
+        or_arms.push(Bson::Document(doc! {
+            "value_reference": { "$regex": format!("^https?://.*/{escaped_id}/_history/") }
+        }));
+
+        Ok(doc! { "$or": or_arms })
     }
 
     fn build_uri_filter(
@@ -2734,6 +3075,93 @@ mod query_support_tests {
     }
 }
 
+/// Controller finding: a `:missing` presence filter with no value-field
+/// conjunct is served by a full scan of the `(tenant, type)` slice, because
+/// no generation-2 partial index has a `{tenant_id, resource_type,
+/// param_name}` prefix without a value predicate. See `missing_presence_filter`.
+#[cfg(test)]
+mod missing_presence_filter_tests {
+    use super::*;
+
+    /// Every `SearchParamType` variant, via a `match` that is exhaustive
+    /// over the enum: adding a new variant fails this test to compile
+    /// (rather than silently falling through `value_field_for`'s own
+    /// `Composite | Special => None` arm) until it is added here too.
+    #[test]
+    fn value_field_for_covers_every_variant() {
+        let variants = [
+            SearchParamType::String,
+            SearchParamType::Uri,
+            SearchParamType::Number,
+            SearchParamType::Date,
+            SearchParamType::Quantity,
+            SearchParamType::Token,
+            SearchParamType::Reference,
+            SearchParamType::Composite,
+            SearchParamType::Special,
+        ];
+        for variant in variants {
+            let expected = match variant {
+                SearchParamType::String => Some("value_string"),
+                SearchParamType::Token => Some("value_token_code"),
+                SearchParamType::Date => Some("value_date"),
+                SearchParamType::Number => Some("value_number"),
+                SearchParamType::Quantity => Some("value_quantity_value"),
+                SearchParamType::Reference => Some("value_reference"),
+                SearchParamType::Uri => Some("value_uri"),
+                SearchParamType::Composite | SearchParamType::Special => None,
+            };
+            assert_eq!(value_field_for(variant), expected, "{variant:?}");
+        }
+    }
+
+    fn param(name: &str, param_type: SearchParamType) -> SearchParameter {
+        SearchParameter {
+            name: name.to_string(),
+            param_type,
+            modifier: Some(SearchModifier::Missing),
+            values: vec![SearchValue::eq("false")],
+            chain: vec![],
+            components: vec![],
+        }
+    }
+
+    #[test]
+    fn missing_presence_filter_adds_value_field_conjunct_for_token() {
+        let filter = missing_presence_filter(
+            "tenant-1",
+            "Patient",
+            &param("gender", SearchParamType::Token),
+        );
+        assert_eq!(
+            filter,
+            doc! {
+                "tenant_id": "tenant-1",
+                "resource_type": "Patient",
+                "param_name": "gender",
+                "value_token_code": { "$ne": Bson::Null },
+            }
+        );
+    }
+
+    #[test]
+    fn missing_presence_filter_is_the_bare_envelope_for_composite() {
+        let filter = missing_presence_filter(
+            "tenant-1",
+            "Patient",
+            &param("some-composite", SearchParamType::Composite),
+        );
+        assert_eq!(
+            filter,
+            doc! {
+                "tenant_id": "tenant-1",
+                "resource_type": "Patient",
+                "param_name": "some-composite",
+            }
+        );
+    }
+}
+
 /// #1062: comma-separated search values are OR per FHIR
 /// (https://build.fhir.org/search.html#combining), for every parameter
 /// type. These pins target the exact filter document `build_search_index_filter`
@@ -3052,6 +3480,189 @@ mod number_quantity_precision_tests {
                 .contains_key("$not"),
             "ne is a value_number-scoped $not, sitting alongside the tenant/resource/param keys: {filter:?}"
         );
+    }
+}
+
+/// #1083: bare-id reference search must be index-bounded, and the qualified
+/// form must keep matching its own `_history` versions (parity with SQLite's
+/// `test_search_by_reference_does_not_match_extended_sibling_ids`). These
+/// pins target the exact filter document `build_search_index_filter` sends
+/// to `distinct_resource_ids`, the same way `value_list_tests` above does.
+///
+/// The `backend()` helper's registry (embedded fallback params only — the
+/// spec bundle at `<workspace root>/data` is not reachable from this crate's
+/// `./data`-relative default `data_dir` under `cargo test`) has no declared
+/// targets for `Observation.subject`, so tests that need targets seed the
+/// base registry explicitly via `SearchParameterDefinition::with_targets`,
+/// the same builder `resolve_param_targets_returns_declared_targets` in
+/// `helios_fhir::search::registry` uses.
+#[cfg(test)]
+mod reference_filter_tests {
+    use super::*;
+    use crate::backends::mongodb::MongoBackendConfig;
+    use crate::search::SearchParameterDefinition;
+
+    fn backend() -> MongoBackend {
+        MongoBackend::new(MongoBackendConfig::default()).unwrap()
+    }
+
+    /// A backend whose base registry declares `Observation.subject` targets
+    /// `["Patient", "Group"]`, registry order preserved.
+    fn backend_with_subject_targets() -> MongoBackend {
+        let backend = backend();
+        backend
+            .tenant_registries()
+            .base()
+            .write()
+            .register(
+                SearchParameterDefinition::new(
+                    "http://hl7.org/fhir/SearchParameter/Observation-subject",
+                    "subject",
+                    SearchParamType::Reference,
+                    "Observation.subject",
+                )
+                .with_base(vec!["Observation"])
+                .with_targets(vec!["Patient", "Group"]),
+            )
+            .expect("registering Observation.subject must not collide with a fallback param");
+        backend
+    }
+
+    fn subject_param(value: &str) -> SearchParameter {
+        SearchParameter {
+            name: "subject".to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: None,
+            values: vec![SearchValue::eq(value)],
+            chain: vec![],
+            components: vec![],
+        }
+    }
+
+    fn or_arms(filter: &Document) -> Vec<Document> {
+        filter
+            .get_array("$or")
+            .expect("$or array")
+            .iter()
+            .map(|b| b.as_document().expect("$or arm is a document").clone())
+            .collect()
+    }
+
+    fn arm_regex(arm: &Document) -> &str {
+        arm.get_document("value_reference")
+            .expect("value_reference field")
+            .get_str("$regex")
+            .expect("$regex field")
+    }
+
+    /// Bare `subject=123`: `$in` first (bare id + `Target/123` per declared
+    /// target, registry order, deduplicated), one anchored `_history` regex
+    /// per target, and an anchored `^https?://.*/123$` absolute-URL regex
+    /// last — every branch index-bounded, per #1083 (a plain unanchored
+    /// `/123$` last arm makes MongoDB abandon the index for the whole `$or`).
+    #[test]
+    fn bare_id_with_registry_targets_is_index_bounded() {
+        let backend = backend_with_subject_targets();
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &subject_param("123"))
+            .expect("valid filter");
+
+        let arms = or_arms(&filter);
+        // $in arm + one history-regex arm per target ["Patient", "Group"] +
+        // the trailing absolute-URL regex + the trailing absolute-URL
+        // _history regex.
+        assert_eq!(arms.len(), 5, "unexpected arm count: {arms:?}");
+
+        let in_values: Vec<&str> = arms[0]
+            .get_document("value_reference")
+            .expect("value_reference field")
+            .get_array("$in")
+            .expect("$in array")
+            .iter()
+            .map(|b| b.as_str().expect("$in entry is a string"))
+            .collect();
+        assert_eq!(in_values, vec!["123", "Patient/123", "Group/123"]);
+
+        assert_eq!(arm_regex(&arms[1]), "^Patient/123/_history/");
+        assert_eq!(arm_regex(&arms[2]), "^Group/123/_history/");
+
+        // Anchored absolute-URL arms, last.
+        assert_eq!(arm_regex(&arms[3]), "^https?://.*/123$");
+        assert_eq!(arm_regex(&arms[4]), "^https?://.*/123/_history/");
+    }
+
+    /// No declared targets (unknown parameter): the bare form is byte-for-byte
+    /// today's two-branch `$or` — the match set must not shrink or grow.
+    #[test]
+    fn bare_id_without_registry_targets_is_unchanged() {
+        let backend = backend();
+        let param = SearchParameter {
+            name: "nonexistent-ref".to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: None,
+            values: vec![SearchValue::eq("123")],
+            chain: vec![],
+            components: vec![],
+        };
+
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &param)
+            .expect("valid filter");
+
+        let arms = or_arms(&filter);
+        assert_eq!(
+            arms.len(),
+            2,
+            "today's filter has exactly two arms: {arms:?}"
+        );
+        assert_eq!(
+            arms[0].get_str("value_reference").expect("exact-match arm"),
+            "123"
+        );
+        assert_eq!(arm_regex(&arms[1]), "/123$");
+    }
+
+    /// Qualified `subject=Patient/123`: exact match plus an anchored
+    /// `_history` regex, so `Patient/123/_history/2` keeps matching
+    /// (parity with SQLite).
+    #[test]
+    fn qualified_reference_matches_its_own_history() {
+        let backend = backend();
+        let filter = backend
+            .build_search_index_filter("t1", "Observation", &subject_param("Patient/123"))
+            .expect("valid filter");
+
+        let arms = or_arms(&filter);
+        assert_eq!(arms.len(), 2);
+        assert_eq!(
+            arms[0].get_str("value_reference").expect("exact-match arm"),
+            "Patient/123"
+        );
+        assert_eq!(arm_regex(&arms[1]), "^Patient/123/_history/");
+    }
+
+    /// Regex metacharacters in the id (`.`) must be escaped in every arm:
+    /// the qualified form's `_history` regex, each target's `_history`
+    /// regex in the bare form, and both trailing absolute-URL regexes.
+    #[test]
+    fn regex_metacharacters_are_escaped_in_every_arm() {
+        let backend = backend_with_subject_targets();
+
+        let qualified = backend
+            .build_search_index_filter("t1", "Observation", &subject_param("Patient/123.5"))
+            .expect("valid filter");
+        let arms = or_arms(&qualified);
+        assert_eq!(arm_regex(&arms[1]), "^Patient/123\\.5/_history/");
+
+        let bare = backend
+            .build_search_index_filter("t1", "Observation", &subject_param("123.5"))
+            .expect("valid filter");
+        let arms = or_arms(&bare);
+        assert_eq!(arms.len(), 5);
+        assert_eq!(arm_regex(&arms[1]), "^Patient/123\\.5/_history/");
+        assert_eq!(arm_regex(&arms[2]), "^Group/123\\.5/_history/");
+        assert_eq!(arm_regex(&arms[3]), "^https?://.*/123\\.5$");
+        assert_eq!(arm_regex(&arms[4]), "^https?://.*/123\\.5/_history/");
     }
 }
 

@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 31;
+pub const SCHEMA_VERSION: i32 = 33;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -26,12 +26,16 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// `resource_fts_map`) and Helios `#959`/`#953` (`idx_resources_live_type`,
 /// manifest `phase`/`files_*`) sit *before* Helios `#882`/`#961` (manifest
 /// publication, export `types_*`), Helios v28 (partial `idx_search_string_folded`),
-/// Helios v29 (`idx_search_token_display` drop, `#945`), and
-/// [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at Helios
-/// v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps through
-/// types (26). Helios v28 maps through the partial folded index (27) and still
-/// runs the token-display drop and `dead_at`. Helios v29 maps through the drop
-/// (28) and still runs `dead_at`.
+/// Helios v29 (`idx_search_token_display` drop, `#945`), Helios v30
+/// (`bulk_manifests.index_pending`, `#1125`), Helios v31 (`search_index.resource_key`,
+/// `#945`), and [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at
+/// Helios v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps
+/// through types (26). Helios v28 maps through the partial folded index (27)
+/// and still runs the token-display drop, index_pending, resource_key, and
+/// `dead_at`. Helios v29 maps through the drop (28) and still runs the later
+/// three. Helios v30 maps through index_pending (29) and still runs resource_key
+/// and `dead_at`. Helios v31 maps through resource_key (30) and still runs
+/// `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -62,6 +66,8 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_export_types_progress", migrate_export_types_progress),
     ("search_index_partial_folded", migrate_v27_to_v28),
     ("search_index_drop_token_display", migrate_v28_to_v29),
+    ("bulk_manifests_index_pending", migrate_v29_to_v30),
+    ("search_index_resource_key", migrate_v30_to_v31),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -1097,6 +1103,7 @@ fn migrate_v5_to_v6(conn: &Connection) -> StorageResult<()> {
             total_entries INTEGER DEFAULT 0,
             processed_entries INTEGER DEFAULT 0,
             failed_entries INTEGER DEFAULT 0,
+            index_pending INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (tenant_id, submitter, submission_id, manifest_id),
             FOREIGN KEY (tenant_id, submitter, submission_id)
                 REFERENCES bulk_submissions(tenant_id, submitter, submission_id) ON DELETE CASCADE
@@ -1601,6 +1608,108 @@ fn migrate_v27_to_v28(conn: &Connection) -> StorageResult<()> {
 fn migrate_v28_to_v29(conn: &Connection) -> StorageResult<()> {
     conn.execute("DROP INDEX IF EXISTS idx_search_token_display", [])
         .map_err(|e| migration_err(format!("v29 drop token_display index: {e}")))?;
+    Ok(())
+}
+
+/// Migrate from schema version 29 to version 30.
+///
+/// Adds `bulk_manifests.index_pending` — a manifest whose resources were
+/// ingested with indexing deferred owes a search-index rebuild. Set in the same
+/// transaction that publishes the manifest, cleared when the rebuild finishes,
+/// so a restart mid-rebuild can find the outstanding work instead of losing it
+/// with the in-process job map (#1125).
+fn migrate_v29_to_v30(conn: &Connection) -> StorageResult<()> {
+    let has_column = conn
+        .prepare("SELECT 1 FROM pragma_table_info('bulk_manifests') WHERE name = 'index_pending'")
+        .and_then(|mut stmt| stmt.exists([]))
+        .unwrap_or(false);
+    if !has_column {
+        conn.execute(
+            "ALTER TABLE bulk_manifests ADD COLUMN index_pending INTEGER NOT NULL DEFAULT 0",
+            [],
+        )
+        .map_err(|e| migration_err(format!("v30 index_pending column: {e}")))?;
+    }
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_bulk_manifests_index_pending
+         ON bulk_manifests(tenant_id, submitter, submission_id, manifest_id)
+         WHERE index_pending = 1",
+        [],
+    )
+    .map_err(|e| migration_err(format!("v30 index_pending index: {e}")))?;
+    Ok(())
+}
+
+/// Migrate from schema version 30 to version 31.
+///
+/// Introduces an integer surrogate for the owning resource on `search_index`
+/// (#945). `resource_key` mirrors `resources.rowid`; `idx_search_composite` is
+/// rekeyed to carry that 3–4 byte varint in place of the 36-byte `resource_id`
+/// UUID it repeated on every row, which was ~44% of the table's index bytes and
+/// the dominant per-batch write during bulk ingest.
+///
+/// `resource_id` stays on the table: the chained-search / `_has` / `:identifier`
+/// paths concatenate `Type/resource_id` to match `value_reference` and cannot
+/// use the key, so only the composite index and the equality read paths move to
+/// `resource_key` in this step.
+///
+/// Backfill is a single-pass `UPDATE ... FROM resources` (a JOIN, not a
+/// correlated subquery per row) with the FTS triggers dropped for the duration.
+/// A full table rebuild is deliberately avoided: the FTS triggers key on
+/// `search_index.rowid`, so renumbering rowids would orphan every FTS row. The
+/// backfill only sets a new column — no rowid and no FTS-indexed column changes
+/// — so the existing FTS content stays valid and the triggers are restored
+/// verbatim afterwards.
+fn migrate_v30_to_v31(conn: &Connection) -> StorageResult<()> {
+    // SQLite has no `ADD COLUMN IF NOT EXISTS`; ignore a duplicate-column error
+    // so the ladder is replay-safe (see `migrate_v10_to_v11`).
+    let _ = conn.execute(
+        "ALTER TABLE search_index ADD COLUMN resource_key INTEGER",
+        [],
+    );
+
+    // The FTS triggers fire on every UPDATE of a row carrying `value_string` /
+    // `value_token_display` (their `WHEN` matches the column's presence, not
+    // which column changed), so the backfill would re-run the full-text
+    // delete+reinsert on most rows. Capture their exact DDL from the catalog,
+    // drop them across the backfill, and restore verbatim — drift-proof, and a
+    // no-op on an FTS5-less build that has none.
+    let saved_triggers: Vec<String> = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT sql FROM sqlite_master
+                  WHERE type = 'trigger'
+                    AND name IN ('search_index_fts_insert', 'search_index_fts_delete', 'search_index_fts_update')
+                    AND sql IS NOT NULL",
+            )
+            .map_err(|e| migration_err(format!("v31 read FTS triggers: {e}")))?;
+        let rows = stmt
+            .query_map([], |r| r.get::<_, String>(0))
+            .map_err(|e| migration_err(format!("v31 read FTS triggers: {e}")))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| migration_err(format!("v31 read FTS triggers: {e}")))?
+    };
+
+    conn.execute_batch(
+        "DROP TRIGGER IF EXISTS search_index_fts_insert;
+         DROP TRIGGER IF EXISTS search_index_fts_delete;
+         DROP TRIGGER IF EXISTS search_index_fts_update;
+         UPDATE search_index
+            SET resource_key = r.rowid
+            FROM resources r
+            WHERE r.tenant_id = search_index.tenant_id
+              AND r.resource_type = search_index.resource_type
+              AND r.id = search_index.resource_id;
+         DROP INDEX IF EXISTS idx_search_composite;
+         CREATE INDEX idx_search_composite
+            ON search_index(tenant_id, resource_type, resource_key, param_name, composite_group);",
+    )
+    .map_err(|e| migration_err(format!("v31 resource_key surrogate: {e}")))?;
+
+    for sql in &saved_triggers {
+        conn.execute(sql, [])
+            .map_err(|e| migration_err(format!("v31 restore FTS trigger: {e}")))?;
+    }
     Ok(())
 }
 
@@ -2946,10 +3055,12 @@ mod tests {
         assert!(applied.contains("resource_fts_map"));
         assert!(applied.contains("search_index_partial_folded"));
         assert!(applied.contains("search_index_drop_token_display"));
+        assert!(applied.contains("bulk_manifests_index_pending"));
+        assert!(applied.contains("search_index_resource_key"));
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v31 must add subscription_outbox.dead_at"
+            "v33 must add subscription_outbox.dead_at"
         );
         assert_eq!(
             table_exists("resource_fts_map"),
@@ -2991,6 +3102,9 @@ mod tests {
     /// `idx_search_string_folded` joined the partial set in v28; the
     /// `LIKE`-shaped searches that used to depend on it being full now carry
     /// their own `IS NOT NULL` (see [`migrate_v27_to_v28`]).
+    ///
+    /// In v31 (#945) the composite index swapped the 36-byte `resource_id` UUID
+    /// for the integer `resource_key` (see [`migrate_v30_to_v31`]).
     #[test]
     fn search_index_carries_no_redundant_or_full_value_indexes() {
         let conn = Connection::open_in_memory().unwrap();
@@ -3013,8 +3127,9 @@ mod tests {
         assert!(
             index_sql("idx_search_composite")
                 .expect("composite index")
-                .contains("resource_id"),
-            "idx_search_composite must still lead with the resource key"
+                .contains("resource_key"),
+            "idx_search_composite must carry the integer resource_key (v31, #945), \
+             not the resource_id UUID it replaced"
         );
 
         for (name, predicate) in [

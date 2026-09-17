@@ -205,11 +205,11 @@ mod tests {
 
     #[test]
     fn upstream_sqlite_v23_runs_later_steps_after_helios_fts_map() {
-        // 30 steps: Helios v23 maps onto fork indices 16..=22 (provider …
+        // 32 steps: Helios v23 maps onto fork indices 16..=22 (provider …
         // resource_fts_map). live_type (23), phase (24), publication (25),
-        // types (26), folded (27), drop_token_display (28) and dead_letter (29)
-        // must still run.
-        let idx = implied_applied_indices(23, Numbering::Upstream, 30);
+        // types (26), folded (27), drop_token_display (28), index_pending (29),
+        // resource_key (30) and dead_letter (31) must still run.
+        let idx = implied_applied_indices(23, Numbering::Upstream, 32);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&22), "resource_fts_map is Helios v23");
         assert!(!idx.contains(&23), "live_type is Helios v24");
@@ -218,13 +218,15 @@ mod tests {
         assert!(!idx.contains(&26), "types is Helios v27");
         assert!(!idx.contains(&27), "folded is Helios v28");
         assert!(!idx.contains(&28), "drop_token_display is Helios v29");
-        assert!(!idx.contains(&29), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 22, "all Helios steps through v23 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v25_runs_later_steps_after_helios_phase() {
-        let idx = implied_applied_indices(25, Numbering::Upstream, 30);
+        let idx = implied_applied_indices(25, Numbering::Upstream, 32);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&23), "live_type is Helios v24");
         assert!(idx.contains(&24), "phase is Helios v25");
@@ -232,39 +234,68 @@ mod tests {
         assert!(!idx.contains(&26), "types is Helios v27");
         assert!(!idx.contains(&27), "folded is Helios v28");
         assert!(!idx.contains(&28), "drop_token_display is Helios v29");
-        assert!(!idx.contains(&29), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 24, "all Helios steps through v25 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v27_runs_folded_and_later_after_types() {
-        let idx = implied_applied_indices(27, Numbering::Upstream, 30);
+        let idx = implied_applied_indices(27, Numbering::Upstream, 32);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&26), "types is Helios v27");
         assert!(!idx.contains(&27), "folded is Helios v28");
         assert!(!idx.contains(&28), "drop_token_display is Helios v29");
-        assert!(!idx.contains(&29), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 26, "all Helios steps through v27 except outbox");
     }
 
     #[test]
-    fn upstream_sqlite_v28_runs_drop_and_dead_letter_after_folded() {
-        let idx = implied_applied_indices(28, Numbering::Upstream, 30);
+    fn upstream_sqlite_v28_runs_later_after_folded() {
+        let idx = implied_applied_indices(28, Numbering::Upstream, 32);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&26), "types is Helios v27");
         assert!(idx.contains(&27), "folded is Helios v28");
         assert!(!idx.contains(&28), "drop_token_display is Helios v29");
-        assert!(!idx.contains(&29), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 27, "all Helios steps through v28 except outbox");
     }
 
     #[test]
-    fn upstream_sqlite_v29_runs_dead_letter_after_token_display_drop() {
-        let idx = implied_applied_indices(29, Numbering::Upstream, 30);
+    fn upstream_sqlite_v29_runs_later_after_token_display_drop() {
+        let idx = implied_applied_indices(29, Numbering::Upstream, 32);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&27), "folded is Helios v28");
         assert!(idx.contains(&28), "drop_token_display is Helios v29");
-        assert!(!idx.contains(&29), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 28, "all Helios steps through v29 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v30_runs_resource_key_and_dead_letter_after_index_pending() {
+        let idx = implied_applied_indices(30, Numbering::Upstream, 32);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 29, "all Helios steps through v30 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v31_runs_dead_letter_after_resource_key() {
+        let idx = implied_applied_indices(31, Numbering::Upstream, 32);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&29), "index_pending is Helios v30");
+        assert!(idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 30, "all Helios steps through v31 except outbox");
     }
 }
