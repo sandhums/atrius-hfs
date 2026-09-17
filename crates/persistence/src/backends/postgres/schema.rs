@@ -15,7 +15,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 42;
+pub const SCHEMA_VERSION: i32 = 43;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -25,8 +25,10 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 ///
 /// Helios publication (their v37) and export `types_*` (their v38) sit
 /// immediately after autovacuum so an upstream-numbered Postgres DB at
-/// Helios v38 maps through types (index 37) and still runs fork-only
-/// slot-2, phase, and `dead_at`.
+/// Helios v38 maps through types (index 37) and still runs Helios v39
+/// file-progress, then fork-only slot-2, phase, and `dead_at`. Helios v39
+/// maps through file-progress (index 38) and still runs slot-2, phase, and
+/// `dead_at`.
 const PG_STEPS: &[&str] = &[
     "search_index_enhanced_columns",
     "resource_fts",
@@ -66,6 +68,7 @@ const PG_STEPS: &[&str] = &[
     "search_index_autovacuum",
     "bulk_submit_manifest_publication",
     "bulk_export_types_progress",
+    "bulk_manifest_file_progress",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -407,6 +410,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "search_index_autovacuum" => migrate_v36_to_v37(client).await,
         "bulk_submit_manifest_publication" => migrate_publication(client).await,
         "bulk_export_types_progress" => migrate_export_types_progress(client).await,
+        "bulk_manifest_file_progress" => migrate_bulk_manifest_file_progress(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -3960,7 +3964,8 @@ async fn migrate_export_types_progress(client: &deadpool_postgres::Client) -> St
     Ok(())
 }
 
-/// v38 → v39: tombstone exhausted subscription outbox claims (`dead_at`).
+/// Named step `subscription_outbox_dead_letter`: tombstone exhausted
+/// subscription outbox claims (`dead_at`).
 ///
 /// Before this step the worker delayed a timed-out row 3600s with
 /// `"max retries exceeded"` and retried it hourly forever. Dead rows keep
@@ -3969,10 +3974,11 @@ async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult
     ensure_outbox_dead_letter(client).await
 }
 
-/// Named step `bulk_manifests_phase_progress` (stamp v40): pre-ingest phase
-/// columns Helios stuffed into `add_bulk_submit_worker_schema` without bumping
-/// their Postgres integer. Existing fork DBs already recorded `bulk_submit_worker`,
-/// so those `IF NOT EXISTS` ALTERs would never re-run without this step.
+/// Named step `bulk_manifests_phase_progress` (stamp v41 after file-progress):
+/// pre-ingest phase columns Helios stuffed into `add_bulk_submit_worker_schema`
+/// without bumping their Postgres integer. Existing fork DBs already recorded
+/// `bulk_submit_worker`, so those `IF NOT EXISTS` ALTERs would never re-run
+/// without this step.
 async fn migrate_v39_to_v40(client: &deadpool_postgres::Client) -> StorageResult<()> {
     for sql in [
         "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS phase TEXT",
@@ -3985,6 +3991,50 @@ async fn migrate_v39_to_v40(client: &deadpool_postgres::Client) -> StorageResult
             ))
         })?;
     }
+    Ok(())
+}
+
+/// Named step `bulk_manifest_file_progress` (Helios v39, #1127): per-file
+/// ingest counters that a re-walk cannot inflate.
+///
+/// `bulk_manifest_file_progress` keeps, per input file of a manifest, the
+/// highest line whose entry has already been charged to the manifest's
+/// counters. A worker that re-reads a file — after a lost lease, a reclaim or
+/// a whole-file retry — re-ingests those lines but no longer adds them to
+/// `total_entries` a second time, so the counters describe the manifest
+/// rather than the sum over passes, and they still never move backwards
+/// (#969). `skipped_entries` gives the submission summary a skip count without
+/// scanning `bulk_entry_results`.
+async fn migrate_bulk_manifest_file_progress(
+    client: &deadpool_postgres::Client,
+) -> StorageResult<()> {
+    let stmts = [
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS skipped_entries INTEGER NOT NULL DEFAULT 0",
+        "CREATE TABLE IF NOT EXISTS bulk_manifest_file_progress (
+            tenant_id TEXT NOT NULL,
+            submitter TEXT NOT NULL,
+            submission_id TEXT NOT NULL,
+            manifest_id TEXT NOT NULL,
+            file_url TEXT NOT NULL,
+            max_line BIGINT NOT NULL DEFAULT 0,
+            total_entries BIGINT NOT NULL DEFAULT 0,
+            processed_entries BIGINT NOT NULL DEFAULT 0,
+            failed_entries BIGINT NOT NULL DEFAULT 0,
+            skipped_entries BIGINT NOT NULL DEFAULT 0,
+            PRIMARY KEY (tenant_id, submitter, submission_id, manifest_id, file_url),
+            FOREIGN KEY (tenant_id, submitter, submission_id, manifest_id)
+                REFERENCES bulk_manifests(tenant_id, submitter, submission_id, manifest_id)
+                ON DELETE CASCADE
+        )",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("Migration bulk_manifest_file_progress failed: {e}")))?;
+    }
+
     Ok(())
 }
 
@@ -4602,6 +4652,14 @@ fn pg_error(message: String) -> crate::error::StorageError {
     })
 }
 
+/// Process-exit removal of the shared PostgreSQL testcontainer below. Declared
+/// at file level: a `#[path]` inside an inline module resolves through a
+/// virtual `schema/<module>/` directory that does not exist, which Linux
+/// rejects while Windows normalises it away.
+#[cfg(test)]
+#[path = "../../../tests/common/container_cleanup.rs"]
+mod container_cleanup;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4637,7 +4695,8 @@ mod postgres_integration_v37_migration {
     struct SharedPg {
         host: String,
         port: u16,
-        /// Kept alive for the test binary; CI cleanup uses the run label.
+        /// Kept alive for the test binary; the `container_cleanup` exit hook
+        /// removes it at process exit.
         _container: testcontainers::ContainerAsync<Postgres>,
     }
 
@@ -4648,12 +4707,16 @@ mod postgres_integration_v37_migration {
         SHARED_PG
             .get_or_init(|| async {
                 let run_id = std::env::var("GITHUB_RUN_ID").unwrap_or_default();
-                let container = Postgres::default()
-                    .with_tag("16-alpine")
-                    .with_label("github.run_id", &run_id)
-                    .start()
-                    .await
-                    .expect("start PostgreSQL container");
+                // `SHARED_PG` is a static and never dropped; the cleanup label
+                // lets the exit hook remove the container.
+                let container = super::container_cleanup::with_cleanup_label(
+                    Postgres::default()
+                        .with_tag("16-alpine")
+                        .with_label("github.run_id", &run_id),
+                )
+                .start()
+                .await
+                .expect("start PostgreSQL container");
                 let host = container
                     .get_host()
                     .await
@@ -5229,6 +5292,15 @@ mod postgres_integration_v37_migration {
         assert_eq!(
             column_type(&client, "bulk_submit_files", "publication_excluded_reason").await,
             Some("text".to_string())
+        );
+        // v39 (#1127): re-walk-proof per-file progress and a skip counter.
+        assert_eq!(
+            column_type(&client, "bulk_manifests", "skipped_entries").await,
+            Some("integer".to_string())
+        );
+        assert_eq!(
+            column_type(&client, "bulk_manifest_file_progress", "max_line").await,
+            Some("bigint".to_string())
         );
         assert_eq!(
             classification(&client, completed).await,
