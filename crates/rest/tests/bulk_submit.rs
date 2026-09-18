@@ -557,6 +557,107 @@ fn kickoff_body_with_status(submission_id: &str, code: &str) -> Value {
     })
 }
 
+/// A status-only kick-off: identity plus `submissionStatus`, no manifest —
+/// the shape the Import page's Abort / Mark completed buttons send.
+fn status_only_body(submission_id: &str, code: &str) -> Value {
+    json!({
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "submitter", "valueIdentifier": {"system": "http://ehr", "value": "ehr-1"}},
+            {"name": "submissionId", "valueString": submission_id},
+            {"name": "submissionStatus", "valueCoding": {
+                "system": "http://hl7.org/fhir/event-status", "code": code}}
+        ]
+    })
+}
+
+/// #998: a status-only kick-off that restates the terminal status a submission
+/// already has answers `200` again. The provider whose first close-out timed
+/// out client-side — while the server still committed it — can only send it
+/// again, and a `409` there reads as the transition having been refused. Only
+/// the exact restatement is idempotent: the other terminal status, or any
+/// kick-off carrying a manifest, is still a conflict.
+#[tokio::test]
+async fn test_restating_a_terminal_status_is_idempotent() {
+    let (server, backend, ..) = create_submit_server().await;
+    let tenant = helios_persistence::tenant::TenantContext::new(
+        helios_persistence::tenant::TenantId::new("test-tenant"),
+        helios_persistence::tenant::TenantPermissions::full_access(),
+    );
+
+    // completed, then completed again.
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&kickoff_body_with_status("again-1", "completed"))
+            .await
+            .status_code(),
+        StatusCode::OK
+    );
+    let repeated = server
+        .post("/$bulk-submit")
+        .json(&status_only_body("again-1", "completed"))
+        .await;
+    assert_eq!(
+        repeated.status_code(),
+        StatusCode::OK,
+        "the same close-out twice is one close-out: {}",
+        repeated.text()
+    );
+    let completed_id = helios_persistence::core::SubmissionId::new("http://ehr|ehr-1", "again-1");
+    assert_eq!(
+        backend
+            .get_submission_status(&tenant, &completed_id)
+            .await
+            .unwrap(),
+        Some(helios_persistence::core::SubmissionStatus::Complete)
+    );
+    // ...but not stopped after completed,
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&status_only_body("again-1", "stopped"))
+            .await
+            .status_code(),
+        StatusCode::CONFLICT
+    );
+    // ...nor a restatement that also carries a manifest.
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&kickoff_body_with_status("again-1", "completed"))
+            .await
+            .status_code(),
+        StatusCode::CONFLICT
+    );
+
+    // stopped, then stopped again — the abort is not re-run.
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&kickoff_body_with_status("again-2", "stopped"))
+            .await
+            .status_code(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&status_only_body("again-2", "stopped"))
+            .await
+            .status_code(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        server
+            .post("/$bulk-submit")
+            .json(&status_only_body("again-2", "completed"))
+            .await
+            .status_code(),
+        StatusCode::CONFLICT
+    );
+}
+
 /// `submissionStatus=completed` SHALL make the submission terminal.
 ///
 /// Regression: the kick-off handler branched only on `stopped`, so `completed`
@@ -593,7 +694,9 @@ async fn test_completed_status_finalizes_submission() {
         summary.status
     );
 
-    // And being terminal, it must reject further kick-offs.
+    // And being terminal, it must reject further kick-offs — this one carries
+    // a manifest, so it is a further submission, not a restated close-out
+    // (`test_restating_a_terminal_status_is_idempotent`).
     assert_eq!(
         server
             .post("/$bulk-submit")
@@ -1944,7 +2047,7 @@ async fn test_poll_reports_a_stalled_ingestion() {
         .unwrap()
         .to_string();
     assert!(
-        progress.contains("stalled"),
+        progress.contains("Stalled"),
         "a dead worker pool must be visible to the poller, got: {progress}"
     );
 }
@@ -2032,7 +2135,7 @@ async fn test_poll_reports_the_manifest_read_phase() {
 
     let progress = poll_progress(&server, &poll_path).await;
     assert_eq!(
-        progress, "reading manifest",
+        progress, "Reading manifest",
         "the manifest fetch must be visible to the poller, got: {progress}"
     );
     assert!(
@@ -2061,7 +2164,7 @@ async fn test_poll_reports_the_sizing_phase_with_file_counts() {
 
     let progress = poll_progress(&server, &poll_path).await;
     assert_eq!(
-        progress, "sizing 37 of 412 files",
+        progress, "Sizing 37 of 412 files",
         "pre-sizing must report its file counts, got: {progress}"
     );
     assert!(
@@ -2090,12 +2193,59 @@ async fn test_poll_reports_the_downloading_phase_with_file_counts() {
 
     let progress = poll_progress(&server, &poll_path).await;
     assert_eq!(
-        progress, "downloading file 1 of 412",
+        progress, "Downloading file 1 of 412",
         "the file being fetched must be visible to the poller, got: {progress}"
     );
     assert!(
         !progress.starts_with("processing "),
         "an indeterminate phase must not look like a determinate percentage (#827)"
+    );
+}
+
+/// #1218: once every output file has been pulled, the poll says so — and
+/// keeps saying so beside the counters, which otherwise outrank every phase.
+/// That is what tells "still downloading" apart from the manifest's wind-down.
+#[tokio::test]
+async fn test_poll_reports_all_files_downloaded_beside_the_counters() {
+    let (server, backend, _fetcher, _output, _tmp) =
+        create_submit_server_with(mock_fetcher(), BulkSubmitConfig::default()).await;
+    let poll_path = start_and_get_poll_path(&server).await;
+
+    let lease = backend
+        .claim_next_manifest(&WorkerId::new("downloaded-worker"), Duration::from_secs(60))
+        .await
+        .expect("claim")
+        .expect("a manifest to claim");
+    backend
+        .update_manifest_bytes(&lease, 350, 1_000)
+        .await
+        .expect("bytes update");
+    backend
+        .add_manifest_progress(&lease, 1_234, 0, 1_234)
+        .await
+        .expect("progress update");
+
+    // Files still being pulled: the counters alone speak.
+    backend
+        .update_manifest_phase(&lease, ManifestPhase::Downloading, 24, 24)
+        .await
+        .expect("phase update");
+    let progress = poll_progress(&server, &poll_path).await;
+    assert_eq!(progress, "Processing 35% - 1,234 Resources written");
+
+    // Fan-out drained: the counters keep the lead, the completion trails.
+    backend
+        .update_manifest_phase(&lease, ManifestPhase::Downloaded, 24, 24)
+        .await
+        .expect("phase update");
+    let progress = poll_progress(&server, &poll_path).await;
+    assert_eq!(
+        progress, "Processing 35% - 1,234 Resources written - Downloaded 24 of 24 files",
+        "the poller must be told every file is in, got: {progress}"
+    );
+    assert!(
+        progress.is_ascii(),
+        "X-Progress is a header value: {progress}"
     );
 }
 
