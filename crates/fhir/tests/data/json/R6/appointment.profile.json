@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "Appointment",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -14,12 +14,12 @@
       "valueCode": "normative"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
-      "valueCode": "pa"
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "6.0.0-snapshot1"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 3
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+      "valueCode": "pa"
     },
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
@@ -27,11 +27,11 @@
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/Appointment",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "Appointment",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Patient Administration",
   "contact": [
     {
@@ -63,7 +63,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "workflow",
@@ -364,7 +364,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -659,7 +659,7 @@
           ],
           "strength": "required",
           "description": "The free/busy status of an appointment.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2393,7 +2393,7 @@
           ],
           "strength": "required",
           "description": "The Participation status of an appointment.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2705,7 +2705,7 @@
           ],
           "strength": "required",
           "description": "IANA Timezones (BCP 175)",
-          "valueSet": "http://hl7.org/fhir/ValueSet/timezones|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/timezones|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3082,7 +3082,7 @@
           ],
           "strength": "required",
           "description": "The days of the week.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"
         }
       },
       {
@@ -3354,7 +3354,7 @@
           ],
           "strength": "required",
           "description": "The set of weeks in a month.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-snapshot1"
         }
       },
       {
@@ -3396,7 +3396,7 @@
           ],
           "strength": "required",
           "description": "The days of the week.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"
         }
       },
       {
@@ -3853,7 +3853,7 @@
           ],
           "strength": "required",
           "description": "The free/busy status of an appointment.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5000,7 +5000,7 @@
           ],
           "strength": "required",
           "description": "The Participation status of an appointment.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5115,7 +5115,7 @@
           ],
           "strength": "required",
           "description": "IANA Timezones (BCP 175)",
-          "valueSet": "http://hl7.org/fhir/ValueSet/timezones|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/timezones|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5267,7 +5267,7 @@
           ],
           "strength": "required",
           "description": "The days of the week.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"
         }
       },
       {
@@ -5342,7 +5342,7 @@
           ],
           "strength": "required",
           "description": "The set of weeks in a month.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-snapshot1"
         }
       },
       {
@@ -5370,7 +5370,7 @@
           ],
           "strength": "required",
           "description": "The days of the week.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"
         }
       },
       {

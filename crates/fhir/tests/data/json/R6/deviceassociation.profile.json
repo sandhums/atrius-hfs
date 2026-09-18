@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "DeviceAssociation",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -18,20 +18,16 @@
       "valueCode": "oo"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 0
-    },
-    {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
       "valueCode": "patient"
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/DeviceAssociation",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "DeviceAssociation",
   "status": "draft",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Orders and Observations",
   "contact": [
     {
@@ -63,7 +59,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "w5",
@@ -289,7 +285,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -638,7 +634,7 @@
           ],
           "strength": "required",
           "description": "Describes the lifecycle of the association.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-snapshot1"
         }
       },
       {
@@ -1011,7 +1007,7 @@
           ],
           "strength": "required",
           "description": "Describes the lifecycle of the association.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-snapshot1"
         }
       },
       {

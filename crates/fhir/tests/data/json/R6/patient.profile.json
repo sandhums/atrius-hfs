@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "Patient",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -22,20 +22,16 @@
       "valueCode": "pa"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 5
-    },
-    {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
       "valueCode": "patient"
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/Patient",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "Patient",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Patient Administration",
   "contact": [
     {
@@ -68,7 +64,7 @@
     }
   ],
   "purpose": "Tracking patient is the center of the healthcare process.",
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "w5",
@@ -334,7 +330,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -790,7 +786,7 @@
           ],
           "strength": "required",
           "description": "The gender of a person used for administrative purposes.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -1725,7 +1721,7 @@
           ],
           "strength": "required",
           "description": "The gender of a person used for administrative purposes.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2064,7 +2060,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -2508,7 +2504,7 @@
           ],
           "strength": "required",
           "description": "The type of link between this patient resource and another Patient resource, or Patient/RelatedPerson when using the `seealso` code",
-          "valueSet": "http://hl7.org/fhir/ValueSet/link-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/link-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2748,7 +2744,7 @@
           ],
           "strength": "required",
           "description": "The gender of a person used for administrative purposes.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3334,7 +3330,7 @@
           ],
           "strength": "required",
           "description": "The gender of a person used for administrative purposes.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3476,7 +3472,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -3695,7 +3691,7 @@
           ],
           "strength": "required",
           "description": "The type of link between this patient resource and another Patient resource, or Patient/RelatedPerson when using the `seealso` code",
-          "valueSet": "http://hl7.org/fhir/ValueSet/link-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/link-type|6.0.0-snapshot1"
         },
         "mapping": [
           {

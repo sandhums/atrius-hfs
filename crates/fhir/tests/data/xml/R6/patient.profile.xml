@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="Patient"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -790,18 +790,15 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="pa"/>
   </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="5"/>
-  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="patient"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/Patient"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="Patient"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / Patient Administration"/>
   <contact>
     <telecom>
@@ -824,7 +821,7 @@
     </coding>
   </jurisdiction>
   <purpose value="Tracking patient is the center of the healthcare process."/>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="w5"/>
     <uri value="http://hl7.org/fhir/fivews"/>
@@ -1052,7 +1049,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -1427,7 +1424,7 @@
         </extension>
         <strength value="required"/>
         <description value="The gender of a person used for administrative purposes."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -2201,7 +2198,7 @@
         </extension>
         <strength value="required"/>
         <description value="The gender of a person used for administrative purposes."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -2471,7 +2468,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -2824,7 +2821,7 @@
         </extension>
         <strength value="required"/>
         <description value="The type of link between this patient resource and another Patient resource, or Patient/RelatedPerson when using the `seealso` code"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/link-type|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/link-type|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>
@@ -3028,7 +3025,7 @@
         </extension>
         <strength value="required"/>
         <description value="The gender of a person used for administrative purposes."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -3514,7 +3511,7 @@
         </extension>
         <strength value="required"/>
         <description value="The gender of a person used for administrative purposes."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/administrative-gender|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -3628,7 +3625,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -3801,7 +3798,7 @@
         </extension>
         <strength value="required"/>
         <description value="The type of link between this patient resource and another Patient resource, or Patient/RelatedPerson when using the `seealso` code"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/link-type|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/link-type|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>

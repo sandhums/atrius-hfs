@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "RequestOrchestration",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -14,12 +14,12 @@
       "valueCode": "normative"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
-      "valueCode": "cds"
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "6.0.0-snapshot1"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 4
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+      "valueCode": "cds"
     },
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
@@ -27,11 +27,11 @@
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/RequestOrchestration",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "RequestOrchestration",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Clinical Decision Support",
   "contact": [
     {
@@ -63,7 +63,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "workflow",
@@ -298,7 +298,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -779,7 +779,7 @@
           ],
           "strength": "required",
           "description": "Codes identifying the lifecycle stage of a request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -835,7 +835,7 @@
           ],
           "strength": "required",
           "description": "Codes indicating the degree of authority/intentionality associated with a request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -887,7 +887,7 @@
           ],
           "strength": "required",
           "description": "Identifies the level of importance to be assigned to actioning the request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -1638,7 +1638,7 @@
           ],
           "strength": "required",
           "description": "Identifies the level of importance to be assigned to actioning the request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -1990,7 +1990,7 @@
           ],
           "strength": "required",
           "description": "The kind of condition for the action.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-snapshot1"
         }
       },
       {
@@ -2861,7 +2861,7 @@
           ],
           "strength": "required",
           "description": "Defines the types of relationships between actions.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-snapshot1"
         }
       },
       {
@@ -2902,7 +2902,7 @@
           ],
           "strength": "required",
           "description": "Defines the types of relationships between actions.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3264,7 +3264,7 @@
           ],
           "strength": "required",
           "description": "The type of participant in the activity.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3610,7 +3610,7 @@
           ],
           "strength": "required",
           "description": "Defines applicability behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3657,7 +3657,7 @@
           ],
           "strength": "required",
           "description": "Defines organization behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -3698,7 +3698,7 @@
           ],
           "strength": "required",
           "description": "Defines selection behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -3739,7 +3739,7 @@
           ],
           "strength": "required",
           "description": "Defines expectations around whether an action or action group is required.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -3780,7 +3780,7 @@
           ],
           "strength": "required",
           "description": "Defines selection frequency behavior for an action or group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -3821,7 +3821,7 @@
           ],
           "strength": "required",
           "description": "Defines behavior for an action or a group for how many times that item may be repeated.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -4435,7 +4435,7 @@
           ],
           "strength": "required",
           "description": "Codes identifying the lifecycle stage of a request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4477,7 +4477,7 @@
           ],
           "strength": "required",
           "description": "Codes indicating the degree of authority/intentionality associated with a request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-intent|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4515,7 +4515,7 @@
           ],
           "strength": "required",
           "description": "Identifies the level of importance to be assigned to actioning the request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4917,7 +4917,7 @@
           ],
           "strength": "required",
           "description": "Identifies the level of importance to be assigned to actioning the request.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5060,7 +5060,7 @@
           ],
           "strength": "required",
           "description": "The kind of condition for the action.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-condition-kind|6.0.0-snapshot1"
         }
       },
       {
@@ -5344,7 +5344,7 @@
           ],
           "strength": "required",
           "description": "Defines the types of relationships between actions.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-snapshot1"
         }
       },
       {
@@ -5371,7 +5371,7 @@
           ],
           "strength": "required",
           "description": "Defines the types of relationships between actions.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-relationship-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5522,7 +5522,7 @@
           ],
           "strength": "required",
           "description": "The type of participant in the activity.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-participant-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5770,7 +5770,7 @@
           ],
           "strength": "required",
           "description": "Defines applicability behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-applicability-behavior|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -5803,7 +5803,7 @@
           ],
           "strength": "required",
           "description": "Defines organization behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-grouping-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -5830,7 +5830,7 @@
           ],
           "strength": "required",
           "description": "Defines selection behavior of a group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-selection-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -5857,7 +5857,7 @@
           ],
           "strength": "required",
           "description": "Defines expectations around whether an action or action group is required.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-required-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -5884,7 +5884,7 @@
           ],
           "strength": "required",
           "description": "Defines selection frequency behavior for an action or group.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-precheck-behavior|6.0.0-snapshot1"
         }
       },
       {
@@ -5911,7 +5911,7 @@
           ],
           "strength": "required",
           "description": "Defines behavior for an action or a group for how many times that item may be repeated.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/action-cardinality-behavior|6.0.0-snapshot1"
         }
       },
       {

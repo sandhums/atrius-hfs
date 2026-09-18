@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="DeviceAssociation"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -319,18 +319,15 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="oo"/>
   </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="0"/>
-  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="patient"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/DeviceAssociation"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="DeviceAssociation"/>
   <status value="draft"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / Orders and Observations"/>
   <contact>
     <telecom>
@@ -352,7 +349,7 @@
       <display value="World"/>
     </coding>
   </jurisdiction>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="w5"/>
     <uri value="http://hl7.org/fhir/fivews"/>
@@ -542,7 +539,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -817,7 +814,7 @@
         </extension>
         <strength value="required"/>
         <description value="Describes the lifecycle of the association."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="DeviceAssociation.statusReason">
@@ -1116,7 +1113,7 @@
         </extension>
         <strength value="required"/>
         <description value="Describes the lifecycle of the association."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/deviceassociation-status|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="DeviceAssociation.statusReason">

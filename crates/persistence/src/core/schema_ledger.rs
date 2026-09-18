@@ -148,83 +148,100 @@ mod tests {
 
     #[test]
     fn upstream_postgres_v36_skips_outbox_and_later_helios_steps() {
-        let idx = implied_applied_indices(36, Numbering::Upstream, 42);
+        let idx = implied_applied_indices(36, Numbering::Upstream, 43);
         assert!(!idx.contains(&15));
         assert!(idx.contains(&16));
         assert!(idx.contains(&35), "autovacuum is Helios v36");
         assert!(!idx.contains(&36), "publication is Helios v37");
         assert!(!idx.contains(&38), "file-progress is Helios v39");
-        assert!(!idx.contains(&39), "slot-2 is fork-only");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "slot-2 is fork-only");
         assert_eq!(idx.len(), 35);
     }
 
     #[test]
     fn classify_flavour_and_tip_are_fork() {
         assert_eq!(
-            classify_numbering(Some(SCHEMA_FLAVOUR), 36, 43, false),
+            classify_numbering(Some(SCHEMA_FLAVOUR), 36, 44, false),
             Numbering::Fork
         );
-        assert_eq!(classify_numbering(None, 43, 43, false), Numbering::Fork);
-        assert_eq!(classify_numbering(None, 20, 43, true), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 44, 44, false), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 20, 44, true), Numbering::Fork);
     }
 
     #[test]
     fn classify_no_outbox_below_tip_is_upstream() {
-        assert_eq!(classify_numbering(None, 36, 43, false), Numbering::Upstream);
+        assert_eq!(classify_numbering(None, 36, 44, false), Numbering::Upstream);
         assert_eq!(classify_numbering(None, 18, 19, false), Numbering::Upstream);
     }
 
     #[test]
     fn classify_below_insertion_is_fork() {
-        assert_eq!(classify_numbering(None, 16, 43, false), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 16, 44, false), Numbering::Fork);
     }
 
     #[test]
     fn upstream_postgres_v36_skips_later_fork_tip_steps() {
-        let idx = implied_applied_indices(36, Numbering::Upstream, 42);
+        let idx = implied_applied_indices(36, Numbering::Upstream, 43);
         assert!(!idx.contains(&15), "outbox");
         assert!(!idx.contains(&36), "publication");
         assert!(!idx.contains(&37), "types");
         assert!(!idx.contains(&38), "file-progress");
-        assert!(!idx.contains(&39), "slot-2");
-        assert!(!idx.contains(&40), "manifest phase");
-        assert!(!idx.contains(&41), "outbox dead-letter");
+        assert!(!idx.contains(&39), "attempts");
+        assert!(!idx.contains(&40), "slot-2");
+        assert!(!idx.contains(&41), "manifest phase");
+        assert!(!idx.contains(&42), "outbox dead-letter");
         assert_eq!(idx.len(), 35);
     }
 
     #[test]
     fn upstream_postgres_v38_runs_fork_steps_after_types() {
-        let idx = implied_applied_indices(38, Numbering::Upstream, 42);
+        let idx = implied_applied_indices(38, Numbering::Upstream, 43);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&35), "autovacuum is Helios v36");
         assert!(idx.contains(&36), "publication is Helios v37");
         assert!(idx.contains(&37), "types is Helios v38");
         assert!(!idx.contains(&38), "file-progress is Helios v39");
-        assert!(!idx.contains(&39), "slot-2 is fork-only");
-        assert!(!idx.contains(&40), "manifest phase");
-        assert!(!idx.contains(&41), "outbox dead-letter");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "slot-2 is fork-only");
+        assert!(!idx.contains(&41), "manifest phase");
+        assert!(!idx.contains(&42), "outbox dead-letter");
         assert_eq!(idx.len(), 37, "all Helios steps through v38 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v39_runs_fork_steps_after_file_progress() {
-        let idx = implied_applied_indices(39, Numbering::Upstream, 42);
+        let idx = implied_applied_indices(39, Numbering::Upstream, 43);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&37), "types is Helios v38");
         assert!(idx.contains(&38), "file-progress is Helios v39");
-        assert!(!idx.contains(&39), "slot-2 is fork-only");
-        assert!(!idx.contains(&40), "manifest phase");
-        assert!(!idx.contains(&41), "outbox dead-letter");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "slot-2 is fork-only");
+        assert!(!idx.contains(&41), "manifest phase");
+        assert!(!idx.contains(&42), "outbox dead-letter");
         assert_eq!(idx.len(), 38, "all Helios steps through v39 except outbox");
     }
 
     #[test]
+    fn upstream_postgres_v40_runs_fork_steps_after_attempts() {
+        let idx = implied_applied_indices(40, Numbering::Upstream, 43);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&38), "file-progress is Helios v39");
+        assert!(idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "slot-2 is fork-only");
+        assert!(!idx.contains(&41), "manifest phase");
+        assert!(!idx.contains(&42), "outbox dead-letter");
+        assert_eq!(idx.len(), 39, "all Helios steps through v40 except outbox");
+    }
+
+    #[test]
     fn upstream_sqlite_v23_runs_later_steps_after_helios_fts_map() {
-        // 33 steps: Helios v23 maps onto fork indices 16..=22 (provider …
+        // 34 steps: Helios v23 maps onto fork indices 16..=22 (provider …
         // resource_fts_map). live_type (23), phase (24), publication (25),
         // types (26), folded (27), drop_token_display (28), index_pending (29),
-        // resource_key (30), file_progress (31) and dead_letter (32) must still run.
-        let idx = implied_applied_indices(23, Numbering::Upstream, 33);
+        // resource_key (30), file_progress (31), attempts (32) and dead_letter (33)
+        // must still run.
+        let idx = implied_applied_indices(23, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&22), "resource_fts_map is Helios v23");
         assert!(!idx.contains(&23), "live_type is Helios v24");
@@ -236,13 +253,14 @@ mod tests {
         assert!(!idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 22, "all Helios steps through v23 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v25_runs_later_steps_after_helios_phase() {
-        let idx = implied_applied_indices(25, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(25, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&23), "live_type is Helios v24");
         assert!(idx.contains(&24), "phase is Helios v25");
@@ -253,13 +271,14 @@ mod tests {
         assert!(!idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 24, "all Helios steps through v25 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v27_runs_folded_and_later_after_types() {
-        let idx = implied_applied_indices(27, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(27, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&26), "types is Helios v27");
         assert!(!idx.contains(&27), "folded is Helios v28");
@@ -267,13 +286,14 @@ mod tests {
         assert!(!idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 26, "all Helios steps through v27 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v28_runs_later_after_folded() {
-        let idx = implied_applied_indices(28, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(28, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&26), "types is Helios v27");
         assert!(idx.contains(&27), "folded is Helios v28");
@@ -281,53 +301,68 @@ mod tests {
         assert!(!idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 27, "all Helios steps through v28 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v29_runs_later_after_token_display_drop() {
-        let idx = implied_applied_indices(29, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(29, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&27), "folded is Helios v28");
         assert!(idx.contains(&28), "drop_token_display is Helios v29");
         assert!(!idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 28, "all Helios steps through v29 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v30_runs_resource_key_and_dead_letter_after_index_pending() {
-        let idx = implied_applied_indices(30, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(30, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&28), "drop_token_display is Helios v29");
         assert!(idx.contains(&29), "index_pending is Helios v30");
         assert!(!idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 29, "all Helios steps through v30 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v31_runs_dead_letter_after_resource_key() {
-        let idx = implied_applied_indices(31, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(31, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&29), "index_pending is Helios v30");
         assert!(idx.contains(&30), "resource_key is Helios v31");
         assert!(!idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 30, "all Helios steps through v31 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v32_runs_dead_letter_after_file_progress() {
-        let idx = implied_applied_indices(32, Numbering::Upstream, 33);
+        let idx = implied_applied_indices(32, Numbering::Upstream, 34);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&30), "resource_key is Helios v31");
         assert!(idx.contains(&31), "file_progress is Helios v32");
-        assert!(!idx.contains(&32), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 31, "all Helios steps through v32 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v33_runs_dead_letter_after_attempts() {
+        let idx = implied_applied_indices(33, Numbering::Upstream, 34);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&31), "file_progress is Helios v32");
+        assert!(idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 32, "all Helios steps through v33 except outbox");
     }
 }

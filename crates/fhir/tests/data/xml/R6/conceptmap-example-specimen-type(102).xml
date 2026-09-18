@@ -3171,7 +3171,7 @@
     <system value="urn:ietf:rfc:3986"/>
     <value value="urn:oid:2.16.840.1.113883.4.642.14.3"/>
   </identifier>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="SpecimenMappingFromV2Table0487ToSNOMEDCT"/>
   <title value="Specimen mapping from v2 table 0487 to SNOMED CT"/>
   <status value="draft"/>

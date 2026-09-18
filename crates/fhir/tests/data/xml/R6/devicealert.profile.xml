@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="DeviceAlert"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -656,21 +656,21 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
     <valueCode value="normative"/>
   </extension>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
+    <valueCode value="6.0.0-snapshot1"/>
+  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="dev"/>
-  </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="2"/>
   </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="patient"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/DeviceAlert"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="DeviceAlert"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / Devices"/>
   <contact>
     <telecom>
@@ -692,7 +692,7 @@
       <display value="World"/>
     </coding>
   </jurisdiction>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="workflow"/>
     <uri value="http://hl7.org/fhir/workflow"/>
@@ -910,7 +910,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -1166,7 +1166,7 @@
       <binding>
         <strength value="required"/>
         <description value="in-progress | completed | entered-in-error | unknown"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="workflow"/>
@@ -2341,7 +2341,7 @@
       <binding>
         <strength value="required"/>
         <description value="in-progress | completed | entered-in-error | unknown"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/devicealert-status|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="workflow"/>

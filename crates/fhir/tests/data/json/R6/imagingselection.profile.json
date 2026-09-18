@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "ImagingSelection",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -14,12 +14,12 @@
       "valueCode": "normative"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
-      "valueCode": "ii"
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "6.0.0-snapshot1"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 6
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+      "valueCode": "ii"
     },
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
@@ -27,11 +27,11 @@
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/ImagingSelection",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "ImagingSelection",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Imaging Integration",
   "contact": [
     {
@@ -63,7 +63,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "workflow",
@@ -384,7 +384,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -664,7 +664,7 @@
           ],
           "strength": "required",
           "description": "The status of the ImagingSelection.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2338,7 +2338,7 @@
           ],
           "strength": "required",
           "description": "The type of image region.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2618,7 +2618,7 @@
           ],
           "strength": "required",
           "description": "The type of image region.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -2833,7 +2833,7 @@
           ],
           "strength": "required",
           "description": "The status of the ImagingSelection.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3692,7 +3692,7 @@
           ],
           "strength": "required",
           "description": "The type of image region.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-2dgraphictype|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3789,7 +3789,7 @@
           ],
           "strength": "required",
           "description": "The type of image region.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/imagingselection-3dgraphictype|6.0.0-snapshot1"
         },
         "mapping": [
           {

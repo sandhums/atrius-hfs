@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 34;
+pub const SCHEMA_VERSION: i32 = 35;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -29,15 +29,18 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// Helios v29 (`idx_search_token_display` drop, `#945`), Helios v30
 /// (`bulk_manifests.index_pending`, `#1125`), Helios v31 (`search_index.resource_key`,
 /// `#945`), Helios v32 (`bulk_manifest_file_progress` / `skipped_entries`, `#1127`),
-/// and [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at
+/// Helios v33 (`bulk_export_jobs.attempts`, `#1041`), and
+/// [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at
 /// Helios v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps
 /// through types (26). Helios v28 maps through the partial folded index (27)
 /// and still runs the token-display drop, index_pending, resource_key,
-/// file-progress, and `dead_at`. Helios v29 maps through the drop (28) and
-/// still runs the later four. Helios v30 maps through index_pending (29) and
-/// still runs resource_key, file-progress, and `dead_at`. Helios v31 maps
-/// through resource_key (30) and still runs file-progress and `dead_at`.
-/// Helios v32 maps through file-progress (31) and still runs `dead_at`.
+/// file-progress, attempts, and `dead_at`. Helios v29 maps through the drop (28)
+/// and still runs the later five. Helios v30 maps through index_pending (29)
+/// and still runs resource_key, file-progress, attempts, and `dead_at`. Helios
+/// v31 maps through resource_key (30) and still runs file-progress, attempts,
+/// and `dead_at`. Helios v32 maps through file-progress (31) and still runs
+/// attempts and `dead_at`. Helios v33 maps through attempts (32) and still
+/// runs `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -71,6 +74,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_manifests_index_pending", migrate_v29_to_v30),
     ("search_index_resource_key", migrate_v30_to_v31),
     ("bulk_manifest_file_progress", migrate_v31_to_v32),
+    ("bulk_export_jobs_attempts", migrate_v32_to_v33),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -1768,6 +1772,30 @@ fn migrate_v31_to_v32(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Migrate from schema version 32 to version 33.
+///
+/// Adds `bulk_export_jobs.attempts` — how many times the job has been claimed
+/// by a worker (#1041). A job whose lease expires mid-run is reclaimable, so
+/// without a count of past claims a job that keeps dying the same way is handed
+/// to worker after worker forever, never reaching a terminal state and never
+/// giving its tenant's concurrency slot back. `claim_next` bumps the column on
+/// every claim and retires the job once the count would exceed the configured
+/// cap.
+fn migrate_v32_to_v33(conn: &Connection) -> StorageResult<()> {
+    let has_column = conn
+        .prepare("SELECT 1 FROM pragma_table_info('bulk_export_jobs') WHERE name = 'attempts'")
+        .and_then(|mut stmt| stmt.exists([]))
+        .unwrap_or(false);
+    if !has_column {
+        conn.execute(
+            "ALTER TABLE bulk_export_jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+            [],
+        )
+        .map_err(|e| migration_err(format!("v33 attempts column: {e}")))?;
+    }
+    Ok(())
+}
+
 /// Migrate from schema version 10 to version 11.
 ///
 /// Adds columns supporting `_contained` search: index rows extracted from a
@@ -3114,10 +3142,15 @@ mod tests {
         assert!(applied.contains("bulk_manifests_index_pending"));
         assert!(applied.contains("search_index_resource_key"));
         assert!(applied.contains("bulk_manifest_file_progress"));
+        assert!(applied.contains("bulk_export_jobs_attempts"));
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
+            table_has_column(&conn, "bulk_export_jobs", "attempts").unwrap(),
+            "v33 must add bulk_export_jobs.attempts"
+        );
+        assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v34 must add subscription_outbox.dead_at"
+            "v35 must add subscription_outbox.dead_at"
         );
         assert_eq!(
             table_exists("resource_fts_map"),

@@ -15,7 +15,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 43;
+pub const SCHEMA_VERSION: i32 = 44;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -26,9 +26,11 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// Helios publication (their v37) and export `types_*` (their v38) sit
 /// immediately after autovacuum so an upstream-numbered Postgres DB at
 /// Helios v38 maps through types (index 37) and still runs Helios v39
-/// file-progress, then fork-only slot-2, phase, and `dead_at`. Helios v39
-/// maps through file-progress (index 38) and still runs slot-2, phase, and
-/// `dead_at`.
+/// file-progress, Helios v40 `bulk_export_jobs.attempts` (`#1041`), then
+/// fork-only slot-2, phase, and `dead_at`. Helios v39 maps through
+/// file-progress (index 38) and still runs attempts, slot-2, phase, and
+/// `dead_at`. Helios v40 maps through attempts (index 39) and still runs
+/// slot-2, phase, and `dead_at`.
 const PG_STEPS: &[&str] = &[
     "search_index_enhanced_columns",
     "resource_fts",
@@ -69,6 +71,7 @@ const PG_STEPS: &[&str] = &[
     "bulk_submit_manifest_publication",
     "bulk_export_types_progress",
     "bulk_manifest_file_progress",
+    "bulk_export_jobs_attempts",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -411,6 +414,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "bulk_submit_manifest_publication" => migrate_publication(client).await,
         "bulk_export_types_progress" => migrate_export_types_progress(client).await,
         "bulk_manifest_file_progress" => migrate_bulk_manifest_file_progress(client).await,
+        "bulk_export_jobs_attempts" => migrate_bulk_export_jobs_attempts(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -4034,6 +4038,29 @@ async fn migrate_bulk_manifest_file_progress(
             .await
             .map_err(|e| pg_error(format!("Migration bulk_manifest_file_progress failed: {e}")))?;
     }
+
+    Ok(())
+}
+
+/// Named step `bulk_export_jobs_attempts` (Helios v40, #1041): `attempts` on
+/// `bulk_export_jobs`.
+///
+/// Counts how many times the job has been claimed by a worker. A job whose
+/// lease expires mid-run is reclaimable, so without a count of past claims a
+/// job that keeps dying the same way is handed to worker after worker forever,
+/// never reaching a terminal state and never giving its tenant's concurrency
+/// slot back. `claim_next` bumps the column on every claim and retires the job
+/// once the count would exceed the configured cap.
+async fn migrate_bulk_export_jobs_attempts(
+    client: &deadpool_postgres::Client,
+) -> StorageResult<()> {
+    client
+        .execute(
+            "ALTER TABLE bulk_export_jobs ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("Migration bulk_export_jobs_attempts failed: {e}")))?;
 
     Ok(())
 }

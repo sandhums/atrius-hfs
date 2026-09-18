@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="Subscription"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -634,21 +634,21 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
     <valueCode value="normative"/>
   </extension>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
+    <valueCode value="6.0.0-snapshot1"/>
+  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="fhir"/>
-  </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="3"/>
   </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="business"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/Subscription"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="Subscription"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / FHIR Infrastructure"/>
   <contact>
     <telecom>
@@ -664,7 +664,7 @@
       <display value="World"/>
     </coding>
   </jurisdiction>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="w5"/>
     <uri value="http://hl7.org/fhir/fivews"/>
@@ -857,7 +857,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -1097,7 +1097,7 @@
         </extension>
         <strength value="required"/>
         <description value="The status of a subscription."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="w5"/>
@@ -1495,7 +1495,7 @@
         </extension>
         <strength value="required"/>
         <description value="Search Comparator Codes applied to this filter."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.filterBy.modifier">
@@ -1530,7 +1530,7 @@
         </extension>
         <strength value="required"/>
         <description value="Search Modifier Code applied to this filter."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.filterBy.value">
@@ -1920,7 +1920,7 @@
         </extension>
         <strength value="required"/>
         <description value="BCP 13 (RFCs 2045, 2046, 2047, 4288, 4289 and 2049)"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.content">
@@ -1954,7 +1954,7 @@
         </extension>
         <strength value="required"/>
         <description value="Codes to represent how much resource content to send in the notification payload."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.maxCount">
@@ -2054,7 +2054,7 @@
         </extension>
         <strength value="required"/>
         <description value="The status of a subscription."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-status|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="w5"/>
@@ -2236,7 +2236,7 @@
         </extension>
         <strength value="required"/>
         <description value="Search Comparator Codes applied to this filter."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/search-comparator|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.filterBy.modifier">
@@ -2259,7 +2259,7 @@
         </extension>
         <strength value="required"/>
         <description value="Search Modifier Code applied to this filter."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/search-modifier-code|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.filterBy.value">
@@ -2421,7 +2421,7 @@
         </extension>
         <strength value="required"/>
         <description value="BCP 13 (RFCs 2045, 2046, 2047, 4288, 4289 and 2049)"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/mimetypes|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.content">
@@ -2443,7 +2443,7 @@
         </extension>
         <strength value="required"/>
         <description value="Codes to represent how much resource content to send in the notification payload."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/subscription-payload-content|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Subscription.maxCount">

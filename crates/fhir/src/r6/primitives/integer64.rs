@@ -7,8 +7,9 @@ use crate::r6::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type Integer64
-///
+/// 
 /// integer64 Type: A very large whole number
-///
+/// 
 /// See: [integer64](http://hl7.org/fhir/StructureDefinition/integer64)
 pub type Integer64 = Element<std::primitive::i64, Extension>;
+

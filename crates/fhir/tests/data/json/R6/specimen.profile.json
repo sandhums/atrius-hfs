@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "Specimen",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -14,12 +14,12 @@
       "valueCode": "normative"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
-      "valueCode": "oo"
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "6.0.0-snapshot1"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 3
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+      "valueCode": "oo"
     },
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
@@ -27,11 +27,11 @@
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/Specimen",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "Specimen",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Orders and Observations",
   "contact": [
     {
@@ -63,7 +63,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "w5",
@@ -301,7 +301,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -584,7 +584,7 @@
           ],
           "strength": "required",
           "description": "Codes providing the status/availability of a specimen.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -929,7 +929,7 @@
           ],
           "strength": "required",
           "description": "Codes for the combined status of a specimen.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-combined|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-combined|6.0.0-snapshot1"
         }
       },
       {
@@ -1817,7 +1817,7 @@
         "path": "Specimen.collection.fastingStatus[x]",
         "short": "Whether or how long patient abstained from food and/or drink",
         "definition": "Abstinence or reduction from some or all food, drink, or both, for a period of time prior to sample collection.",
-        "comment": "Representing fasting status using this element is preferred to representing it with an observation using a \u0027pre-coordinated code\u0027  such as  LOINC 2005-7 (Calcium [Moles/​time] in 2 hour Urine --12 hours fasting), or  using  a component observation ` such as `Observation.component code`  \u003d LOINC 49541-6 (Fasting status - Reported).",
+        "comment": "Representing fasting status using this element is preferred to representing it with an observation using a \u0027pre-coordinated code\u0027 such as LOINC 2005-7 (Calcium [Moles/​time] in 2 hour Urine --12 hours fasting), or using a component observation such as `Observation.component.code` \u003d LOINC 49541-6 (Fasting status - Reported).",
         "requirements": "Many diagnostic tests require fasting  to facilitate accurate interpretation.",
         "min": 0,
         "max": "1",
@@ -2986,7 +2986,7 @@
           ],
           "strength": "required",
           "description": "Codes providing the status/availability of a specimen.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -3233,7 +3233,7 @@
           ],
           "strength": "required",
           "description": "Codes for the combined status of a specimen.",
-          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-combined|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/specimen-combined|6.0.0-snapshot1"
         }
       },
       {
@@ -3657,7 +3657,7 @@
         "path": "Specimen.collection.fastingStatus[x]",
         "short": "Whether or how long patient abstained from food and/or drink",
         "definition": "Abstinence or reduction from some or all food, drink, or both, for a period of time prior to sample collection.",
-        "comment": "Representing fasting status using this element is preferred to representing it with an observation using a \u0027pre-coordinated code\u0027  such as  LOINC 2005-7 (Calcium [Moles/​time] in 2 hour Urine --12 hours fasting), or  using  a component observation ` such as `Observation.component code`  \u003d LOINC 49541-6 (Fasting status - Reported).",
+        "comment": "Representing fasting status using this element is preferred to representing it with an observation using a \u0027pre-coordinated code\u0027 such as LOINC 2005-7 (Calcium [Moles/​time] in 2 hour Urine --12 hours fasting), or using a component observation such as `Observation.component.code` \u003d LOINC 49541-6 (Fasting status - Reported).",
         "requirements": "Many diagnostic tests require fasting  to facilitate accurate interpretation.",
         "min": 0,
         "max": "1",

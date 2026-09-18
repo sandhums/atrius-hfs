@@ -269,10 +269,7 @@ async fn post_flag(
         }]
     });
 
-    let url = format!(
-        "{}/Flag/{flag_id}",
-        cfg.fhir_base_url.trim_end_matches('/')
-    );
+    let url = format!("{}/Flag/{flag_id}", cfg.fhir_base_url.trim_end_matches('/'));
     let req = cfg
         .fhir_http
         .put(&url)

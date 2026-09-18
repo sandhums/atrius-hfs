@@ -196,6 +196,9 @@ fn test_tenant() -> TenantContext {
     )
 }
 
+/// Claim cap for tests that are not exercising the cap itself.
+const TEST_MAX_ATTEMPTS: u32 = 3;
+
 /// Drains all currently-claimable export jobs by running a worker synchronously.
 async fn drain_workers(backend: &Arc<SqliteBackend>, output: &Arc<LocalFsOutputStore>) {
     let worker_id = WorkerId::new("test-worker");
@@ -206,7 +209,7 @@ async fn drain_workers(backend: &Arc<SqliteBackend>, output: &Arc<LocalFsOutputS
         worker_id.clone(),
     );
     while let Some(lease) = backend
-        .claim_next(&worker_id, Duration::from_secs(60))
+        .claim_next(&worker_id, Duration::from_secs(60), TEST_MAX_ATTEMPTS)
         .await
         .expect("claim_next")
     {
@@ -476,7 +479,7 @@ async fn test_status_poll_reports_types_progress_while_in_flight() {
     // it in-progress, and record that one of the three types is done.
     let worker_id = WorkerId::new("t");
     let lease = backend
-        .claim_next(&worker_id, Duration::from_secs(60))
+        .claim_next(&worker_id, Duration::from_secs(60), TEST_MAX_ATTEMPTS)
         .await
         .expect("claim_next")
         .expect("a job is claimable right after kick-off");
@@ -598,7 +601,7 @@ async fn test_status_poll_percent_is_capped_at_99_while_running() {
 
     let worker_id = WorkerId::new("t");
     let lease = backend
-        .claim_next(&worker_id, Duration::from_secs(60))
+        .claim_next(&worker_id, Duration::from_secs(60), TEST_MAX_ATTEMPTS)
         .await
         .expect("claim_next")
         .expect("a job is claimable right after kick-off");
@@ -784,7 +787,7 @@ async fn test_failed_job_status_poll_returns_operation_outcome_with_diagnostics(
         worker_id.clone(),
     );
     while let Some(lease) = backend
-        .claim_next(&worker_id, Duration::from_secs(60))
+        .claim_next(&worker_id, Duration::from_secs(60), TEST_MAX_ATTEMPTS)
         .await
         .expect("claim_next")
     {
@@ -1068,7 +1071,7 @@ async fn test_valid_type_filter_accepted() {
     // the worker to reinterpret the raw query string.
     let worker_id = WorkerId::new("t");
     let lease = backend
-        .claim_next(&worker_id, Duration::from_secs(60))
+        .claim_next(&worker_id, Duration::from_secs(60), TEST_MAX_ATTEMPTS)
         .await
         .expect("claim_next")
         .expect("a job should be claimable");

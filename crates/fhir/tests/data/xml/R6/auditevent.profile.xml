@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="AuditEvent"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -1134,21 +1134,21 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
     <valueCode value="normative"/>
   </extension>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
+    <valueCode value="6.0.0-snapshot1"/>
+  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="sec"/>
-  </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="4"/>
   </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="not-classified"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/AuditEvent"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="AuditEvent"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / Security"/>
   <contact>
     <telecom>
@@ -1170,7 +1170,7 @@
       <display value="World"/>
     </coding>
   </jurisdiction>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="workflow"/>
     <uri value="http://hl7.org/fhir/workflow"/>
@@ -1389,7 +1389,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -1690,7 +1690,7 @@
         </extension>
         <strength value="required"/>
         <description value="DICOM Audit Event Action"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-action|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-action|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="w5"/>
@@ -1740,7 +1740,7 @@
         </extension>
         <strength value="required"/>
         <description value="This is in the SysLog header, PRI. http://tools.ietf.org/html/rfc5424#appendix-A.3"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-severity|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-severity|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>
@@ -3923,7 +3923,7 @@
         </extension>
         <strength value="required"/>
         <description value="DICOM Audit Event Action"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-action|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-action|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="w5"/>
@@ -3961,7 +3961,7 @@
         </extension>
         <strength value="required"/>
         <description value="This is in the SysLog header, PRI. http://tools.ietf.org/html/rfc5424#appendix-A.3"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-severity|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/audit-event-severity|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>

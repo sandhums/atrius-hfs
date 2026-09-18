@@ -2,7 +2,7 @@
   "resourceType": "StructureDefinition",
   "id": "MeasureReport",
   "meta": {
-    "lastUpdated": "2026-08-28T18:37:46.371+00:00"
+    "lastUpdated": "2026-09-14T16:43:45.341+00:00"
   },
   "text": {
     "status": "generated",
@@ -14,12 +14,12 @@
       "valueCode": "normative"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
-      "valueCode": "cqi"
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "6.0.0-snapshot1"
     },
     {
-      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
-      "valueInteger": 4
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+      "valueCode": "cqi"
     },
     {
       "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category",
@@ -27,11 +27,11 @@
     }
   ],
   "url": "http://hl7.org/fhir/StructureDefinition/MeasureReport",
-  "version": "6.0.0-ballot4",
+  "version": "6.0.0-snapshot1",
   "name": "MeasureReport",
   "status": "active",
   "experimental": false,
-  "date": "2026-08-28T18:37:46+00:00",
+  "date": "2026-09-14T16:43:45+00:00",
   "publisher": "HL7 International / Clinical Quality Information",
   "contact": [
     {
@@ -63,7 +63,7 @@
       ]
     }
   ],
-  "fhirVersion": "6.0.0-ballot4",
+  "fhirVersion": "6.0.0-snapshot1",
   "mapping": [
     {
       "identity": "w5",
@@ -303,7 +303,7 @@
           ],
           "strength": "required",
           "description": "IETF language tag for a human language",
-          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4",
+          "valueSet": "http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1",
           "additional": [
             {
               "purpose": "starter",
@@ -666,7 +666,7 @@
           ],
           "strength": "required",
           "description": "The status of the measure report (e.g. complete, pending, or error)",
-          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -725,7 +725,7 @@
           ],
           "strength": "required",
           "description": "The type of the measure report: individual, patient listing, or summary",
-          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -777,7 +777,7 @@
             }
           ],
           "strength": "required",
-          "valueSet": "http://hl7.org/fhir/ValueSet/submit-data-update-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/submit-data-update-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4068,7 +4068,7 @@
           ],
           "strength": "required",
           "description": "The status of the measure report (e.g. complete, pending, or error)",
-          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-status|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-status|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4113,7 +4113,7 @@
           ],
           "strength": "required",
           "description": "The type of the measure report: individual, patient listing, or summary",
-          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/measure-report-type|6.0.0-snapshot1"
         },
         "mapping": [
           {
@@ -4151,7 +4151,7 @@
             }
           ],
           "strength": "required",
-          "valueSet": "http://hl7.org/fhir/ValueSet/submit-data-update-type|6.0.0-ballot4"
+          "valueSet": "http://hl7.org/fhir/ValueSet/submit-data-update-type|6.0.0-snapshot1"
         },
         "mapping": [
           {

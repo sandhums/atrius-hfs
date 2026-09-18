@@ -3,7 +3,7 @@
 <StructureDefinition xmlns="http://hl7.org/fhir">
   <id value="Appointment"/>
   <meta>
-    <lastUpdated value="2026-08-28T18:37:46.371+00:00"/>
+    <lastUpdated value="2026-09-14T16:43:45.341+00:00"/>
   </meta>
   <text>
     <status value="generated"/>
@@ -1237,21 +1237,21 @@
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
     <valueCode value="normative"/>
   </extension>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
+    <valueCode value="6.0.0-snapshot1"/>
+  </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
     <valueCode value="pa"/>
-  </extension>
-  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm">
-    <valueInteger value="3"/>
   </extension>
   <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category">
     <valueCode value="patient"/>
   </extension>
   <url value="http://hl7.org/fhir/StructureDefinition/Appointment"/>
-  <version value="6.0.0-ballot4"/>
+  <version value="6.0.0-snapshot1"/>
   <name value="Appointment"/>
   <status value="active"/>
   <experimental value="false"/>
-  <date value="2026-08-28T18:37:46+00:00"/>
+  <date value="2026-09-14T16:43:45+00:00"/>
   <publisher value="HL7 International / Patient Administration"/>
   <contact>
     <telecom>
@@ -1273,7 +1273,7 @@
       <display value="World"/>
     </coding>
   </jurisdiction>
-  <fhirVersion value="6.0.0-ballot4"/>
+  <fhirVersion value="6.0.0-snapshot1"/>
   <mapping>
     <identity value="workflow"/>
     <uri value="http://hl7.org/fhir/workflow"/>
@@ -1534,7 +1534,7 @@
         </extension>
         <strength value="required"/>
         <description value="IETF language tag for a human language"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/all-languages|6.0.0-snapshot1"/>
         <additional>
           <purpose value="starter"/>
           <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
@@ -1768,7 +1768,7 @@
         </extension>
         <strength value="required"/>
         <description value="The free/busy status of an appointment."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="workflow"/>
@@ -3176,7 +3176,7 @@
         </extension>
         <strength value="required"/>
         <description value="The Participation status of an appointment."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -3421,7 +3421,7 @@
         </extension>
         <strength value="required"/>
         <description value="IANA Timezones (BCP 175)"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/timezones|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/timezones|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>
@@ -3719,7 +3719,7 @@
         </extension>
         <strength value="required"/>
         <description value="The days of the week."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.weeklyTemplate.weekInterval">
@@ -3935,7 +3935,7 @@
         </extension>
         <strength value="required"/>
         <description value="The set of weeks in a month."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.monthlyTemplate.dayOfWeek">
@@ -3969,7 +3969,7 @@
         </extension>
         <strength value="required"/>
         <description value="The days of the week."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.monthlyTemplate.monthInterval">
@@ -4342,7 +4342,7 @@
         </extension>
         <strength value="required"/>
         <description value="The free/busy status of an appointment."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/appointmentstatus|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="workflow"/>
@@ -5258,7 +5258,7 @@
         </extension>
         <strength value="required"/>
         <description value="The Participation status of an appointment."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/participationstatus|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="v2"/>
@@ -5347,7 +5347,7 @@
         </extension>
         <strength value="required"/>
         <description value="IANA Timezones (BCP 175)"/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/timezones|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/timezones|6.0.0-snapshot1"/>
       </binding>
       <mapping>
         <identity value="rim"/>
@@ -5465,7 +5465,7 @@
         </extension>
         <strength value="required"/>
         <description value="The days of the week."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.weeklyTemplate.weekInterval">
@@ -5525,7 +5525,7 @@
         </extension>
         <strength value="required"/>
         <description value="The set of weeks in a month."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/week-of-month|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.monthlyTemplate.dayOfWeek">
@@ -5547,7 +5547,7 @@
         </extension>
         <strength value="required"/>
         <description value="The days of the week."/>
-        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-ballot4"/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/days-of-week|6.0.0-snapshot1"/>
       </binding>
     </element>
     <element id="Appointment.recurrenceTemplate.monthlyTemplate.monthInterval">

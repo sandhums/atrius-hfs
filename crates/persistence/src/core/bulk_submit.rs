@@ -319,6 +319,11 @@ pub enum ManifestPhase {
     Sizing,
     /// Ingesting the `output` files (before the first counters flush).
     Downloading,
+    /// Every `output` file has been pulled to its end; what remains is the
+    /// manifest's own wind-down (deleted files, receipts, artifacts, and the
+    /// per-manifest reindex under deferred indexing). Reported so a poller can
+    /// tell "still pulling files" from "all files in" (#1218).
+    Downloaded,
 }
 
 impl std::fmt::Display for ManifestPhase {
@@ -327,6 +332,7 @@ impl std::fmt::Display for ManifestPhase {
             Self::ReadingManifest => write!(f, "reading-manifest"),
             Self::Sizing => write!(f, "sizing"),
             Self::Downloading => write!(f, "downloading"),
+            Self::Downloaded => write!(f, "downloaded"),
         }
     }
 }
@@ -339,6 +345,7 @@ impl std::str::FromStr for ManifestPhase {
             "reading-manifest" | "reading_manifest" => Ok(Self::ReadingManifest),
             "sizing" => Ok(Self::Sizing),
             "downloading" => Ok(Self::Downloading),
+            "downloaded" => Ok(Self::Downloaded),
             _ => Err(format!("unknown manifest phase: {}", s)),
         }
     }
@@ -1596,14 +1603,19 @@ pub trait BulkSubmitProvider: ResourceStorage {
 
     /// Marks a submission as complete.
     ///
+    /// This is a status transition only. It deliberately returns nothing:
+    /// building a [`SubmissionSummary`] means aggregating every receipt row of
+    /// the submission, which at corpus scale (millions of entries) took tens
+    /// of seconds on every `submissionStatus=completed` kick-off — the same
+    /// kick-off the Import page's *Mark completed* button sends with a 15s
+    /// budget, so the transition timed out and was lost (#998). A caller that
+    /// wants the counts calls [`get_submission`](Self::get_submission)
+    /// afterwards and pays for them knowingly.
+    ///
     /// # Arguments
     ///
     /// * `tenant` - The tenant context
     /// * `id` - The submission identifier
-    ///
-    /// # Returns
-    ///
-    /// The updated submission summary.
     ///
     /// # Errors
     ///
@@ -1613,7 +1625,7 @@ pub trait BulkSubmitProvider: ResourceStorage {
         &self,
         tenant: &TenantContext,
         id: &SubmissionId,
-    ) -> StorageResult<SubmissionSummary>;
+    ) -> StorageResult<()>;
 
     /// Aborts a submission.
     ///
