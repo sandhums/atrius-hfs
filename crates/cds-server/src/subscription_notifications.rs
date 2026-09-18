@@ -219,6 +219,10 @@ async fn fetch_observation(cfg: &SubscriptionNotifyConfig, id: &str) -> Result<V
         .map_err(|e| format!("decode Observation/{id}: {e}"))
 }
 
+fn critical_labs_flag_id(observation_id: &str) -> String {
+    format!("flag-{observation_id}")
+}
+
 async fn post_flag(
     cfg: &SubscriptionNotifyConfig,
     patient_id: &str,
@@ -230,8 +234,17 @@ async fn post_flag(
         Indicator::Warning => "warning",
         Indicator::Info => "info",
     };
+    let flag_id = critical_labs_flag_id(observation_id);
+    let period_start = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    // Display-only `author` trips Helios ref-1. AtriusInFlag example is
+    // status + code.text + subject + period.start — PUT by observation id so
+    // smokes can GET Flag/flag-{obs} instead of searching (HFS search lag).
     let flag = json!({
         "resourceType": "Flag",
+        "id": flag_id,
+        "meta": {
+            "profile": ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-flag"]
+        },
         "status": "active",
         "category": [{
             "coding": [{
@@ -249,17 +262,20 @@ async fn post_flag(
             "text": card.summary
         },
         "subject": { "reference": format!("Patient/{patient_id}") },
-        "author": { "display": CRITICAL_LABS_SERVICE_ID },
+        "period": { "start": period_start },
         "extension": [{
             "url": "https://atrius.in/fhir/StructureDefinition/cds-subscription-source",
             "valueReference": { "reference": format!("Observation/{observation_id}") }
         }]
     });
 
-    let url = format!("{}/Flag", cfg.fhir_base_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/Flag/{flag_id}",
+        cfg.fhir_base_url.trim_end_matches('/')
+    );
     let req = cfg
         .fhir_http
-        .post(&url)
+        .put(&url)
         .header("Content-Type", "application/fhir+json")
         .json(&flag);
     let mut req = match authorize_request(cfg.fhir_auth.as_ref(), req).await {
