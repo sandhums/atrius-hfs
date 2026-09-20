@@ -3447,22 +3447,68 @@ async fn build_hierarchical_expansion(
     Ok(roots)
 }
 
-/// Recursively build an [`ExpansionContains`] node with all its nested children.
+/// Build an [`ExpansionContains`] node with nested children (heap walk).
+///
+/// Same cycle / poly-hierarchy contract as the SQLite `build_subtree`: path-
+/// local skip of already-open ancestors, so SNOMED mutual parent/child pairs
+/// cannot overflow the tokio worker stack.
 fn build_subtree(
     key: &(String, String),
     items_map: &HashMap<(String, String), ExpansionContains>,
     parent_to_children: &HashMap<(String, String), Vec<(String, String)>>,
 ) -> ExpansionContains {
-    let mut item = items_map[key].clone();
-    if let Some(children) = parent_to_children.get(key) {
-        let mut child_items: Vec<ExpansionContains> = children
-            .iter()
-            .map(|ck| build_subtree(ck, items_map, parent_to_children))
-            .collect();
+    struct Frame {
+        key: (String, String),
+        next_child: usize,
+        children: Vec<(String, String)>,
+        built: Vec<ExpansionContains>,
+    }
+
+    let start_children = parent_to_children.get(key).cloned().unwrap_or_default();
+    let mut stack = vec![Frame {
+        key: key.clone(),
+        next_child: 0,
+        children: start_children,
+        built: Vec::new(),
+    }];
+    let mut path = HashSet::new();
+    path.insert(key.clone());
+
+    while let Some(frame) = stack.last_mut() {
+        if frame.next_child < frame.children.len() {
+            let child_key = frame.children[frame.next_child].clone();
+            frame.next_child += 1;
+            if path.contains(&child_key) {
+                continue;
+            }
+            path.insert(child_key.clone());
+            let grandchildren = parent_to_children
+                .get(&child_key)
+                .cloned()
+                .unwrap_or_default();
+            stack.push(Frame {
+                key: child_key,
+                next_child: 0,
+                children: grandchildren,
+                built: Vec::new(),
+            });
+            continue;
+        }
+
+        let done = stack.pop().expect("frame just observed");
+        path.remove(&done.key);
+        let mut item = items_map[&done.key].clone();
+        let mut child_items = done.built;
         child_items.sort_by(|a, b| a.code.cmp(&b.code));
         item.contains = child_items;
+        if let Some(parent) = stack.last_mut() {
+            parent.built.push(item);
+        } else {
+            return item;
+        }
     }
-    item
+
+    items_map[key].clone()
 }
 
 /// Write computed expansion entries into the `value_set_expansions` cache.

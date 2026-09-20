@@ -6464,12 +6464,10 @@ fn build_hierarchical_expansion(
         .iter()
         .filter(|c| !has_parent.contains(&(c.system.clone(), c.code.clone())))
         .map(|c| {
-            let mut path = HashSet::new();
             build_subtree(
                 &(c.system.clone(), c.code.clone()),
                 &items_map,
                 &parent_to_children,
-                &mut path,
             )
         })
         .collect();
@@ -6487,55 +6485,82 @@ fn build_hierarchical_expansion(
     Ok(roots)
 }
 
-/// Recursively build an [`ExpansionContains`] node with all its nested children.
+/// Build an [`ExpansionContains`] node with all its nested children.
 ///
-/// Looks up `key` in `items_map` to get the base node, then checks
-/// `parent_to_children` for any children of that node, recursing into each
-/// child.  Children are sorted by code before being attached, producing a
-/// deterministic tree order regardless of the order edges were stored in
-/// `concept_hierarchy`.
+/// Looks up `key` in `items_map`, then walks `parent_to_children` iteratively
+/// (heap stack, not the OS thread stack). Children are sorted by code before
+/// being attached, producing a deterministic tree order regardless of the
+/// order edges were stored in `concept_hierarchy`.
 ///
-/// `path` carries the ancestor chain of `key` and makes the recursion safe on
-/// cyclic edge sets. `concept_hierarchy` is not guaranteed acyclic: SNOMED RF2
-/// imports produce mutual parent/child pairs (e.g. `310387003` ⇄ `707221002`,
-/// diabetic intracapillary glomerulosclerosis / diabetic glomerulosclerosis),
-/// and without this guard any expansion covering such a pair recursed until the
-/// worker thread overflowed its stack and aborted the process. The guard is
-/// path-local rather than global because these hierarchies are poly-hierarchies:
-/// the same concept legitimately nests under several different parents.
+/// The walk is path-local cycle-safe. `concept_hierarchy` is not guaranteed
+/// acyclic: SNOMED RF2 imports produce mutual parent/child pairs (e.g.
+/// `310387003` ⇄ `707221002`). A recursive walk of those edges overflowed the
+/// tokio worker stack and aborted the process. The guard is path-local rather
+/// than global because these are poly-hierarchies: the same concept
+/// legitimately nests under several different parents.
 ///
 /// ## Parameters
 /// - `key` — `(system_url, code)` of the concept to build.
 /// - `items_map` — flat `(system_url, code)` → [`ExpansionContains`] lookup.
 /// - `parent_to_children` — adjacency map built from `concept_hierarchy` edges
 ///   that are fully contained within the expansion set.
-/// - `path` — `(system_url, code)` keys currently on the recursion stack.
 fn build_subtree(
     key: &(String, String),
     items_map: &HashMap<(String, String), ExpansionContains>,
     parent_to_children: &HashMap<(String, String), Vec<(String, String)>>,
-    path: &mut HashSet<(String, String)>,
 ) -> ExpansionContains {
-    let mut item = items_map[key].clone();
-    if let Some(children) = parent_to_children.get(key) {
-        path.insert(key.clone());
-        let mut child_items: Vec<ExpansionContains> = Vec::with_capacity(children.len());
-        for child_key in children {
-            if path.contains(child_key) {
+    struct Frame {
+        key: (String, String),
+        next_child: usize,
+        children: Vec<(String, String)>,
+        built: Vec<ExpansionContains>,
+    }
+
+    let start_children = parent_to_children.get(key).cloned().unwrap_or_default();
+    let mut stack = vec![Frame {
+        key: key.clone(),
+        next_child: 0,
+        children: start_children,
+        built: Vec::new(),
+    }];
+    let mut path = HashSet::new();
+    path.insert(key.clone());
+
+    while let Some(frame) = stack.last_mut() {
+        if frame.next_child < frame.children.len() {
+            let child_key = frame.children[frame.next_child].clone();
+            frame.next_child += 1;
+            if path.contains(&child_key) {
                 continue;
             }
-            child_items.push(build_subtree(
-                child_key,
-                items_map,
-                parent_to_children,
-                path,
-            ));
+            path.insert(child_key.clone());
+            let grandchildren = parent_to_children
+                .get(&child_key)
+                .cloned()
+                .unwrap_or_default();
+            stack.push(Frame {
+                key: child_key,
+                next_child: 0,
+                children: grandchildren,
+                built: Vec::new(),
+            });
+            continue;
         }
-        path.remove(key);
+
+        let done = stack.pop().expect("frame just observed");
+        path.remove(&done.key);
+        let mut item = items_map[&done.key].clone();
+        let mut child_items = done.built;
         child_items.sort_by(|a, b| a.code.cmp(&b.code));
         item.contains = child_items;
+        if let Some(parent) = stack.last_mut() {
+            parent.built.push(item);
+        } else {
+            return item;
+        }
     }
-    item
+
+    items_map[key].clone()
 }
 
 /// Write computed expansion entries into the `value_set_expansions` cache.
@@ -10686,8 +10711,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let mut path = HashSet::new();
-        let tree = build_subtree(&key("root"), &items_map, &parent_to_children, &mut path);
+        let tree = build_subtree(&key("root"), &items_map, &parent_to_children);
 
         // root → a → b; b's edge back to a closes the cycle and is dropped.
         assert_eq!(tree.code, "root");
@@ -10696,7 +10720,45 @@ mod tests {
         assert_eq!(tree.contains[0].contains.len(), 1);
         assert_eq!(tree.contains[0].contains[0].code, "b");
         assert!(tree.contains[0].contains[0].contains.is_empty());
-        assert!(path.is_empty(), "path must be unwound before returning");
+    }
+
+    /// A 4k-deep parent chain would overflow a tokio worker if `build_subtree`
+    /// still recursed on the OS stack. Heap walk must terminate.
+    #[test]
+    fn build_subtree_survives_deep_chain() {
+        const SYS: &str = "http://example.org/cs";
+        const DEPTH: usize = 4_096;
+        let key = |n: usize| (SYS.to_string(), n.to_string());
+        let node = |n: usize| ExpansionContains {
+            system: SYS.to_string(),
+            version: None,
+            code: n.to_string(),
+            display: None,
+            is_abstract: None,
+            inactive: None,
+            designations: vec![],
+            properties: vec![],
+            extensions: vec![],
+            contains: vec![],
+        };
+
+        let items_map: HashMap<(String, String), ExpansionContains> =
+            (0..=DEPTH).map(|n| (key(n), node(n))).collect();
+        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = (0..DEPTH)
+            .map(|n| (key(n), vec![key(n + 1)]))
+            .collect();
+
+        let tree = build_subtree(&key(0), &items_map, &parent_to_children);
+        let mut walk = &tree;
+        for n in 0..=DEPTH {
+            assert_eq!(walk.code, n.to_string());
+            if n == DEPTH {
+                assert!(walk.contains.is_empty());
+            } else {
+                assert_eq!(walk.contains.len(), 1);
+                walk = &walk.contains[0];
+            }
+        }
     }
 
     /// The cycle guard is path-local on purpose: these are poly-hierarchies, so
@@ -10732,8 +10794,7 @@ mod tests {
         .into_iter()
         .collect();
 
-        let mut path = HashSet::new();
-        let tree = build_subtree(&key("root"), &items_map, &parent_to_children, &mut path);
+        let tree = build_subtree(&key("root"), &items_map, &parent_to_children);
 
         assert_eq!(tree.contains.len(), 2);
         for parent in &tree.contains {
