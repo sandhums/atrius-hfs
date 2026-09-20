@@ -8,6 +8,8 @@ what the Atrius fork added, and where simplification is (and is not) warranted.
 
 - [`fork-ecl-fts-typeahead-expand.md`](fork-ecl-fts-typeahead-expand.md) — Atrius
   ECL + text filter / typeahead ranking patch
+- [`fork-icd-import-expand-subsumes-2026-09-20.md`](fork-icd-import-expand-subsumes-2026-09-20.md)
+  — dotted `is-a` `$expand` (bypass ECL), hierarchical cycle guard, `/import?finalize=true`
 - `atrius-clinical-ui/docs/snomed-structured-data-entry-plan.md` — clinical UI
   consumer (BFF → HTS `$expand` with `filter`)
 

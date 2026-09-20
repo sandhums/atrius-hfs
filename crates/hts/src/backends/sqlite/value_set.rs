@@ -4295,6 +4295,30 @@ fn apply_compose_filters(
             continue;
         }
 
+        // Fast path for is-a / descendent-of with no prior candidate set.
+        // ECL only accepts numeric SCTIDs, so routing these through
+        // `parse_and_evaluate` rejects any code system whose codes carry a
+        // `.` or `-` (ICD-10 `H40.1`, LOINC `718-7`). A closure lookup is
+        // equivalent for a plain-code hierarchy op and works on every system —
+        // it is already what the bounded paths above and
+        // `apply_compose_filters_to_candidates` use.
+        if property_norm == "concept"
+            && matches!(op, "is-a" | "descendent-of")
+            && !value.is_empty()
+        {
+            let descendants =
+                query_descendants_full(conn, system_url, system_id, value, op == "is-a")?;
+            match result.as_mut() {
+                Some(prev) => {
+                    let keep: HashSet<String> =
+                        descendants.iter().map(|c| c.code.clone()).collect();
+                    prev.retain(|c| keep.contains(&c.code));
+                }
+                None => result = Some(descendants),
+            }
+            continue;
+        }
+
         // Slow path: no prior bounded set — compute the full ECL expansion.
         let resolved = ecl::parse_and_evaluate(conn, system_id, &ecl_expr)?;
         let concepts: Vec<ExpansionContains> = resolved
@@ -4865,6 +4889,58 @@ fn query_ancestors_full(
                 contains: vec![],
             })
         })
+        .map_err(|e| HtsError::StorageError(e.to_string()))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(|e| HtsError::StorageError(e.to_string()))?;
+
+    Ok(rows)
+}
+
+/// Return all descendants of `value_code` in `system_id`, including `value_code`
+/// itself when `include_self`.
+///
+/// The mirror of [`query_ancestors_full`], walking `concept_closure` in the
+/// descendant direction. Backs the unbounded `is-a` / `descendent-of` compose
+/// filters, which cannot go through ECL because the ECL grammar only accepts
+/// numeric SCTIDs.
+fn query_descendants_full(
+    conn: &Connection,
+    system_url: &str,
+    system_id: &str,
+    value_code: &str,
+    include_self: bool,
+) -> Result<Vec<ExpansionContains>, HtsError> {
+    let mut stmt = conn
+        .prepare_cached(
+            "SELECT cc.descendant_code, c.display
+             FROM   concept_closure cc
+             JOIN   concepts c ON c.system_id = ?2 AND c.code = cc.descendant_code
+             WHERE  cc.system_id = ?2 AND cc.ancestor_code = ?1
+               AND  (cc.descendant_code != ?1 OR ?3)",
+        )
+        .map_err(|e| HtsError::StorageError(e.to_string()))?;
+
+    let rows = stmt
+        .query_map(
+            rusqlite::params![value_code, system_id, i64::from(include_self)],
+            |r| {
+                Ok(ExpansionContains {
+                    system: system_url.to_owned(),
+                    version: None,
+                    code: r.get(0)?,
+                    display: r.get(1)?,
+                    is_abstract: None,
+
+                    inactive: None,
+
+                    designations: vec![],
+
+                    properties: vec![],
+                    extensions: vec![],
+                    contains: vec![],
+                })
+            },
+        )
         .map_err(|e| HtsError::StorageError(e.to_string()))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
@@ -6393,13 +6469,24 @@ fn build_hierarchical_expansion(
         .iter()
         .filter(|c| !has_parent.contains(&(c.system.clone(), c.code.clone())))
         .map(|c| {
+            let mut path = HashSet::new();
             build_subtree(
                 &(c.system.clone(), c.code.clone()),
                 &items_map,
                 &parent_to_children,
+                &mut path,
             )
         })
         .collect();
+
+    // When every member of the expansion has a parent inside it, the edge set
+    // contains a cycle with no external entry point and there is no root to
+    // nest under. Fall back to the flat list rather than returning nothing.
+    if roots.is_empty() {
+        let mut flat = flat;
+        flat.sort_by(|a, b| a.code.cmp(&b.code));
+        return Ok(flat);
+    }
 
     roots.sort_by(|a, b| a.code.cmp(&b.code));
     Ok(roots)
@@ -6413,22 +6500,43 @@ fn build_hierarchical_expansion(
 /// deterministic tree order regardless of the order edges were stored in
 /// `concept_hierarchy`.
 ///
+/// `path` carries the ancestor chain of `key` and makes the recursion safe on
+/// cyclic edge sets. `concept_hierarchy` is not guaranteed acyclic: SNOMED RF2
+/// imports produce mutual parent/child pairs (e.g. `310387003` ⇄ `707221002`,
+/// diabetic intracapillary glomerulosclerosis / diabetic glomerulosclerosis),
+/// and without this guard any expansion covering such a pair recursed until the
+/// worker thread overflowed its stack and aborted the process. The guard is
+/// path-local rather than global because these hierarchies are poly-hierarchies:
+/// the same concept legitimately nests under several different parents.
+///
 /// ## Parameters
 /// - `key` — `(system_url, code)` of the concept to build.
 /// - `items_map` — flat `(system_url, code)` → [`ExpansionContains`] lookup.
 /// - `parent_to_children` — adjacency map built from `concept_hierarchy` edges
 ///   that are fully contained within the expansion set.
+/// - `path` — `(system_url, code)` keys currently on the recursion stack.
 fn build_subtree(
     key: &(String, String),
     items_map: &HashMap<(String, String), ExpansionContains>,
     parent_to_children: &HashMap<(String, String), Vec<(String, String)>>,
+    path: &mut HashSet<(String, String)>,
 ) -> ExpansionContains {
     let mut item = items_map[key].clone();
     if let Some(children) = parent_to_children.get(key) {
-        let mut child_items: Vec<ExpansionContains> = children
-            .iter()
-            .map(|ck| build_subtree(ck, items_map, parent_to_children))
-            .collect();
+        path.insert(key.clone());
+        let mut child_items: Vec<ExpansionContains> = Vec::with_capacity(children.len());
+        for child_key in children {
+            if path.contains(child_key) {
+                continue;
+            }
+            child_items.push(build_subtree(
+                child_key,
+                items_map,
+                parent_to_children,
+                path,
+            ));
+        }
+        path.remove(key);
         child_items.sort_by(|a, b| a.code.cmp(&b.code));
         item.contains = child_items;
     }
@@ -10545,6 +10653,98 @@ mod tests {
         assert_eq!(resp.contains.len(), 4);
         for c in &resp.contains {
             assert!(c.contains.is_empty(), "flat mode should not nest children");
+        }
+    }
+
+    /// `concept_hierarchy` is not guaranteed acyclic: SNOMED RF2 imports leave
+    /// mutual parent/child pairs behind (e.g. `310387003` ⇄ `707221002`).
+    /// `build_subtree` used to recurse across such a pair until the worker
+    /// thread overflowed its stack, aborting the whole process — so any
+    /// unbounded `$expand` covering one took the server down.
+    #[test]
+    fn build_subtree_terminates_on_cyclic_hierarchy() {
+        const SYS: &str = "http://snomed.info/sct";
+        let key = |code: &str| (SYS.to_string(), code.to_string());
+        let node = |code: &str| ExpansionContains {
+            system: SYS.to_string(),
+            version: None,
+            code: code.to_string(),
+            display: None,
+            is_abstract: None,
+            inactive: None,
+            designations: vec![],
+            properties: vec![],
+            extensions: vec![],
+            contains: vec![],
+        };
+
+        // root → a, plus the mutual pair a ⇄ b.
+        let items_map: HashMap<(String, String), ExpansionContains> =
+            ["root", "a", "b"].iter().map(|c| (key(c), node(c))).collect();
+        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
+            (key("root"), vec![key("a")]),
+            (key("a"), vec![key("b")]),
+            (key("b"), vec![key("a")]),
+        ]
+        .into_iter()
+        .collect();
+
+        let mut path = HashSet::new();
+        let tree = build_subtree(&key("root"), &items_map, &parent_to_children, &mut path);
+
+        // root → a → b; b's edge back to a closes the cycle and is dropped.
+        assert_eq!(tree.code, "root");
+        assert_eq!(tree.contains.len(), 1);
+        assert_eq!(tree.contains[0].code, "a");
+        assert_eq!(tree.contains[0].contains.len(), 1);
+        assert_eq!(tree.contains[0].contains[0].code, "b");
+        assert!(tree.contains[0].contains[0].contains.is_empty());
+        assert!(path.is_empty(), "path must be unwound before returning");
+    }
+
+    /// The cycle guard is path-local on purpose: these are poly-hierarchies, so
+    /// one concept legitimately nests under each of its parents.
+    #[test]
+    fn build_subtree_keeps_shared_concept_under_every_parent() {
+        const SYS: &str = "http://snomed.info/sct";
+        let key = |code: &str| (SYS.to_string(), code.to_string());
+        let node = |code: &str| ExpansionContains {
+            system: SYS.to_string(),
+            version: None,
+            code: code.to_string(),
+            display: None,
+            is_abstract: None,
+            inactive: None,
+            designations: vec![],
+            properties: vec![],
+            extensions: vec![],
+            contains: vec![],
+        };
+
+        // root → p1, p2; both p1 and p2 → shared.
+        let items_map: HashMap<(String, String), ExpansionContains> = ["root", "p1", "p2", "shared"]
+            .iter()
+            .map(|c| (key(c), node(c)))
+            .collect();
+        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
+            (key("root"), vec![key("p1"), key("p2")]),
+            (key("p1"), vec![key("shared")]),
+            (key("p2"), vec![key("shared")]),
+        ]
+        .into_iter()
+        .collect();
+
+        let mut path = HashSet::new();
+        let tree = build_subtree(&key("root"), &items_map, &parent_to_children, &mut path);
+
+        assert_eq!(tree.contains.len(), 2);
+        for parent in &tree.contains {
+            assert_eq!(
+                parent.contains.iter().map(|c| c.code.as_str()).collect::<Vec<_>>(),
+                vec!["shared"],
+                "{} should still nest the shared concept",
+                parent.code
+            );
         }
     }
 

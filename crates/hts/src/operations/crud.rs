@@ -389,7 +389,14 @@ mod inner {
     ///
     /// 1. Reads the current resource to extract its canonical URL (needed for
     ///    HTS normalized-table cleanup).
-    /// 2. Soft-deletes the raw JSON in `helios-persistence`.
+    /// 2. Soft-deletes the raw JSON in `helios-persistence`, **when a row is
+    ///    there**. `POST /import` writes only the HTS normalized tables, so
+    ///    every imported resource has no persistence row at all; insisting on
+    ///    one made imported content permanently undeletable (the store's
+    ///    not-found surfaced as HTTP 500 `resource not found`). That in turn
+    ///    left no way to drop a code retired upstream, because import only ever
+    ///    upserts. DELETE is idempotent in FHIR, so an already-absent resource
+    ///    is still 204 rather than an error.
     /// 3. Removes the resource's rows from HTS normalized tables:
     ///    - SQLite path: via `hts_pool` spawn-blocking helpers.
     ///    - PostgreSQL path: via `terminology_importer.delete_normalized()`.
@@ -408,8 +415,11 @@ mod inner {
         let terminology_importer = state.terminology_importer.clone();
         let ctx = ctx();
 
-        // 1. Read the resource URL before deleting (needed by both HTS cleanup paths).
-        let resource_url: Option<String> = match store.read(&ctx, resource_type, &id).await {
+        // 1. Read the resource URL before deleting (needed by both HTS cleanup
+        //    paths), and note whether the persistence store holds it at all.
+        let existing = store.read(&ctx, resource_type, &id).await;
+        let in_store = matches!(&existing, Ok(Some(r)) if !r.is_deleted());
+        let resource_url: Option<String> = match existing {
             Ok(Some(r)) if !r.is_deleted() => r
                 .content()
                 .get("url")
@@ -418,11 +428,14 @@ mod inner {
             _ => None,
         };
 
-        // 2. Soft-delete in persistence store.
-        store
-            .delete(&ctx, resource_type, &id)
-            .await
-            .map_err(|e| HtsError::StorageError(e.to_string()))?;
+        // 2. Soft-delete in the persistence store, but only when it has a row —
+        //    imported resources live solely in the normalized tables (see above).
+        if in_store {
+            store
+                .delete(&ctx, resource_type, &id)
+                .await
+                .map_err(|e| HtsError::StorageError(e.to_string()))?;
+        }
 
         // 3. Delete from HTS normalized tables.
         #[allow(unused_mut, unused_assignments)]
@@ -676,6 +689,98 @@ mod tests {
         AppState::new(backend)
             .with_resource_store(resource_store)
             .with_hts_pool(hts_pool)
+    }
+
+    /// Router with both `/import` and `CodeSystem` DELETE, so a resource that
+    /// exists only in the HTS normalized tables can be deleted.
+    fn import_and_delete_router() -> Router {
+        let state = make_state();
+        Router::new()
+            .route(
+                "/import",
+                post(crate::operations::import_bundle::import_handler::<SqliteTerminologyBackend>),
+            )
+            .route(
+                "/CodeSystem/{id}",
+                get(read_code_system::<SqliteTerminologyBackend>)
+                    .delete(delete_code_system::<SqliteTerminologyBackend>),
+            )
+            .with_state(state)
+    }
+
+    /// An imported CodeSystem is deletable.
+    ///
+    /// `POST /import` writes only the HTS normalized tables, so the resource has
+    /// no `helios-persistence` row. Deleting used to fail the store read and
+    /// return HTTP 500 `resource not found`, which left no way at all to drop a
+    /// code retired upstream — import only upserts, so stale codes accumulated
+    /// forever.
+    #[tokio::test]
+    async fn delete_removes_a_code_system_that_was_only_imported() {
+        let app = import_and_delete_router();
+
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [{ "resource": {
+                "resourceType": "CodeSystem",
+                "id": "imported-cs",
+                "url": "http://example.org/imported-cs",
+                "version": "1.0",
+                "name": "ImportedCS",
+                "status": "active",
+                "content": "complete",
+                "concept": [{ "code": "RETIRED", "display": "Retired code" }]
+            }}]
+        });
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/import")
+                    .header(header::CONTENT_TYPE, "application/fhir+json")
+                    .body(Body::from(bundle.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/CodeSystem/imported-cs")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::NO_CONTENT,
+            "imported CodeSystem should be deletable"
+        );
+    }
+
+    /// DELETE is idempotent: an id that exists nowhere is still 204, not 500.
+    #[tokio::test]
+    async fn delete_of_absent_code_system_is_idempotent() {
+        let app = import_and_delete_router();
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/CodeSystem/never-existed")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     }
 
     fn code_system_router() -> Router {

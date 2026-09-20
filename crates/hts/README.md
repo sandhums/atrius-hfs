@@ -44,6 +44,7 @@ All six standard [FHIR Terminology Service](http://hl7.org/fhir/terminology-serv
 |----------|-------------|
 | [IG Publisher compatibility](docs/ig-publisher-compatibility.md) | `$validate-code` parameter aliases, SNOMED `version=current`, LOINC version labeling — required for HL7 IG Publisher `-tx` validation |
 | [Expand paths architecture](docs/expand-paths-architecture.md) | ValueSet `$expand` code paths |
+| [ICD import / expand / subsumes fork (2026-09-20)](docs/fork-icd-import-expand-subsumes-2026-09-20.md) | Keep on `upstream/main` merge: dotted `is-a` `$expand`, hierarchical cycle guard, `/import?finalize=true`, idempotent DELETE of imported resources |
 
 ### Terminologies
 

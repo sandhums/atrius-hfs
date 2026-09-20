@@ -37,7 +37,9 @@
 //!
 //! Local enhancements for clinical SNOMED typeahead (ECL ValueSet + text filter)
 //! are documented in [`docs/fork-ecl-fts-typeahead-expand.md`](../docs/fork-ecl-fts-typeahead-expand.md)
-//! for upstream merge.
+//! for upstream merge. ICD-safe `$expand` / `$subsumes` / `/import` / DELETE
+//! (2026-09-20) is in
+//! [`docs/fork-icd-import-expand-subsumes-2026-09-20.md`](../docs/fork-icd-import-expand-subsumes-2026-09-20.md).
 //!
 //! [`AppState`]: state::AppState
 //! [`create_app`]: server::create_app
