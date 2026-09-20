@@ -24,7 +24,7 @@ otel = ["helios-observability/otel"]
 
 [dependencies]
 helios-cds-hooks = { path = "../cds-hooks" }
-helios-observability = { path = "../observability", version = "0.2.2" }
+helios-observability = { path = "../observability", version = "0.2.3" }
 anyhow = "1"
 chrono = { workspace = true }
 async-trait = "0.1"

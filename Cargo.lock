@@ -1611,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "cds-server"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1646,9 +1646,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chacha20"
-version = "0.10.0"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f8d983286843e49675a4b7a2d174efe136dc93a18d69130dd18198a6c167601"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
@@ -2806,7 +2806,7 @@ version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da0e4dd2a88388a1f4ccc7c9ce104604dab68d9f408dc34cd45823d5a9069095"
 dependencies = [
- "spin 0.9.8",
+ "spin 0.9.9",
 ]
 
 [[package]]
@@ -3196,7 +3196,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "helios-audit"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "aws-config",
@@ -3215,7 +3215,7 @@ dependencies = [
 
 [[package]]
 name = "helios-auth"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "bitflags 2.11.1",
@@ -3233,7 +3233,7 @@ dependencies = [
 
 [[package]]
 name = "helios-cds-hooks"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3246,7 +3246,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "chrono",
  "clap",
@@ -3266,7 +3266,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-gen"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "chrono",
  "clap",
@@ -3279,7 +3279,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-macro"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "heck",
  "helios-fhirpath-support",
@@ -3292,7 +3292,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-validator"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "clap",
@@ -3311,7 +3311,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhirpath"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "arc-swap",
  "axum",
@@ -3352,14 +3352,14 @@ dependencies = [
 
 [[package]]
 name = "helios-fhirpath-support"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "rust_decimal",
 ]
 
 [[package]]
 name = "helios-hfs"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3389,7 +3389,7 @@ dependencies = [
 
 [[package]]
 name = "helios-hts"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3434,7 +3434,7 @@ dependencies = [
 
 [[package]]
 name = "helios-hts-ui"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "askama",
  "async-trait",
@@ -3461,7 +3461,7 @@ dependencies = [
 
 [[package]]
 name = "helios-observability"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "axum",
@@ -3481,7 +3481,7 @@ dependencies = [
 
 [[package]]
 name = "helios-persistence"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "aws-config",
@@ -3534,7 +3534,7 @@ dependencies = [
 
 [[package]]
 name = "helios-rest"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -3599,7 +3599,7 @@ dependencies = [
 
 [[package]]
 name = "helios-serde"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "helios-fhir",
  "helios-fhir-macro",
@@ -3615,7 +3615,7 @@ dependencies = [
 
 [[package]]
 name = "helios-serde-support"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "erased-serde",
  "serde",
@@ -3624,7 +3624,7 @@ dependencies = [
 
 [[package]]
 name = "helios-sof"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -3671,7 +3671,7 @@ dependencies = [
 
 [[package]]
 name = "helios-subscriptions"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3695,7 +3695,7 @@ dependencies = [
 
 [[package]]
 name = "helios-terminology-client"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "dashmap",
  "reqwest",
@@ -3707,7 +3707,7 @@ dependencies = [
 
 [[package]]
 name = "helios-ui"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "askama",
  "async-stream",
@@ -3751,7 +3751,7 @@ dependencies = [
 
 [[package]]
 name = "helios-ui-chrome"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "askama",
  "form_urlencoded",
@@ -6136,7 +6136,7 @@ dependencies = [
 
 [[package]]
 name = "pysof"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "chrono",
  "csv",
@@ -7463,9 +7463,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
 dependencies = [
  "lock_api",
 ]

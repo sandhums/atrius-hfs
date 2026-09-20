@@ -4302,9 +4302,7 @@ fn apply_compose_filters(
         // equivalent for a plain-code hierarchy op and works on every system —
         // it is already what the bounded paths above and
         // `apply_compose_filters_to_candidates` use.
-        if property_norm == "concept"
-            && matches!(op, "is-a" | "descendent-of")
-            && !value.is_empty()
+        if property_norm == "concept" && matches!(op, "is-a" | "descendent-of") && !value.is_empty()
         {
             let descendants =
                 query_descendants_full(conn, system_url, system_id, value, op == "is-a")?;
@@ -5894,10 +5892,7 @@ fn try_validate_hierarchy_compose(
         None => return Ok(None),
     };
 
-    if compose["exclude"]
-        .as_array()
-        .is_some_and(|a| !a.is_empty())
-    {
+    if compose["exclude"].as_array().is_some_and(|a| !a.is_empty()) {
         return Ok(None);
     }
 
@@ -10679,8 +10674,10 @@ mod tests {
         };
 
         // root → a, plus the mutual pair a ⇄ b.
-        let items_map: HashMap<(String, String), ExpansionContains> =
-            ["root", "a", "b"].iter().map(|c| (key(c), node(c))).collect();
+        let items_map: HashMap<(String, String), ExpansionContains> = ["root", "a", "b"]
+            .iter()
+            .map(|c| (key(c), node(c)))
+            .collect();
         let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
             (key("root"), vec![key("a")]),
             (key("a"), vec![key("b")]),
@@ -10722,10 +10719,11 @@ mod tests {
         };
 
         // root → p1, p2; both p1 and p2 → shared.
-        let items_map: HashMap<(String, String), ExpansionContains> = ["root", "p1", "p2", "shared"]
-            .iter()
-            .map(|c| (key(c), node(c)))
-            .collect();
+        let items_map: HashMap<(String, String), ExpansionContains> =
+            ["root", "p1", "p2", "shared"]
+                .iter()
+                .map(|c| (key(c), node(c)))
+                .collect();
         let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
             (key("root"), vec![key("p1"), key("p2")]),
             (key("p1"), vec![key("shared")]),
@@ -10740,7 +10738,11 @@ mod tests {
         assert_eq!(tree.contains.len(), 2);
         for parent in &tree.contains {
             assert_eq!(
-                parent.contains.iter().map(|c| c.code.as_str()).collect::<Vec<_>>(),
+                parent
+                    .contains
+                    .iter()
+                    .map(|c| c.code.as_str())
+                    .collect::<Vec<_>>(),
                 vec!["shared"],
                 "{} should still nest the shared concept",
                 parent.code

@@ -227,9 +227,7 @@ mod tests {
         }
 
         async fn subsumes(app: &axum::Router, a: &str, b: &str) -> String {
-            let uri = format!(
-                "/CodeSystem/$subsumes?system={SYS}&codeA={a}&codeB={b}",
-            );
+            let uri = format!("/CodeSystem/$subsumes?system={SYS}&codeA={a}&codeB={b}",);
             let resp = app
                 .clone()
                 .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())

@@ -980,6 +980,11 @@ impl From<ValidationError> for RestError {
 impl From<SearchError> for RestError {
     fn from(err: SearchError) -> Self {
         match err {
+            // Named after the parameter, like the extractor's own value errors.
+            SearchError::InvalidDateValue { param, reason, .. } => RestError::InvalidParameter {
+                param,
+                message: reason,
+            },
             SearchError::UnsupportedParameterType { .. }
             | SearchError::UnsupportedModifier { .. }
             | SearchError::InvalidComposite { .. }
@@ -990,7 +995,8 @@ impl From<SearchError> for RestError {
             SearchError::ChainedSearchNotSupported { .. }
             | SearchError::ReverseChainNotSupported
             | SearchError::IncludeNotSupported { .. }
-            | SearchError::TextSearchNotAvailable => RestError::NotImplemented {
+            | SearchError::TextSearchNotAvailable
+            | SearchError::TerminologyRequired { .. } => RestError::NotImplemented {
                 feature: err.to_string(),
             },
             SearchError::TooManyResults { count, max } => RestError::UnprocessableEntity {
