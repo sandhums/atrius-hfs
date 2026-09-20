@@ -1350,6 +1350,76 @@ impl ValueSetOperations for SqliteTerminologyBackend {
             let (all_codes, compose_json_for_version): (Vec<ExpansionContains>, Option<String>) =
                 match resolution {
                     Ok((vs_id, compose_json)) => {
+                        // Intensional is-a / descendent-of composes (one or many
+                        // includes) are membership-checked against
+                        // `concept_closure` instead of materialising the expansion.
+                        // ACEI∪ARB∪ARNI is ~6.5k SNOMED products and would
+                        // otherwise 422 VALUESET_TOO_COSTLY on $validate-code
+                        // (HTS_MAX_EXPANSION_SIZE) even though $subsumes is O(1).
+                        if let Some(found) = try_validate_hierarchy_compose(
+                            &backend,
+                            &conn,
+                            compose_json.as_deref(),
+                            &req.code,
+                            req.system.as_deref(),
+                        )? {
+                            let abstract_for_msg = req.include_abstract == Some(false)
+                                && found
+                                    .as_ref()
+                                    .map(|c| {
+                                        is_concept_abstract(&backend, &conn, &c.system, &c.code)
+                                    })
+                                    .unwrap_or(false);
+                            let inactive_for_msg = found
+                                .as_ref()
+                                .map(|c| is_concept_inactive(&backend, &conn, &c.system, &c.code))
+                                .unwrap_or(false);
+                            let inactive_in_cs = found.is_none()
+                                && req
+                                    .system
+                                    .as_deref()
+                                    .map(|s| is_concept_inactive(&backend, &conn, s, &req.code))
+                                    .unwrap_or(false);
+                            let code_unknown_in_cs = found.is_none()
+                                && req
+                                    .system
+                                    .as_deref()
+                                    .map(|s| !is_code_in_cs(&conn, s, &req.code))
+                                    .unwrap_or(false);
+                            let cs_version = req
+                                .system
+                                .as_deref()
+                                .and_then(|s| cs_version_for_msg(&backend, &conn, s));
+                            let cs_is_fragment = req
+                                .system
+                                .as_deref()
+                                .map(|s| {
+                                    cs_content_for_url(&backend, &conn, s).as_deref()
+                                        == Some("fragment")
+                                })
+                                .unwrap_or(false);
+                            let vs_version_owned =
+                                lookup_value_set_version(&backend, &conn, &url);
+                            return finish_validate_code_response(
+                                found,
+                                &req.code,
+                                &url,
+                                req.display.as_deref(),
+                                req.system.as_deref(),
+                                abstract_for_msg,
+                                inactive_for_msg,
+                                vs_version_owned.as_deref(),
+                                inactive_in_cs,
+                                code_unknown_in_cs,
+                                false,
+                                cs_version.as_deref(),
+                                req.version.as_deref(),
+                                req.lenient_display_validation.unwrap_or(false),
+                                cs_is_fragment,
+                                None,
+                                None,
+                            );
+                        }
                         let saved = compose_json.clone();
                         // Bypass the `value_set_expansions` cache when the
                         // compose describes a multi-version overload — the
@@ -5720,6 +5790,157 @@ fn extract_simple_hierarchy_compose(
     )))
 }
 
+/// Membership check for composes that are a union of `concept is-a` /
+/// `descendent-of` includes and nothing else (no `concept[]`, no nested
+/// `valueSet[]`, no `exclude`, no other filter ops).
+///
+/// Returns:
+/// - `Ok(None)` when the compose does not match this pattern (caller must
+///   expand).
+/// - `Ok(Some(None))` when the compose matches and `code` is not a member.
+/// - `Ok(Some(Some(concept)))` when `code` is a member of at least one include.
+///
+/// Uses `concept_closure` (O(1) PK lookup per include) so large SNOMED
+/// product-class ValueSets can `$validate-code` without materialising the
+/// expansion and tripping `HTS_MAX_EXPANSION_SIZE`.
+fn try_validate_hierarchy_compose(
+    backend: &SqliteTerminologyBackend,
+    conn: &Connection,
+    compose_json: Option<&str>,
+    code: &str,
+    system: Option<&str>,
+) -> Result<Option<Option<ExpansionContains>>, HtsError> {
+    let compose: serde_json::Value = match compose_json {
+        Some(s) => match serde_json::from_str(s) {
+            Ok(v) => v,
+            Err(_) => return Ok(None),
+        },
+        None => return Ok(None),
+    };
+
+    if compose["exclude"]
+        .as_array()
+        .is_some_and(|a| !a.is_empty())
+    {
+        return Ok(None);
+    }
+
+    let includes = match compose["include"].as_array() {
+        Some(a) if !a.is_empty() => a,
+        _ => return Ok(None),
+    };
+
+    struct Branch {
+        sys_url: String,
+        sys_id: String,
+        root_code: String,
+        include_root: bool,
+    }
+    let mut branches: Vec<Branch> = Vec::new();
+
+    for inc in includes {
+        if inc["concept"].as_array().is_some_and(|a| !a.is_empty()) {
+            return Ok(None);
+        }
+        if inc["valueSet"].as_array().is_some_and(|a| !a.is_empty()) {
+            return Ok(None);
+        }
+        let filters = match inc["filter"].as_array() {
+            Some(f) if f.len() == 1 => f,
+            _ => return Ok(None),
+        };
+        let f = &filters[0];
+        let property = f["property"].as_str().unwrap_or("");
+        let op = f["op"].as_str().unwrap_or("");
+        let root_code = f["value"].as_str().unwrap_or("");
+        if (property != "concept" && property != "code") || root_code.is_empty() {
+            return Ok(None);
+        }
+        let include_root = match op {
+            "is-a" => true,
+            "descendent-of" => false,
+            _ => return Ok(None),
+        };
+        let system_url = match inc["system"].as_str() {
+            Some(s) if !s.is_empty() => s,
+            _ => return Ok(None),
+        };
+        if let Some(sys) = system
+            && sys != system_url
+        {
+            continue;
+        }
+        let sys_id = if let Some(ver) = inc["version"].as_str().filter(|v| !v.is_empty()) {
+            conn.query_row(
+                "SELECT id FROM code_systems WHERE url = ?1 AND version = ?2 LIMIT 1",
+                rusqlite::params![system_url, ver],
+                |r| r.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(|e| HtsError::StorageError(e.to_string()))?
+        } else {
+            resolve_system_id_cached(backend, conn, system_url)?
+        };
+        let Some(sys_id) = sys_id else {
+            continue;
+        };
+        branches.push(Branch {
+            sys_url: system_url.to_owned(),
+            sys_id,
+            root_code: root_code.to_owned(),
+            include_root,
+        });
+    }
+
+    if branches.is_empty() {
+        // Pattern matched (or every include was skipped for system/version
+        // mismatch) — do not fall through to a too-costly expansion.
+        return Ok(Some(None));
+    }
+
+    for b in &branches {
+        if !b.include_root && b.root_code == code {
+            continue;
+        }
+        let is_member: bool = conn
+            .query_row(
+                "SELECT EXISTS(
+                     SELECT 1 FROM concept_closure
+                     WHERE system_id = ?1 AND ancestor_code = ?2 AND descendant_code = ?3
+                 )",
+                rusqlite::params![b.sys_id, b.root_code, code],
+                |r| r.get(0),
+            )
+            .map_err(|e| HtsError::StorageError(e.to_string()))?;
+        if !is_member {
+            continue;
+        }
+        let display: Option<String> = conn
+            .query_row(
+                "SELECT display FROM concepts WHERE system_id = ?1 AND code = ?2",
+                rusqlite::params![b.sys_id, code],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(|e| HtsError::StorageError(e.to_string()))?
+            .flatten();
+        return Ok(Some(Some(ExpansionContains {
+            system: b.sys_url.clone(),
+            version: None,
+            code: code.to_owned(),
+            display,
+            is_abstract: None,
+            inactive: None,
+            designations: vec![],
+            properties: vec![],
+            extensions: vec![],
+            contains: vec![],
+        })));
+    }
+
+    Ok(Some(None))
+}
+
 /// Serve a page of an implicit ValueSet without waiting for the full cache.
 ///
 /// Used as the "cold-cache fast path" when `ensure_implicit_cache` would block
@@ -9584,6 +9805,89 @@ mod tests {
 
         assert!(resp.result);
         assert_eq!(resp.display, Some("Concept A".into()));
+    }
+
+    #[tokio::test]
+    async fn validate_code_multi_include_is_a_uses_closure_not_expansion() {
+        // Union of two is-a includes must membership-check via concept_closure
+        // rather than materialising the expansion (VALUESET_TOO_COSTLY on
+        // large SNOMED product-class ValueSets).
+        let b = backend();
+        b.import_bundle(&ctx(), bundle_with_hierarchy().as_bytes())
+            .await
+            .unwrap();
+        b.import_bundle(
+            &ctx(),
+            br#"{
+              "resourceType": "Bundle",
+              "type": "collection",
+              "entry": [{
+                "resource": {
+                  "resourceType": "ValueSet",
+                  "id": "vs-isa-or",
+                  "url": "http://example.org/vs-isa-or",
+                  "status": "active",
+                  "compose": {
+                    "include": [
+                      {
+                        "system": "http://example.org/cs-hier",
+                        "filter": [{ "property": "concept", "op": "is-a", "value": "child1" }]
+                      },
+                      {
+                        "system": "http://example.org/cs-hier",
+                        "filter": [{ "property": "concept", "op": "is-a", "value": "child2" }]
+                      }
+                    ]
+                  }
+                }
+              }]
+            }"#,
+        )
+        .await
+        .unwrap();
+
+        let in_set = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://example.org/vs-isa-or".into()),
+                    system: Some("http://example.org/cs-hier".into()),
+                    code: "child1".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(in_set.result, "child1 is-a child1");
+        assert_eq!(in_set.display.as_deref(), Some("Child 1"));
+
+        let out = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://example.org/vs-isa-or".into()),
+                    system: Some("http://example.org/cs-hier".into()),
+                    code: "orphan".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!out.result, "orphan is not under child1 or child2");
+
+        let root = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://example.org/vs-isa-or".into()),
+                    system: Some("http://example.org/cs-hier".into()),
+                    code: "root".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!root.result, "root is an ancestor, not a descendant");
     }
 
     // ── $validate-code: code NOT in set ───────────────────────────────────────

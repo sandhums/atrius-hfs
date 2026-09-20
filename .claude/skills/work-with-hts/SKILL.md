@@ -56,6 +56,8 @@ When `HTS_BOOTSTRAP_DIR` points at a directory, HTS synchronizes recognized file
 | import bundle | POST | `/import` |
 | CRUD | GET/POST/PUT/DELETE | `/CodeSystem/:id`, `/ValueSet/:id`, `/ConceptMap/:id` |
 
+`$validate-code` on a stored ValueSet whose compose is only `concept is-a` / `descendent-of` includes (OR'd) uses `concept_closure` and does not materialise the expansion. Full `$expand` of a large product-class set can still 422 `too-costly` (`HTS_MAX_EXPANSION_SIZE`); paginate with `count`.
+
 ## Quick Examples
 
 ```bash
