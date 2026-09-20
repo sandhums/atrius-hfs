@@ -8648,6 +8648,27 @@ pub(crate) fn prebuild_concepts_fts(conn: &Connection) -> usize {
         return 0;
     }
 
+    // By the invariant above, any FTS rows still present for an *untracked*
+    // system are stale (their tracker row was cleared, or never existed). Drop
+    // them before inserting: FTS5 enforces rowid uniqueness, so a leftover row
+    // would otherwise make the INSERT fail with `constraint failed`, roll back
+    // the whole build, and leave every invalidated system unindexed until the
+    // next boot — which then fails the same way. Seen in practice with concept
+    // rows orphaned by a re-keyed `code_systems` id.
+    for table in ["concepts_fts", "concepts_word_fts", "concepts_search_fts"] {
+        if let Err(e) = conn.execute(
+            &format!(
+                "DELETE FROM {table}
+                 WHERE system_id NOT IN (SELECT system_id FROM concepts_fts_built)"
+            ),
+            [],
+        ) {
+            let _ = conn.execute_batch("ROLLBACK");
+            tracing::warn!("prebuild_concepts_fts: stale {table} DELETE failed: {e}");
+            return 0;
+        }
+    }
+
     let fts_result = conn.execute(
         "INSERT INTO concepts_fts(rowid, system_id, code, display)
          SELECT id, system_id, code, display FROM concepts
@@ -12397,6 +12418,56 @@ mod tests {
         assert_eq!(rebuilt, 0, "warm reopen builds nothing");
         assert_eq!(count(&conn, "SELECT COUNT(*) FROM concepts_fts"), 2);
         assert_eq!(count(&conn, "SELECT COUNT(*) FROM concepts_search_fts"), 3);
+    }
+
+    /// A system whose tracker row is missing but whose FTS rows are still
+    /// present (e.g. concepts orphaned when their `code_systems` id was
+    /// re-keyed) must not block the build: FTS5 rejects a duplicate rowid, and
+    /// before the stale-row sweep that single collision rolled back the entire
+    /// prebuild, leaving every other invalidated system unindexed on every boot.
+    #[test]
+    fn prebuild_concepts_fts_sweeps_stale_untracked_rows_instead_of_failing() {
+        let conn = Connection::open_in_memory().expect("in-memory db");
+        crate::backends::sqlite::schema::apply(&conn).expect("schema should apply");
+        conn.execute_batch(
+            "INSERT INTO code_systems(id, url, created_at, updated_at) VALUES
+                 ('sys1',  'http://example.org/cs1',   '2026-01-01', '2026-01-01'),
+                 ('ghost', 'http://example.org/ghost', '2026-01-01', '2026-01-01');
+             INSERT INTO concepts(id, system_id, code, display) VALUES
+                 (1, 'sys1',  'a', 'Alpha'),
+                 (2, 'ghost', 'g', 'Ghost');
+             -- ghost's FTS rows linger from an earlier build …
+             INSERT INTO concepts_fts(rowid, system_id, code, display)      VALUES (2, 'ghost', 'g', 'Ghost');
+             INSERT INTO concepts_word_fts(rowid, system_id, code, display) VALUES (2, 'ghost', 'g', 'Ghost');
+             INSERT INTO concepts_search_fts(rowid, system_id, code, term)  VALUES (2, 'ghost', 'g', 'Ghost');
+             -- … but its code_systems row was removed without cascading (FKs off
+             -- in an older importer session), orphaning the concept row.
+             PRAGMA foreign_keys = OFF;
+             DELETE FROM code_systems WHERE id = 'ghost';
+             PRAGMA foreign_keys = ON;",
+        )
+        .expect("fixture should insert");
+
+        // Both untracked systems are (re)indexed; the stale ghost rows were
+        // swept first so the rowid-2 insert does not collide.
+        assert_eq!(prebuild_concepts_fts(&conn), 2, "build must not roll back");
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM concepts_fts WHERE system_id = 'sys1'"
+            ),
+            1,
+            "the live system is indexed"
+        );
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM concepts_fts WHERE system_id = 'ghost'"
+            ),
+            1,
+            "exactly one ghost row remains (swept, then re-inserted once)"
+        );
+        assert_eq!(prebuild_concepts_fts(&conn), 0, "second boot is a no-op");
     }
 
     /// #295: after a re-import invalidates ONE system (the four DELETEs that

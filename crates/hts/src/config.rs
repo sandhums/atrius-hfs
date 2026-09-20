@@ -412,6 +412,19 @@ pub struct ImportArgs {
     #[arg(long, env = "HTS_IMPORT_LANGUAGES", default_value = "")]
     pub languages: String,
 
+    /// SNOMED CT RF2 only. Layer an *extension* release (e.g. the NRCeS India
+    /// Drug Extension) onto the already-imported base edition stored under
+    /// `http://snomed.info/sct` with exactly this version (e.g. `20260501`),
+    /// instead of storing the package as a standalone version. Keeps the
+    /// extension's Is-a and attribute relationships that point into the base
+    /// release — which a standalone import has to drop — so `$subsumes`,
+    /// `is-a` filters and ECL from International concepts reach extension
+    /// concepts. The package's module-dependency refset is checked against
+    /// this version and a mismatch is reported as a warning. Requires a single
+    /// file path (not a directory).
+    #[arg(long, value_name = "BASE_VERSION")]
+    pub extends: Option<String>,
+
     /// Parse and count resources without writing anything to the database
     #[arg(long)]
     pub dry_run: bool,

@@ -518,6 +518,19 @@ async fn run_import(args: ImportArgs) -> anyhow::Result<i32> {
         );
     }
 
+    if let Some(base) = args.extends.as_deref() {
+        if is_dir {
+            anyhow::bail!(
+                "--extends applies to a single SNOMED CT RF2 extension package; \
+                 point it at the extension ZIP, not a directory."
+            );
+        }
+        if args.format.is_some_and(|f| f != ImportFormat::SnomedRf2) {
+            anyhow::bail!("--extends is only supported with --format snomed-rf2");
+        }
+        eprintln!("[hts-import] layering extension onto http://snomed.info/sct version {base}");
+    }
+
     if args.dry_run {
         eprintln!("[hts-import] dry-run mode — parsing only, no changes will be written");
     }
@@ -568,8 +581,11 @@ async fn run_import(args: ImportArgs) -> anyhow::Result<i32> {
         #[cfg(feature = "sqlite")]
         {
             // Dry-run uses an in-memory database so the pool opens without
-            // requiring the target DB file or its parent directory.
-            let database_url = if args.dry_run {
+            // requiring the target DB file or its parent directory — except
+            // when layering (--extends), where the base edition's concept set
+            // must be read from the real database to produce a meaningful
+            // unresolved-relationship count. Nothing is written either way.
+            let database_url = if args.dry_run && args.extends.is_none() {
                 ":memory:".to_string()
             } else {
                 args.database_url.clone()
@@ -671,6 +687,7 @@ async fn run_import_for_path(
         args.batch_size,
         args.dry_run,
         &languages,
+        args.extends.as_deref(),
     )
     .await?;
     Ok((stats, format.to_string()))
@@ -877,7 +894,13 @@ async fn import_directory_files(
             "[import] file {}/{total} ({format}): {fname}{suffix}",
             idx + 1
         );
-        match dispatch_import(format, backend, ctx, entry, batch_size, dry_run, languages).await {
+        // Directory iteration never layers: an extension must be pointed at
+        // explicitly with `--extends` so the operator names the base version.
+        match dispatch_import(
+            format, backend, ctx, entry, batch_size, dry_run, languages, None,
+        )
+        .await
+        {
             Ok(file_stats) => {
                 stats.merge(file_stats);
                 imported_count += 1;
@@ -910,6 +933,7 @@ async fn import_directory_files(
 }
 
 #[cfg(any(feature = "sqlite", feature = "postgres"))]
+#[allow(clippy::too_many_arguments)] // one flat dispatch over every importer's knobs
 async fn dispatch_import(
     format: ImportFormat,
     backend: &dyn BundleImportBackend,
@@ -918,19 +942,32 @@ async fn dispatch_import(
     batch_size: usize,
     dry_run: bool,
     languages: &LanguageFilter,
+    extends: Option<&str>,
 ) -> Result<ImportStats, helios_hts::error::HtsError> {
     use helios_hts::import::{
-        dicom::import_dicom, hl7_v2_tables::import_hl7_v2_tables, icd9_cm::import_icd9_cm,
-        icd10_cm::import_icd10_cm, loinc_csv::import_loinc_csv, mesh::import_mesh,
-        nci_thesaurus::import_nci_thesaurus, ndc::import_ndc, nucc::import_nucc,
-        rxnorm_rrf::import_rxnorm_rrf, snomed_rf2::import_snomed_rf2, tgz::import_tgz,
+        dicom::import_dicom,
+        hl7_v2_tables::import_hl7_v2_tables,
+        icd9_cm::import_icd9_cm,
+        icd10_cm::import_icd10_cm,
+        loinc_csv::import_loinc_csv,
+        mesh::import_mesh,
+        nci_thesaurus::import_nci_thesaurus,
+        ndc::import_ndc,
+        nucc::import_nucc,
+        rxnorm_rrf::import_rxnorm_rrf,
+        snomed_rf2::{SnomedImportOptions, import_snomed_rf2_with},
+        tgz::import_tgz,
         ucum::import_ucum,
     };
 
     match format {
         ImportFormat::Hl7Npm => import_tgz(backend, ctx, path, batch_size, dry_run).await,
         ImportFormat::SnomedRf2 => {
-            import_snomed_rf2(backend, ctx, path, batch_size, dry_run, languages).await
+            let options = SnomedImportOptions {
+                extends: extends.map(str::to_string),
+            };
+            import_snomed_rf2_with(backend, ctx, path, batch_size, dry_run, languages, &options)
+                .await
         }
         ImportFormat::Loinc => {
             import_loinc_csv(backend, ctx, path, batch_size, dry_run, languages).await

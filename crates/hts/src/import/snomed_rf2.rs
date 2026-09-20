@@ -20,6 +20,29 @@
 //! Description and Language-refset files are skipped without being parsed,
 //! and English is always retained.
 //!
+//! # Extension packages (`--extends`)
+//!
+//! A SNOMED *extension* release (e.g. the NRCeS India Drug Extension) ships
+//! only its own module's components. Its `Is-a` and attribute relationships
+//! point at concepts that live in the International release it was built
+//! against, and those concepts are **not** in the extension ZIP. Imported on
+//! its own, such a package therefore loses every relationship that crosses
+//! the edition boundary — the extension becomes a forest of orphaned
+//! subtrees with no path to the International hierarchy and no ingredient /
+//! dose-form attributes, so `$subsumes` and `is-a` filters from International
+//! groupers can never reach an extension concept.
+//!
+//! [`import_snomed_rf2_with`] with [`SnomedImportOptions::extends`] set layers
+//! the extension **into** the already-loaded base edition row instead:
+//! extension concepts are written under the base `(url, version)`, a
+//! relationship destination is accepted when it exists in either the
+//! extension or the base, and the base closure is rebuilt once afterwards.
+//! This is how a SNOMED *edition* is defined (International + one or more
+//! extensions) and costs no duplication of the base content. The extension's
+//! module-dependency refset is checked against the base version and any
+//! mismatch, together with the count of relationships that still could not be
+//! resolved, is reported in [`ImportStats::errors`] as a warning.
+//!
 //! # ⚠️  LICENSE REQUIRED
 //!
 //! Real SNOMED CT data requires a license from SNOMED International.
@@ -49,6 +72,12 @@ const SNOMED_TITLE: &str = "SNOMED CT";
 const TYPE_FSN: &str = "900000000000003001";
 const TYPE_SYNONYM: &str = "900000000000013009";
 const IS_A_TYPE: &str = "116680003";
+/// SNOMED CT core module — the `referencedComponentId` an extension's
+/// module-dependency refset uses to declare which International release it
+/// was built against.
+const INTERNATIONAL_CORE_MODULE: &str = "900000000000207008";
+/// Module dependency reference set id.
+const MODULE_DEPENDENCY_REFSET: &str = "900000000000534007";
 
 /// Language refset acceptability: preferred.
 const ACCEPTABILITY_PREFERRED: &str = "900000000000548007";
@@ -141,7 +170,24 @@ struct SnomedParseResult {
     /// refset_id → Vec<(source_concept_id, target_concept_id)> from association refset files.
     association_refsets: RoleProps,
     release_version: Option<String>,
+    /// RF2 namespace token from the concept file name (`INT`, `IN1000189`, …).
+    namespace_token: String,
+    /// International release dates the package's module-dependency refset
+    /// declares for the core module (empty when the refset is absent).
+    declared_base_versions: Vec<String>,
+    /// Active relationships skipped because their destination was in neither
+    /// the extension nor the base concept set.
+    unresolved_relationships: usize,
     parse_errors: Vec<String>,
+}
+
+/// Options for [`import_snomed_rf2_with`].
+#[derive(Debug, Clone, Default)]
+pub struct SnomedImportOptions {
+    /// Layer this package onto the already-loaded base edition stored under
+    /// `http://snomed.info/sct` with exactly this `version` (e.g. `20260501`),
+    /// instead of storing it as a standalone version. See the module docs.
+    pub extends: Option<String>,
 }
 
 /// Import a SNOMED CT RF2 distribution ZIP through the given backend.
@@ -150,6 +196,9 @@ struct SnomedParseResult {
 /// designations (see [`LanguageFilter`]). English descriptions are always
 /// retained because concept display selection and the `en-US`/`en-GB`
 /// preference chain depend on them.
+///
+/// Equivalent to [`import_snomed_rf2_with`] with default options: the package
+/// is stored as its own `(url, version)` row.
 pub async fn import_snomed_rf2(
     backend: &dyn BundleImportBackend,
     ctx: &TenantContext,
@@ -158,14 +207,60 @@ pub async fn import_snomed_rf2(
     dry_run: bool,
     languages: &LanguageFilter,
 ) -> Result<ImportStats, HtsError> {
+    import_snomed_rf2_with(
+        backend,
+        ctx,
+        path,
+        batch_size,
+        dry_run,
+        languages,
+        &SnomedImportOptions::default(),
+    )
+    .await
+}
+
+/// [`import_snomed_rf2`] with [`SnomedImportOptions`].
+pub async fn import_snomed_rf2_with(
+    backend: &dyn BundleImportBackend,
+    ctx: &TenantContext,
+    path: &Path,
+    batch_size: usize,
+    dry_run: bool,
+    languages: &LanguageFilter,
+    options: &SnomedImportOptions,
+) -> Result<ImportStats, HtsError> {
     const FORMAT: &str = "snomed-rf2";
     let batch_size = batch_size.max(1);
+
+    // Layered mode: the base edition must already be loaded, and its concept
+    // set is what makes cross-edition relationship destinations resolvable.
+    let base_concepts: Option<HashSet<String>> = match options.extends.as_deref() {
+        Some(base_version) => {
+            let codes = backend
+                .code_system_concept_codes(ctx, SNOMED_URL, base_version)
+                .await?;
+            if codes.is_empty() {
+                return Err(HtsError::InvalidRequest(format!(
+                    "--extends {base_version}: no concepts stored for {SNOMED_URL} version \
+                     '{base_version}'. Import the base SNOMED CT release first, then layer \
+                     the extension onto it."
+                )));
+            }
+            eprintln!(
+                "[{FORMAT}] layering onto {SNOMED_URL} version {base_version} ({} base concepts)",
+                codes.len()
+            );
+            Some(codes)
+        }
+        None => None,
+    };
 
     let path_owned = path.to_path_buf();
     let languages = languages.clone();
     let parsed = tokio::task::spawn_blocking(move || -> Result<SnomedParseResult, HtsError> {
         let (concept_path, desc_paths, rel_path, assoc_refset_paths, lang_refset_paths) =
             find_rf2_paths(&path_owned, &languages)?;
+        let module_dependency_path = find_module_dependency_path(&path_owned)?;
 
         tracing::info!(
             concept_file = %concept_path,
@@ -216,12 +311,30 @@ pub async fn import_snomed_rf2(
             build_concept_terms(by_desc_id, &preferred_in, &active_concepts)
         };
 
-        let (is_a_edges, role_relationships) = {
+        let (is_a_edges, role_relationships, unresolved_relationships) = {
             let mut zip = open_zip(&path_owned)?;
             let entry = zip.by_name(&rel_path).map_err(|e| {
                 HtsError::InvalidRequest(format!("Cannot open relationship file: {e}"))
             })?;
-            parse_relationships(BufReader::new(entry), &active_concepts, &mut parse_errors)
+            parse_relationships(
+                BufReader::new(entry),
+                &active_concepts,
+                base_concepts.as_ref(),
+                &mut parse_errors,
+            )
+        };
+
+        let declared_base_versions = match module_dependency_path {
+            Some(ref mdr_path) => {
+                let mut zip = open_zip(&path_owned)?;
+                let entry = zip.by_name(mdr_path).map_err(|e| {
+                    HtsError::InvalidRequest(format!(
+                        "Cannot open module dependency refset file: {e}"
+                    ))
+                })?;
+                parse_module_dependency_targets(BufReader::new(entry), &mut parse_errors)
+            }
+            None => Vec::new(),
         };
 
         let association_refsets = {
@@ -240,6 +353,7 @@ pub async fn import_snomed_rf2(
         };
 
         let release_version = extract_release_date(&concept_path);
+        let namespace_token = extension_namespace_token(&concept_path);
 
         Ok(SnomedParseResult {
             concept_terms,
@@ -247,6 +361,9 @@ pub async fn import_snomed_rf2(
             role_relationships,
             association_refsets,
             release_version,
+            namespace_token,
+            declared_base_versions,
+            unresolved_relationships,
             parse_errors,
         })
     })
@@ -259,6 +376,9 @@ pub async fn import_snomed_rf2(
         role_relationships,
         association_refsets,
         release_version,
+        namespace_token,
+        declared_base_versions,
+        unresolved_relationships,
         parse_errors,
     } = parsed;
 
@@ -273,11 +393,66 @@ pub async fn import_snomed_rf2(
         ..Default::default()
     };
 
+    // Layered mode: the row we write into is the base edition's; the package's
+    // own release date is recorded in the title so the stored CodeSystem says
+    // what it contains. Report the dependency declaration and anything that
+    // still failed to resolve — a mismatch between the declared and the loaded
+    // International release is expected to leave a few dangling destinations
+    // (concepts inactivated between the two releases), a large count means
+    // the wrong base was chosen.
+    let extension_release = release_version.clone().unwrap_or_else(|| "current".into());
+    let layered_title;
+    let (meta_version, title): (String, &str) = match options.extends.as_deref() {
+        Some(base_version) => {
+            if !declared_base_versions.is_empty()
+                && !declared_base_versions.iter().any(|v| v == base_version)
+            {
+                stats.errors.push(format!(
+                    "[{FORMAT}] module-dependency mismatch: the package declares it was built \
+                     against SNOMED CT International {}, but is being layered onto version \
+                     {base_version}. Concepts inactivated between those releases will leave \
+                     unresolved relationships (see the unresolved count below).",
+                    declared_base_versions.join(", ")
+                ));
+            }
+            if unresolved_relationships > 0 {
+                stats.errors.push(format!(
+                    "[{FORMAT}] {unresolved_relationships} active relationship(s) skipped: \
+                     destination concept is in neither the extension nor base version \
+                     {base_version}"
+                ));
+            }
+            layered_title =
+                format!("{SNOMED_TITLE} ({base_version} + {namespace_token} {extension_release})");
+            (base_version.to_string(), layered_title.as_str())
+        }
+        None => {
+            if unresolved_relationships > 0 {
+                stats.errors.push(format!(
+                    "[{FORMAT}] {unresolved_relationships} active relationship(s) skipped: \
+                     destination concept is not in this package. If this is an extension \
+                     release, re-import with --extends <base-version> so its hierarchy \
+                     joins the International edition it depends on{}.",
+                    if declared_base_versions.is_empty() {
+                        String::new()
+                    } else {
+                        format!(
+                            " (its module-dependency refset declares International {})",
+                            declared_base_versions.join(", ")
+                        )
+                    }
+                ));
+            }
+            (extension_release.clone(), SNOMED_TITLE)
+        }
+    };
+
     if dry_run {
         stats.concepts = concept_count;
         eprintln!(
             "[{FORMAT}] dry-run — would import {concept_count} concepts, {edge_count} Is-a edges, \
-             {role_count} role relationships, {assoc_count} association refset mappings"
+             {role_count} role relationships, {assoc_count} association refset mappings \
+             into {SNOMED_URL} version {meta_version}"
         );
         return Ok(stats);
     }
@@ -291,13 +466,12 @@ pub async fn import_snomed_rf2(
             .push(parent.clone());
     }
 
-    let meta_version = release_version.clone().unwrap_or_else(|| "current".into());
     let meta = CodeSystemMeta {
         id: SNOMED_ID,
         url: SNOMED_URL,
         version: Some(&meta_version),
         name: Some(SNOMED_NAME),
-        title: Some(SNOMED_TITLE),
+        title: Some(title),
         status: "active",
         content: "complete",
     };
@@ -601,7 +775,90 @@ fn find_rf2_paths(
     ))
 }
 
+/// Locate the module-dependency refset (`der2_ssRefset_ModuleDependency*`),
+/// preferring the Snapshot copy. Absent in some minimal / test packages, so
+/// `Ok(None)` is not an error.
+fn find_module_dependency_path(path: &Path) -> Result<Option<String>, HtsError> {
+    let mut zip = open_zip(path)?;
+    let mut candidates: Vec<String> = Vec::new();
+    for i in 0..zip.len() {
+        let entry = zip
+            .by_index(i)
+            .map_err(|e| HtsError::InvalidRequest(format!("ZIP entry error: {e}")))?;
+        let name = entry.name().to_string();
+        let lower = name.to_lowercase();
+        if lower.ends_with(".txt") && lower.contains("moduledependency") {
+            candidates.push(name);
+        }
+    }
+    Ok(pick_single(candidates))
+}
+
+/// The RF2 release-file namespace token — the `_`-delimited segment
+/// immediately before the date in the concept file name, e.g. `IN1000189`
+/// from `sct2_Concept_Snapshot_IN1000189_20260313T120000Z.txt` or `INT`
+/// from `sct2_Concept_Snapshot_INT_20260501.txt`. Falls back to `extension`
+/// when the name does not follow the RF2 pattern.
+fn extension_namespace_token(concept_path: &str) -> String {
+    let stem = concept_path.rsplit('/').next().unwrap_or(concept_path);
+    let stem = stem.strip_suffix(".txt").unwrap_or(stem);
+    let parts: Vec<&str> = stem.split('_').collect();
+    match parts.as_slice() {
+        [.., token, date]
+            if date.len() >= 8
+                && date.chars().take(8).all(|c| c.is_ascii_digit())
+                && !token.is_empty() =>
+        {
+            (*token).to_string()
+        }
+        _ => "extension".to_string(),
+    }
+}
+
 // ── RF2 parsers ───────────────────────────────────────────────────────────────
+
+/// Parse the module-dependency refset and return the International core
+/// module release dates (`targetEffectiveTime`) the package declares it
+/// depends on, de-duplicated, in file order.
+///
+/// Columns: `id effectiveTime active moduleId refsetId referencedComponentId
+/// sourceEffectiveTime targetEffectiveTime`.
+fn parse_module_dependency_targets(reader: impl BufRead, errors: &mut Vec<String>) -> Vec<String> {
+    let mut targets: Vec<String> = Vec::new();
+    for (line_num, line_result) in reader.lines().enumerate() {
+        let line = match line_result {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
+        if line_num == 0 || line.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = line.splitn(9, '\t').collect();
+        if parts.len() < 8 {
+            errors.push(format!(
+                "Module dependency refset line {}: expected ≥8 fields, got {} — skipped",
+                line_num + 1,
+                parts.len()
+            ));
+            continue;
+        }
+        let active = parts[2].trim() == "1";
+        let refset_id = parts[4].trim();
+        let referenced = parts[5].trim();
+        let target = parts[7].trim();
+        if !active
+            || refset_id != MODULE_DEPENDENCY_REFSET
+            || referenced != INTERNATIONAL_CORE_MODULE
+            || target.is_empty()
+        {
+            continue;
+        }
+        if !targets.iter().any(|t| t == target) {
+            targets.push(target.to_string());
+        }
+    }
+    targets
+}
 
 fn parse_active_concepts(reader: impl BufRead, errors: &mut Vec<String>) -> HashSet<String> {
     let mut active = HashSet::new();
@@ -880,18 +1137,30 @@ fn build_concept_terms(
 
 /// Parse the RF2 Relationship file, returning both IS_A edges and role relationships.
 ///
-/// Returns `(is_a_edges, role_props)` where:
+/// A relationship is kept when it is active, its **source** is an active
+/// concept of this package, and its **destination** is either an active
+/// concept of this package or — in layered mode — a concept of the base
+/// edition (`base_concepts`). Sources are never widened to the base: only the
+/// package's own concepts are written, so an edge hanging off a base concept
+/// would have nowhere to go.
+///
+/// Returns `(is_a_edges, role_props, unresolved)` where:
 /// - `is_a_edges`: Vec of `(child_code, parent_code)` for active IS_A relationships.
 /// - `role_props`: Map of `source_code → Vec<(type_id, destination_code)>` for all
-///   other active relationships where both endpoints are active concepts.
+///   other kept relationships.
+/// - `unresolved`: active relationships with a known source whose destination
+///   was in neither set — exactly the edges a standalone extension import
+///   silently loses.
 fn parse_relationships(
     reader: impl BufRead,
     active_concepts: &HashSet<String>,
+    base_concepts: Option<&HashSet<String>>,
     errors: &mut Vec<String>,
-) -> (Vec<(String, String)>, RoleProps) {
+) -> (Vec<(String, String)>, RoleProps, usize) {
     let mut is_a_edges: Vec<(String, String)> = Vec::new();
     let mut is_a_seen: HashSet<(String, String)> = HashSet::new();
     let mut role_props: RoleProps = HashMap::new();
+    let mut unresolved = 0usize;
 
     for (line_num, line_result) in reader.lines().enumerate() {
         let line = match line_result {
@@ -917,7 +1186,13 @@ fn parse_relationships(
         let destination = parts[5].trim();
         let type_id = parts[7].trim();
 
-        if !active || !active_concepts.contains(source) || !active_concepts.contains(destination) {
+        if !active || !active_concepts.contains(source) {
+            continue;
+        }
+        let destination_known = active_concepts.contains(destination)
+            || base_concepts.is_some_and(|base| base.contains(destination));
+        if !destination_known {
+            unresolved += 1;
             continue;
         }
 
@@ -934,7 +1209,7 @@ fn parse_relationships(
         }
     }
 
-    (is_a_edges, role_props)
+    (is_a_edges, role_props, unresolved)
 }
 
 /// Parse an RF2 association refset file (7-column format).
@@ -1358,7 +1633,8 @@ id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcase
     fn parse_relationships_returns_correct_is_a_pairs() {
         let mut errors = Vec::new();
         let active = parse_active_concepts(CONCEPT_TSV.as_bytes(), &mut errors);
-        let (edges, roles) = parse_relationships(RELATIONSHIP_TSV.as_bytes(), &active, &mut errors);
+        let (edges, roles, unresolved) =
+            parse_relationships(RELATIONSHIP_TSV.as_bytes(), &active, None, &mut errors);
 
         assert_eq!(edges.len(), 1);
         assert_eq!(edges[0], ("789012001".to_string(), "123456001".to_string()));
@@ -1366,6 +1642,121 @@ id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcase
             roles.is_empty(),
             "no role relationships expected in test data"
         );
+        assert_eq!(unresolved, 0);
+    }
+
+    /// An extension package: its concepts point at destinations that live in
+    /// the base edition and are absent from the package itself.
+    const EXTENSION_CONCEPT_TSV: &str = "\
+id\teffectiveTime\tactive\tmoduleId\tdefinitionStatusId\r\n\
+1546271000189105\t20260313\t1\t13941000189108\t900000000000074008\r\n\
+1547941000189105\t20260313\t1\t13941000189108\t900000000000074008\r\n";
+
+    /// pack is-a brand-family (in package) and is-a 407855002 (base); brand
+    /// family is-a 776239008 (base); pack has-ingredient 387069000 (base);
+    /// one is-a to 999999999 (in neither) must be reported as unresolved.
+    const EXTENSION_RELATIONSHIP_TSV: &str = "\
+id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\r\n\
+r1\t20260313\t1\t13941000189108\t1546271000189105\t1547941000189105\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r2\t20260313\t1\t13941000189108\t1546271000189105\t407855002\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r3\t20260313\t1\t13941000189108\t1547941000189105\t776239008\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r4\t20260313\t1\t13941000189108\t1546271000189105\t387069000\t1\t762949000\t900000000000011006\t900000000000451002\r\n\
+r5\t20260313\t1\t13941000189108\t1546271000189105\t999999999\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r6\t20260313\t1\t13941000189108\t407855002\t1546271000189105\t0\t116680003\t900000000000011006\t900000000000451002\r\n";
+
+    const MODULE_DEPENDENCY_TSV: &str = "\
+id\teffectiveTime\tactive\tmoduleId\trefsetId\treferencedComponentId\tsourceEffectiveTime\ttargetEffectiveTime\r\n\
+a\t20260313\t1\t13941000189108\t900000000000534007\t900000000000012004\t20260313\t20260301\r\n\
+b\t20260313\t1\t13941000189108\t900000000000534007\t900000000000207008\t20260313\t20260301\r\n\
+c\t20260313\t0\t13941000189108\t900000000000534007\t900000000000207008\t20250313\t20250301\r\n";
+
+    #[test]
+    fn parse_relationships_standalone_extension_drops_cross_edition_edges() {
+        let mut errors = Vec::new();
+        let active = parse_active_concepts(EXTENSION_CONCEPT_TSV.as_bytes(), &mut errors);
+        let (edges, roles, unresolved) = parse_relationships(
+            EXTENSION_RELATIONSHIP_TSV.as_bytes(),
+            &active,
+            None,
+            &mut errors,
+        );
+
+        // Only the in-package is-a survives; r2, r3, r4, r5 all dangle.
+        assert_eq!(
+            edges,
+            vec![(
+                "1546271000189105".to_string(),
+                "1547941000189105".to_string()
+            )]
+        );
+        assert!(roles.is_empty());
+        assert_eq!(
+            unresolved, 4,
+            "r2 r3 r4 r5 have destinations outside the package"
+        );
+    }
+
+    #[test]
+    fn parse_relationships_layered_keeps_edges_into_base_edition() {
+        let mut errors = Vec::new();
+        let active = parse_active_concepts(EXTENSION_CONCEPT_TSV.as_bytes(), &mut errors);
+        let base: HashSet<String> = ["407855002", "776239008", "387069000"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        let (edges, roles, unresolved) = parse_relationships(
+            EXTENSION_RELATIONSHIP_TSV.as_bytes(),
+            &active,
+            Some(&base),
+            &mut errors,
+        );
+
+        let mut edges_sorted = edges.clone();
+        edges_sorted.sort();
+        assert_eq!(
+            edges_sorted,
+            vec![
+                (
+                    "1546271000189105".to_string(),
+                    "1547941000189105".to_string()
+                ),
+                ("1546271000189105".to_string(), "407855002".to_string()),
+                ("1547941000189105".to_string(), "776239008".to_string()),
+            ]
+        );
+        assert_eq!(
+            roles.get("1546271000189105"),
+            Some(&vec![("762949000".to_string(), "387069000".to_string())])
+        );
+        // r5 (unknown destination) is unresolved; r6 (base-concept source) is
+        // ignored silently — sources are never widened to the base.
+        assert_eq!(unresolved, 1);
+    }
+
+    #[test]
+    fn parse_module_dependency_targets_returns_active_core_module_release() {
+        let mut errors = Vec::new();
+        let targets =
+            parse_module_dependency_targets(MODULE_DEPENDENCY_TSV.as_bytes(), &mut errors);
+        assert_eq!(targets, vec!["20260301".to_string()]);
+        assert!(errors.is_empty());
+    }
+
+    #[test]
+    fn extension_namespace_token_reads_rf2_concept_file_name() {
+        assert_eq!(
+            extension_namespace_token(
+                "Snapshot/Terminology/sct2_Concept_Snapshot_IN1000189_20260313T120000Z.txt"
+            ),
+            "IN1000189"
+        );
+        assert_eq!(
+            extension_namespace_token(
+                "Snapshot/Terminology/sct2_Concept_Snapshot_INT_20260501.txt"
+            ),
+            "INT"
+        );
+        assert_eq!(extension_namespace_token("random.txt"), "extension");
     }
 
     #[test]
@@ -1454,6 +1845,237 @@ BADLINE\r\n";
         assert_eq!(count_rows(&backend, "code_systems"), 1);
         assert_eq!(count_rows(&backend, "concepts"), 2);
         assert_eq!(count_rows(&backend, "concept_hierarchy"), 1);
+    }
+
+    /// Extension package whose concepts hang off `123456001` / `789012001`
+    /// from [`make_test_rf2_zip`], with a module-dependency refset declaring
+    /// a base release that does not match what will be loaded.
+    fn make_extension_rf2_zip() -> NamedTempFile {
+        const EXT_CONCEPTS: &str = "\
+id\teffectiveTime\tactive\tmoduleId\tdefinitionStatusId\r\n\
+1546271000189105\t20260313\t1\t13941000189108\t900000000000074008\r\n\
+1547941000189105\t20260313\t1\t13941000189108\t900000000000074008\r\n";
+        const EXT_DESCRIPTIONS: &str = "\
+id\teffectiveTime\tactive\tmoduleId\tconceptId\tlanguageCode\ttypeId\tterm\tcaseSignificanceId\r\n\
+d1\t20260313\t1\t13941000189108\t1546271000189105\ten\t900000000000013009\tTelma H 12.5 mg + 40 mg oral tablet\t900000000000448009\r\n\
+d2\t20260313\t1\t13941000189108\t1547941000189105\ten\t900000000000013009\tTelma H (brand family)\t900000000000448009\r\n";
+        // pack is-a brand family (ext) and is-a 789012001 (base);
+        // brand family is-a 123456001 (base); pack has-ingredient 123456001;
+        // one edge to 555555555 exists in neither.
+        const EXT_RELATIONSHIPS: &str = "\
+id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\ttypeId\tcharacteristicTypeId\tmodifierId\r\n\
+r1\t20260313\t1\t13941000189108\t1546271000189105\t1547941000189105\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r2\t20260313\t1\t13941000189108\t1546271000189105\t789012001\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r3\t20260313\t1\t13941000189108\t1547941000189105\t123456001\t0\t116680003\t900000000000011006\t900000000000451002\r\n\
+r4\t20260313\t1\t13941000189108\t1546271000189105\t123456001\t1\t762949000\t900000000000011006\t900000000000451002\r\n\
+r5\t20260313\t1\t13941000189108\t1546271000189105\t555555555\t0\t116680003\t900000000000011006\t900000000000451002\r\n";
+        const EXT_MODULE_DEPENDENCY: &str = "\
+id\teffectiveTime\tactive\tmoduleId\trefsetId\treferencedComponentId\tsourceEffectiveTime\ttargetEffectiveTime\r\n\
+a\t20260313\t1\t13941000189108\t900000000000534007\t900000000000207008\t20260313\t20231201\r\n";
+
+        let tmp = NamedTempFile::with_suffix(".zip").unwrap();
+        {
+            let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
+            let opts = zip::write::FileOptions::default();
+            zip.start_file(
+                "Snapshot/Terminology/sct2_Concept_Snapshot_IN1000189_20260313T120000Z.txt",
+                opts,
+            )
+            .unwrap();
+            zip.write_all(EXT_CONCEPTS.as_bytes()).unwrap();
+            zip.start_file(
+                "Snapshot/Terminology/sct2_Description_Snapshot-en_IN1000189_20260313T120000Z.txt",
+                opts,
+            )
+            .unwrap();
+            zip.write_all(EXT_DESCRIPTIONS.as_bytes()).unwrap();
+            zip.start_file(
+                "Snapshot/Terminology/sct2_Relationship_Snapshot_IN1000189_20260313T120000Z.txt",
+                opts,
+            )
+            .unwrap();
+            zip.write_all(EXT_RELATIONSHIPS.as_bytes()).unwrap();
+            zip.start_file(
+                "Snapshot/Refset/Metadata/der2_ssRefset_ModuleDependencySnapshot_IN1000189_20260313T120000Z.txt",
+                opts,
+            )
+            .unwrap();
+            zip.write_all(EXT_MODULE_DEPENDENCY.as_bytes()).unwrap();
+            zip.finish().unwrap();
+        }
+        tmp
+    }
+
+    #[tokio::test]
+    async fn import_snomed_rf2_extension_standalone_loses_cross_edition_hierarchy() {
+        let backend = SqliteTerminologyBackend::in_memory().unwrap();
+        let ctx = TenantContext::system();
+        import_snomed_rf2(
+            &backend,
+            &ctx,
+            make_test_rf2_zip().path(),
+            500,
+            false,
+            &LanguageFilter::default(),
+        )
+        .await
+        .unwrap();
+
+        let stats = import_snomed_rf2(
+            &backend,
+            &ctx,
+            make_extension_rf2_zip().path(),
+            500,
+            false,
+            &LanguageFilter::default(),
+        )
+        .await
+        .expect("standalone extension import should succeed");
+
+        // Two sibling versions; only the intra-extension edge survives.
+        assert_eq!(count_rows(&backend, "code_systems"), 2);
+        assert_eq!(count_rows(&backend, "concepts"), 4);
+        assert_eq!(count_rows(&backend, "concept_hierarchy"), 2);
+        assert!(
+            stats
+                .errors
+                .iter()
+                .any(|e| e.contains("4 active relationship(s) skipped")
+                    && e.contains("--extends")
+                    && e.contains("20231201")),
+            "standalone import must hint at --extends and name the declared base: {:?}",
+            stats.errors
+        );
+    }
+
+    #[tokio::test]
+    async fn import_snomed_rf2_extends_layers_extension_into_base_edition() {
+        let backend = SqliteTerminologyBackend::in_memory().unwrap();
+        let ctx = TenantContext::system();
+        import_snomed_rf2(
+            &backend,
+            &ctx,
+            make_test_rf2_zip().path(),
+            500,
+            false,
+            &LanguageFilter::default(),
+        )
+        .await
+        .unwrap();
+
+        let stats = import_snomed_rf2_with(
+            &backend,
+            &ctx,
+            make_extension_rf2_zip().path(),
+            500,
+            false,
+            &LanguageFilter::default(),
+            &SnomedImportOptions {
+                extends: Some("20240101".into()),
+            },
+        )
+        .await
+        .expect("layered import should succeed");
+
+        assert_eq!(stats.concepts, 2);
+        // One row, four concepts, and every resolvable edge kept:
+        // base 1 + ext→ext 1 + ext→base 2.
+        assert_eq!(count_rows(&backend, "code_systems"), 1);
+        assert_eq!(count_rows(&backend, "concepts"), 4);
+        assert_eq!(count_rows(&backend, "concept_hierarchy"), 4);
+
+        let conn = backend.pool().get().unwrap();
+        let (version, title): (String, String) = conn
+            .query_row(
+                "SELECT version, title FROM code_systems WHERE url = ?1",
+                rusqlite::params![SNOMED_URL],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(version, "20240101");
+        assert_eq!(title, "SNOMED CT (20240101 + IN1000189 20260313)");
+
+        // Ingredient attribute into the base survived as a property.
+        let ingredient: String = conn
+            .query_row(
+                "SELECT p.value FROM concept_properties p
+                 JOIN concepts c ON c.id = p.concept_id
+                 WHERE c.code = '1546271000189105' AND p.property = '762949000'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(ingredient, "123456001");
+
+        // After the closure rebuild the base root subsumes the extension pack
+        // through both paths (direct is-a 789012001 → 123456001, and via the
+        // brand family).
+        let system_id: String = conn
+            .query_row(
+                "SELECT id FROM code_systems WHERE url = ?1",
+                rusqlite::params![SNOMED_URL],
+                |r| r.get(0),
+            )
+            .unwrap();
+        crate::backends::sqlite::schema::build_concept_closure(&conn, &system_id).unwrap();
+        let subsumed: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM concept_closure
+                 WHERE system_id = ?1 AND ancestor_code = '123456001'
+                   AND descendant_code = '1546271000189105')",
+                rusqlite::params![system_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            subsumed,
+            "base grouper must reach the extension pack via the closure"
+        );
+
+        // Diagnostics: declared 20231201 ≠ loaded 20240101, and r5 dangles.
+        assert!(
+            stats
+                .errors
+                .iter()
+                .any(|e| e.contains("module-dependency mismatch")
+                    && e.contains("20231201")
+                    && e.contains("20240101")),
+            "{:?}",
+            stats.errors
+        );
+        assert!(
+            stats
+                .errors
+                .iter()
+                .any(|e| e.contains("1 active relationship(s) skipped")),
+            "{:?}",
+            stats.errors
+        );
+    }
+
+    #[tokio::test]
+    async fn import_snomed_rf2_extends_requires_loaded_base() {
+        let backend = SqliteTerminologyBackend::in_memory().unwrap();
+        let ctx = TenantContext::system();
+        let err = import_snomed_rf2_with(
+            &backend,
+            &ctx,
+            make_extension_rf2_zip().path(),
+            500,
+            false,
+            &LanguageFilter::default(),
+            &SnomedImportOptions {
+                extends: Some("20240101".into()),
+            },
+        )
+        .await
+        .expect_err("layering onto an absent base must fail");
+        assert!(
+            err.to_string()
+                .contains("Import the base SNOMED CT release first"),
+            "{err}"
+        );
+        assert_eq!(count_rows(&backend, "concepts"), 0);
     }
 
     #[tokio::test]

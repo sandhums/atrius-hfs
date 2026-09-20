@@ -1011,6 +1011,37 @@ impl BundleImportBackend for SqliteTerminologyBackend {
         .await
         .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))?
     }
+
+    async fn code_system_concept_codes(
+        &self,
+        _ctx: &TenantContext,
+        url: &str,
+        version: &str,
+    ) -> Result<std::collections::HashSet<String>, HtsError> {
+        let pool = self.pool.clone();
+        let url = url.to_string();
+        let version = version.to_string();
+        tokio::task::spawn_blocking(move || -> Result<_, HtsError> {
+            let conn = pool
+                .get()
+                .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT c.code FROM concepts c
+                     JOIN code_systems s ON c.system_id = s.id
+                     WHERE s.url = ?1 AND s.version = ?2",
+                )
+                .map_err(|e| HtsError::StorageError(e.to_string()))?;
+            let codes = stmt
+                .query_map(rusqlite::params![url, version], |r| r.get::<_, String>(0))
+                .map_err(|e| HtsError::StorageError(e.to_string()))?
+                .collect::<Result<std::collections::HashSet<String>, _>>()
+                .map_err(|e| HtsError::StorageError(e.to_string()))?;
+            Ok(codes)
+        })
+        .await
+        .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))?
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

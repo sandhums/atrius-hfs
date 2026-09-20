@@ -867,6 +867,53 @@ of the canonical URL by design) — so a German term from a national edition
 is still found when a newer international release is the default. Pinning
 `version` disables the fallback.
 
+#### Extension packages: `--extends`
+
+A SNOMED **extension** release (as opposed to a full national *edition*)
+ships only its own module's components. Its `Is-a` and attribute
+relationships point at International concepts that are not in the package.
+Imported standalone, every one of those cross-package relationships has to
+be dropped — the extension becomes a set of orphaned subtrees with no path
+to the International hierarchy and no ingredient / dose-form attributes, so
+`$subsumes`, `is-a` filters and ECL from International groupers never reach
+an extension concept, and unversioned `$lookup` / `$validate-code` of an
+extension code fail because the highest version is the International one.
+
+Layer the extension **into** the base release it depends on instead:
+
+```bash
+# 1. International first (stored as version 20260501)
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260501T120000Z.zip --format snomed-rf2
+# 2. Extension layered onto it — same (url, version) row, hierarchy joined
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260313T120000Z.zip \
+    --format snomed-rf2 --extends 20260501
+```
+
+Extension concepts are written under the base `(url, version)`; a
+relationship is kept when its destination exists in either the package or
+the base; the base closure and FTS index are rebuilt once afterwards. The
+stored CodeSystem title records both parts, e.g.
+`SNOMED CT (20260501 + IN1000189 20260313)`. This is how SNOMED itself
+defines an edition (International + extensions), and it duplicates nothing.
+
+Two diagnostics are reported as non-fatal import errors (exit code 2):
+
+- **module-dependency mismatch** — the package's
+  `der2_ssRefset_ModuleDependency*` refset declares the International
+  release it was built against; if that is not the `--extends` version, a
+  handful of destinations (concepts inactivated between the two releases)
+  will dangle. A small unresolved count with a one-release skew is normal.
+- **N active relationship(s) skipped** — destinations found in neither set.
+  A large count means the wrong base was chosen. The same message is
+  emitted for a *standalone* import of a package that looks like an
+  extension, with a hint to re-import using `--extends`.
+
+`--extends` requires a single ZIP path (not a directory) and the base
+version must already hold concepts. `--dry-run --extends` reads the base
+from the real database so the unresolved count is meaningful, but writes
+nothing. Re-running the same layered import is idempotent (upsert on
+`(url, version)` + code).
+
 ---
 
 ### LOINC

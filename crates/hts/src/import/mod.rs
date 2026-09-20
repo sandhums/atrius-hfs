@@ -268,6 +268,30 @@ pub trait BundleImportBackend: Send + Sync {
         Ok(true)
     }
 
+    /// Every concept code stored for the code system at exactly (`url`,
+    /// `version`). Returns an empty set when that version is not loaded.
+    ///
+    /// Used by importers that layer an *extension* release onto an already
+    /// loaded *base* edition (SNOMED CT RF2 `--extends`): the extension's
+    /// relationships point at base concepts that are absent from the extension
+    /// package itself, so the importer needs the base concept set to decide
+    /// which relationship destinations are resolvable.
+    ///
+    /// The default errors: a backend that does not override it cannot support
+    /// layered imports, and silently returning an empty set would make the
+    /// importer discard every cross-edition relationship — the exact defect
+    /// the layered mode exists to fix.
+    async fn code_system_concept_codes(
+        &self,
+        _ctx: &TenantContext,
+        _url: &str,
+        _version: &str,
+    ) -> Result<std::collections::HashSet<String>, HtsError> {
+        Err(HtsError::InvalidRequest(
+            "this storage backend does not support layered (--extends) imports".into(),
+        ))
+    }
+
     /// Remove all HTS normalized rows for the resource identified by `resource_url`.
     ///
     /// Called by the CRUD DELETE handler after the persistence soft-delete so

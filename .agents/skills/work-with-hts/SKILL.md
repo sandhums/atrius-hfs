@@ -114,6 +114,16 @@ LOINC language translations under `AccessoryFiles/LinguisticVariants/`, such as 
 
 SNOMED CT descriptions in all languages — including per-language Description files from national extensions — are imported as `concept.designation` entries tagged with the RF2 language code. Every language refset marks its preferred synonyms with `preferredForLanguage` designations (a bare language tag plus a dialect tag like `en-US`/`da-DK`/`fr-CA` for published national refsets), and `en-US`→`en-GB` preference picks the display. Select language via the `displayLanguage` parameter or the `Accept-Language` header on `$lookup` / `$expand` / `$validate-code`; matching is BCP-47-aware (`de-DE` finds `de`, `fr` accepts `fr-CA`).
 
+SNOMED **extension** packages (e.g. the NRCeS India Drug Extension `IN1000189`) contain only their own module; their `Is-a` and attribute relationships point at International concepts absent from the package. Never import them standalone — the extension ends up severed from the International hierarchy (no `$subsumes` / `is-a` / ECL reach from International groupers, no ingredient attributes, unversioned `$lookup` misses the codes). Layer them onto the loaded International release instead:
+
+```bash
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260501T120000Z.zip --format snomed-rf2
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260313T120000Z.zip \
+  --format snomed-rf2 --extends 20260501
+```
+
+`--extends <base-version>` writes the extension's concepts into the base `(url, version)` row, keeps relationships whose destination is in either the package or the base, and rebuilds the base closure + FTS once. It checks the package's module-dependency refset against the base and reports a mismatch plus the count of still-unresolved relationships as non-fatal errors (exit 2); a one-release skew with a handful of dangling destinations is normal. The merged row's title records both parts (`SNOMED CT (20260501 + IN1000189 20260313)`). Clients then use the base version (or none) — pinning the extension's own release date returns `not-found`.
+
 ## Format Auto-detection
 
 | Extension or pattern | Detected format |
