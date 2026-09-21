@@ -163,6 +163,15 @@ impl SqlFragment {
     }
 }
 
+fn or_combine(conditions: Vec<SqlFragment>) -> Option<SqlFragment> {
+    let mut iter = conditions.into_iter();
+    let mut combined = iter.next()?;
+    for cond in iter {
+        combined = combined.or(cond);
+    }
+    Some(combined)
+}
+
 /// Builds SQL queries from FHIR search parameters.
 pub struct QueryBuilder {
     /// The tenant ID for the query.
@@ -479,14 +488,46 @@ impl QueryBuilder {
                 return None;
             }
 
-            // Combine with OR
-            let mut combined = or_conditions.remove(0);
-            for cond in or_conditions {
-                combined = combined.or(cond);
-            }
-            combined
+            return Some(self.combine_index_or_conditions(param, or_conditions));
         };
 
+        Some(self.wrap_search_index_membership(param, combined))
+    }
+
+    /// SQLite parse-tree depth blows up around 1000 nodes when every token is
+    /// parenthesized `(X) OR (Y)` (#943). A 546-code `:in` expansion is 2 binds
+    /// per code — well past that. Chunk into separate `IN` subqueries and OR
+    /// (or AND, for `:not`) the membership clauses.
+    const INDEX_OR_CHUNK: usize = 250;
+
+    fn combine_index_or_conditions(
+        &self,
+        param: &SearchParameter,
+        or_conditions: Vec<SqlFragment>,
+    ) -> SqlFragment {
+        let is_not = matches!(param.modifier, Some(SearchModifier::Not));
+        let mut memberships = Vec::new();
+        for chunk in or_conditions.chunks(Self::INDEX_OR_CHUNK) {
+            let combined = or_combine(chunk.to_vec())
+                .expect("chunks() on a non-empty vec never yields an empty slice");
+            memberships.push(self.wrap_search_index_membership(param, combined));
+        }
+        let mut combined = memberships.remove(0);
+        for membership in memberships {
+            combined = if is_not {
+                combined.and(membership)
+            } else {
+                combined.or(membership)
+            };
+        }
+        combined
+    }
+
+    fn wrap_search_index_membership(
+        &self,
+        param: &SearchParameter,
+        combined: SqlFragment,
+    ) -> SqlFragment {
         // Wrap in subquery to ensure proper AND/OR semantics. `:not` negates
         // HERE, at the resource level, not inside the row predicate (#473):
         // FHIR's :not means "no value of the parameter matches", so a
@@ -498,13 +539,13 @@ impl QueryBuilder {
         } else {
             "IN"
         };
-        Some(SqlFragment::with_params(
+        SqlFragment::with_params(
             format!(
                 "resource_key {} (SELECT resource_key FROM search_index WHERE tenant_id = ?1 AND resource_type = ?2 AND param_name = '{}' AND ({}))",
                 membership, param.name, combined.sql
             ),
             combined.params,
-        ))
+        )
     }
 
     /// Builds a condition for a composite parameter.
@@ -1127,6 +1168,31 @@ mod tests {
         let fragment = builder.build(&query);
 
         assert!(fragment.sql.contains("param_name = 'name'"));
+    }
+
+    #[test]
+    fn large_token_or_is_chunked_into_separate_in_subqueries() {
+        let builder = QueryBuilder::new("tenant1", "Condition");
+        let values = (0..300)
+            .map(|i| SearchValue::eq(format!("http://example.org/cs|{i}")))
+            .collect();
+        let param = SearchParameter {
+            name: "code".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: None,
+            values,
+            chain: vec![],
+            components: vec![],
+        };
+        let fragment = builder
+            .build_parameter_condition(&param, 2)
+            .expect("300-code :in must still produce a condition");
+        let in_count = fragment.sql.matches("resource_key IN").count();
+        assert_eq!(
+            in_count, 2,
+            "250-code chunks → two IN subqueries, got: {}",
+            fragment.sql
+        );
     }
 
     #[test]

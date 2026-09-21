@@ -14,6 +14,11 @@ use serde_json::{Value, json};
 const VALIDATE_TTL: Duration = Duration::from_secs(300);
 const EXPAND_TTL: Duration = Duration::from_secs(300);
 const FHIR_JSON: &str = "application/fhir+json";
+/// Page size for `$expand`. HTS (and FHIR) page when `count` is omitted — Atrius
+/// HTS returns 16 — so `:in` on a 546-code Diabetes ValueSet used to miss
+/// `44054006` and score CMS951 IP as empty.
+const EXPAND_PAGE_SIZE: i64 = 10_000;
+const EXPAND_COLLECT_CAP: usize = 1_000_000;
 
 /// Three retries after the initial request, with 1s, 2s and 4s backoff.
 const GATEWAY_RETRY_DELAYS: [Duration; 3] = [
@@ -218,20 +223,20 @@ impl TerminologyClient {
     }
 
     /// `POST /ValueSet/$expand` by canonical URL. Cached process-wide for [`EXPAND_TTL`].
+    ///
+    /// Follows `expansion.total` / page size so `:in` search sees every code, not
+    /// the first HTS page.
     pub async fn expand_value_set(
         &self,
         value_set_url: &str,
     ) -> Result<Vec<ExpandedCode>, TerminologyError> {
-        let key = format!("post|{value_set_url}");
+        let key = format!("post|{}|{value_set_url}", self.base_url);
         if let Some(hit) = cache_get(expand_cache(), &key, EXPAND_TTL) {
             return Ok(hit);
         }
-        let body = json!({
-            "resourceType": "Parameters",
-            "parameter": [{ "name": "url", "valueUri": value_set_url }]
-        });
-        let value = self.post_json("/ValueSet/$expand", &body).await?;
-        let codes = extract_expansion_codes(&value)?;
+        let codes = self
+            .expand_all_pages(vec![json!({ "name": "url", "valueUri": value_set_url })])
+            .await?;
         expand_cache().insert(key, (codes.clone(), Instant::now()));
         Ok(codes)
     }
@@ -243,23 +248,54 @@ impl TerminologyClient {
         code: &str,
         op: &str,
     ) -> Result<Vec<ExpandedCode>, TerminologyError> {
-        let body = json!({
-            "resourceType": "Parameters",
-            "parameter": [{
-                "name": "valueSet",
-                "resource": {
-                    "resourceType": "ValueSet",
-                    "compose": {
-                        "include": [{
-                            "system": system,
-                            "filter": [{ "property": "concept", "op": op, "value": code }]
-                        }]
-                    }
+        self.expand_all_pages(vec![json!({
+            "name": "valueSet",
+            "resource": {
+                "resourceType": "ValueSet",
+                "compose": {
+                    "include": [{
+                        "system": system,
+                        "filter": [{ "property": "concept", "op": op, "value": code }]
+                    }]
                 }
-            }]
-        });
-        let value = self.post_json("/ValueSet/$expand", &body).await?;
-        extract_expansion_codes(&value)
+            }
+        })])
+        .await
+    }
+
+    async fn expand_all_pages(
+        &self,
+        extra_params: Vec<Value>,
+    ) -> Result<Vec<ExpandedCode>, TerminologyError> {
+        let mut all = Vec::new();
+        let mut offset: i64 = 0;
+        loop {
+            let mut parameter = extra_params.clone();
+            parameter.push(json!({ "name": "count", "valueInteger": EXPAND_PAGE_SIZE }));
+            parameter.push(json!({ "name": "offset", "valueInteger": offset }));
+            let body = json!({
+                "resourceType": "Parameters",
+                "parameter": parameter
+            });
+            let value = self.post_json("/ValueSet/$expand", &body).await?;
+            let page = extract_expansion_codes(&value)?;
+            let total = expansion_total(&value);
+            let page_len = page.len();
+            all.extend(page);
+            if !should_fetch_next_expand_page(
+                page_len,
+                all.len(),
+                total,
+                EXPAND_PAGE_SIZE as usize,
+            ) {
+                break;
+            }
+            offset = offset.saturating_add(page_len as i64);
+            if all.len() >= EXPAND_COLLECT_CAP {
+                break;
+            }
+        }
+        Ok(all)
     }
 
     /// `GET /ValueSet/$expand`.
@@ -343,6 +379,31 @@ pub fn extract_expansion_codes(value: &Value) -> Result<Vec<ExpandedCode>, Termi
         });
     }
     Ok(codes)
+}
+
+/// `expansion.total` when the server reports how many codes exist across pages.
+pub fn expansion_total(value: &Value) -> Option<usize> {
+    value.pointer("/expansion/total").and_then(|v| {
+        v.as_u64()
+            .map(|n| n as usize)
+            .or_else(|| v.as_i64().and_then(|n| usize::try_from(n).ok()))
+    })
+}
+
+/// Whether another `$expand` page is needed after collecting `collected` codes.
+pub fn should_fetch_next_expand_page(
+    page_len: usize,
+    collected: usize,
+    total: Option<usize>,
+    page_size: usize,
+) -> bool {
+    if page_len == 0 {
+        return false;
+    }
+    if let Some(total) = total {
+        return collected < total;
+    }
+    page_len >= page_size
 }
 
 /// `Parameters.parameter[name=result].valueBoolean`.
@@ -461,6 +522,22 @@ mod tests {
     fn client_trims_trailing_slash() {
         let client = TerminologyClient::new("http://localhost:9091/", ClientOptions::rest_search());
         assert_eq!(client.base_url(), "http://localhost:9091");
+    }
+
+    #[test]
+    fn expansion_total_reads_integer() {
+        let body = json!({ "expansion": { "total": 546, "contains": [] } });
+        assert_eq!(expansion_total(&body), Some(546));
+        assert_eq!(expansion_total(&json!({"expansion": {}})), None);
+    }
+
+    #[test]
+    fn next_expand_page_follows_total_not_page_size() {
+        assert!(!should_fetch_next_expand_page(16, 16, Some(16), 10_000));
+        assert!(should_fetch_next_expand_page(16, 16, Some(546), 10_000));
+        assert!(!should_fetch_next_expand_page(0, 0, Some(546), 10_000));
+        assert!(should_fetch_next_expand_page(10_000, 10_000, None, 10_000));
+        assert!(!should_fetch_next_expand_page(8, 8, None, 10_000));
     }
 
     #[test]

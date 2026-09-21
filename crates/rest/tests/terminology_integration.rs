@@ -82,6 +82,52 @@ async fn start_mock_hts(expansion: Value) -> (String, Arc<Mutex<Vec<Value>>>) {
     (base_url, requests)
 }
 
+/// Mock HTS that pages: first call (offset 0) returns one of three codes.
+async fn start_paging_mock_hts() -> (String, Arc<Mutex<Vec<Value>>>) {
+    let requests: Arc<Mutex<Vec<Value>>> = Arc::new(Mutex::new(vec![]));
+    let requests_state = Arc::clone(&requests);
+
+    let router = Router::new().route(
+        "/ValueSet/$expand",
+        axum::routing::post(move |Json(body): Json<Value>| {
+            let requests = Arc::clone(&requests_state);
+            async move {
+                requests.lock().unwrap().push(body.clone());
+                let offset = body["parameter"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|p| p["name"] == "offset")
+                    .and_then(|p| p["valueInteger"].as_i64())
+                    .unwrap_or(0);
+                let contains = if offset == 0 {
+                    vec![json!({"system": "http://example.org/cs", "code": "A"})]
+                } else {
+                    vec![
+                        json!({"system": "http://example.org/cs", "code": "B"}),
+                        json!({"system": "http://example.org/cs", "code": "C"}),
+                    ]
+                };
+                (
+                    StatusCode::OK,
+                    Json(json!({
+                        "resourceType": "ValueSet",
+                        "expansion": { "total": 3, "contains": contains }
+                    })),
+                )
+            }
+        }),
+    );
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let base_url = format!("http://127.0.0.1:{}", port);
+    tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    (base_url, requests)
+}
+
 /// Creates a minimal FHIR ValueSet expansion response with the given codes.
 fn make_expansion(system: &str, codes: &[&str]) -> Value {
     let contains: Vec<Value> = codes
@@ -139,7 +185,7 @@ async fn test_in_modifier_calls_hts_expand() {
     // (no patients seeded) but the HTS should have received one $expand call.
     let response = server
         .get("/Patient")
-        .add_query_param("code:in", "http://example.org/vs")
+        .add_query_param("code:in", "http://example.org/vs-direct")
         .await;
 
     assert_eq!(response.status_code(), StatusCode::OK);
@@ -154,7 +200,38 @@ async fn test_in_modifier_calls_hts_expand() {
         .iter()
         .find(|p| p["name"] == "url")
         .expect("Expected 'url' parameter in $expand request");
-    assert_eq!(url_param["valueUri"], "http://example.org/vs");
+    assert_eq!(url_param["valueUri"], "http://example.org/vs-direct");
+}
+
+/// HTS pages `$expand` when `count` is omitted (Atrius default page is 16).
+/// The client must walk `offset` until `expansion.total` is reached, otherwise
+/// `:in` on a large ValueSet (CMS951 Diabetes, 546 codes) drops later codes.
+#[tokio::test]
+async fn test_in_modifier_pages_hts_expand() {
+    let (ts_url, requests) = start_paging_mock_hts().await;
+    let server = create_hfs_with_terminology_server(&ts_url);
+
+    let response = server
+        .get("/Observation")
+        .add_query_param("code:in", "http://example.org/vs-paged")
+        .await;
+    assert_eq!(response.status_code(), StatusCode::OK);
+
+    let reqs = requests.lock().unwrap();
+    assert_eq!(reqs.len(), 2, "expected two $expand pages, got {}", reqs.len());
+    let offsets: Vec<i64> = reqs
+        .iter()
+        .map(|body| {
+            body["parameter"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|p| p["name"] == "offset")
+                .and_then(|p| p["valueInteger"].as_i64())
+                .expect("each page sends offset")
+        })
+        .collect();
+    assert_eq!(offsets, vec![0, 1]);
 }
 
 /// When no terminology server is configured, a token `:in` modifier cannot be
@@ -303,19 +380,19 @@ async fn test_chained_in_and_below_modifiers_resolve_with_terminology_server() {
         (
             "DiagnosticReport",
             "result.code:in",
-            "http://example.org/vs",
+            "http://example.org/vs-chained",
             "d-match",
         ),
         (
             "DiagnosticReport",
             "result:Observation.code:in",
-            "http://example.org/vs",
+            "http://example.org/vs-chained",
             "d-match",
         ),
         (
             "Patient",
             "_has:Observation:subject:code:in",
-            "http://example.org/vs",
+            "http://example.org/vs-chained",
             "p-match",
         ),
         (
@@ -338,10 +415,10 @@ async fn test_chained_in_and_below_modifiers_resolve_with_terminology_server() {
             .await;
         assert_eq!(response.status_code(), StatusCode::OK, "{key}");
         assert_eq!(ids(&response.json()), [expected], "{key}");
-        assert_eq!(
-            requests.lock().unwrap().len(),
-            before + 1,
-            "{key}: expected one $expand call"
+        let after = requests.lock().unwrap().len();
+        assert!(
+            after == before || after == before + 1,
+            "{key}: $expand is called on a cache miss and skipped on a hit (before={before} after={after})"
         );
     }
 }
