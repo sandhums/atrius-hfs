@@ -10,12 +10,15 @@ ICD-10↔ICD-11 ConceptMaps through `POST /import`. Four HTS defects then showed
 up that SNOMED RF2 / ICD-10-CM CLI importers never hit. Every one of them
 returned a *wrong-but-plausible* answer, or aborted the process, rather than a
 clear error. They will reappear if this patch is dropped on an upstream merge
-and the ICD loaders are re-run.
+and the ICD loaders are re-run. Item 5 is the matching HFS `:in` miss on the
+same Diabetes ValueSet once `$expand` is healthy.
 
 **Not in this document:** HIS loaders (`claml_to_fhir.py`, `mms_to_fhir.py`,
 `mapping_to_conceptmap.py`), the ValueSet re-axis script, or IDSP `A97`
-corrections. Those live in `atrius-his` / `AtriusIGDraft`. This file is only
-the HTS Rust surface.
+corrections. Those live in `atrius-his` / `AtriusIGDraft`. Items 1–4 are the
+HTS Rust surface. Item 5 is the HFS *consumer* of `$expand` (search `:in`);
+it lives next to this file because losing it looks like an HTS expand
+regression on the same Diabetes ValueSet.
 
 **Related Atrius docs:**
 
@@ -42,10 +45,11 @@ same symptom. If they did, drop ours and note it here.
 | 2 | Unbounded hierarchical `$expand` covering a SNOMED mutual parent/child pair (`310387003` ⇄ `707221002`) **aborts the process** (stack overflow). CMS165 `is-a` ValueSets (e.g. pregnancy, 39 ICD-10 blocks) default to tree mode when `$expand` omits `count`/`excludeNested`, which is how the sidecar evaluates measures. | Same file, `build_subtree` / `build_hierarchical_expansion` (iterative heap walk + path-local cycle skip). Postgres `build_subtree` has the same walk. **Keep ours.** A global visited-set from upstream would be the wrong fix — these are poly-hierarchies. |
 | 3 | Chunked `POST /import` of a CodeSystem into a *running* server leaves `concept_closure` empty. `$subsumes` returns `not-subsumed` for a genuine parent/child; `is-a` `$expand` still works (it walks `concept_hierarchy`). Split-brain. | `operations/import_bundle.rs` (`?finalize=true`), `import/mod.rs` (`BundleImportBackend::rebuild_missing_closures`), sqlite/postgres `mod.rs` + `schema.rs` (return `usize`). Trait default is `Ok(0)`, so adding the method is merge-safe; the `Query(ImportParams)` extractor on `import_handler` will conflict if upstream also changed the signature. **Keep ours.** |
 | 4 | `DELETE /CodeSystem/{id}` of a resource imported via `/import` returns **HTTP 500** `resource not found`. Imported content is permanently undeletable; `/import` only upserts, so retired codes linger forever. | `operations/crud.rs` `delete_resource`. **Keep ours.** FHIR DELETE is idempotent — absent is 204. |
-| 5 | HFS `code:in=` on a large ValueSet (CMS951 / CMS122 Diabetes, 546 codes) returns **total=0** even though `$validate-code` is true and `code=44054006` finds the Condition. HTS `$expand` without `count` pages at 16 and still sets `expansion.total`. The client used the first page only, then SQLite token-OR blew the parse tree (~1000 nodes, #943). | **Not HTS Rust.** `crates/terminology-client` (`expand_all_pages`), `crates/persistence` SQLite `INDEX_OR_CHUNK` 250, `crates/rest` `test_in_modifier_pages_hts_expand`. **Keep ours.** Do not "fix" this by only raising the HTS default page — paging when `count` is omitted is FHIR-legal. |
+| 5 | HFS `Condition?code:in=…/atrius-vs-diabetes` returns **total=0** even though `$validate-code` for `44054006` is true and GET `$expand?count=10000` lists all 546 codes. CMS951 (and any retrieve on a ValueSet larger than the HTS default page) scores IP empty. Essential Hypertension is 16 codes and still works, which is how this looked like a measure/CQL flake. | `crates/terminology-client` `expand_value_set` (page `$expand`) and `crates/persistence` SQLite token OR chunking. **Keep ours.** HTS paging when `count` is omitted is FHIR-legal; the client must walk `expansion.total`. |
 
-A related behaviour is **not a code change** and will not show up in the diff, but
-it is the thing most likely to look like a regression after a merge-and-reload:
+A related behaviour is **not a code change** and will not show up in the diff,
+but it is the thing most likely to look like a regression after a
+merge-and-reload:
 
 > HTS serves `$expand` / `$validate-code` from the precomputed
 > `value_set_expansions` table, not by evaluating `compose` live. Deleting or
@@ -67,11 +71,9 @@ crates/hts/src/backends/postgres/schema.rs      # 3 (migrate_concept_closure_pg 
 crates/hts/src/import/mod.rs                    # 3 (trait method + default)
 crates/hts/src/operations/import_bundle.rs      # 3 (Query param + test)
 crates/hts/src/operations/crud.rs               # 4
-
-# Item 5 lives on the HFS FHIR server, not helios-hts:
-crates/terminology-client/src/lib.rs            # 5 page $expand
-crates/persistence/src/backends/sqlite/search/query_builder.rs  # 5 IN chunks
-crates/rest/tests/terminology_integration.rs    # 5 vs-paged / unique VS URLs
+crates/terminology-client/src/lib.rs            # 5 (page $expand for :in)
+crates/persistence/src/backends/sqlite/search/query_builder.rs  # 5 (token OR chunks)
+crates/rest/tests/terminology_integration.rs    # 5
 ```
 
 **Not changed:** `backends/postgres/value_set.rs` (already has a non-ECL `is-a`
@@ -229,46 +231,63 @@ the operator is stuck with the old CodeSystem.
 
 ---
 
-## 5. HFS `:in` walks every `$expand` page (and SQLite chunks the OR)
+## 5. HFS `:in` must page `$expand` (not take the first 16 codes)
 
-**Where:** `helios-terminology-client` `expand_value_set` / `expand_all_pages`;
-SQLite `query_builder.rs` `combine_index_or_conditions`; REST
-`test_in_modifier_pages_hts_expand`.
+**Where:** `TerminologyClient::expand_value_set` in
+`crates/terminology-client/src/lib.rs` (used by REST search `:in` / `:below` /
+`:above`). SQLite follow-up in
+`crates/persistence/src/backends/sqlite/search/query_builder.rs`.
 
-**What was wrong:** HTS `$expand` without `count` is FHIR-legal to page. Atrius
-HTS returns 16 of 546 for Diabetes and still sets `expansion.total`. HFS
-`code:in=` POSTed `$expand`, took `expansion.contains`, and rewrote the search
-as `code=system|c1,c2,…`. `44054006` was not on page 1, so
-`Condition?code:in=…/atrius-vs-diabetes` was total=0 while
-`Condition?code=44054006` and `$validate-code` were true. CMS951 (and the same
-Diabetes retrieve on CMS122) scored IP empty.
+**What was wrong:** HFS rewrites `code:in=<ValueSet URL>` to
+`code=system\|c1,system\|c2,…` after `POST /ValueSet/$expand` with only a
+`url` parameter. Atrius HTS, when `count` is omitted, returns a **16-code
+page** and still sets `expansion.total` to the full size (546 for
+`atrius-vs-diabetes`). The client treated that page as the whole set.
 
-A second trap: once the client collected all 546 codes, SQLite token OR of
-`(system AND code)` pairs is ~1 092 parse-tree nodes and fails around 1000
-(#943).
+`44054006` (fixture type 2 diabetes) is not among those 16, so
+`Condition?code:in=…/atrius-vs-diabetes` is empty. CMS951 IP is then false
+for every patient who should qualify. CMS165 still passed because Essential
+Hypertension expands to exactly 16 codes.
+
+GET `$expand?count=10000` and `$validate-code` both already knew the code
+was in the set — so this looked like a Keycloak / CQL / fixture bug. The
+sidecar MeasureReport was `status=complete` with Encounter and labs in
+`evaluatedResource` and **no Condition**.
+
+A second landmine once the full 546 tokens reach SQLite: each `system|code`
+is two binds, OR'd as `(X) OR (Y)`. That parse tree blows up around 1000
+nodes (#943). 546 × 2 is past that.
 
 **Fix:**
 
-- Always send `count=10000` + `offset`, and keep paging while
-  `should_fetch_next_expand_page` says `collected < expansion.total` (or a
-  full page when `total` is omitted). Cap at 1e6 codes.
-- Cache key is `post|{hts-base}|{url}` so two HTS bases (or a mock + live)
-  do not share a truncated page.
-- SQLite OR is chunked into 250-value `IN` membership clauses, then those
-  clauses are OR'd (AND for `:not`).
-- Integration fixtures use unique ValueSet URLs (`vs-direct` / `vs-chained` /
-  `vs-paged`) because the expand cache is process-wide.
+- `expand_value_set` / `expand_subsumption` send `count=10000` and follow
+  `offset` until `collected >= expansion.total` (or the page is short / empty).
+  Cap at 1_000_000 codes.
+- Cache key is `post|{hts-base}|{url}` so two HTS bases in one process do not
+  share a truncated page.
+- SQLite folds token OR lists into 250-value `IN` subqueries and ORs those
+  membership clauses (AND of `NOT IN` for `:not`).
 
-**Do not "fix" this by only raising the HTS default page.** Clients that omit
-`count` must walk `expansion.total`. Hypertension happened to fit in 16 members,
-which is why CMS165 passed while CMS951 did not.
+**Do not "fix" this by raising the HTS default page and leaving the client
+unpaged.** FHIR `$expand` is allowed to page; the next 2_000-code VS will
+miss again.
 
 Tests:
 
-- `next_expand_page_follows_total_not_page_size` (16 of 16 with `total=546`
-  continues; 16 of 16 with `total=16` stops)
-- `large_token_or_is_chunked_into_separate_in_subqueries`
-- `test_in_modifier_pages_hts_expand` (mock HTS, two pages, offsets 0 then 1)
+- `helios-terminology-client`: `should_fetch_next_expand_page` /
+  `expansion_total`
+- `helios-persistence --lib`: `large_token_or_is_chunked_into_separate_in_subqueries`
+- `helios-rest --test terminology_integration`: `test_in_modifier_pages_hts_expand`
+
+Live check (HFS `:8082`, HTS `:9091`, tenant `atrius-hospitals`, after the
+CMS951 fixture seed):
+
+```text
+# must be 1, not 0 — 44054006 is in the VS and on the patient
+GET /Condition?patient=cms951-numerator-panel&code:in=https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-diabetes
+
+python3 scripts/measure-eval-runner.py --measure cms951
+```
 
 ---
 
@@ -277,21 +296,20 @@ Tests:
 From a running HTS (`http://127.0.0.1:9091`) that has the ICD stack loaded:
 
 ```bash
-# Unit + the four HTS regressions (no HTS process needed)
+# Unit + the four new regressions (no HTS process needed)
 cargo test -p helios-hts --lib \
   finalize_rebuilds_closure_dropped_by_a_chunked_import \
   build_subtree_terminates_on_cyclic_hierarchy \
   build_subtree_keeps_shared_concept_under_every_parent \
   delete_of_absent_code_system_is_idempotent
 
-# Item 5 (HFS client + SQLite search; no live HTS needed)
-cargo test -p helios-terminology-client --lib next_expand_page_follows_total_not_page_size
-cargo test -p helios-persistence large_token_or_is_chunked_into_separate_in_subqueries
-cargo test -p helios-rest --test terminology_integration \
-  test_in_modifier_pages_hts_expand
-
 # Full crate
 cargo test -p helios-hts --lib          # 716 passed at time of writing
+
+# Item 5 (HFS :in paging — no running HFS needed)
+cargo test -p helios-terminology-client
+cargo test -p helios-persistence --lib large_token_or_is_chunked
+cargo test -p helios-rest --test terminology_integration
 
 # Live invariants (needs HTS + loaded ICD-10 / ICD-11 / ConceptMaps / ValueSets)
 python3 /Users/sandhu/RustroverProjects/atrius-his/scripts/icd/verify-icd-load.py
@@ -316,17 +334,17 @@ GET /CodeSystem/$subsumes?system=http://id.who.int/icd/release/11/mms&codeA=5A13
 # 3. DELETE of an imported CodeSystem — must be 204, not 500
 DELETE /CodeSystem/icd-10          # then re-import; do not leave this down
 
-# 4. HFS :in must see every Diabetes code, not the first HTS page
-GET /Condition?code:in=https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-diabetes
-# expect the 44054006 Condition; GET /ValueSet/$expand?url=…&count=10000 has 546
+# 4. HFS :in must see codes past the first $expand page (needs HFS + seeded fixture)
+GET HFS /Condition?patient=cms951-numerator-panel&code:in=…/atrius-vs-diabetes
+# total=1, id cms951-numerator-panel-dm — not total=0
 ```
 
 ---
 
 ## Upstream contribution notes
 
-These five are independent and can be five PRs, in this order, if Helios wants
-them separately:
+These five are independent and can be separate PRs, in this order, if Helios
+wants them separately:
 
 1. **Cycle guard** — smallest, SNOMED-only, process-killing. No ICD needed to
    demonstrate. Tests are pure in-memory.
@@ -336,9 +354,10 @@ them separately:
    terminology download). Highest leverage for anyone doing chunked `/import`.
 4. **Idempotent DELETE** — FHIR-correct regardless of import; the `/import`-only
    hole is the motivation.
-5. **Client-side `$expand` paging + SQLite OR chunks** — HFS, not HTS. Any
-   terminology server that pages `$expand` when `count` is omitted will hit
-   this. Tests are mock-HTS + in-memory SQLite.
+5. **Client-side `$expand` paging for `:in`** — independent of HTS. Any FHIR
+   server that pages `$expand` when `count` is omitted will hit this. The
+   SQLite OR-chunk is a separate one-file PR if they already page.
 
 Item 3's trait method has a default, so it does not force every backend to
-change. Item 1 must stay path-local.
+change. Item 1 must stay path-local. Item 5 must stay paged on the client —
+do not "fix" it by only raising the HTS default `count`.
