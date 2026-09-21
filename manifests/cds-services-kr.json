@@ -1,6 +1,26 @@
 {
   "services": [
     {
+      "id": "atriuscms165controllinghighbp",
+      "hook": "patient-view",
+      "title": "Atrius CMS165 Controlling High BP",
+      "description": "CDS Hooks service evaluating Initial Population from Library AtriusCMS165ControllingHighBP at patient-view.",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "procedures": "Procedure?patient={{context.patientId}}"
+      },
+      "libraryId": "AtriusCMS165ControllingHighBP",
+      "libraryVersion": "1.0.000",
+      "expression": "Initial Population",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0",
+      "planDefinitionId": "atrius-cms165-cds",
+      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-cms165-cds"
+    },
+    {
       "id": "atrius-critical-labs",
       "hook": "patient-view",
       "title": "Critical Lab Value Alerts",
@@ -155,7 +175,7 @@
         "patient": "Patient/{{context.patientId}}"
       },
       "libraryId": "AtriusAdultOutpatientEncounters",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "4.19.000",
       "expression": "Qualifying Encounters",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
@@ -171,32 +191,12 @@
         "patient": "Patient/{{context.patientId}}"
       },
       "libraryId": "AtriusAdvancedIllnessAndFrailty",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "1.27.000",
       "expression": "Has Frailty Device Order",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atriusadvancedillnessandfrailty-has-frailty-device-order",
       "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriusadvancedillnessandfrailty-has-frailty-device-order"
-    },
-    {
-      "id": "atriuscms165controllinghighbp",
-      "hook": "patient-view",
-      "title": "Atrius CMS165 Controlling High BP",
-      "description": "CDS Hooks service evaluating Initial Population from Library AtriusCMS165ControllingHighBP at patient-view.",
-      "prefetch": {
-        "patient": "Patient/{{context.patientId}}",
-        "conditions": "Condition?patient={{context.patientId}}",
-        "encounters": "Encounter?patient={{context.patientId}}",
-        "observations": "Observation?patient={{context.patientId}}",
-        "procedures": "Procedure?patient={{context.patientId}}"
-      },
-      "libraryId": "AtriusCMS165ControllingHighBP",
-      "libraryVersion": "0.1.0",
-      "expression": "Initial Population",
-      "resolveFromFhir": true,
-      "cdsHooksVersion": "1.0",
-      "planDefinitionId": "atriuscms165controllinghighbp",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atriuscms165controllinghighbp"
     },
     {
       "id": "atriuscqmcommon-inpatient-encounter",
@@ -207,7 +207,7 @@
         "patient": "Patient/{{context.patientId}}"
       },
       "libraryId": "AtriusCQMCommon",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "4.1.000",
       "expression": "Inpatient Encounter",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
@@ -223,7 +223,7 @@
         "patient": "Patient/{{context.patientId}}"
       },
       "libraryId": "AtriusPalliativeCare",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "1.18.000",
       "expression": "Has Palliative Care in the Measurement Period",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
