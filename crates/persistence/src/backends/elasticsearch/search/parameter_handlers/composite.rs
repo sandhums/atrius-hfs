@@ -60,7 +60,15 @@ fn component_conditions(param_type: SearchParamType, part: &str) -> Option<Vec<V
         SearchParamType::Token => {
             let conds = if let Some((system, code)) = part.split_once('|') {
                 let mut v = Vec::new();
-                if !system.is_empty() {
+                if !system.is_empty() && !code.is_empty() {
+                    // Or a `code` component, whose system is implicit (#1379).
+                    v.push(json!({
+                        "terms": {
+                            field("token_system"):
+                                crate::search::implicit_system_candidates(system)
+                        }
+                    }));
+                } else if !system.is_empty() {
                     v.push(json!({ "term": { field("token_system"): system } }));
                 }
                 if !code.is_empty() {
@@ -80,14 +88,15 @@ fn component_conditions(param_type: SearchParamType, part: &str) -> Option<Vec<V
             Some(vec![numeric_condition(&field("number"), op, num)])
         }
         SearchParamType::Quantity => {
-            let mut comps = part.splitn(3, '|');
-            let (op, num) = parse_prefixed_number(comps.next()?)?;
-            let mut v = vec![numeric_condition(&field("quantity_value"), op, num)];
-            let _system = comps.next();
-            if let Some(code) = comps.next() {
-                if !code.is_empty() {
-                    v.push(json!({ "term": { field("quantity_unit"): code } }));
-                }
+            let (op, rest) = split_prefix(part);
+            let quantity = crate::search::FhirQuantityValue::parse(rest).ok()?;
+            let mut v = vec![numeric_condition(
+                &field("quantity_value"),
+                op,
+                quantity.number.value,
+            )];
+            if let Some(code) = quantity.code {
+                v.push(json!({ "term": { field("quantity_unit"): code } }));
             }
             Some(v)
         }
@@ -124,9 +133,14 @@ fn split_prefix(part: &str) -> (&str, &str) {
     ("eq", part)
 }
 
+/// `None` — not a number by the grammar every backend shares, which excludes
+/// the `inf` and `nan` that `f64::from_str` takes — makes the caller emit a
+/// clause that never matches.
 fn parse_prefixed_number(part: &str) -> Option<(&str, f64)> {
     let (op, rest) = split_prefix(part);
-    rest.parse::<f64>().ok().map(|n| (op, n))
+    crate::search::FhirNumberValue::parse(rest)
+        .ok()
+        .map(|n| (op, n.value))
 }
 
 /// Builds a numeric term/range condition honoring the comparison prefix.
@@ -182,6 +196,15 @@ mod tests {
         assert!(s.contains("token_code"));
         assert!(s.contains("quantity_value"));
         assert!(s.contains("gte"));
+        // The named system, or the marker of a `code` component (#1379).
+        assert!(s.contains(crate::search::IMPLICIT_TOKEN_SYSTEM));
+        // `system|` names the codes OF a system: no marker.
+        let clause = build_clause(&param, "http://loinc.org|$ge100").unwrap();
+        assert!(
+            !clause
+                .to_string()
+                .contains(crate::search::IMPLICIT_TOKEN_SYSTEM)
+        );
     }
 
     fn code_date_param() -> SearchParameter {
