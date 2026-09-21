@@ -1,9 +1,169 @@
 //! Token parameter handler for Elasticsearch.
 
-use serde_json::{Value, json};
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::search::{IMPLICIT_TOKEN_SYSTEM, implicit_system_candidates};
+use serde_json::{json, Value};
+
+use crate::search::{implicit_system_candidates, IMPLICIT_TOKEN_SYSTEM};
 use crate::types::{SearchModifier, SearchParameter};
+
+/// Builds one clause for every token value on `param`.
+///
+/// `:in` expansions (CMS122 / CMS165 Advanced Illness is 1,882 codes) used to
+/// become one `nested` bool per `system|code`. Elasticsearch then rejects the
+/// search with `too_many_nested_clauses` (`maxClauseCount` 2048). Collapse
+/// same-shape values into a `terms` query per system so the clause count stays
+/// in the single digits.
+///
+/// Returns `None` for `:text` / `:of-type` so the caller keeps the per-value
+/// path.
+pub fn build_multi_value_clause(param: &SearchParameter) -> Option<Value> {
+    if !can_collapse_token_values(param) {
+        return None;
+    }
+    if param.values.len() <= 1 {
+        return param
+            .values
+            .first()
+            .and_then(|value| build_clause(param, &value.value));
+    }
+
+    let mut code_only: BTreeSet<&str> = BTreeSet::new();
+    let mut no_system: BTreeSet<&str> = BTreeSet::new();
+    let mut system_only: BTreeSet<&str> = BTreeSet::new();
+    let mut system_codes: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+
+    for value in &param.values {
+        match value.value.split_once('|') {
+            None if !value.value.is_empty() => {
+                code_only.insert(value.value.as_str());
+            }
+            Some(("", code)) if !code.is_empty() => {
+                no_system.insert(code);
+            }
+            Some((system, "")) if !system.is_empty() => {
+                system_only.insert(system);
+            }
+            Some((system, code)) if !system.is_empty() && !code.is_empty() => {
+                system_codes.entry(system).or_default().insert(code);
+            }
+            _ => {}
+        }
+    }
+
+    let mut clauses: Vec<Value> = Vec::new();
+    if !code_only.is_empty() {
+        clauses.push(nested_token_codes(
+            param.name.as_str(),
+            None,
+            &code_only,
+            false,
+        ));
+    }
+    if !no_system.is_empty() {
+        clauses.push(nested_token_codes(
+            param.name.as_str(),
+            None,
+            &no_system,
+            true,
+        ));
+    }
+    if !system_only.is_empty() {
+        clauses.push(nested_system_only(param.name.as_str(), &system_only));
+    }
+    for (system, codes) in &system_codes {
+        clauses.push(nested_token_codes(
+            param.name.as_str(),
+            Some(*system),
+            codes,
+            false,
+        ));
+    }
+
+    match clauses.len() {
+        0 => None,
+        1 => clauses.pop(),
+        _ => Some(json!({
+            "bool": {
+                "should": clauses,
+                "minimum_should_match": 1
+            }
+        })),
+    }
+}
+
+fn can_collapse_token_values(param: &SearchParameter) -> bool {
+    !matches!(
+        param.modifier,
+        Some(SearchModifier::Text)
+            | Some(SearchModifier::TextAdvanced)
+            | Some(SearchModifier::CodeText)
+            | Some(SearchModifier::OfType)
+    )
+}
+
+fn nested_token_codes(
+    name: &str,
+    system: Option<&str>,
+    codes: &BTreeSet<&str>,
+    require_absent_or_implicit_system: bool,
+) -> Value {
+    let mut must_conditions = vec![json!({ "term": { "search_params.token.name": name } })];
+    if let Some(system) = system {
+        must_conditions.push(json!({
+            "terms": { "search_params.token.system": implicit_system_candidates(system) }
+        }));
+    }
+    if require_absent_or_implicit_system {
+        must_conditions.push(json!({
+            "bool": {
+                "should": [
+                    { "bool": { "must_not": [
+                        { "exists": { "field": "search_params.token.system" } }
+                    ] } },
+                    { "term": { "search_params.token.system": IMPLICIT_TOKEN_SYSTEM } }
+                ],
+                "minimum_should_match": 1
+            }
+        }));
+    }
+    let code_list: Vec<&str> = codes.iter().copied().collect();
+    if code_list.len() == 1 {
+        must_conditions.push(json!({ "term": { "search_params.token.code": code_list[0] } }));
+    } else {
+        must_conditions.push(json!({ "terms": { "search_params.token.code": code_list } }));
+    }
+    json!({
+        "nested": {
+            "path": "search_params.token",
+            "query": {
+                "bool": { "must": must_conditions }
+            }
+        }
+    })
+}
+
+fn nested_system_only(name: &str, systems: &BTreeSet<&str>) -> Value {
+    let system_list: Vec<&str> = systems.iter().copied().collect();
+    let system_clause = if system_list.len() == 1 {
+        json!({ "term": { "search_params.token.system": system_list[0] } })
+    } else {
+        json!({ "terms": { "search_params.token.system": system_list } })
+    };
+    json!({
+        "nested": {
+            "path": "search_params.token",
+            "query": {
+                "bool": {
+                    "must": [
+                        { "term": { "search_params.token.name": name } },
+                        system_clause
+                    ]
+                }
+            }
+        }
+    })
+}
 
 /// Builds an ES query clause for a token search parameter.
 pub fn build_clause(param: &SearchParameter, value: &str) -> Option<Value> {
@@ -241,11 +401,9 @@ mod tests {
             must("|female")[2]["bool"]["should"][1],
             json!({ "term": { "search_params.token.system": IMPLICIT_TOKEN_SYSTEM } })
         );
-        assert!(
-            !must("http://hl7.org/fhir/administrative-gender|")
-                .to_string()
-                .contains(IMPLICIT_TOKEN_SYSTEM)
-        );
+        assert!(!must("http://hl7.org/fhir/administrative-gender|")
+            .to_string()
+            .contains(IMPLICIT_TOKEN_SYSTEM));
     }
 
     #[test]
@@ -267,5 +425,43 @@ mod tests {
         let s = serde_json::to_string(&clause).unwrap();
         assert!(s.contains("display"));
         assert!(s.contains("headache"));
+    }
+
+    #[test]
+    fn large_system_code_list_collapses_to_one_nested_terms() {
+        let mut param = make_param("code", None);
+        param.values = (0..1882)
+            .map(|i| SearchValue::eq(format!("http://hl7.org/fhir/sid/icd-10|E{i}")))
+            .collect();
+        let clause = build_multi_value_clause(&param).unwrap();
+        assert!(
+            clause["nested"].is_object(),
+            "one nested query, not a should-OR"
+        );
+        let must = clause["nested"]["query"]["bool"]["must"]
+            .as_array()
+            .expect("must");
+        let codes = must
+            .iter()
+            .find_map(|c| c.pointer("/terms/search_params.token.code"))
+            .and_then(|v| v.as_array())
+            .expect("terms on code");
+        assert_eq!(codes.len(), 1882);
+        let encoded = serde_json::to_string(&clause).unwrap();
+        let nested_count = encoded.matches("\"nested\"").count();
+        assert_eq!(nested_count, 1);
+    }
+
+    #[test]
+    fn two_systems_become_a_should_of_two_nested_terms() {
+        let mut param = make_param("code", None);
+        param.values = vec![
+            SearchValue::eq("http://snomed.info/sct|44054006"),
+            SearchValue::eq("http://hl7.org/fhir/sid/icd-10|E11"),
+            SearchValue::eq("http://hl7.org/fhir/sid/icd-10|E10"),
+        ];
+        let clause = build_multi_value_clause(&param).unwrap();
+        let should = clause["bool"]["should"].as_array().expect("should");
+        assert_eq!(should.len(), 2);
     }
 }
