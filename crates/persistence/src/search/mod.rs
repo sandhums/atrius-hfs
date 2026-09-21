@@ -71,24 +71,30 @@ pub mod extractor;
 pub mod list_resolver;
 pub mod loader;
 pub mod metadata_modifier;
+pub mod numeric_value;
 pub mod range;
 pub mod registry;
 pub mod reindex;
 pub mod seeder;
 pub mod tenant_registries;
 pub mod text_fold;
+pub mod type_qualifier;
 pub mod uri;
 pub mod value_parser;
 pub mod writer;
 
 // Re-export main types
 pub use chain_resolver::{
-    ChainResolveOptions, query_has_chains, resolve_chains, resolve_chains_with,
+    ChainResolveOptions, TerminologyExpander, TerminologyExpansion, query_has_chains,
+    resolve_chains, resolve_chains_with,
 };
 pub use conditional::{
-    build_conditional_parameters, build_conditional_query, parse_conditional_criteria,
+    build_conditional_parameters, build_conditional_query, build_conditional_query_from_pairs,
+    parse_conditional_criteria,
 };
-pub use converters::{IndexValue, ValueConverter};
+pub use converters::{
+    IMPLICIT_TOKEN_SYSTEM, IndexValue, ValueConverter, implicit_system_candidates,
+};
 pub use date_value::{
     DatePredicate, DateValueError, DateValueErrorReason, DateValuePrecision, FhirDateValue,
     StorageResolution, validate_date_parameter, validate_date_values,
@@ -98,6 +104,10 @@ pub use extractor::{ContainedExtraction, ExtractedValue, SearchParameterExtracto
 pub use list_resolver::{query_has_list, resolve_list};
 pub use loader::SearchParameterLoader;
 pub use metadata_modifier::reject_unsupported_metadata_modifier;
+pub use numeric_value::{
+    FhirNumberValue, FhirQuantityValue, NumberValueError, NumberValueErrorReason,
+    validate_numeric_parameter, validate_numeric_values,
+};
 pub use range::{implicit_precision, implicit_range};
 pub use registry::{
     RegistryUpdate, SearchParameterDefinition, SearchParameterRegistry, SearchParameterSource,
@@ -114,6 +124,7 @@ pub use seeder::{
 };
 pub use tenant_registries::{StoredParamLoader, TenantSearchRegistries};
 pub use text_fold::fold_text;
+pub use type_qualifier::ResourceTypeScope;
 pub use uri::compute_parent_uris;
 pub use value_parser::{
     modifier_requires_terminology, param_requires_terminology, parse_typed_values,

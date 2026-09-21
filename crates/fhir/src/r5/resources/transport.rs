@@ -7,58 +7,56 @@ use crate::r5::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR Transport type
-///
+/// 
 /// Record of transport.
-///
+/// 
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-///
+/// 
 /// ## Status: draft
 /// FHIR Version: 5.0.0
-///
+/// 
 /// See: [Transport](http://hl7.org/fhir/StructureDefinition/Transport)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    summary_fields = "id,meta,implicit_rules,modifier_extension,instantiates_canonical,instantiates_uri,based_on,group_identifier,part_of,status,status_reason,intent,code,description,focus,r#for,encounter,completion_time,last_modified,requester,owner,location,requested_location,current_location"
-)]
+#[fhir_resource(summary_fields = "id,meta,implicit_rules,modifier_extension,instantiates_canonical,instantiates_uri,based_on,group_identifier,part_of,status,status_reason,intent,code,description,focus,r#for,encounter,completion_time,last_modified,requester,owner,location,requested_location,current_location")]
 pub struct Transport {
     /// Logical id of this artifact
-    ///
+    /// 
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Within the context of the FHIR RESTful interactions, the resource has an id
     /// except for cases like the create and conditional update. Otherwise, the use
     /// of the resouce id depends on the given use case.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    ///
+    /// 
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    ///
+    /// 
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
     /// along with other profiles etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -68,22 +66,22 @@ pub struct Transport {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of its narrative along with other profiles, value sets, etc.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies its meaning or interpretation
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    ///
+    /// 
     /// The base language in which the resource is written.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -94,27 +92,27 @@ pub struct Transport {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: IETF language tag for a human language
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/all-languages|5.0.0
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    ///
+    /// 
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Contained resources do not have a narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -122,69 +120,69 @@ pub struct Transport {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// narrative, html, xhtml, display
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-6
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    ///
+    /// 
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, nor can they
     /// have their own independent transaction scope. This is allowed to be a
     /// Parameters resource if and only if it is referenced by a resource that
     /// provides context/meaning.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
     /// dependent) to restore it again. Contained resources may have profiles and
     /// tags in their meta elements, but SHALL NOT have security labels.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
-    ///
+    /// 
     /// ## Conditions
     /// Used when: dom-2, dom-4, dom-3, dom-5
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -194,11 +192,11 @@ pub struct Transport {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -206,187 +204,187 @@ pub struct Transport {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// External identifier
-    ///
+    /// 
     /// Identifier for the transport event that is used to identify it across
     /// multiple disparate systems.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This identifier is typically assigned by the dispenser, and may be used to
     /// reference the delivery when exchanging information about it with other
     /// systems.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Formal definition of transport
-    ///
+    /// 
     /// The URL pointing to a *FHIR*-defined protocol, guideline, orderset or other
     /// definition that is adhered to in whole or in part by this Transport.
-    ///
+    /// 
     /// ## Requirements
     /// Enables a formal definition of how the transport is to be performed, enabling
     /// automation.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "instantiatesCanonical")]
     pub instantiates_canonical: Option<Canonical>,
     /// Formal definition of transport
-    ///
+    /// 
     /// The URL pointing to an *externally* maintained protocol, guideline, orderset
     /// or other definition that is adhered to in whole or in part by this Transport.
-    ///
+    /// 
     /// ## Requirements
     /// Enables a formal definition of how the transport is to be performed (e.g.
     /// using BPMN, BPEL, XPDL or other formal notation to be associated with a
     /// transport), enabling automation.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "instantiatesUri")]
     pub instantiates_uri: Option<Uri>,
     /// Request fulfilled by this transport
-    ///
+    /// 
     /// BasedOn refers to a higher-level authorization that triggered the creation of
     /// the transport. It references a "request" resource such as a ServiceRequest or
     /// Transport, which is distinct from the "request" resource the Transport is
     /// seeking to fulfill. This latter resource is referenced by FocusOn. For
     /// example, based on a ServiceRequest (= BasedOn), a transport is created to
     /// fulfill a procedureRequest ( = FocusOn ) to transport a specimen to the lab.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "basedOn")]
     pub based_on: Option<Vec<Reference>>,
     /// Requisition or grouper id
-    ///
+    /// 
     /// A shared identifier common to multiple independent Request instances that
     /// were activated/authorized more or less simultaneously by a single author. The
     /// presence of the same identifier on each request ties those requests together
     /// and may have business ramifications in terms of reporting of results,
     /// billing, etc. E.g. a requisition number shared by a set of lab tests ordered
     /// together, or a prescription number shared by all meds ordered at one time.
-    ///
+    /// 
     /// ## Requirements
     /// Billing and/or reporting can be linked to whether multiple requests were
     /// created as a single unit.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "groupIdentifier")]
     pub group_identifier: Option<Identifier>,
     /// Part of referenced event
-    ///
+    /// 
     /// A larger event of which this particular event is a component or step.
-    ///
+    /// 
     /// ## Requirements
     /// E.g. Drug administration as part of a procedure, procedure as part of
     /// observation, etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Not to be used to link an event to an Encounter - use Event.context for that.
-    ///
+    /// 
     /// [The allowed reference resources may be adjusted as appropriate for the event
     /// resource].
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "partOf")]
     pub part_of: Option<Vec<Reference>>,
     /// in-progress | completed | abandoned | cancelled | planned | entered-in-error
-    ///
+    /// 
     /// A code specifying the state of the transport event.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - This element is labelled as a modifier because it is a status element that contains status entered-in-error which means that the resource should not be treated as valid
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Status of the transport.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/transport-status|5.0.0
     pub status: Option<Code>,
     /// Reason for current status
-    ///
+    /// 
     /// An explanation as to why this transport is held, failed, was refused, etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This applies to the current status. Look at the history of the transport to
     /// see reasons for past statuses.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify the reason for current status.  These will typically be specific to a particular workflow.
@@ -394,234 +392,234 @@ pub struct Transport {
     #[fhir_serde(rename = "statusReason")]
     pub status_reason: Option<CodeableConcept>,
     /// unknown | proposal | plan | order | original-order | reflex-order | filler-order | instance-order | option
-    ///
+    /// 
     /// Indicates the "level" of actionability associated with the Transport, i.e.
     /// i+R[9]Cs this a proposed transport, a planned transport, an actionable
     /// transport, etc.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element is immutable. Proposed transports, planned transports, etc. must
     /// be distinct instances.
-    ///
+    /// 
     /// In most cases, Transports will have an intent of "order".
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: Distinguishes whether the transport is a proposal, plan or full order.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/transport-intent|5.0.0
     pub intent: Code,
     /// routine | urgent | asap | stat
-    ///
+    /// 
     /// Indicates how quickly the Transport should be addressed with respect to other
     /// requests.
-    ///
+    /// 
     /// ## Requirements
     /// Used to identify the service level expected while performing a transport.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - When missing: If missing, this transport should be performed with normal priority
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The priority of a transport (may affect service level applied to the transport).
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/request-priority|5.0.0
     pub priority: Option<Code>,
     /// Transport Type
-    ///
+    /// 
     /// A name or code (or both) briefly describing what the transport involves.
-    ///
+    /// 
     /// ## Implementation Notes
     /// The title (eg "My Transports", "Outstanding Transports for Patient X") should
     /// go into the code.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify what the transport involves.  These will typically be specific to a particular workflow.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/transport-code
     pub code: Option<CodeableConcept>,
     /// Human-readable explanation of transport
-    ///
+    /// 
     /// A free-text description of what is to be performed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// What transport is acting on
-    ///
+    /// 
     /// The request being actioned or the resource being manipulated by this
     /// transport.
-    ///
+    /// 
     /// ## Requirements
     /// Used to identify the thing to be done.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If multiple resources need to be manipulated, use sub-transports. (This
     /// ensures that status can be tracked independently for each referenced
     /// resource.).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub focus: Option<Reference>,
     /// Beneficiary of the Transport
-    ///
+    /// 
     /// The entity who benefits from the performance of the service specified in the
     /// transport (e.g., the patient).
-    ///
+    /// 
     /// ## Requirements
     /// Used to track transports outstanding for a beneficiary. Do not use to track
     /// the transport owner or creator (see owner and creator respectively). This can
     /// also affect access control.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Patient
     #[fhir_serde(rename = "for")]
     pub r#for: Option<Reference>,
     /// Healthcare event during which this transport originated
-    ///
+    /// 
     /// The healthcare event (e.g. a patient and healthcare provider interaction)
     /// during which this transport was created.
-    ///
+    /// 
     /// ## Requirements
     /// For some transports it may be important to know the link between the
     /// encounter the transport originated within.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub encounter: Option<Reference>,
     /// Completion time of the event (the occurrence)
-    ///
+    /// 
     /// Identifies the completion time of the event (the occurrence).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "completionTime")]
     pub completion_time: Option<DateTime>,
     /// Transport Creation Date
-    ///
+    /// 
     /// The date and time this transport was created.
-    ///
+    /// 
     /// ## Requirements
     /// Most often used along with lastUpdated to track duration of the transport to
     /// supporting monitoring and management.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Created Date
     #[fhir_serde(rename = "authoredOn")]
     pub authored_on: Option<DateTime>,
     /// Transport Last Modified Date
-    ///
+    /// 
     /// The date and time of last modification to this transport.
-    ///
+    /// 
     /// ## Requirements
     /// Used along with history to track transport activity and time in a particular
     /// transport state. This enables monitoring and management.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Update Date
     #[fhir_serde(rename = "lastModified")]
     pub last_modified: Option<DateTime>,
     /// Who is asking for transport to be done
-    ///
+    /// 
     /// The creator of the transport.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies who created this transport. May be used by access control
     /// mechanisms (e.g., to ensure that only the creator can cancel a transport).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub requester: Option<Reference>,
     /// Requested performer
-    ///
+    /// 
     /// The kind of participant that should perform the transport.
-    ///
+    /// 
     /// ## Requirements
     /// Use to distinguish transports on different activity queues.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: The type(s) of transport performers allowed.
@@ -629,191 +627,191 @@ pub struct Transport {
     #[fhir_serde(rename = "performerType")]
     pub performer_type: Option<Vec<CodeableConcept>>,
     /// Responsible individual
-    ///
+    /// 
     /// Individual organization or Device currently responsible for transport
     /// execution.
-    ///
+    /// 
     /// ## Requirements
     /// Identifies who is expected to perform this transport.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Transports may be created with an owner not yet identified.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Performer, Executer
     pub owner: Option<Reference>,
     /// Where transport occurs
-    ///
+    /// 
     /// Principal physical location where this transport is performed.
-    ///
+    /// 
     /// ## Requirements
     /// Ties the event to where the records are likely kept and provides context
     /// around the event occurrence (e.g. if it occurred inside or outside a
     /// dedicated healthcare setting).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub location: Option<Reference>,
     /// Associated insurance coverage
-    ///
+    /// 
     /// Insurance plans, coverage extensions, pre-authorizations and/or
     /// pre-determinations that may be relevant to the Transport.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub insurance: Option<Vec<Reference>>,
     /// Comments made about the transport
-    ///
+    /// 
     /// Free-text information captured about the transport as it progresses.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Key events in history of the Transport
-    ///
+    /// 
     /// Links to Provenance records for past versions of this Transport that identify
     /// key state transitions or updates that are likely to be relevant to a user
     /// looking at the current version of the transport.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element does not point to the Provenance associated with the *current*
     /// version of the resource - as it would be created after this version existed.
     /// The Provenance for the current version can be retrieved with a _revinclude.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Status History
     #[fhir_serde(rename = "relevantHistory")]
     pub relevant_history: Option<Vec<Reference>>,
     /// Constraints on fulfillment transports
-    ///
+    /// 
     /// If the Transport.focus is a request resource and the transport is seeking
     /// fulfillment (i.e. is asking for the request to be actioned), this element
     /// identifies any limitations on what parts of the referenced request should be
     /// actioned.
-    ///
+    /// 
     /// ## Requirements
     /// Sometimes when fulfillment is sought, you don't want full fulfillment.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub restriction: Option<TransportRestriction>,
     /// Information used to perform transport
-    ///
+    /// 
     /// Additional information that may be needed in the execution of the transport.
-    ///
+    /// 
     /// ## Requirements
     /// Resources and data used to perform the transport. This data is used in the
     /// business logic of transport execution, and is stored separately because it
     /// varies between workflows.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Aliases
     /// Supporting Information
     pub input: Option<Vec<TransportInput>>,
     /// Information produced as part of transport
-    ///
+    /// 
     /// Outputs produced by the Transport.
-    ///
+    /// 
     /// ## Requirements
     /// Resources and data produced during the execution the transport. This data is
     /// generated by the business logic of transport execution, and is stored
     /// separately because it varies between workflows.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub output: Option<Vec<TransportOutput>>,
     /// The desired location
-    ///
+    /// 
     /// The desired or final location for the transport.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "requestedLocation")]
     pub requested_location: Reference,
     /// The entity current location
-    ///
+    /// 
     /// The current location for the entity to be transported.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "currentLocation")]
     pub current_location: Reference,
     /// Why transport is needed
-    ///
+    /// 
     /// A resource reference indicating why this transport needs to be performed.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Transports might be justified based on an Observation, a Condition, a past or
     /// planned procedure, etc. This should only be included if there is no focus or
     /// if it differs from the reason indicated on the focus. Use the CodeableConcept
     /// text element in `Transport.reasonCode` if the data is free (uncoded) text.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Indicates why the transport is needed.  E.g. Suspended because patient admitted to hospital.
     pub reason: Option<CodeableReference>,
     /// Parent (or preceding) transport
-    ///
+    /// 
     /// The transport event prior to this one.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -989,63 +987,63 @@ pub enum TransportInputValue {
 }
 
 /// Information used to perform transport
-///
+/// 
 /// Additional information that may be needed in the execution of the transport.
-///
+/// 
 /// ## Requirements
 /// Resources and data used to perform the transport. This data is used in the
 /// business logic of transport execution, and is stored separately because it
 /// varies between workflows.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
-///
+/// 
 /// ## Aliases
 /// Supporting Information
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "value")]
 pub struct TransportInput {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1055,11 +1053,11 @@ pub struct TransportInput {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1067,63 +1065,63 @@ pub struct TransportInput {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Label for the input
-    ///
+    /// 
     /// A code or description indicating how the input is intended to be used as part
     /// of the transport execution.
-    ///
+    /// 
     /// ## Requirements
     /// Inputs are named to enable transport automation to bind data and pass it from
     /// one transport to the next.
-    ///
+    /// 
     /// ## Implementation Notes
     /// If referencing a BPMN workflow or Protocol, the "system" is the URL for the
     /// workflow definition and the code is the "name" of the required input.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Comparison source", "Applicable consent", "Concomitent Medications", etc.
-    ///
+    /// 
     /// ## Aliases
     /// Name
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Content to use in performing the transport
-    ///
+    /// 
     /// The value of the input parameter as a basic type.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1300,16 +1298,16 @@ pub enum TransportOutputValue {
 }
 
 /// Information produced as part of transport
-///
+/// 
 /// Outputs produced by the Transport.
-///
+/// 
 /// ## Requirements
 /// Resources and data produced during the execution the transport. This data is
 /// generated by the business logic of transport execution, and is stored
 /// separately because it varies between workflows.
-///
+/// 
 /// ## Cardinality: Optional, Multiple (0..*)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1317,43 +1315,43 @@ pub enum TransportOutputValue {
 #[fhir_resource(choice_elements = "value")]
 pub struct TransportOutput {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1363,11 +1361,11 @@ pub struct TransportOutput {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1375,61 +1373,61 @@ pub struct TransportOutput {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Label for output
-    ///
+    /// 
     /// The name of the Output parameter.
-    ///
+    /// 
     /// ## Requirements
     /// Outputs are named to enable transport automation to bind data and pass it
     /// from one transport to the next.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: example
     /// - **Description**: Codes to identify types of input parameters.  These will typically be specific to a particular workflow.  E.g. "Identified issues", "Preliminary results", "Filler order", "Final results", etc.
-    ///
+    /// 
     /// ## Aliases
     /// Name
     #[fhir_serde(rename = "type")]
     pub r#type: CodeableConcept,
     /// Result of output
-    ///
+    /// 
     /// The value of the Output parameter as a basic type.
-    ///
+    /// 
     /// ## Requirements
     /// Transport outputs can take any form.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1438,60 +1436,60 @@ pub struct TransportOutput {
 }
 
 /// Constraints on fulfillment transports
-///
+/// 
 /// If the Transport.focus is a request resource and the transport is seeking
 /// fulfillment (i.e. is asking for the request to be actioned), this element
 /// identifies any limitations on what parts of the referenced request should be
 /// actioned.
-///
+/// 
 /// ## Requirements
 /// Sometimes when fulfillment is sought, you don't want full fulfillment.
-///
+/// 
 /// ## Cardinality: Optional (0..1)
-///
+/// 
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children (error)
 ///   Expression: `hasValue() or (children().count() > id.count())`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct TransportRestriction {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Conditions
     /// Used when: ele-1
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and managable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1501,11 +1499,11 @@ pub struct TransportRestriction {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    ///
+    /// 
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    ///
+    /// 
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1513,70 +1511,71 @@ pub struct TransportRestriction {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// How many times to repeat
-    ///
+    /// 
     /// Indicates the number of times the requested action should occur.
-    ///
+    /// 
     /// ## Requirements
     /// E.g. order that requests monthly lab tests, fulfillment is sought for 1.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub repetitions: Option<PositiveInt>,
     /// When fulfillment sought
-    ///
+    /// 
     /// Over what time-period is fulfillment sought.
-    ///
+    /// 
     /// ## Requirements
     /// E.g. order that authorizes 1 year's services. Fulfillment is sought for next
     /// 3 months.
-    ///
+    /// 
     /// ## Implementation Notes
     /// Note that period.high is the due date representing the time by which the
     /// transport should be completed.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub period: Option<Period>,
     /// For whom is fulfillment sought?
-    ///
+    /// 
     /// For requests that are targeted to more than one potential recipient/target,
     /// to identify who is fulfillment is sought for.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub recipient: Option<Vec<Reference>>,
 }
+

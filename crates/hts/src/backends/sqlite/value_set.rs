@@ -10744,9 +10744,8 @@ mod tests {
 
         let items_map: HashMap<(String, String), ExpansionContains> =
             (0..=DEPTH).map(|n| (key(n), node(n))).collect();
-        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = (0..DEPTH)
-            .map(|n| (key(n), vec![key(n + 1)]))
-            .collect();
+        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> =
+            (0..DEPTH).map(|n| (key(n), vec![key(n + 1)])).collect();
 
         let tree = build_subtree(&key(0), &items_map, &parent_to_children);
         let mut walk = &tree;

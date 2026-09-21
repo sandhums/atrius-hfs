@@ -34,6 +34,15 @@ pub enum ViewDefinitionVersionAlgorithm {
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 #[fhir_resource(choice_elements = "versionAlgorithm", summary_fields = "id,meta,implicit_rules,modifier_extension,url,identifier,version,version_algorithm,name,title,status,experimental,date,publisher,contact,use_context,jurisdiction,effective_period")]
 pub struct ViewDefinition {
+    /// Canonical of the definition of this additional resource
+    /// 
+    /// The versioned canonical URL of the StructureDefinition that defines this
+    /// resource type. Instances of an additional resource - a resource type defined
+    /// outside the core FHIR specification - carry it alongside resourceType.
+    /// 
+    /// ## Cardinality: Optional (0..1)
+    #[fhir_serde(rename = "resourceDefinition")]
+    pub resource_definition: Option<Canonical>,
     /// Logical id of this artifact
     /// 
     /// The logical id of the resource, as used in the URL for the resource. Once

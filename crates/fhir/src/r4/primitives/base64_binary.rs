@@ -7,8 +7,9 @@ use crate::r4::*;
 use crate::{DecimalElement, Element};
 
 /// FHIR primitive type for base64-encoded binary data
-///
+/// 
 /// Base StructureDefinition for base64Binary Type: A stream of bytes
-///
+/// 
 /// See: [base64Binary](http://hl7.org/fhir/StructureDefinition/base64Binary)
 pub type Base64Binary = Element<std::string::String, Extension>;
+

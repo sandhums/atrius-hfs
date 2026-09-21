@@ -10059,6 +10059,7 @@ pub static FIELD_TYPES: &[(&str, &str, &str, bool)] = &[
     ("ViewDefinition", "purpose", "markdown", false),
     ("ViewDefinition", "relatedArtifact", "RelatedArtifact", true),
     ("ViewDefinition", "resource", "code", false),
+    ("ViewDefinition", "resourceDefinition", "canonical", false),
     ("ViewDefinition", "reviewer", "ContactDetail", true),
     ("ViewDefinition", "select", "ViewDefinitionSelect", true),
     ("ViewDefinition", "status", "code", false),

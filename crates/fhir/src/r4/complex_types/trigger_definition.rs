@@ -25,70 +25,67 @@ pub enum TriggerDefinitionTiming {
 }
 
 /// FHIR TriggerDefinition type
-///
+/// 
 /// Base StructureDefinition for TriggerDefinition Type: A description of a
 /// triggering event. Triggering events can be named events, data events, or
 /// periodic, as determined by the type element.
-///
+/// 
 /// ## Type: Complex-type type
 /// Base type: http://hl7.org/fhir/StructureDefinition/Element
-///
+/// 
 /// ## Status: draft
 /// FHIR Version: 4.0.1
-///
+/// 
 /// See: [TriggerDefinition](http://hl7.org/fhir/StructureDefinition/TriggerDefinition)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(
-    choice_elements = "timing",
-    summary_fields = "r#type,name,timing,data,condition"
-)]
+#[fhir_resource(choice_elements = "timing", summary_fields = "r#type,name,timing,data,condition")]
 pub struct TriggerDefinition {
     /// Unique id for inter-element referencing
-    ///
+    /// 
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    ///
+    /// 
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    ///
+    /// 
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    ///
+    /// 
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// named-event | periodic | data-changed | data-added | data-modified | data-removed | data-accessed | data-access-ended
-    ///
+    /// 
     /// The type of triggering event.
-    ///
+    /// 
     /// ## Cardinality: Required (1..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    ///
+    /// 
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The type of trigger.
@@ -96,66 +93,66 @@ pub struct TriggerDefinition {
     #[fhir_serde(rename = "type")]
     pub r#type: Code,
     /// Name or URI that identifies the event
-    ///
+    /// 
     /// A formal name for the event. This may be an absolute URI that identifies the
     /// event formally (e.g. from a trigger registry), or a simple relative URI that
     /// identifies the event in a local context.
-    ///
+    /// 
     /// ## Implementation Notes
     /// An event name can be provided for all event types, but is required for named
     /// events. If a name is provided for a type other than named events, it is
     /// considered to be a shorthand for the semantics described by the formal
     /// description of the event.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub name: Option<String>,
     /// Timing of the event
-    ///
+    /// 
     /// The timing of the event (if this is a periodic trigger).
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub timing: Option<TriggerDefinitionTiming>,
     /// Triggering data of the event (multiple = 'and')
-    ///
+    /// 
     /// The triggering data of the event (if this is a data trigger). If more than
     /// one data is requirement is specified, then all the data requirements must be
     /// true.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element shall be present for any data type trigger.
-    ///
+    /// 
     /// ## Cardinality: Optional, Multiple (0..*)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub data: Option<Vec<DataRequirement>>,
     /// Whether the event triggers (boolean expression)
-    ///
+    /// 
     /// A boolean-valued expression that is evaluated in the context of the container
     /// of the trigger definition and returns whether or not the trigger fires.
-    ///
+    /// 
     /// ## Requirements
     /// Need to be able to formally describe the triggering criteria.
-    ///
+    /// 
     /// ## Implementation Notes
     /// This element can be only be specified for data type triggers and provides
     /// additional semantics for the trigger. The context available within the
@@ -169,14 +166,15 @@ pub struct TriggerDefinition {
     /// data requirement, and may also refer to the variable %previous for delta
     /// comparisons on events of type data-changed, data-modified, and data-deleted
     /// which will always have the same type.
-    ///
+    /// 
     /// ## Cardinality: Optional (0..1)
-    ///
+    /// 
     /// ## Special Semantics
     /// - Included in summary
-    ///
+    /// 
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub condition: Option<Expression>,
 }
+
