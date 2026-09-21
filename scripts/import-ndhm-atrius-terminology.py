@@ -137,6 +137,19 @@ def main() -> int:
     ndhm_vs = collect_terminology(ndhm_dir, "ValueSet")
     atrius_cs = collect_terminology(ig_output, "CodeSystem")
     atrius_vs = collect_terminology(ig_output, "ValueSet")
+    if not atrius_vs:
+        authored = ig_output.parent / "input" / "resources"
+        if authored.is_dir():
+            authored_cs = collect_terminology(authored, "CodeSystem")
+            authored_vs = collect_terminology(authored, "ValueSet")
+            if authored_vs:
+                print(
+                    f"output/ had 0 Atrius ValueSets; using authored {authored} "
+                    f"({len(authored_vs)} ValueSets, {len(authored_cs)} CodeSystems)",
+                    file=sys.stderr,
+                )
+                atrius_cs = authored_cs or atrius_cs
+                atrius_vs = authored_vs
 
     all_resources = ndhm_cs + ndhm_vs + atrius_cs + atrius_vs
     print(
