@@ -1053,6 +1053,9 @@ impl ValueSetOperations for PostgresTerminologyBackend {
         if let Some(resp) = crate::bcp13::validate_mimetypes_code(&url, &req) {
             return Ok(resp);
         }
+        if let Some(resp) = crate::bcp47::validate_all_languages_code(&url, &req) {
+            return Ok(resp);
+        }
 
         // TODO: cache — port the per-instance response cache from SQLite
         // (validate_code_response_cache). The SQLite cache key folds in
@@ -2288,6 +2291,13 @@ async fn compute_expansion_inner_body(
                             "__UNKNOWN_CS_VERSION_EXP__:{text}"
                         )));
                     }
+                }
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
+                if let Some(codes) = crate::bcp47::enumerated_bcp47_expansion(system_url, inc) {
+                    included.extend(codes);
+                    continue;
                 }
                 tracing::warn!(
                     system_url,

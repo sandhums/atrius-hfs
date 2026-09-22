@@ -293,6 +293,9 @@ impl CodeSystemOperations for PostgresTerminologyBackend {
                     .map(|r| r.get::<_, bool>(0))
                     .unwrap_or(false);
                 if !url_exists {
+                    if system == crate::bcp47::BCP47_SYSTEM {
+                        return Ok(crate::bcp47::validate_system_code(&req.code));
+                    }
                     let text = format!(
                         "A definition for CodeSystem {system} could not be found, so the code cannot be validated"
                     );

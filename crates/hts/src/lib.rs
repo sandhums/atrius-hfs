@@ -46,6 +46,7 @@
 
 pub mod backends;
 pub(crate) mod bcp13;
+pub(crate) mod bcp47;
 pub mod config;
 pub mod ecl;
 pub mod error;

@@ -3773,6 +3773,86 @@ async fn process_inline_vs_validate_code<B: TerminologyBackend>(
         }
     }
 
+    // Inline all-languages (or a compose that includes the whole of
+    // urn:ietf:bcp:47): the set is not enumerable. Accept a well-formed
+    // language tag instead of expanding.
+    if let Some(url) = crate::bcp47::inline_unbounded_language_url(&vs_resource) {
+        let vs_version = vs_resource
+            .get("version")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        for (in_system, in_code, in_display, path) in &coding_attempts {
+            let req = ValidateCodeRequest {
+                url: Some(url.clone()),
+                value_set_version: vs_version.clone(),
+                system: in_system.clone(),
+                code: in_code.clone(),
+                version: None,
+                display: in_display.clone(),
+                date: None,
+                include_abstract: None,
+                input_form: Some(match path {
+                    RequestPath::BareCode => "code".into(),
+                    RequestPath::Coding => "coding".into(),
+                    RequestPath::CodeableConcept => "codeableConcept".into(),
+                }),
+                lenient_display_validation: None,
+                default_value_set_versions: std::collections::HashMap::new(),
+            };
+            let resp = crate::bcp47::validate_unbounded_language_code(&url, &req);
+            if resp.result {
+                let value = build_validate_response_async(
+                    state.backend(),
+                    &ctx,
+                    resp,
+                    Some(in_code),
+                    in_system.as_deref().or(Some(crate::bcp47::BCP47_SYSTEM)),
+                    cc_value.as_ref(),
+                    *path,
+                    Some(&url),
+                    find_str_param(&params, "displayLanguage").as_deref(),
+                    in_display.as_deref(),
+                    &[],
+                    lenient_display_validation,
+                )
+                .await;
+                return Ok(value);
+            }
+        }
+        if let Some((in_system, in_code, in_display, path)) = coding_attempts.first() {
+            let req = ValidateCodeRequest {
+                url: Some(url.clone()),
+                value_set_version: vs_version,
+                system: in_system.clone(),
+                code: in_code.clone(),
+                version: None,
+                display: in_display.clone(),
+                date: None,
+                include_abstract: None,
+                input_form: None,
+                lenient_display_validation: None,
+                default_value_set_versions: std::collections::HashMap::new(),
+            };
+            let resp = crate::bcp47::validate_unbounded_language_code(&url, &req);
+            let value = build_validate_response_async(
+                state.backend(),
+                &ctx,
+                resp,
+                Some(in_code),
+                None,
+                cc_value.as_ref(),
+                *path,
+                Some(&url),
+                find_str_param(&params, "displayLanguage").as_deref(),
+                in_display.as_deref(),
+                &[],
+                lenient_display_validation,
+            )
+            .await;
+            return Ok(value);
+        }
+    }
+
     // The inline VS is anonymous (no top-level `url`) in the IG fixtures —
     // surface "(unidentified)" in `not-in-vs` text per the expected output.
     let vs_label = vs_resource

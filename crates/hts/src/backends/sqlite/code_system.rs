@@ -396,6 +396,9 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
             ) {
                 Ok((id, _, version)) => (id, version),
                 Err(HtsError::NotFound(_)) => {
+                    if system == crate::bcp47::BCP47_SYSTEM {
+                        return Ok(crate::bcp47::validate_system_code(&req.code));
+                    }
                     let text = format!(
                         "A definition for CodeSystem {system} could not be found, so the code cannot be validated"
                     );
@@ -2319,6 +2322,78 @@ mod tests {
         assert!(resp.result);
         assert_eq!(resp.display, Some("Alpha Beta Charlie".into()));
         assert!(resp.message.is_none());
+    }
+
+    #[tokio::test]
+    async fn validate_code_bcp47_grammar_when_codesystem_absent() {
+        let b = backend();
+
+        let ok = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "pa-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(ok.result);
+        assert_eq!(ok.system.as_deref(), Some("urn:ietf:bcp:47"));
+
+        let bad = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "Punjabi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!bad.result);
+    }
+
+    #[tokio::test]
+    async fn validate_code_loaded_bcp47_uses_stored_concepts() {
+        let b = backend();
+        let conn = b.pool().get().unwrap();
+        conn.execute_batch(
+            "INSERT INTO code_systems (id, url, version, name, status, content, created_at, updated_at)
+             VALUES ('bcp47', 'urn:ietf:bcp:47', '1', 'BCP 47', 'active', 'complete',
+                     '2024-01-01', '2024-01-01');
+             INSERT INTO concepts (id, system_id, code, display)
+             VALUES (1, 'bcp47', 'en', 'English');",
+        )
+        .unwrap();
+
+        let stored = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "en".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(stored.result);
+
+        let regional = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!regional.result);
     }
 
     fn seed_snomed_current_stub(b: &SqliteTerminologyBackend) {

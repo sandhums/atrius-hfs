@@ -1325,6 +1325,9 @@ impl ValueSetOperations for SqliteTerminologyBackend {
             if let Some(resp) = crate::bcp13::validate_mimetypes_code(&url, &req) {
                 return Ok(resp);
             }
+            if let Some(resp) = crate::bcp47::validate_all_languages_code(&url, &req) {
+                return Ok(resp);
+            }
 
             // Resolve the expansion — try explicit ValueSet first, then the two
             // implicit-ValueSet fallbacks used by $expand.
@@ -2458,6 +2461,9 @@ fn expand_inline_plain_fts(
         match resolve_compose_system_id(backend, conn, system_url, inc_version)? {
             Some((id, _)) => pairs.push((system_url.to_owned(), id)),
             None => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
                 let msg = format!(
                     "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
                     inc_version
@@ -2645,6 +2651,17 @@ fn expand_inline_filtered(
         let system_id = match resolve_compose_system_id(backend, conn, system_url, inc_version)? {
             Some((id, _)) => id,
             None => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
+                if let Some(codes) = crate::bcp47::enumerated_bcp47_expansion(system_url, inc) {
+                    results.extend(
+                        codes
+                            .into_iter()
+                            .filter(|c| crate::bcp47::matches_text_filter(c, &filter_lower)),
+                    );
+                    continue;
+                }
                 let msg = format!(
                     "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
                     inc_version
@@ -3589,6 +3606,15 @@ fn expand_single_include_local(
                             "__UNKNOWN_CS_VERSION_EXP__:{text}"
                         )));
                     }
+                }
+                // `urn:ietf:bcp:47` is not shipped as a CodeSystem. Enumerated
+                // language ValueSets already carry their codes; the open
+                // `all-languages` include cannot be materialised.
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
+                if let Some(codes) = crate::bcp47::enumerated_bcp47_expansion(system_url, inc) {
+                    return Ok(codes);
                 }
                 let msg = format!(
                     "CodeSystem {system_url} was not found and has been excluded from the expansion"
@@ -9368,6 +9394,9 @@ fn load_plain_corpus_and_cache(
         match resolve_compose_system_id(backend, conn, system_url, inc_version) {
             Ok(Some((id, _))) => pairs.push((system_url.to_owned(), id)),
             Ok(None) => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return None;
+                }
                 let msg = format!(
                     "CodeSystem {system_url}{} was not found and has been excluded from the expansion",
                     inc_version
@@ -9688,6 +9717,181 @@ mod tests {
         assert!(codes.contains(&"A"), "A should be in expansion");
         assert!(codes.contains(&"B"), "B should be in expansion");
         assert!(!codes.contains(&"C"), "C should NOT be in expansion");
+    }
+
+    fn language_valueset_bundle(url: &str, include: &str) -> String {
+        format!(
+            r#"{{
+              "resourceType": "Bundle",
+              "type": "collection",
+              "entry": [{{
+                "resource": {{
+                  "resourceType": "ValueSet",
+                  "url": "{url}",
+                  "status": "active",
+                  "compose": {{ "include": [{include}] }}
+                }}
+              }}]
+            }}"#
+        )
+    }
+
+    #[tokio::test]
+    async fn expand_enumerated_bcp47_without_codesystem() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"},
+                {"code":"en-US","display":"English (United States)"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let resp = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(resp.warnings.is_empty(), "{:?}", resp.warnings);
+        let codes: Vec<&str> = resp.contains.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(codes, ["hi", "pa", "en-US"]);
+        assert_eq!(resp.contains[0].display.as_deref(), Some("Hindi"));
+        assert_eq!(resp.contains[0].system, "urn:ietf:bcp:47");
+    }
+
+    #[tokio::test]
+    async fn expand_enumerated_bcp47_text_filter() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let resp = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    filter: Some("pun".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        let codes: Vec<&str> = resp.contains.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(codes, ["pa"]);
+    }
+
+    #[tokio::test]
+    async fn expand_all_languages_is_too_costly() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/all-languages",
+            r#"{"system":"urn:ietf:bcp:47"}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let err = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, HtsError::TooCostly(_)), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn validate_languages_uses_enumerated_codes() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let hi = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    code: "hi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(hi.result);
+        assert_eq!(hi.display.as_deref(), Some("Hindi"));
+
+        let regional = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!regional.result);
+    }
+
+    #[tokio::test]
+    async fn validate_all_languages_accepts_well_formed_tag() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/all-languages",
+            r#"{"system":"urn:ietf:bcp:47"}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let ok = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(ok.result);
+        assert_eq!(ok.system.as_deref(), Some("urn:ietf:bcp:47"));
+
+        let bad = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    code: "Hindi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!bad.result);
     }
 
     // ── $expand: full-system include ───────────────────────────────────────────
