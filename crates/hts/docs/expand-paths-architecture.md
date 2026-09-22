@@ -10,6 +10,8 @@ what the Atrius fork added, and where simplification is (and is not) warranted.
   ECL + text filter / typeahead ranking patch
 - [`fork-icd-import-expand-subsumes-2026-09-20.md`](fork-icd-import-expand-subsumes-2026-09-20.md)
   — dotted `is-a` `$expand` (bypass ECL), hierarchical cycle guard, `/import?finalize=true`
+- [`fork-bcp47-languages.md`](fork-bcp47-languages.md) — enumerated BCP 47
+  `$expand` without a CodeSystem; `all-languages` stays unbounded
 - `atrius-clinical-ui/docs/snomed-structured-data-entry-plan.md` — clinical UI
   consumer (BFF → HTS `$expand` with `filter`)
 

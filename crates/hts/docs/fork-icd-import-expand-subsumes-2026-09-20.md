@@ -24,6 +24,9 @@ regression on the same Diabetes ValueSet.
 
 - [`fork-ecl-fts-typeahead-expand.md`](fork-ecl-fts-typeahead-expand.md) — earlier
   Atrius `$expand` fork (ECL + FTS typeahead). Same file, different patch.
+- [`fork-bcp47-languages.md`](fork-bcp47-languages.md) — BCP 47 language
+  `$expand` / `$validate-code` (`3ecac00f4`). Same `value_set.rs` missing-system
+  arms, different patch.
 - [`expand-paths-architecture.md`](expand-paths-architecture.md) — full `$expand`
   routing map. The `is-a` fast path below is a new branch on that map.
 - `atrius-his/scripts/icd/README.md` — load order, `--replace`, `?finalize=true`.

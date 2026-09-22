@@ -40,6 +40,9 @@
 //! for upstream merge. ICD-safe `$expand` / `$subsumes` / `/import` / DELETE
 //! (2026-09-20) is in
 //! [`docs/fork-icd-import-expand-subsumes-2026-09-20.md`](../docs/fork-icd-import-expand-subsumes-2026-09-20.md).
+//! BCP 47 language expansion and validation without a loaded CodeSystem
+//! (2026-09-22, `3ecac00f4`) is in
+//! [`docs/fork-bcp47-languages.md`](../docs/fork-bcp47-languages.md).
 //!
 //! [`AppState`]: state::AppState
 //! [`create_app`]: server::create_app
